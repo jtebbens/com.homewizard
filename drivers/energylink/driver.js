@@ -153,6 +153,17 @@ module.exports.capabilities = {
                 callback(null, device.last_meter_water);
             }
         }
+    },
+	measure_water: {
+        get: function (device_data, callback) {
+            var device = devices[device_data.id];
+
+            if (device === undefined) {
+                callback(null, 0);
+            } else {
+                callback(null, device.last_measure_water);
+            }
+        }
     }
 
 };
@@ -229,19 +240,22 @@ function getStatus(device_id) {
                     }
                     
                     if (value_s1 == 'water' ) {
-                    	  // var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
+                    	var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
                         var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
                         console.log("Water- " + water_daytotal_cons);
                         // Used water m3
                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
+						module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
+						
                     }
                                         
                     if (value_s2 == 'water' ) {
-                    	  // var water_current_cons = ( callback[0].s2.po ); // Water used via S1 $energylink[0]['s1']['po']
+                    	var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
                         var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
                         console.log("Water- " + water_daytotal_cons);
                         // Used water m3
                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
+						module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
                     }   
                     
                     // Trigger flows

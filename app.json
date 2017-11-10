@@ -379,7 +379,7 @@
 		},
 		"class": "sensor",
 		"capabilities": [
-			"meter_power.used", "meter_power.aggr", "meter_power.s1", "meter_gas", "measure_power.used", "measure_power.s1", "meter_water"
+			"meter_power.used", "meter_power.aggr", "meter_power.s1", "meter_gas", "measure_power.used", "measure_power.s1", "meter_water", "measure_water"
 		],
 
 		"capabilitiesOptions": {
@@ -424,8 +424,14 @@
 			},
 			"meter_water": {
 				"title": {
-					"en": "Water",
-					"nl": "Water"
+					"en": "Water Total",
+					"nl": "Water Totaal"
+				}
+			},
+			"measure_water": {
+				"title": {
+					"en": "Water l./m",
+					"nl": "Water l./m"
 				}
 			}
 		},
@@ -498,6 +504,51 @@
 				"title": {
 					"en": "Power current",
 					"nl": "Huidig vermogen"
+				}
+
+			}
+
+		},
+
+		"pair": [{
+			"id": "start"
+		}, {
+			"id": "list_my_devices",
+			"template": "list_devices",
+			"navigation": {
+				"next": "add_my_devices"
+			}
+		}, {
+			"id": "add_my_devices",
+			"template": "add_devices"
+		}]
+	}, {
+		"id": "rainmeter",
+		"name": {
+			"en": "Rainmeter",
+			"nl": "Regen meter"
+		},
+		"images": {
+			"large": "drivers/rainmeter/assets/images/large.jpg",
+			"small": "drivers/rainmeter/assets/images/small.jpg"
+		},
+		"class": "sensor",
+		"capabilities": [
+			"measure_rain"
+		],
+
+		"capabilitiesOptions": {
+			"measure_rain.3h": {
+				"title": {
+					"en": "Last 3 hours rain",
+					"nl": "Laatste 3 uur regen"
+				}
+			},
+
+			"measure_rain.total": {
+				"title": {
+					"en": "Rainfall today",
+					"nl": "Regenval vandaag"
 				}
 
 			}

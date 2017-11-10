@@ -96,12 +96,15 @@ module.exports.deleted = function( device_data ) {
 
 // SCENES
 Homey.manager('flow').on('action.switch_scene_on.scene.autocomplete', function( callback, args ){
+	Homey.log('getScenes autocomplete called');
     homewizard.getScenes(args, function(err, response) {
       callback(err, response ); // err, results
     });
 });
 
 Homey.manager('flow').on('action.switch_scene_on', function( callback, args ){
+	Homey.log('args.device.id: ' + JSON.stringify(args.device.id));
+	Homey.log('args.scene.id: ' + JSON.stringify(args.scene.id));
     homewizard.call(args.device.id, '/gp/' + args.scene.id + '/on', function(err, response) {
       if (err === null) {
         Homey.log('Scene is on');

@@ -12,7 +12,7 @@ module.exports = (function(){
       "switches":[],
       "uvmeters":[],
       "windmeters":[],
-      "rainmeters":[],
+      "rainmeters":[{"id":1,"name":"Regenmeter","code":"6996438","model":1,"lowBattery":"no","version":2.32,"mm":0.0,"3h":0.0,"favorite":"no"}],
       "thermometers":[
          {"id":1,"name":"Kantoor","channel":2,"model":0,"te":20.0,"hu":5,"te+":20.4,"te+t":"12:15","te-":19.6,"te-t":"07:06","hu+":5,"hu+t":"00:00","hu-":5,"hu-t":"00:00","outside":"no","favorite":"no"},
          {"id":2,"name":"Slaapkamer","channel":5,"model":0,"te":18.8,"hu":47,"te+":19.1,"te+t":"09:06","te-":17.7,"te-t":"11:34","hu+":49,"hu+t":"07:39","hu-":43,"hu-t":"10:51","outside":"no","favorite":"no"}
@@ -106,10 +106,10 @@ module.exports = (function(){
    };
    
    homewizard.getScenes = function(args, callback) {
-      this.call(args.args.device.data.id, '/gplist', function(err, response) {
+     this.call(args.args.device.data.id, '/gplist', function(err, response) {
         if (err === null) {
           var output = [];
-          for (var i = 0, len = response.length; i < len; i++) {
+	      for (var i = 0, len = response.length; i < len; i++) {
               if (response[i].name.toLowerCase().indexOf(args.query.toLowerCase()) !== -1) {
                   output[output.length] = response[i];
               }
@@ -119,7 +119,7 @@ module.exports = (function(){
           }  
         } else {
           callback(err); // err
-        }
+	    }
       });
    };
    
@@ -160,7 +160,7 @@ module.exports = (function(){
                self.devices[device_id].polldata.energylinks = response.energylinks;
                self.devices[device_id].polldata.energymeters = response.energymeters;
                self.devices[device_id].polldata.thermometers = response.thermometers;
-               
+			   self.devices[device_id].polldata.rainmeters = response.rainmeters;
                Homey.log('HW-Data polled for: '+device_id);
             }
          });
