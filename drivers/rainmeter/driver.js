@@ -76,14 +76,25 @@ module.exports.deleted = function( device_data ) {
 };
 
 module.exports.capabilities = {
-    measure_rain: {
+    "measure_rain.last3h": {
         get: function (device_data, callback) {
             var device = devices[device_data.id];
 
             if (device === undefined) {
                 callback(null, 0);
             } else {
-                callback(null, device.raintotal);
+                callback(null, device.last_rainlast3h);
+            }
+        }
+    },
+	"measure_rain.total": {
+        get: function (device_data, callback) {
+            var device = devices[device_data.id];
+
+            if (device === undefined) {
+                callback(null, 0);
+            } else {
+                callback(null, device.last_raintotal);
             }
         }
     }
@@ -108,18 +119,17 @@ function getStatus(device_id) {
         homewizard.getDeviceData(homewizard_id, 'rainmeters', function(callback) {
             if (Object.keys(callback).length > 0) {
                 try {
+					Homey.log ("Callback: ") + JSON.stringify(callback);
                     module.exports.setAvailable({id: device_id});
-					var hours3 = "3h";
 					var rain_daytotal = ( callback[0].mm ); // Total Rain in mm used JSON $rainmeters[0]['mm']
-                    var rain_last3h = ( callback[0].hours3 ); // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
-                    
-                     // Rain last 3 hours
-                     module.exports.realtime( { id: device_id }, "measure_rain.3h", rain_last3h );
-                     // Rain total day
-                     module.exports.realtime( { id: device_id }, "measure_rain.total", rain_daytotal );
+                    var rain_last3h = ( callback[0]['3h'] ); // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
+                    // Rain last 3 hours
+                    module.exports.realtime( { id: device_id }, "measure_rain.last3h", rain_last3h );
+                    // Rain total day
+                    module.exports.realtime( { id: device_id }, "measure_rain.total", rain_daytotal );
                      
-                     console.log("Rainmeter 3h- "+ rain_last3h); 
-                     console.log("Rainmeter Daytotal- "+ rain_daytotal); 
+                    console.log("Rainmeter 3h- "+ rain_last3h); 
+                    console.log("Rainmeter Daytotal- "+ rain_daytotal); 
                 } catch (err) {
                     // Error with Rain no data in Rainmeters 
                     console.log ("No Rainmeter found");

@@ -12,7 +12,7 @@ module.exports = (function(){
       "switches":[],
       "uvmeters":[],
       "windmeters":[],
-      "rainmeters":[{"id":1,"name":"Regenmeter","code":"6996438","model":1,"lowBattery":"no","version":2.32,"mm":0.0,"3h":0.0,"favorite":"no"}],
+      "rainmeters":[{"id":1,"name":"Regenmeter","code":"6996438","model":1,"lowBattery":"no","version":2.32,"mm":3.0,"3h":1.0,"favorite":"no"}],
       "thermometers":[
          {"id":1,"name":"Kantoor","channel":2,"model":0,"te":20.0,"hu":5,"te+":20.4,"te+t":"12:15","te-":19.6,"te-t":"07:06","hu+":5,"hu+t":"00:00","hu-":5,"hu-t":"00:00","outside":"no","favorite":"no"},
          {"id":2,"name":"Slaapkamer","channel":5,"model":0,"te":18.8,"hu":47,"te+":19.1,"te+t":"09:06","te-":17.7,"te-t":"11:34","hu+":49,"hu+t":"07:39","hu-":43,"hu-t":"10:51","outside":"no","favorite":"no"}
