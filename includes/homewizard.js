@@ -165,7 +165,7 @@ module.exports = (function(){
                self.devices[device_id].polldata.thermometers = response.thermometers;
                self.devices[device_id].polldata.rainmeters = response.rainmeters;
             
-               if (Object.keys(response.energylinks) !== 0) {
+               if (Object.keys(response.energylinks).length !== 0) {
                   homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
                      if (err === null) {
                         self.devices[device_id].polldata.energylink_el = response2.el;
