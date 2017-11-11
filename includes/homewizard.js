@@ -19,6 +19,7 @@ module.exports = (function(){
       ],
       "weatherdisplays":[],
       "energymeters": [],
+	  //"energylinks": [], 
       "energylinks": [
          {"id":0,"favorite":"no","name":"EnergyLink","code":"942991","t1":"solar","c1":1000,"t2":"water","c2":1,"tariff":1,"s1":{"po":0,"dayTotal":10.24,"po+":2498,"po+t":"11:22","po-":0,"po-t":"00:01"},"s2":{"po":4,"dayTotal":162.00,"po+":7,"po+t":"08:49","po-":0,"po-t":"00:01"},"aggregate":{"po":511,"dayTotal":-3.19,"po+":2873,"po+t":"09:22","po-":-1857,"po-t":"11:55"},"used":{"po":511,"dayTotal":7.04,"po+":3791,"po+t":"11:45","po-":204,"po-t":"16:34"},"gas":{"lastHour":0.44,"dayTotal":4.07},"kwhindex":2.87,"wp":3570}
       ],
@@ -106,7 +107,9 @@ module.exports = (function(){
    };
    
    homewizard.getScenes = function(args, callback) {
-     this.call(args.args.device.data.id, '/gplist', function(err, response) {
+	  this.call(args.args.device.data.id, '/gplist', function(err, response) {
+	    Homey.log('Error: '+err);
+		Homey.log('Response: '+response);
         if (err === null) {
           var output = [];
 	      for (var i = 0, len = response.length; i < len; i++) {
@@ -162,8 +165,22 @@ module.exports = (function(){
                self.devices[device_id].polldata.thermometers = response.thermometers;
 			   self.devices[device_id].polldata.rainmeters = response.rainmeters;
                Homey.log('HW-Data polled for: '+device_id);
+		 	   Homey.log('typeof: ' +typeof self.devices[device_id].polldata.energylinks);
+			   Homey.log('Object details: ' +JSON.stringify(self.devices[device_id].polldata.energylinks));
+			// Object details: []
+			   if (Object.keys(self.devices[device_id].polldata.energylinks).length === 2 && self.devices[device_id].polldata.energylinks.constructor === Object) {Homey.log('Object has no data')};
+			   if (JSON.stringify(self.devices[device_id].polldata.energylinks) == "[]") {Homey.log('Object has no data')};
+		 	   if (JSON.stringify(self.devices[device_id].polldata.energylinks) != "[]") {  // if (self.devices[device_id].polldata.energylinks === null)
+		     		homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+               		if (err === null) {
+                  		self.devices[device_id].polldata.energylink_el = response2.el;
+                  		Homey.log('HW-Data polled for slimme meter: '+device_id);
+               		}
+		  		});
+	    		}
             }
          });
+
       });
    };
    
