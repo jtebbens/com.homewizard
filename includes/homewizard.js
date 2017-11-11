@@ -163,21 +163,16 @@ module.exports = (function(){
                self.devices[device_id].polldata.energylinks = response.energylinks;
                self.devices[device_id].polldata.energymeters = response.energymeters;
                self.devices[device_id].polldata.thermometers = response.thermometers;
-			   self.devices[device_id].polldata.rainmeters = response.rainmeters;
-               Homey.log('HW-Data polled for: '+device_id);
-		 	   Homey.log('typeof: ' +typeof self.devices[device_id].polldata.energylinks);
-			   Homey.log('Object details: ' +JSON.stringify(self.devices[device_id].polldata.energylinks));
-			// Object details: []
-			   if (Object.keys(self.devices[device_id].polldata.energylinks).length === 2 && self.devices[device_id].polldata.energylinks.constructor === Object) {Homey.log('Object has no data')};
-			   if (JSON.stringify(self.devices[device_id].polldata.energylinks) == "[]") {Homey.log('Object has no data')};
-		 	   if (JSON.stringify(self.devices[device_id].polldata.energylinks) != "[]") {  // if (self.devices[device_id].polldata.energylinks === null)
-		     		homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
-               		if (err === null) {
-                  		self.devices[device_id].polldata.energylink_el = response2.el;
-                  		Homey.log('HW-Data polled for slimme meter: '+device_id);
-               		}
-		  		});
-	    		}
+               self.devices[device_id].polldata.rainmeters = response.rainmeters;
+            
+               if (Object.keys(response.energylinks) !== 0) {
+                  homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+                     if (err === null) {
+                        self.devices[device_id].polldata.energylink_el = response2.el;
+                        Homey.log('HW-Data polled for slimme meter: '+device_id);
+                     }
+                  });
+               }
             }
          });
 
