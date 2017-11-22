@@ -11,7 +11,7 @@ module.exports = (function(){
       "time":"2017-01-21 20:07",
       "switches":[],
       "uvmeters":[],
-      "windmeters":[],
+      "windmeters":[{"id":4,"name":"Windmeter","code":"7001251","model":1,"lowBattery":"no","version":2.32,"unit":0,"ws":1.4,"dir":"SW 225","gu":3.5,"wc":26.1,"te":26.1,"ws+":3.0,"ws+t":"13:08","ws-":0.0,"ws-t":"00:00","favorite":"no"}],
       "rainmeters":[{"id":1,"name":"Regenmeter","code":"6996438","model":1,"lowBattery":"no","version":2.32,"mm":3.0,"3h":1.0,"favorite":"no"}],
       "thermometers":[
          {"id":1,"name":"Kantoor","channel":2,"model":0,"te":20.0,"hu":5,"te+":20.4,"te+t":"12:15","te-":19.6,"te-t":"07:06","hu+":5,"hu+t":"00:00","hu-":5,"hu-t":"00:00","outside":"no","favorite":"no"},
