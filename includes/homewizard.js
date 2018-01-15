@@ -168,7 +168,7 @@ module.exports = (function(){
                if (Object.keys(response.energylinks).length !== 0) {
                   homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
                      if (err === null) {
-                        self.devices[device_id].polldata.energylink_el = response2.el;
+                        self.devices[device_id].polldata.energylink_el = response2;
                         Homey.log('HW-Data polled for slimme meter: '+device_id);
                      }
                   });
