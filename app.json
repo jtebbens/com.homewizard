@@ -424,7 +424,7 @@
 			"meter_gas.reading": {
 				"title": {
 					"en": "Meter reading gas",
-					"nl": "Meterstand Gas"
+					"nl": "Stand Gas"
 				}
 			},
 			"meter_water": {
@@ -442,7 +442,7 @@
 			"meter_power.consumed.t1": {
 				"title": {
 					"en": "Meter reading low",
-					"nl": "Meterstand laag tarief"
+					"nl": "Stand laag tarief"
 				}
 			},
 			"meter_power.produced.t1": {
@@ -454,7 +454,7 @@
 			"meter_power.consumed.t2": {
 				"title": {
 					"en": "Meter reading normal",
-					"nl": "Meterstand verbruik normaal"
+					"nl": "Stand verbruik normaal"
 				}
 			},
 			"meter_power.produced.t2": {

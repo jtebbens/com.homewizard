@@ -206,7 +206,7 @@ function startPolling() {
             getStatus(device_id);
         });
     }, 1000 * 10);
-    
+
     // Request readings every minute
     refreshIntervalIdReadings = setInterval(function () {
         console.log("--Start Energylink Readings Polling-- ");
