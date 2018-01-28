@@ -1,6 +1,7 @@
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
 var refreshIntervalId = 0;
+var refreshIntervalIdReadings = 0;
 
 // SETTINGS
 module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
@@ -164,6 +165,28 @@ module.exports.capabilities = {
                 callback(null, device.last_measure_water);
             }
         }
+    },
+    "meter_reading_consumed.tarrif1": {
+        get: function (device_data, callback) {
+            var device = devices[device_data.id];
+
+            if (device === undefined) {
+                callback(null, 0);
+            } else {
+                callback(null, device.last_meter_reading_consumed_t2);
+            }
+        }
+    },
+    "meter_reading_consumed.tarrif2": {
+        get: function (device_data, callback) {
+            var device = devices[device_data.id];
+
+            if (device === undefined) {
+                callback(null, 0);
+            } else {
+                callback(null, device.last_meter_reading_consumed_t1);
+            }
+        }
     }
 
 };
@@ -173,12 +196,24 @@ function startPolling() {
     if(refreshIntervalId){
         clearInterval(refreshIntervalId);
     }
+    if(refreshIntervalIdReadings){
+        clearInterval(refreshIntervalIdReadings);
+    }
+
     refreshIntervalId = setInterval(function () {
         console.log("--Start Energylink Polling-- ");
         Object.keys(devices).forEach(function (device_id) {
             getStatus(device_id);
         });
     }, 1000 * 10);
+
+    // Request readings every minute
+    refreshIntervalIdReadings = setInterval(function () {
+        console.log("--Start Energylink Readings Polling-- ");
+        Object.keys(devices).forEach(function (device_id) {
+            getReadings(device_id);
+        });
+    }, 1000 * 60);
 }
 
 function getStatus(device_id) {
@@ -204,7 +239,7 @@ function getStatus(device_id) {
                     try {
                            var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
                             // Consumed gas      
-                           module.exports.realtime( { id: device_id }, "meter_gas", gas_daytotal_cons );
+                           module.exports.realtime( { id: device_id }, "meter_gas.today", gas_daytotal_cons );
                     }
                     catch(err) {
                       // Error with Energylink no data in Energylink
@@ -218,27 +253,32 @@ function getStatus(device_id) {
                     // Consumed elec total day
                     module.exports.realtime( { id: device_id }, "meter_power.aggr", energy_daytotal_aggr );
 
-                    
+                    // Set solar used to zero before counting
+                    var solar_current_prod = 0;
+                    var solar_daytotal_prod = 0;
+
                     if (value_s1 == 'solar' ) {
-                    	  var energy_current_prod = ( callback[0].s1.po ); // WATTS Energy produced via S1 $energylink[0]['s1']['po']
+                        var energy_current_prod = ( callback[0].s1.po ); // WATTS Energy produced via S1 $energylink[0]['s1']['po']
                         var energy_daytotal_prod = ( callback[0].s1.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s1']['po']
-                        
-                        // Produced elec current
-                        module.exports.realtime( { id: device_id }, "measure_power.s1", energy_current_prod );
-                        // Produced elec total day
-                        module.exports.realtime( { id: device_id }, "meter_power.s1", energy_daytotal_prod );
+
+                        var solar_current_prod = solar_current_prod + energy_current_prod;
+                        var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
+
                     }
                     
                     if (value_s2 == 'solar' ) {
-                    	  var energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
+                        var energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
                         var energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
-                        
-                        // Produced elec current
-                        module.exports.realtime( { id: device_id }, "measure_power.s2", energy_current_prod );
-                        // Produced elec total day
-                        module.exports.realtime( { id: device_id }, "meter_power.s2", energy_daytotal_prod );
+
+                        var solar_current_prod = solar_current_prod + energy_current_prod;
+                        var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
                     }
-                    
+
+                    if(value_s1 == 'solar' || value_s2 == 'solar') {
+                        module.exports.realtime( { id: device_id }, "measure_power.s1", solar_current_prod );
+                        module.exports.realtime( { id: device_id }, "meter_power.s1", solar_daytotal_prod );
+                    }
+
                     if (value_s1 == 'water' ) {
                     	var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
                         var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
@@ -264,16 +304,16 @@ function getStatus(device_id) {
                         Homey.manager('flow').triggerDevice('power_used_changed', { power_used: energy_current_cons }, null, { id: device_id } );
                     }
                     if (energy_current_prod != devices[device_id].last_measure_power_s1) {
-                        console.log("Current S1 - "+ energy_current_prod);
-                        Homey.manager('flow').triggerDevice('power_s1_changed', { power_s1: energy_current_prod }, null, { id: device_id } );
+                        console.log("Current S1 - "+ solar_current_prod);
+                        Homey.manager('flow').triggerDevice('power_s1_changed', { power_s1: solar_current_prod }, null, { id: device_id } );
                     }
                     if (energy_daytotal_cons != devices[device_id].last_meter_power_used) {
                         console.log("Used Daytotal- "+ energy_daytotal_cons);                                
                         Homey.manager('flow').triggerDevice('meter_power_used_changed', { power_daytotal_used: energy_daytotal_cons }, null, { id: device_id });
                     }
                     if (energy_daytotal_prod != devices[device_id].last_meter_power_s1) {                                
-                        console.log("S1 Daytotal- "+ energy_daytotal_prod);                                
-                        Homey.manager('flow').triggerDevice('meter_power_s1_changed', { power_daytotal_s1: energy_daytotal_prod }, null, { id: device_id });                                                                                    
+                        console.log("S1 Daytotal- "+ solar_daytotal_prod);
+                        Homey.manager('flow').triggerDevice('meter_power_s1_changed', { power_daytotal_s1: solar_daytotal_prod }, null, { id: device_id });
                     }
                     if (energy_daytotal_aggr != devices[device_id].last_meter_power_aggr) {
                         console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);                                
@@ -296,6 +336,52 @@ function getStatus(device_id) {
         // In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
         if(Object.keys(devices).length === 1) {
             clearInterval(refreshIntervalId);
+        }
+    }
+}
+
+
+function getReadings(device_id) {
+
+    if(devices[device_id].settings.homewizard_id !== undefined ) {
+
+        var homewizard_id = devices[device_id].settings.homewizard_id;
+        homewizard.getDeviceData(homewizard_id, 'energylink_el', function(callback) {
+
+            if (Object.keys(callback).length > 0) {
+
+                try {
+                    module.exports.setAvailable({id: device_id})
+
+                    var metered_gas = callback[2].consumed;
+                    var metered_electricity_consumed_t1 = callback[0].consumed;
+                    var metered_electricity_produced_t1 = callback[0].produced;
+                    var metered_electricity_consumed_t2 = callback[1].consumed;
+                    var metered_electricity_produced_t2 = callback[1].produced;
+
+                    // Save export data
+                    module.exports.realtime( { id: device_id }, "meter_gas.reading", metered_gas );
+                    module.exports.realtime( { id: device_id }, "meter_power.consumed.t1", metered_electricity_consumed_t1 );
+                    module.exports.realtime( { id: device_id }, "meter_power.produced.t1", metered_electricity_produced_t1 );
+                    module.exports.realtime( { id: device_id }, "meter_power.consumed.t2", metered_electricity_consumed_t2 );
+                    module.exports.realtime( { id: device_id }, "meter_power.produced.t2", metered_electricity_produced_t2 );
+
+                }
+                catch (err) {
+                    // Error with Energylink no data in Energylink
+                    console.log("No Energylink found");
+                    module.exports.setUnavailable({id: device_id}, "No Energylink found");
+                }
+            }
+        });
+    } else {
+        Homey.log('Removed Energylink '+ device_id +' (wrong settings)');
+        module.exports.setUnavailable({id: device_id}, "No Energylink found" );
+        // Only clear interval when the unavailable device is the only device on this driver
+        // This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+        // In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
+        if(Object.keys(devices).length === 1) {
+            clearInterval(refreshIntervalIdReadings);
         }
     }
 }
