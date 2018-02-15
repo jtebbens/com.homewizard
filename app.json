@@ -48,14 +48,16 @@
 					"title": {
 						"en": "Preset",
 						"nl": "Preset"
-					}
+					},
+					"example": 1,
 				}, {
 					"name": "preset_text",
 					"type": "string",
 					"title": {
 						"en": "Text",
 						"nl": "Tekst"
-					}
+					},
+					"example": "Home",
 				}]
 			}, {
 				"id": "power_used_changed",
@@ -78,7 +80,8 @@
 					"title": {
 						"en": "Watt",
 						"nl": "Watt"
-					}
+					},
+					"example": 15,
 				}]
 			}, {
 				"id": "power_s1_changed",
@@ -101,7 +104,8 @@
 					"title": {
 						"en": "Watt",
 						"nl": "Watt"
-					}
+					},
+					"example": 15,
 				}]
 			}, {
 				"id": "meter_power_used_changed",
@@ -124,7 +128,8 @@
 					"title": {
 						"en": "kWh",
 						"nl": "kWh"
-					}
+					},
+					"example": 1,
 				}]
 			}, {
 				"id": "meter_power_aggregated_changed",
@@ -148,6 +153,7 @@
 						"en": "kWh",
 						"nl": "kWh"
 					}
+					"example": 1,
 				}]
 			}, {
 				"id": "meter_power_s1_changed",
@@ -170,7 +176,8 @@
 					"title": {
 						"en": "kWh",
 						"nl": "kWh"
-					}
+					},
+					"example": 1,
 				}]
 			}
 		],
