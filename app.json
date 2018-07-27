@@ -3,8 +3,8 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.1.6",
-	"compatibility": ">=0.9",
+	"version": "0.1.7",
+	"compatibility": ">=1.5",
 	"description": {
 		"en": "Control HomeWizard using Homey"
 	},
@@ -173,7 +173,6 @@
 					}
 				}]
 			}
-
 		],
 		"conditions": [{
 			"id": "check_preset",
@@ -379,7 +378,7 @@
 		},
 		"class": "sensor",
 		"capabilities": [
-			"meter_power.used", "meter_power.aggr", "meter_power.s1", "meter_gas", "measure_power.used", "measure_power.s1", "meter_water", "measure_water"
+			"meter_power.used", "meter_power.aggr", "meter_power.s1", "measure_power.used", "measure_power.s1",  "meter_gas.today", "meter_gas.reading", "meter_water", "measure_water","meter_power.consumed.t1","meter_power.produced.t1","meter_power.consumed.t2","meter_power.produced.t2"
 		],
 
 		"capabilitiesOptions": {
@@ -414,12 +413,17 @@
 					"en": "Solar current",
 					"nl": "Huidige opbrengst"
 				}
-
 			},
-			"meter_gas": {
+			"meter_gas.today": {
 				"title": {
 					"en": "Gas",
 					"nl": "Gas"
+				}
+			},
+			"meter_gas.reading": {
+				"title": {
+					"en": "Meter reading gas",
+					"nl": "Stand Gas"
 				}
 			},
 			"meter_water": {
@@ -432,6 +436,30 @@
 				"title": {
 					"en": "Water l./m",
 					"nl": "Water l./m"
+				}
+			},
+			"meter_power.consumed.t1": {
+				"title": {
+					"en": "Meter reading low",
+					"nl": "Stand laag tarief"
+				}
+			},
+			"meter_power.produced.t1": {
+				"title": {
+					"en": "Meter reading produced low",
+					"nl": "Stand terug levering laag"
+				}
+			},
+			"meter_power.consumed.t2": {
+				"title": {
+					"en": "Meter reading normal",
+					"nl": "Stand verbruik normaal"
+				}
+			},
+			"meter_power.produced.t2": {
+				"title": {
+					"en": "Meter reading produced normal",
+					"nl": "Stand terug levering normaal"
 				}
 			}
 		},
@@ -552,7 +580,6 @@
 				}
 
 			}
-
 		},
 
 		"pair": [{
