@@ -8,6 +8,10 @@ This app let's you connect your HomeWizard to Homey. You can add your HomeWizard
 
 [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4653ZKTPTPSLW)
 
+v0.1.8:
+* Added windmeter
+* Changed device class to make it work on Homey V2
+
 v0.1.7:
 * Save readings from your smart meter
 * Fixed EnergyLink not correctly saving solar from S2 port.

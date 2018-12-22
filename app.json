@@ -3,7 +3,7 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"compatibility": ">=1.5",
 	"description": {
 		"en": "Control HomeWizard using Homey"
@@ -300,7 +300,7 @@
 			"large": "drivers/homewizard/assets/images/large.jpg",
 			"small": "drivers/homewizard/assets/images/small.jpg"
 		},
-		"class": "appliances",
+		"class": "other",
 		"capabilities": [],
 		"pair": [{
 			"id": "start"
