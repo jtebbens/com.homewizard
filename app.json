@@ -3,7 +3,7 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"compatibility": ">=1.5",
 	"description": {
 		"en": "Control HomeWizard using Homey"
@@ -29,6 +29,13 @@
 			"email": "jeroen@tebbens.net"
 		}]
 	},
+	"contributing": {
+		"donate": {
+		  "paypal": {
+			"username": "jeroenbos22"
+		  }
+		}
+	},
 	"flow": {
 		"triggers": [{
 				"id": "preset_changed",
@@ -48,14 +55,16 @@
 					"title": {
 						"en": "Preset",
 						"nl": "Preset"
-					}
+					},
+					"example": 1
 				}, {
 					"name": "preset_text",
 					"type": "string",
 					"title": {
 						"en": "Text",
 						"nl": "Tekst"
-					}
+					},
+					"example": "Home"
 				}]
 			}, {
 				"id": "power_used_changed",
@@ -78,7 +87,8 @@
 					"title": {
 						"en": "Watt",
 						"nl": "Watt"
-					}
+					},
+					"example": 15
 				}]
 			}, {
 				"id": "power_s1_changed",
@@ -101,7 +111,8 @@
 					"title": {
 						"en": "Watt",
 						"nl": "Watt"
-					}
+					},
+					"example": 15
 				}]
 			}, {
 				"id": "meter_power_used_changed",
@@ -124,7 +135,8 @@
 					"title": {
 						"en": "kWh",
 						"nl": "kWh"
-					}
+					},
+					"example": 1
 				}]
 			}, {
 				"id": "meter_power_aggregated_changed",
@@ -147,7 +159,8 @@
 					"title": {
 						"en": "kWh",
 						"nl": "kWh"
-					}
+					},
+					"example": 1
 				}]
 			}, {
 				"id": "meter_power_s1_changed",
@@ -170,7 +183,8 @@
 					"title": {
 						"en": "kWh",
 						"nl": "kWh"
-					}
+					},
+					"example": 1
 				}]
 			}
 		],
@@ -293,7 +307,7 @@
 			"large": "drivers/homewizard/assets/images/large.jpg",
 			"small": "drivers/homewizard/assets/images/small.jpg"
 		},
-		"class": "appliances",
+		"class": "other",
 		"capabilities": [],
 		"pair": [{
 			"id": "start"

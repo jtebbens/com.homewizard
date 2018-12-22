@@ -3,10 +3,9 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section. Once done it will show up in the flow-editor, ready to be used!
 
 
-
-**If you like this app, then consider to buy me a beer :)**
-
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4653ZKTPTPSLW)
+v0.1.8:
+* Added windmeter
+* Changed device class to make it work on Homey V2
 
 v0.1.7:
 * Save readings from your smart meter
@@ -76,3 +75,8 @@ V0.0.1:
 
 * Use HomeWizard’s preset as a condition in flows
 * Set HomeWizard’s preset as action in flows
+
+
+**If you like this app, then consider to buy me a beer :)**
+
+[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4653ZKTPTPSLW)
