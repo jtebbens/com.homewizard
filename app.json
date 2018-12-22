@@ -29,6 +29,13 @@
 			"email": "jeroen@tebbens.net"
 		}]
 	},
+	"contributing": {
+		"donate": {
+		  "paypal": {
+			"username": "jeroenbos22"
+		  }
+		}
+	},
 	"flow": {
 		"triggers": [{
 				"id": "preset_changed",
