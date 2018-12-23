@@ -3,7 +3,7 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section. Once done it will show up in the flow-editor, ready to be used!
 
 
-v0.1.8:
+v0.2.0:
 * Added windmeter
 * Changed device class to make it work on Homey V2
 
