@@ -176,17 +176,28 @@ function getStatus(device_id) {
                 try {
 					Homey.log ("Callback: ") + JSON.stringify(callback);
                     module.exports.setAvailable({id: device_id});
+					console.log ("Start capture var data");
 					var wind_angle_tmp = ( callback[0].dir ); // $windmeters[0]['dir'] SW 225
-					var wind_angle = parseInt(wind_angle_tmp); // Capture only the angle portion (number)
+					var wind_angle = wind_angle_tmp.split(" ");
+					//var wind_angle = parseInt(wind_angle_tmp); // Capture only the angle portion (number)
 					var wind_strength_current = ( callback[0].ws ); // $windmeters[0]['ws'] Windspeed in km/h
 					var wind_strength_min = ( callback[0]["ws-"] ); // $windmeters[0]['ws-'] Min Windspeed in km/h
 					var wind_strength_max = ( callback[0]["ws+"] ); // $windmeters[0]['ws+'] Max Windspeed in km/h
                     var gust_strength = ( callback[0].gu ); // $windmeters[0]['gu'] Gust speed in km/h
 					var temp_real = ( callback[0].te ); // $windmeters[0]['te'] Temperature
-					var temp_windchill = ( callback[0].wc ); // $windmeters[0]['wc'] Windchill temperature
+					var temp_windchill = ( callback[0].wc); // $windmeters[0]['wc'] Windchill temperature
+					console.log ("End capture var data");
 					// Export the data
+					// Console data
+					console.log("Windangle in degrees: "+ wind_angle[1]); 
+                    console.log("Windspeed in km/u: "+ wind_strength_current); 
+					console.log("Min Windspeed in km/u: "+ wind_strength_min);
+					console.log("Min Windspeed in km/u: "+ wind_strength_max);
+					console.log("Gust strength in km/u: "+ gust_strength);
+					console.log("Temperature current: "+ temp_real);
+					console.log("Temperature windchill: "+ temp_windchill);
                     // Wind angle
-                    module.exports.realtime( { id: device_id }, "measure_wind_angle", wind_angle );
+					module.exports.realtime( { id: device_id }, "measure_wind_angle", wind_angle[1] );
                     // Wind speed current
                     module.exports.realtime( { id: device_id }, "measure_wind_strength.cur", wind_strenght_current );
 					// Wind speed min
@@ -200,13 +211,13 @@ function getStatus(device_id) {
 					// Temp Windchill
                     module.exports.realtime( { id: device_id }, "measure_temperature.windchill", temp_windchill );
 					// Console data
-					console.log("Windangle in degrees: "+ wind_angle); 
+					console.log("Windangle in degrees: "+ wind_angle[1]); 
                     console.log("Windspeed in km/u: "+ wind_strength_current); 
 					console.log("Min Windspeed in km/u: "+ wind_strength_min);
 					console.log("Min Windspeed in km/u: "+ wind_strength_max);
 					console.log("Gust strength in km/u: "+ gust_strength);
 					console.log("Temperature current: "+ temp_real);
-					console.log("Temperature windchill: "+ gust_strength);
+					console.log("Temperature windchill: "+ temp_windchill);
                 } catch (err) {
                     // Error with Wind no data in Rainmeters 
                     console.log ("No Windmeter found");
