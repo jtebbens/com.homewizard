@@ -3,6 +3,10 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section. Once done it will show up in the flow-editor, ready to be used!
 
 
+v0.1.9:
+* Fixed windmeter
+* Added Heatlink action card to turn off Heatlink and make your room thermostat active again
+
 v0.1.8:
 * Added windmeter
 * Changed device class to make it work on Homey V2
