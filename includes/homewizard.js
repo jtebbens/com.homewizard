@@ -11,7 +11,7 @@ module.exports = (function(){
       "time":"2017-01-21 20:07",
       "switches":[],
       "uvmeters":[],
-      "windmeters":[],
+      "windmeters":[{"id":3,"name":"Windmeter","code":"6219442","model":1,"lowBattery":"no","version":2.32,"unit":0,"ws":4.1,"dir":"W 270","gu":7.8,"wc":19.6,"te":19.6,"ws+":12.8,"ws+t":"11:03","ws-":0.0,"ws-t":"01:45","favorite":"no"}],
       "rainmeters":[{"id":1,"name":"Regenmeter","code":"6996438","model":1,"lowBattery":"no","version":2.32,"mm":3.0,"3h":1.0,"favorite":"no"}],
       "thermometers":[
          {"id":1,"name":"Kantoor","channel":2,"model":0,"te":20.0,"hu":5,"te+":20.4,"te+t":"12:15","te-":19.6,"te-t":"07:06","hu+":5,"hu+t":"00:00","hu-":5,"hu-t":"00:00","outside":"no","favorite":"no"},
@@ -164,6 +164,7 @@ module.exports = (function(){
                self.devices[device_id].polldata.energymeters = response.energymeters;
                self.devices[device_id].polldata.thermometers = response.thermometers;
                self.devices[device_id].polldata.rainmeters = response.rainmeters;
+			   self.devices[device_id].polldata.windmeters = response.windmeters;
             
                if (Object.keys(response.energylinks).length !== 0) {
                   homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
