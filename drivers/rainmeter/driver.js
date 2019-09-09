@@ -132,9 +132,10 @@ function getStatus(device_id) {
                     console.log("Rainmeter Daytotal- "+ rain_daytotal);
 
                     // Trigger flows
-                    if (rain_daytotal != devices[device_id].last_raintotal) {
+                    if (rain_daytotal != devices[device_id].last_raintotal && rain_daytotal != 0) {
                         console.log("Current Total Rainfall - "+ rain_daytotal);
                         Homey.manager('flow').triggerDevice('rainmeter_value_changed', { rainmeter_changed: rain_daytotal }, null, { id: device_id } );
+                        devices[device_id].last_raintotal = rain_daytotal; // Update last_raintotal
                     }
 
                 } catch (err) {
