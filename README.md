@@ -2,6 +2,9 @@
 
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section. Once done it will show up in the flow-editor, ready to be used!
 
+v0.2.4:
+* Bugfix Rainmeter and EnergyLink triggers
+
 v0.2.2:
 * Rainmeter flow trigger added (Rainfall total based)
 
