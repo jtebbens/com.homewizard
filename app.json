@@ -3,7 +3,7 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"compatibility": ">=1.5",
 	"description": {
 		"en": "Control HomeWizard using Homey"
@@ -14,8 +14,8 @@
 		"small": "assets/images/small.jpg"
 	},
 	"author": {
-		"name": "Jeroen Bos",
-		"email": "jeroenbos22@gmail.com"
+		"name": "Jeroen Tebbens",
+		"email": "jeroen@tebbens.net"
 	},
 	"contributors": {
 		"developers": [{
@@ -32,7 +32,7 @@
 	"contributing": {
 		"donate": {
 		  "paypal": {
-			"username": "jeroenbos22"
+			"username": "jtebbens"
 		  }
 		}
 	},
@@ -186,6 +186,30 @@
 					},
 					"example": 1
 				}]
+			}, {
+				"id": "rainmeter_value_changed",
+				"title": {
+					"en": "Rainmeter value changed",
+					"nl": "Regenmeter waarde veranderd"
+				},
+				"args": [{
+					"name": "Rainmeter",
+					"type": "device",
+					"filter": "driver_id=rainmeter",
+					"placeholder": {
+						"en": "Which Rainmeter",
+						"nl": "Welke Regenmeter"
+					}
+				}],
+				"tokens": [{
+					"name": "rainmeter_changed",
+					"type": "number",
+					"title": {
+						"en": "mm",
+						"nl": "mm"
+					},
+					"example": 15
+				}]
 			}
 		],
 		"conditions": [{
@@ -306,7 +330,7 @@
 				"type": "device",
 				"filter": "driver_id=homewizard"
 			}]
-				
+
 		}]
 	},
 	"drivers": [{

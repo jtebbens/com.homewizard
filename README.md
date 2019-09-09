@@ -1,10 +1,12 @@
 # HomeWizard
-        
+
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section. Once done it will show up in the flow-editor, ready to be used!
 
+v0.2.2:
+* Rainmeter flow trigger added (Rainfall total based)
 
 v0.2.1:
-Windmeter fix and heatlink action card added
+* Windmeter fix and heatlink action card added
 
 v0.2.0:
 * Added windmeter
@@ -15,13 +17,13 @@ v0.1.7:
 * Fixed EnergyLink not correctly saving solar from S2 port.
 
 v0.1.6:
-* Added rainmeter 
+* Added rainmeter
 * SIDENOTE just as the Energylink, heatlink etc you need to add Rain and windmeter separately.
-  Verify homewizard has its windmeter units set to km/h else you get funny measures 
-  
+  Verify homewizard has its windmeter units set to km/h else you get funny measures
+
 v0.1.5: Bugfix for making scenes work again (big thanks to Jeroen Tebbens!)
 
-v0.1.3: 
+v0.1.3:
 Energylink updates:
 * s1 and s2 are now giving information on either solar or water (whatever is connected to it)
 * "Netto verbruik" feature added, it will now show the aggregated power usage which can be negative if your solarpanels do their job. ;)
@@ -30,7 +32,7 @@ Other updates:
 * Made fixes for app to work on 1.2.0 Firmware (Thermometer & Scenes)
 
 
-v0.1.2: 
+v0.1.2:
 Updated Polling method to avoid traffic overhead and timing issues
 
 V0.1.1:

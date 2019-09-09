@@ -11,7 +11,7 @@ module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj,
 		});
 		callback(null, true);
     } catch (error) {
-      callback(error); 
+      callback(error);
     }
 };
 
@@ -23,12 +23,12 @@ module.exports.pair = function( socket ) {
             Object.keys(homewizard_devices).forEach(function(key) {
                 hw_devices[key] = homewizard_devices[key];
             });
-            
+
             socket.emit('hw_devices', hw_devices);
         });
     });
-    
-    socket.on('manual_add', function (device, callback) {        
+
+    socket.on('manual_add', function (device, callback) {
         if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
             //true
             Homey.log('Rainmeter added ' + device.data.id);
@@ -39,12 +39,12 @@ module.exports.pair = function( socket ) {
             };
             callback( null, devices );
             socket.emit("success", device);
-            startPolling();   
+            startPolling();
         } else {
             socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
         }
     });
-    
+
     socket.on('disconnect', function(){
         console.log("User aborted pairing, or pairing is finished");
     });
@@ -127,11 +127,18 @@ function getStatus(device_id) {
                     module.exports.realtime( { id: device_id }, "measure_rain.last3h", rain_last3h );
                     // Rain total day
                     module.exports.realtime( { id: device_id }, "measure_rain.total", rain_daytotal );
-                     
-                    console.log("Rainmeter 3h- "+ rain_last3h); 
-                    console.log("Rainmeter Daytotal- "+ rain_daytotal); 
+
+                    console.log("Rainmeter 3h- "+ rain_last3h);
+                    console.log("Rainmeter Daytotal- "+ rain_daytotal);
+
+                    // Trigger flows
+                    if (rain_daytotal != devices[device_id].last_raintotal) {
+                        console.log("Current Total Rainfall - "+ rain_daytotal);
+                        Homey.manager('flow').triggerDevice('rainmeter_value_changed', { rainmeter_changed: rain_daytotal }, null, { id: device_id } );
+                    }
+
                 } catch (err) {
-                    // Error with Rain no data in Rainmeters 
+                    // Error with Rain no data in Rainmeters
                     console.log ("No Rainmeter found");
                     module.exports.setUnavailable({id: device_id}, "No Rainmeter found" );
                 }
@@ -148,5 +155,3 @@ function getStatus(device_id) {
         }
     }
 }
-
-
