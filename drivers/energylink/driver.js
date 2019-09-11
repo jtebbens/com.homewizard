@@ -12,25 +12,25 @@ module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj,
 		});
 		callback(null, true);
     } catch (error) {
-      callback(error); 
+      callback(error);
     }
 };
 
 module.exports.pair = function( socket ) {
     socket.on('get_homewizards', function () {
         homewizard.getDevices(function(homewizard_devices) {
-            
+
             Homey.log(homewizard_devices);
             var hw_devices = {};
             Object.keys(homewizard_devices).forEach(function(key) {
                 hw_devices[key] = homewizard_devices[key];
             });
-            
+
             socket.emit('hw_devices', hw_devices);
         });
     });
-    
-    socket.on('manual_add', function (device, callback) {        
+
+    socket.on('manual_add', function (device, callback) {
         if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
             //true
             Homey.log('Energylink added ' + device.data.id);
@@ -41,12 +41,12 @@ module.exports.pair = function( socket ) {
             };
             callback( null, devices );
             socket.emit("success", device);
-            startPolling();   
+            startPolling();
         } else {
             socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
         }
     });
-    
+
     socket.on('disconnect', function(){
         console.log("User aborted pairing, or pairing is finished");
     });
@@ -223,29 +223,29 @@ function getStatus(device_id) {
             if (Object.keys(callback).length > 0) {
                 try {
                     module.exports.setAvailable({id: device_id});
-                    
+
                     var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
                     var value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
-                    
+
                     console.log("t1- " + value_s1);
                     console.log("t2- " + value_s2);
-                    
-                    // Common Energylink data                 
+
+                    // Common Energylink data
                     var energy_current_cons = ( callback[0].used.po ); // WATTS Energy used JSON $energylink[0]['used']['po']
                     var energy_daytotal_cons = ( callback[0].used.dayTotal ); // KWH Energy used JSON $energylink[0]['used']['dayTotal']
                     var energy_daytotal_aggr = ( callback[0].aggregate.dayTotal ) ; // KWH Energy aggregated is used - generated $energylink[0]['aggregate']['dayTotal']
-                                       
+
                     // Some Energylink do not have gas information so try to get it else fail silently
                     try {
                            var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
-                            // Consumed gas      
+                            // Consumed gas
                            module.exports.realtime( { id: device_id }, "meter_gas.today", gas_daytotal_cons );
                     }
                     catch(err) {
                       // Error with Energylink no data in Energylink
                       console.log ("No Gas information found");
                     }
-                    
+
                     // Consumed elec current
                     module.exports.realtime( { id: device_id }, "measure_power.used", energy_current_cons );
                     // Consumed elec total day
@@ -265,7 +265,7 @@ function getStatus(device_id) {
                         var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 
                     }
-                    
+
                     if (value_s2 == 'solar' ) {
                         var energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
                         var energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
@@ -285,41 +285,46 @@ function getStatus(device_id) {
                         console.log("Water- " + water_daytotal_cons);
                         // Used water m3
                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
-						module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
-						
+						            module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
+
                     }
-                                        
+
                     if (value_s2 == 'water' ) {
                     	var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
                         var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
                         console.log("Water- " + water_daytotal_cons);
                         // Used water m3
                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
-						module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
-                    }   
-                    
+						            module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
+                    }
+
                     // Trigger flows
                     if (energy_current_cons != devices[device_id].last_measure_power_used) {
                         console.log("Current Power - "+ energy_current_cons);
                         Homey.manager('flow').triggerDevice('power_used_changed', { power_used: energy_current_cons }, null, { id: device_id } );
+                        devices[device_id].last_measure_power_used = energy_current_cons; // Update last_measure_power_used
                     }
                     if (energy_current_prod != devices[device_id].last_measure_power_s1) {
                         console.log("Current S1 - "+ solar_current_prod);
                         Homey.manager('flow').triggerDevice('power_s1_changed', { power_s1: solar_current_prod }, null, { id: device_id } );
+                        devices[device_id].last_measure_power_s1 = energy_current_prod; // Update last_measure_power_s1
                     }
                     if (energy_daytotal_cons != devices[device_id].last_meter_power_used) {
-                        console.log("Used Daytotal- "+ energy_daytotal_cons);                                
+                        console.log("Used Daytotal- "+ energy_daytotal_cons);
                         Homey.manager('flow').triggerDevice('meter_power_used_changed', { power_daytotal_used: energy_daytotal_cons }, null, { id: device_id });
+                        devices[device_id].last_meter_power_used = energy_daytotal_cons; // Update last_measure_power_used
                     }
-                    if (energy_daytotal_prod != devices[device_id].last_meter_power_s1) {                                
+                    if (energy_daytotal_prod != devices[device_id].last_meter_power_s1) {
                         console.log("S1 Daytotal- "+ solar_daytotal_prod);
                         Homey.manager('flow').triggerDevice('meter_power_s1_changed', { power_daytotal_s1: solar_daytotal_prod }, null, { id: device_id });
+                        devices[device_id].last_meter_power_s1 = energy_daytotal_prod; // Update last_meter_power_s1
                     }
                     if (energy_daytotal_aggr != devices[device_id].last_meter_power_aggr) {
-                        console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);                                
+                        console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
                         Homey.manager('flow').triggerDevice('meter_power_aggregated_changed', { power_daytotal_aggr: energy_daytotal_aggr }, null, { id: device_id });
+                        devices[device_id].last_meter_power_aggr = energy_daytotal_aggr; // Update last_meter_power_aggr
                     }
-                    
+
                 }
                 catch(err) {
                       // Error with Energylink no data in Energylink
