@@ -320,7 +320,7 @@ function getStatus(device_id) {
                     }
                     if (energy_current_netto != devices[device_id].last_measure_power_netto && energy_current_netto != undefined && energy_current_netto != null) {
                         console.log("Current Netto Power - "+ energy_current_netto);
-                        Homey.manager('flow').triggerDevice('power_netto_changed', { power_used: energy_current_netto }, null, { id: device_id } );
+                        Homey.manager('flow').triggerDevice('power_netto_changed', { netto_power_used: energy_current_netto }, null, { id: device_id } );
                         devices[device_id].last_measure_power_netto = energy_current_netto; // Update last_measure_power_netto
                     }
                     if (energy_current_prod != devices[device_id].last_measure_power_s1 && energy_current_prod != undefined && energy_current_prod != null) {
