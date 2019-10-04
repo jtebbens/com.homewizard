@@ -428,7 +428,7 @@
 		},
 		"class": "sensor",
 		"capabilities": [
-			"meter_power.used", "meter_power.aggr", "meter_power.s1", "measure_power.used", "measure_power.s1",  "meter_gas.today", "meter_gas.reading", "meter_water", "measure_water","meter_power.consumed.t1","meter_power.produced.t1","meter_power.consumed.t2","meter_power.produced.t2"
+			"meter_power.used", "meter_power.aggr", "meter_power.s1", "measure_power.used","measure_power.netto", "measure_power.s1",  "meter_gas.today", "meter_gas.reading", "meter_water", "measure_water","meter_power.consumed.t1","meter_power.produced.t1","meter_power.consumed.t2","meter_power.produced.t2"
 		],
 
 		"capabilitiesOptions": {
@@ -449,14 +449,18 @@
 					"en": "Day production",
 					"nl": "Dag opbrengst"
 				}
-
 			},
 			"measure_power.used": {
 				"title": {
 					"en": "Power current",
 					"nl": "Huidig vermogen"
 				}
-
+			},
+			"measure_power.netto": {
+				"title": {
+					"en": "Netto Power current",
+					"nl": "Netto Huidig vermogen"
+				}
 			},
 			"measure_power.s1": {
 				"title": {
