@@ -173,7 +173,7 @@ module.exports.capabilities = {
             if (device === undefined) {
                 callback(null, 0);
             } else {
-                callback(null, device.last_meter_reading_consumed_t2);
+                callback(null, device.last_meter_reading_consumed_t1);
             }
         }
     },
@@ -184,7 +184,7 @@ module.exports.capabilities = {
             if (device === undefined) {
                 callback(null, 0);
             } else {
-                callback(null, device.last_meter_reading_consumed_t1);
+                callback(null, device.last_meter_reading_consumed_t2);
             }
         }
     }
