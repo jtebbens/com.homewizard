@@ -3,12 +3,13 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.2.6",
-	"compatibility": ">=1.5",
+	"version": "0.2.7",
+	"compatibility": ">=3.0.0",
+	"homeyCommunityTopicId": 19267,
 	"description": {
 		"en": "Control HomeWizard using Homey"
 	},
-	"category": "appliances",
+	"category": ["appliances", "energy"],
 	"images": {
 		"large": "assets/images/large.jpg",
 		"small": "assets/images/small.jpg"
@@ -428,9 +429,11 @@
 		},
 		"class": "sensor",
 		"capabilities": [
-			"meter_power.used", "meter_power.aggr", "meter_power.s1", "measure_power.used","measure_power.netto", "measure_power.s1",  "meter_gas.today", "meter_gas.reading", "meter_water", "measure_water","meter_power.consumed.t1","meter_power.produced.t1","meter_power.consumed.t2","meter_power.produced.t2"
+			"measure_power", "meter_power.used", "meter_power.aggr", "meter_power.s1", "measure_power.used","measure_power.netto", "measure_power.s1",  "meter_gas.today", "meter_gas.reading", "meter_water", "measure_water","meter_power.consumed.t1","meter_power.produced.t1","meter_power.consumed.t2","meter_power.produced.t2"
 		],
-
+		"energy": {
+			 "cumulative": true
+		},
 		"capabilitiesOptions": {
 			"meter_power.used": {
 				"title": {
@@ -722,7 +725,9 @@
 			"measure_power",
 			"meter_power"
 		],
-
+		"energy": {
+	  "cumulative": true
+	},
 		"capabilitiesOptions": {
 			"meter_power": {
 				"title": {
