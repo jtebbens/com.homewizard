@@ -272,7 +272,7 @@ function getStatus(device_id) {
                     // Consumed elec current
                     module.exports.realtime( { id: device_id }, "measure_power.used", energy_current_cons );
                     // Consumed elec current
-                    module.exports.realtime( { id: device_id }, "measure_power", energy_current_cons );
+                    module.exports.realtime( { id: device_id }, "measure_power", energy_current_netto );
                     // Consumed elec current Netto
                     module.exports.realtime( { id: device_id }, "measure_power.netto", energy_current_netto );
                     // Consumed elec total day

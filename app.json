@@ -3,7 +3,7 @@
 	"name": {
 		"en": "HomeWizard"
 	},
-	"version": "0.2.7",
+	"version": "0.2.8",
 	"compatibility": ">=3.0.0",
 	"homeyCommunityTopicId": 19267,
 	"description": {
