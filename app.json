@@ -577,7 +577,9 @@
 			"measure_power",
 			"meter_power"
 		],
-
+		"energy": {
+			 "cumulative": true
+		},
 		"capabilitiesOptions": {
 			"meter_power": {
 				"title": {
