@@ -45,7 +45,7 @@ class HomeWizardThermometer extends Homey.Device {
 						if (Object.keys(callback).length > 0) {
 							try {
 								for (var index in callback) {
-									
+
 									if (callback[index].id == thermometer_id) {
 										var te = (callback[index].te.toFixed(1) * 2) / 2;
 										var hu = (callback[index].hu.toFixed(1) * 2) / 2;
