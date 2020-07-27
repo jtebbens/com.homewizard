@@ -2,6 +2,7 @@
 
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section.
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
+
 v0.2.7:
 * Progress SDK2 support for HomeWizard,thermometers
 
