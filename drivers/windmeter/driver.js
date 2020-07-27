@@ -1,3 +1,11 @@
+'use strict';
+
+const Homey = require('homey');
+
+class HomeWizardWindmeter extends Homey.Device {
+}
+
+module.exports = HomeWizardWindmeter;
 //
 //
 // var devices = {};

@@ -1,3 +1,12 @@
+'use strict';
+
+const Homey = require('homey');
+
+class HomeWizardRainmeter extends Homey.Device {
+}
+
+module.exports = HomeWizardRainmeter;
+
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');
 // var refreshIntervalId = 0;

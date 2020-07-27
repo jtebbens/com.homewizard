@@ -1,3 +1,12 @@
+'use strict';
+
+const Homey = require('homey');
+
+class HomeWizardWattcher extends Homey.Device {
+}
+
+module.exports = HomeWizardWattcher;
+
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');
 // var refreshIntervalId = 0;

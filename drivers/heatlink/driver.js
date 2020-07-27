@@ -1,3 +1,12 @@
+'use strict';
+
+const Homey = require('homey');
+
+class HomeWizardHeatlink extends Homey.Device {
+}
+
+module.exports = HomeWizardHeatlink;
+
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');
 // var refreshIntervalId = 0;
