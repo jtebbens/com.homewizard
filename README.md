@@ -7,7 +7,7 @@ v0.2.9:
 * Progress SDK2 support for HomeWizard,thermometers
 
 V0.2.8:
-*
+* Updated measure_power to reflect Netto power vs Used (Solar needs to add its own power generation in Homey)
 
 v0.2.6:
 * Netto power usage added (Current power/watts which will go negative if you produce power via solar)
