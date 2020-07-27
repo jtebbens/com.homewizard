@@ -1,8 +1,16 @@
 'use strict';
 
 const Homey = require('homey');
+const request = require('request');
 
-class HomeWizardHeatlink extends Homey.Device {
+const { ManagerDrivers } = require('homey');
+
+class HomeWizardHeatlink extends Homey.Driver {
+
+    onInit() {
+        this.log('HomeWizard Heatlink has been inited');
+    }
+
 }
 
 module.exports = HomeWizardHeatlink;

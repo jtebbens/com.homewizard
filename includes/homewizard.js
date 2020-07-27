@@ -44,8 +44,6 @@ module.exports = (function(){
    homewizard.debug_devices_data =  [ { id: 'HW12345' }];
    
    homewizard.setDevices = function(devices){
-      console.log('Devices SET!');
-      console.log(devices);
       if (homewizard.debug) {
          self.devices = homewizard.debug_devices;
       } else {

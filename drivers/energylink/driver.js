@@ -1,11 +1,20 @@
 'use strict';
 
 const Homey = require('homey');
+const request = require('request');
 
-class HomeWizardEnergylink extends Homey.Device {
+const { ManagerDrivers } = require('homey');
+
+class HomeWizardEnergyLink extends Homey.Driver {
+
+    onInit() {
+        this.log('HomeWizard EnergyLink has been inited');
+    }
+
 }
 
-module.exports = HomeWizardEnergylink;
+module.exports = HomeWizardEnergyLink;
+
 
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');

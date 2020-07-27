@@ -1,8 +1,16 @@
 'use strict';
 
 const Homey = require('homey');
+const request = require('request');
 
-class HomeWizardRainmeter extends Homey.Device {
+const { ManagerDrivers } = require('homey');
+
+class HomeWizardRainmeter extends Homey.Driver {
+
+    onInit() {
+        this.log('HomeWizard Rainmeter has been inited');
+    }
+
 }
 
 module.exports = HomeWizardRainmeter;
