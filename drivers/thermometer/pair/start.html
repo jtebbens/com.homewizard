@@ -17,7 +17,7 @@ $( document ).ready(function() {
 	
 	$('#homewizard_select').on('change', function() {
 		$('#thermometer_select').find('option').remove();
-        $('#thermometer_select').append('<option>Select HomeWizard</option>');
+        $('#thermometer_select').append('<option>Select Thermometer</option>');
 		$.each(JSON.parse(hw_device_list[$('#homewizard_select').val()].thermometers), function( index, value ) {
 			$('#thermometer_select').append($("<option>").attr('value',value.id).text(value.name));
 		});
