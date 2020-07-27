@@ -1,4 +1,8 @@
+'use strict';
+
 var request = require('request');
+
+const Homey = require('homey');
 
 module.exports = (function(){
    var homewizard = {};
@@ -40,8 +44,8 @@ module.exports = (function(){
    homewizard.debug_devices_data =  [ { id: 'HW12345' }];
    
    homewizard.setDevices = function(devices){
-      Homey.log('Devices SET!');
-      Homey.log(devices);
+      console.log('Devices SET!');
+      console.log(devices);
       if (homewizard.debug) {
          self.devices = homewizard.debug_devices;
       } else {
@@ -65,7 +69,7 @@ module.exports = (function(){
       if (homewizard.debug) {
          callback(null, testdata); 
       } else {
-         Homey.log('Call device' + device_id);
+         console.log('Call device ' + device_id);
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
@@ -85,11 +89,11 @@ module.exports = (function(){
                      
                      if (jsonObject.status == 'ok') {
                         if(typeof callback === 'function') {
-                          callback(null, jsonObject.response); 
+                            callback(null, jsonObject.response);
                         }
                      }
                   } catch (exception) {
-                     Homey.log('JSON: '+ body);
+                     console.log('EXCEPTION JSON : '+ body);
                      jsonObject = null;
                      callback('Invalid data', []); 
                   }
@@ -97,11 +101,11 @@ module.exports = (function(){
                   if(typeof callback === 'function') {
                     callback('Error', []); 
                   }
-                  Homey.log('Error: '+error);
+                  console.log('Error: '+error);
                }
            });
          } else {
-            Homey.log('Homewizard '+ device_id +': settings not found!');
+            console.log('Homewizard '+ device_id +': settings not found!');
         }
       } 
    };
@@ -166,14 +170,14 @@ module.exports = (function(){
                self.devices[device_id].polldata.rainmeters = response.rainmeters;
 			   self.devices[device_id].polldata.windmeters = response.windmeters;
             
-               if (Object.keys(response.energylinks).length !== 0) {
-                  homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
-                     if (err === null) {
-                        self.devices[device_id].polldata.energylink_el = response2;
-                        Homey.log('HW-Data polled for slimme meter: '+device_id);
-                     }
-                  });
-               }
+               // if (Object.keys(response.energylinks).length !== 0) {
+               //    homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+               //       if (err === null) {
+               //          self.devices[device_id].polldata.energylink_el = response2;
+               //          Homey.log('HW-Data polled for slimme meter: '+device_id);
+               //       }
+               //    });
+               // }
             }
          });
 
