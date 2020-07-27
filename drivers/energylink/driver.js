@@ -78,6 +78,17 @@ module.exports.deleted = function( device_data ) {
 };
 
 module.exports.capabilities = {
+  "measure_power": {
+      get: function (device_data, callback) {
+          var device = devices[device_data.id];
+
+          if (device === undefined) {
+              callback(null, 0);
+          } else {
+              callback(null, device.last_measure_power);
+          }
+      }
+  },
     "measure_power.used": {
         get: function (device_data, callback) {
             var device = devices[device_data.id];
@@ -260,6 +271,8 @@ function getStatus(device_id) {
 
                     // Consumed elec current
                     module.exports.realtime( { id: device_id }, "measure_power.used", energy_current_cons );
+                    // Consumed elec current
+                    module.exports.realtime( { id: device_id }, "measure_power", energy_current_netto );
                     // Consumed elec current Netto
                     module.exports.realtime( { id: device_id }, "measure_power.netto", energy_current_netto );
                     // Consumed elec total day
