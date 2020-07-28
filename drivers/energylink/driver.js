@@ -15,7 +15,6 @@ class HomeWizardEnergyLink extends Homey.Driver {
 
 module.exports = HomeWizardEnergyLink;
 
-
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');
 // var refreshIntervalId = 0;
@@ -25,12 +24,12 @@ module.exports = HomeWizardEnergyLink;
 // module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
 //     Homey.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
 //     try {
-// 	    changedKeysArr.forEach(function (key) {
-// 		    devices[device_data.id].settings[key] = newSettingsObj[key];
-// 		});
-// 		callback(null, true);
+//         changedKeysArr.forEach(function (key) {
+//             devices[device_data.id].settings[key] = newSettingsObj[key];
+//         });
+//         callback(null, true);
 //     } catch (error) {
-//       callback(error);
+//         callback(error);
 //     }
 // };
 //
@@ -53,9 +52,9 @@ module.exports = HomeWizardEnergyLink;
 //             //true
 //             Homey.log('Energylink added ' + device.data.id);
 //             devices[device.data.id] = {
-//               id: device.data.id,
-//               name: device.name,
-//               settings: device.settings,
+//                 id: device.data.id,
+//                 name: device.name,
+//                 settings: device.settings,
 //             };
 //             callback( null, devices );
 //             socket.emit("success", device);
@@ -79,11 +78,11 @@ module.exports = HomeWizardEnergyLink;
 //         });
 //     });
 //     if (Object.keys(devices).length > 0) {
-//       startPolling();
+//         startPolling();
 //     }
-// 	Homey.log('Energylink driver init done');
+//     Homey.log('Energylink driver init done');
 //
-// 	callback (null, true);
+//     callback (null, true);
 // };
 //
 // module.exports.deleted = function( device_data ) {
@@ -96,6 +95,17 @@ module.exports = HomeWizardEnergyLink;
 // };
 //
 // module.exports.capabilities = {
+//     "measure_power": {
+//         get: function (device_data, callback) {
+//             var device = devices[device_data.id];
+//
+//             if (device === undefined) {
+//                 callback(null, 0);
+//             } else {
+//                 callback(null, device.last_measure_power);
+//             }
+//         }
+//     },
 //     "measure_power.used": {
 //         get: function (device_data, callback) {
 //             var device = devices[device_data.id];
@@ -184,7 +194,7 @@ module.exports = HomeWizardEnergyLink;
 //             }
 //         }
 //     },
-// 	measure_water: {
+//     measure_water: {
 //         get: function (device_data, callback) {
 //             var device = devices[device_data.id];
 //
@@ -267,17 +277,19 @@ module.exports = HomeWizardEnergyLink;
 //
 //                     // Some Energylink do not have gas information so try to get it else fail silently
 //                     try {
-//                            var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
-//                             // Consumed gas
-//                            module.exports.realtime( { id: device_id }, "meter_gas.today", gas_daytotal_cons );
+//                         var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
+//                         // Consumed gas
+//                         module.exports.realtime( { id: device_id }, "meter_gas.today", gas_daytotal_cons );
 //                     }
 //                     catch(err) {
-//                       // Error with Energylink no data in Energylink
-//                       console.log ("No Gas information found");
+//                         // Error with Energylink no data in Energylink
+//                         console.log ("No Gas information found");
 //                     }
 //
 //                     // Consumed elec current
 //                     module.exports.realtime( { id: device_id }, "measure_power.used", energy_current_cons );
+//                     // Consumed elec current
+//                     module.exports.realtime( { id: device_id }, "measure_power", energy_current_netto );
 //                     // Consumed elec current Netto
 //                     module.exports.realtime( { id: device_id }, "measure_power.netto", energy_current_netto );
 //                     // Consumed elec total day
@@ -312,22 +324,22 @@ module.exports = HomeWizardEnergyLink;
 //                     }
 //
 //                     if (value_s1 == 'water' ) {
-//                     	var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
+//                         var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
 //                         var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
 //                         console.log("Water- " + water_daytotal_cons);
 //                         // Used water m3
 //                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
-// 						            module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
+//                         module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
 //
 //                     }
 //
 //                     if (value_s2 == 'water' ) {
-//                     	var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
+//                         var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
 //                         var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
 //                         console.log("Water- " + water_daytotal_cons);
 //                         // Used water m3
 //                         module.exports.realtime( { id: device_id }, "meter_water", water_daytotal_cons );
-// 						            module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
+//                         module.exports.realtime( { id: device_id }, "measure_water", water_current_cons );
 //                     }
 //
 //                     // Trigger flows
@@ -364,9 +376,9 @@ module.exports = HomeWizardEnergyLink;
 //
 //                 }
 //                 catch(err) {
-//                       // Error with Energylink no data in Energylink
-//                       console.log ("No Energylink found");
-//                       module.exports.setUnavailable({id: device_id}, "No Energylink found" );
+//                     // Error with Energylink no data in Energylink
+//                     console.log ("No Energylink found");
+//                     module.exports.setUnavailable({id: device_id}, "No Energylink found" );
 //                 }
 //             }
 //         });

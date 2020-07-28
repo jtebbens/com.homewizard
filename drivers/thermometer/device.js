@@ -51,19 +51,20 @@ class HomeWizardThermometer extends Homey.Device {
 										var hu = (callback[index].hu.toFixed(1) * 2) / 2;
 
 										//Check current temperature
-										if (devices[index].temperature != te) {
+										if (devices[index].getCapabilityValue('measure_temperature') != te) {
 											console.log("New TE - "+ te);
 											devices[index].setCapabilityValue('measure_temperature', te);
 										}
 
 										//Check current temperature
-										if (devices[index].humidity != hu) {
+										if (devices[index].getCapabilityValue('measure_humidity') != hu) {
 											console.log("New HU - "+ hu);
 											devices[index].setCapabilityValue('measure_humidity', hu);
 										}
 									}
 								}
 							} catch (err) {
+								console.log(err);
 								console.log("Thermometer data corrupt");
 							}
 						}
