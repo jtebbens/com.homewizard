@@ -15,19 +15,6 @@ class HomeWizardEnergylink extends Homey.Device {
 
 		this.log('HomeWizard Energylink '+this.getName() +' has been inited');
 
-		// const devices = driver.getDevices();
-		//
-		// devices.forEach(function initdevice(device) {
-		// 	console.log('add device: ' + JSON.stringify(device.getName()));
-		//
-		// 	devices[device.getData().id] = device;
-		// 	devices[device.getData().id].settings = device.getSettings();
-		// });
-
-		if (Object.keys(devices).length > 0) {
-		  // this.startPolling(devices);
-		}
-
 		this.startPolling();
 
 		// Init flow triggers
