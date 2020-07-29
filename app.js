@@ -6,6 +6,8 @@ class HomeWizardApp extends Homey.App {
 	onInit() {
 		this.log("HomeWizard app ready!");
 	}
+
+
 }
 
 // function init() {
