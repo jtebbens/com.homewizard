@@ -548,9 +548,11 @@
       },
       "class": "sensor",
       "capabilities": [
+        "measure_power",
         "meter_power.used",
         "meter_power.aggr",
         "meter_power.s1",
+        "meter_power",
         "measure_power.used",
         "measure_power.netto",
         "measure_power.s1",
@@ -563,6 +565,9 @@
         "meter_power.consumed.t2",
         "meter_power.produced.t2"
       ],
+      "energy": {
+        "cumulative": true
+      },
       "capabilitiesOptions": {
         "meter_power.used": {
           "title": {

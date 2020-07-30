@@ -52,7 +52,6 @@ class HomeWizardEnergyLink extends Homey.Driver {
 
                 });
 
-                console.log(hw_devices);
                 socket.emit('hw_devices', hw_devices);
 
             });
