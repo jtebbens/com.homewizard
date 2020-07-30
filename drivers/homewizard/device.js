@@ -77,7 +77,7 @@ class HomeWizardDevice extends Homey.Device {
 						devices[index].getStoreValue('preset', callback);
 					}
 
-					if (devices[index].getCapabilityValue('preset') != callback) {
+					if (devices[index].getStoreValue('preset') != callback) {
 
 						devices[index].setStoreValue('preset', callback);
 
