@@ -10,15 +10,12 @@ class HomeWizardEnergyLink extends Homey.Driver {
     onInit() {
         this.log('HomeWizard EnergyLink has been inited');
 
-        this.powerUsedChangedTrigger = new Homey.FlowCardTriggerDevice('power_used_changed').register()
+        // this.powerUsedChangedTrigger = new Homey.FlowCardTriggerDevice('power_used_changed').register()
     }
 
-    triggerMyFlow( device, tokens, state ) {
-        this.powerUsedChangedTrigger
-            .trigger( device, tokens, state )
-            .then( this.log )
-            .catch( this.error )
-    }
+    // triggerMyFlow( device, tokens, state ) {
+    //     this.powerUsedChangedTrigger.trigger( device, tokens, state ).then( this.log ).catch( this.error )
+    // }
 
 }
 

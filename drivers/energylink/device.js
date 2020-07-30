@@ -5,9 +5,6 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var refreshIntervalIdReadings;
-var devices = {};
-
-
 
 class HomeWizardEnergylink extends Homey.Device {
 
@@ -19,11 +16,35 @@ class HomeWizardEnergylink extends Homey.Device {
 
 		// Init flow triggers
 		this._flowTriggerPowerUsed = new Homey.FlowCardTriggerDevice('power_used_changed').register();
+		this._flowTriggerPowerNetto = new Homey.FlowCardTriggerDevice('power_netto_changed').register();
+		this._flowTriggerPowerS1 = new Homey.FlowCardTriggerDevice('power_s1_changed').register();
+		this._flowTriggerMeterPowerS1 = new Homey.FlowCardTriggerDevice('meter_power_s1_changed').register();
+		this._flowTriggerMeterPowerUsed = new Homey.FlowCardTriggerDevice('meter_power_used_changed').register();
+		this._flowTriggerMeterPowerAggregated = new Homey.FlowCardTriggerDevice('meter_power_aggregated_changed').register();
 
 	}
 
 	flowTriggerPowerUsed( device, tokens ) {
 		this._flowTriggerPowerUsed.trigger( device, tokens ).catch( this.error )
+	}
+	flowTriggerPowerNetto( device, tokens ) {
+		this._flowTriggerPowerNetto.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerPowerS1( device, tokens ) {
+		this._flowTriggerPowerS1.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerMeterPowerS1( device, tokens ) {
+		this._flowTriggerMeterPowerS1.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerMeterPowerUsed( device, tokens ) {
+		this._flowTriggerMeterPowerUsed.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerMeterPowerAggregated( device, tokens ) {
+		this._flowTriggerMeterPowerAggregated.trigger( device, tokens ).catch( this.error )
 	}
 
 	startPolling() {
@@ -148,31 +169,45 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.flowTriggerPowerUsed(me, { power_used: energy_current_cons });
 						me.setStoreValue("last_measure_power_used",energy_current_cons);
 					}
-					// if (energy_current_netto != devices[device_id].last_measure_power_netto && energy_current_netto != undefined && energy_current_netto != null) {
-					//     console.log("Current Netto Power - "+ energy_current_netto);
+					if (energy_current_netto != me.getStoreValue('last_measure_power_netto') && energy_current_netto != undefined && energy_current_netto != null) {
+					    console.log("Current Netto Power - "+ energy_current_netto);
+						me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto });
+						me.setStoreValue("last_measure_power_netto",energy_current_netto);
+
 					//     Homey.manager('flow').triggerDevice('power_netto_changed', { netto_power_used: energy_current_netto }, null, { id: device_id } );
 					//     devices[device_id].last_measure_power_netto = energy_current_netto; // Update last_measure_power_netto
-					// }
-					// if (energy_current_prod != devices[device_id].last_measure_power_s1 && energy_current_prod != undefined && energy_current_prod != null) {
-					//     console.log("Current S1 - "+ solar_current_prod);
+					}
+					if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
+					    console.log("Current S1 - "+ solar_current_prod);
+						me.flowTriggerPowerS1(me, { power_s1: solar_current_prod });
+						me.setStoreValue("last_measure_power_s1",solar_current_prod);
+
 					//     Homey.manager('flow').triggerDevice('power_s1_changed', { power_s1: solar_current_prod }, null, { id: device_id } );
 					//     devices[device_id].last_measure_power_s1 = energy_current_prod; // Update last_measure_power_s1
-					// }
-					// if (energy_daytotal_cons != devices[device_id].last_meter_power_used && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
-					//     console.log("Used Daytotal- "+ energy_daytotal_cons);
+					}
+					if (energy_daytotal_cons != me.getStoreValue('last_meter_power_used') && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
+					    console.log("Used Daytotal- "+ energy_daytotal_cons);
+						me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod });
+						me.setStoreValue("last_meter_power_used",energy_daytotal_cons);
 					//     Homey.manager('flow').triggerDevice('meter_power_used_changed', { power_daytotal_used: energy_daytotal_cons }, null, { id: device_id });
 					//     devices[device_id].last_meter_power_used = energy_daytotal_cons; // Update last_measure_power_used
-					// }
-					// if (energy_daytotal_prod != devices[device_id].last_meter_power_s1 && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
-					//     console.log("S1 Daytotal- "+ solar_daytotal_prod);
+					}
+
+					if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
+					    console.log("S1 Daytotal- "+ solar_daytotal_prod);
+						me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod });
+						me.setStoreValue("last_meter_power_s1",solar_daytotal_prod);
 					//     Homey.manager('flow').triggerDevice('meter_power_s1_changed', { power_daytotal_s1: solar_daytotal_prod }, null, { id: device_id });
 					//     devices[device_id].last_meter_power_s1 = energy_daytotal_prod; // Update last_meter_power_s1
-					// }
-					// if (energy_daytotal_aggr != devices[device_id].last_meter_power_aggr && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
-					//     console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
+					}
+					if (energy_daytotal_aggr != me.getStoreValue('last_meter_power_aggr') && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
+					    console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
+						me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr });
+						me.setStoreValue("last_meter_power_aggr",energy_daytotal_aggr);
+
 					//     Homey.manager('flow').triggerDevice('meter_power_aggregated_changed', { power_daytotal_aggr: energy_daytotal_aggr }, null, { id: device_id });
 					//     devices[device_id].last_meter_power_aggr = energy_daytotal_aggr; // Update last_meter_power_aggr
-					// }
+					}
 
 				} catch (err) {
 					console.log(err);

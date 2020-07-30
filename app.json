@@ -140,6 +140,35 @@
         ]
       },
       {
+        "id": ",power_netto_changed",
+        "title": {
+          "en": "Daily netto usage changed",
+          "nl": "Dag netto verbruik veranderd"
+        },
+        "args": [
+          {
+            "name": "Energylink",
+            "type": "device",
+            "filter": "driver_id=energylink",
+            "placeholder": {
+              "en": "Which energylink",
+              "nl": "Welke energylink"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "netto_power_used",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
         "id": "meter_power_used_changed",
         "title": {
           "en": "Daily usage changed",
