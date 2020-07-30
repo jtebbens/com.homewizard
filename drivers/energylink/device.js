@@ -27,6 +27,7 @@ class HomeWizardEnergylink extends Homey.Device {
 	flowTriggerPowerUsed( device, tokens ) {
 		this._flowTriggerPowerUsed.trigger( device, tokens ).catch( this.error )
 	}
+
 	flowTriggerPowerNetto( device, tokens ) {
 		this._flowTriggerPowerNetto.trigger( device, tokens ).catch( this.error )
 	}

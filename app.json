@@ -140,7 +140,7 @@
         ]
       },
       {
-        "id": ",power_netto_changed",
+        "id": "power_netto_changed",
         "title": {
           "en": "Daily netto usage changed",
           "nl": "Dag netto verbruik veranderd"
