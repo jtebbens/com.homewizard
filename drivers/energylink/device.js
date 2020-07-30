@@ -254,6 +254,15 @@ class HomeWizardEnergylink extends Homey.Device {
 		});
 	}
 
+	onDeleted() {
+
+		clearInterval(refreshIntervalId);
+		clearInterval(refreshIntervalIdReadings);
+		Homey.log("--Stopped Polling--");
+		this.log('deleted: ' + JSON.stringify(this));
+
+	}
+
 }
 
 module.exports = HomeWizardEnergylink;
