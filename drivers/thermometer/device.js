@@ -89,6 +89,16 @@ class HomeWizardThermometer extends Homey.Device {
 		}
 	}
 
+	onDeleted() {
+
+		if (Object.keys(devices).length === 0) {
+			clearInterval(refreshIntervalId);
+			Homey.log("--Stopped Polling--");
+		}
+
+		this.log('deleted: ' + JSON.stringify(this));
+	}
+
 }
 
 module.exports = HomeWizardThermometer;

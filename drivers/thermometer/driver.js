@@ -92,77 +92,7 @@ class HomeWizardThermometer extends Homey.Driver {
 
 module.exports = HomeWizardThermometer;
 
-// var devices = {};
-// var homewizard = require('./../../includes/homewizard.js');
-// var refreshIntervalId = 0;
-//
-// // SETTINGS
-// module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
-//     Homey.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
-//     try {
-// 	    changedKeysArr.forEach(function (key) {
-// 		    devices[device_data.id].settings[key] = newSettingsObj[key];
-// 		});
-// 		callback(null, true);
-//     } catch (error) {
-//       callback(error);
-//     }
-// };
-//
-// module.exports.pair = function( socket ) {
-//     socket.on('get_homewizards', function () {
-//         homewizard.getDevices(function(homewizard_devices) {
-//             var hw_devices = {};
-//             Object.keys(homewizard_devices).forEach(function(key) {
-//                 var thermometers = JSON.stringify(homewizard_devices[key].polldata.thermometers);
-//
-//                 hw_devices[key] = homewizard_devices[key];
-//                 hw_devices[key].polldata = {};
-//                 hw_devices[key].thermometers = thermometers;
-//             });
-//             socket.emit('hw_devices', hw_devices);
-//         });
-//     });
-//
-//     socket.on('manual_add', function (device, callback) {
-//         if (typeof device.settings.homewizard_id == "string" && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-//             //true
-//             Homey.log('Thermometer added ' + device.data.id);
-//             devices[device.data.id] = {
-//               id: device.data.id,
-//               name: device.name,
-//               settings: device.settings,
-//             };
-//             callback( null, devices );
-//             socket.emit("success", device);
-//             startPolling();
-//         } else {
-//             socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
-//         }
-//     });
-//
-//     socket.on('disconnect', function(){
-//         console.log("User aborted pairing, or pairing is finished");
-//     });
-// }
-//
-// module.exports.init = function(devices_data, callback) {
-//     devices_data.forEach(function initdevice(device) {
-//         Homey.log('add device: ' + JSON.stringify(device));
-//         devices[device.id] = device;
-//         module.exports.getSettings(device, function(err, settings){
-//             devices[device.id].settings = settings;
-//         });
-//
-//     });
-//     if (Object.keys(devices).length > 0) {
-//       startPolling();
-//     }
-// 	Homey.log('Thermometer driver init done');
-//
-// 	callback (null, true);
-// };
-//
+
 // module.exports.deleted = function( device_data ) {
 //     delete devices[device_data.id];
 //     if (Object.keys(devices).length === 0) {
