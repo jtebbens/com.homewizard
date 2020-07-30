@@ -55,6 +55,7 @@ module.exports = (function(){
    };
    
    homewizard.getDeviceData = function(device_id, data_part, callback) {
+
       if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
          callback([]); 
       } else {
