@@ -12,6 +12,39 @@ var refreshIntervalId;
 class HomeWizardDriver extends Homey.Driver {
     onInit() {
         this.log('HomeWizard has been inited');
+
+        var me = this;
+
+        new Homey.FlowCardCondition('check_preset')
+            .register()
+            .registerRunListener( async (args, state) => {
+
+            homewizard.call(args.device.getData().id, '/get-status/', function(err, response) {
+
+              if (err === null) {
+                  me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+                  var result = (args.preset == response.preset);
+                  me.log('FlowCardCondition(\'check_preset\') result ' + result);
+                  return result;
+                //
+                // if (response.preset == args.preset) {
+                //     me.log('Yes, preset is: '+ response.preset+'!');
+                //
+                //     // if(typeof callback === 'function') {
+                //     //     callback(null, true);
+                //     // }
+                // } else {
+                //     me.log('Preset is: ' + response.preset+', not '+args.preset);
+                //     return false;
+                //     // callback(null, false);
+                //     // if(typeof callback === 'function') {
+                //     // }
+                // }
+              } else {
+                // callback(err, false); // err
+              }
+            });
+        });
     }
 
     onPair( socket ) {
@@ -75,17 +108,6 @@ class HomeWizardDriver extends Homey.Driver {
 }
 
 module.exports = HomeWizardDriver;
-
-// var devices = {};
-// var homewizard = require('./../../includes/homewizard.js');
-// var request = require('request');
-// var refreshIntervalId;
-//
-// var preset_text = '';
-// var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
-// var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
-// var homey_lang = Homey.manager('i18n').getLanguage();
-//
 
 // // SCENES
 // Homey.manager('flow').on('action.switch_scene_on.scene.autocomplete', function( callback, args ){
@@ -160,45 +182,3 @@ module.exports = HomeWizardDriver;
 //       }
 //     });
 // });
-//
-//
-// function getStatus(device_id) {
-//     homewizard.getDeviceData(device_id, 'preset', function(callback) {
-//         Homey.log('PRESET:' + callback);
-//         try {
-//             if (!('preset' in devices[device_id])) {
-//                 Homey.log('Preset was set to ' + callback);
-//                 devices[device_id].preset = callback;
-//             }
-//
-//             if (('preset' in devices[device_id]) && devices[device_id].preset != callback) {
-//                 devices[device_id].preset = callback;
-//                 Homey.log('Flow call!' + callback);
-//                 if (homey_lang == "nl") {
-//                     preset_text = preset_text_nl[callback];
-//                 } else {
-//                     preset_text = preset_text_en[callback];
-//                 }
-//                 Homey.log(preset_text);
-//                 Homey.manager('flow').triggerDevice('preset_changed', { preset: callback, preset_text: preset_text }, null, { id: device_id } , (err) => {
-//                 if (err) return Homey.error('Error triggeringDevice:', err);
-//             });
-//                 Homey.log('Preset was changed!');
-//             }
-//         } catch(err) {
-//             console.log ("HomeWizard data corrupt");
-//         }
-//     });
-// }
-//
-// function startPolling() {
-//     if (refreshIntervalId) {
-//         clearInterval(refreshIntervalId);
-//     }
-//     refreshIntervalId = setInterval(function () {
-//         Homey.log("--Start HomeWizard Polling-- ");
-//         Object.keys(devices).forEach(function (device_id) {
-//             getStatus(device_id);
-//         });
-//     }, 1000 * 10);
-// }
