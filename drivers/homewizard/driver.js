@@ -2,7 +2,6 @@
 
 const Homey = require('homey');
 const request = require('request');
-const util = require('util');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
@@ -14,6 +13,7 @@ class HomeWizardDriver extends Homey.Driver {
 
         var me = this;
 
+        // PRESETS
         new Homey.FlowCardCondition('check_preset')
             .register()
             .registerRunListener( async (args, state) => {
@@ -24,7 +24,7 @@ class HomeWizardDriver extends Homey.Driver {
                 return new Promise((resolve, reject) => {
                     homewizard.call(args.device.getData().id, '/get-status/', (err, response) => {
                         if (err) {
-                            this.log('ERR _onFlowCardConditionCheckPreset() -> returned false');
+                            this.log('ERR flowCardCondition  -> returned false');
                             // You can make a choice here: reject the promise with the error,
                             // or resolve it to return "false" return resolve(false); // OR: return reject(err)
                         }
@@ -34,6 +34,54 @@ class HomeWizardDriver extends Homey.Driver {
                     });
                 });
             });
+
+        new Homey.FlowCardAction('set_preset')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+
+                    var uri = '/preset/' + args.preset;
+
+                    homewizard.call(args.device.getData().id, uri, function(err, response) {
+                        if(err) {
+                            me.log('ERR flowCardAction set_preset  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction set_preset  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            });
+
+        // SCENES
+        new Homey.FlowCardAction('switch_scene_on')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
+                        if(err) {
+                            this.log('ERR flowCardAction switch_scene_on  -> returned false');
+                            return resolve(false);
+                        }
+
+                        this.log('flowCardAction switch_scene_on  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            });
+
+
     }
 
     onPair( socket ) {
