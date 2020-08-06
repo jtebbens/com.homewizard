@@ -86,9 +86,7 @@ module.exports = (function(){
                      jsonObject = JSON.parse(body);
                      
                      if (jsonObject.status == 'ok') {
-                         console.log('CALL ok');
                         if(typeof callback === 'function') {
-                            console.log('CALLBACK');
                             callback(null, jsonObject.response);
                         } else {
                             console.log('Not typeoffunction');
@@ -113,25 +111,24 @@ module.exports = (function(){
       } 
    };
    
-   homewizard.getScenes = function(args, callback) {
-	  this.call(args.args.device.data.id, '/gplist', function(err, response) {
-	    Homey.log('Error: '+err);
-		Homey.log('Response: '+response);
-        if (err === null) {
-          var output = [];
-	      for (var i = 0, len = response.length; i < len; i++) {
-              if (response[i].name.toLowerCase().indexOf(args.query.toLowerCase()) !== -1) {
-                  output[output.length] = response[i];
-              }
-          }
-          if(typeof callback === 'function') {
-            callback(null, output); 
-          }  
-        } else {
-          callback(err); // err
-	    }
-      });
-   };
+   // homewizard.getScenes = function(args, callback) {
+   //
+	//   this.call(args.device.getData().id, '/gplist', function(err, response) {
+   //
+	//       console.log('Call GetScenes');
+   //
+   //        var arrayAutocomplete = [];
+   //
+   //        for (var i = 0, len = response.length; i < len; i++) {
+   //              arrayAutocomplete.push({
+   //                  id: response[i].id,
+   //                  name: response[i].name
+   //              });
+   //        }
+   //
+   //        return arrayAutocomplete;
+   //    });
+   // };
    
    homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;

@@ -79,8 +79,41 @@ class HomeWizardDriver extends Homey.Driver {
 
                     });
                 });
-            });
+            })
+            .getArgument('scene')
+            .registerAutocompleteListener(async (query, args) => {
+                this.log('CALLED flowCardAction switch_scene_on autocomplete');
+                if (! args.device) {
+                    me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE');
+                    return false;
+                }
 
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/gplist', function(err, response) {
+                        if(err) {
+                            me.log('ERR flowCardAction switch_scene_on autocomplete');
+
+                            return resolve(false);
+                        }
+
+                        var arrayAutocomplete = [];
+
+                        for (var i = 0, len = response.length; i < len; i++) {
+                            arrayAutocomplete.push({
+                                name: response[i].name,
+                                id: response[i].id
+                            });
+                        }
+
+                        me.log('flowCardAction switch_scene_on autocomplete result', arrayAutocomplete);
+
+                        return resolve(arrayAutocomplete);
+                    });
+                });
+
+
+
+            });
 
     }
 
