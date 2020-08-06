@@ -2,12 +2,11 @@
 
 const Homey = require('homey');
 const request = require('request');
+const util = require('util');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
 var refreshIntervalId;
-
-
 
 class HomeWizardDriver extends Homey.Driver {
     onInit() {
@@ -17,35 +16,69 @@ class HomeWizardDriver extends Homey.Driver {
 
         new Homey.FlowCardCondition('check_preset')
             .register()
-            .registerRunListener( async (args, state) => {
+            .registerRunListener(HomeWizardDriver._onFlowCardConditionCheckPreset.bind(this));
+
+        // new Homey.FlowCardCondition('check_preset')
+        //     .register()
+        //     .registerRunListener( async (args, state) => {
+        //
+        //     let myCall = util.promisify(homewizard.call);
+        //
+        //     myCall(args.device.getData().id, '/get-status/', function(err, response) {
+        //
+        //       if (err === null) {
+        //           me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+        //
+        //           if(args.preset == response.preset) {
+        //               me.log('Return True');
+        //               return Promise.resolve(true)
+        //           } else {
+        //               me.log('Return False');
+        //               return Promise.reject(false)
+        //           }
+        //           // var result = (args.preset == response.preset);
+        //           // me.log('FlowCardCondition(\'check_preset\') result ' + result);
+        //           // return result;
+        //
+        //       } else {
+        //           me.log('Err != null');
+        //         return false;
+        //         // callback(err, false); // err
+        //       }
+        //     });
+        // });
+    }
+
+    static async _onFlowCardConditionCheckPreset(args = {}) {
+
+        if (Object.prototype.hasOwnProperty.call(args, 'device')) {
+
+            var me = this;
+            const result = false;
 
             homewizard.call(args.device.getData().id, '/get-status/', function(err, response) {
+                if (response) {
+                    me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
 
-              if (err === null) {
-                  me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-                  var result = (args.preset == response.preset);
-                  me.log('FlowCardCondition(\'check_preset\') result ' + result);
-                  return result;
-                //
-                // if (response.preset == args.preset) {
-                //     me.log('Yes, preset is: '+ response.preset+'!');
-                //
-                //     // if(typeof callback === 'function') {
-                //     //     callback(null, true);
-                //     // }
-                // } else {
-                //     me.log('Preset is: ' + response.preset+', not '+args.preset);
-                //     return false;
-                //     // callback(null, false);
-                //     // if(typeof callback === 'function') {
-                //     // }
-                // }
-              } else {
-                // callback(err, false); // err
-              }
+                    me.log('_onFlowCardConditionCheckPreset() -> returned', (args.preset == response.preset));
+                    return args.preset == response.preset;
+                    // if(args.preset == response.preset) {
+                    //     const result = true;
+                    // }
+                } else {
+                    this.log('ERR _onFlowCardConditionCheckPreset() -> returned', result);
+                    return result;
+                }
             });
-        });
+
+            this.log('NOCALL _onFlowCardConditionCheckPreset() -> returned', result);
+            return result;
+        }
+
+        throw new Error(Homey.__('error.missing_argument'));
+
     }
+
 
     onPair( socket ) {
         // Show a specific view by ID

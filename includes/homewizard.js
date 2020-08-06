@@ -86,11 +86,16 @@ module.exports = (function(){
                      jsonObject = JSON.parse(body);
                      
                      if (jsonObject.status == 'ok') {
+                         console.log('CALL ok');
                         if(typeof callback === 'function') {
+                            console.log('CALLBACK');
                             callback(null, jsonObject.response);
+                        } else {
+                            console.log('Not typeoffunction');
                         }
                      }
                   } catch (exception) {
+                      console.log(exception);
                      console.log('EXCEPTION JSON : '+ body);
                      jsonObject = null;
                      callback('Invalid data', []); 
