@@ -180,25 +180,6 @@ class HomeWizardDriver extends Homey.Driver {
 module.exports = HomeWizardDriver;
 
 // // SCENES
-// Homey.manager('flow').on('action.switch_scene_on.scene.autocomplete', function( callback, args ){
-// 	Homey.log('getScenes autocomplete called');
-//     homewizard.getScenes(args, function(err, response) {
-//       callback(err, response ); // err, results
-//     });
-// });
-//
-// Homey.manager('flow').on('action.switch_scene_on', function( callback, args ){
-// 	Homey.log('args.device.id: ' + JSON.stringify(args.device.id));
-// 	Homey.log('args.scene.id: ' + JSON.stringify(args.scene.id));
-//     homewizard.call(args.device.id, '/gp/' + args.scene.id + '/on', function(err, response) {
-//       if (err === null) {
-//         Homey.log('Scene is on');
-//         callback( null, true );
-//       } else {
-//         callback(err, false); // err
-//       }
-//     });
-// });
 //
 // Homey.manager('flow').on('action.switch_scene_off.scene.autocomplete', function( callback, args ){
 //     homewizard.getScenes(args, function(err, response) {
@@ -212,22 +193,6 @@ module.exports = HomeWizardDriver;
 //         Homey.log('Scene is off');
 //         callback( null, true );
 //       } else {
-//         callback(err, false); // err
-//       }
-//     });
-// });
-//
-//
-// // PRESETS
-//
-// Homey.manager('flow').on('action.set_preset', function( callback, args ){
-//     var uri = '/preset/' + args.preset;
-//     homewizard.call(args.device.id, uri, function(err, response) {
-//       if (err === null) {
-//         homewizard.ledring_pulse(args.device.id, 'green');
-//         callback(null, true);
-//       } else {
-//         homewizard.ledring_pulse(args.device.id, 'red');
 //         callback(err, false); // err
 //       }
 //     });
