@@ -16,69 +16,25 @@ class HomeWizardDriver extends Homey.Driver {
 
         new Homey.FlowCardCondition('check_preset')
             .register()
-            .registerRunListener(HomeWizardDriver._onFlowCardConditionCheckPreset.bind(this));
-
-        // new Homey.FlowCardCondition('check_preset')
-        //     .register()
-        //     .registerRunListener( async (args, state) => {
-        //
-        //     let myCall = util.promisify(homewizard.call);
-        //
-        //     myCall(args.device.getData().id, '/get-status/', function(err, response) {
-        //
-        //       if (err === null) {
-        //           me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-        //
-        //           if(args.preset == response.preset) {
-        //               me.log('Return True');
-        //               return Promise.resolve(true)
-        //           } else {
-        //               me.log('Return False');
-        //               return Promise.reject(false)
-        //           }
-        //           // var result = (args.preset == response.preset);
-        //           // me.log('FlowCardCondition(\'check_preset\') result ' + result);
-        //           // return result;
-        //
-        //       } else {
-        //           me.log('Err != null');
-        //         return false;
-        //         // callback(err, false); // err
-        //       }
-        //     });
-        // });
-    }
-
-    static async _onFlowCardConditionCheckPreset(args = {}) {
-
-        if (Object.prototype.hasOwnProperty.call(args, 'device')) {
-
-            var me = this;
-            const result = false;
-
-            homewizard.call(args.device.getData().id, '/get-status/', function(err, response) {
-                if (response) {
-                    me.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-
-                    me.log('_onFlowCardConditionCheckPreset() -> returned', (args.preset == response.preset));
-                    return args.preset == response.preset;
-                    // if(args.preset == response.preset) {
-                    //     const result = true;
-                    // }
-                } else {
-                    this.log('ERR _onFlowCardConditionCheckPreset() -> returned', result);
-                    return result;
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
                 }
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/get-status/', (err, response) => {
+                        if (err) {
+                            this.log('ERR _onFlowCardConditionCheckPreset() -> returned false');
+                            // You can make a choice here: reject the promise with the error,
+                            // or resolve it to return "false" return resolve(false); // OR: return reject(err)
+                        }
+                        this.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+                        this.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
+                        return resolve(args.preset == response.preset);
+                    });
+                });
             });
-
-            this.log('NOCALL _onFlowCardConditionCheckPreset() -> returned', result);
-            return result;
-        }
-
-        throw new Error(Homey.__('error.missing_argument'));
-
     }
-
 
     onPair( socket ) {
         // Show a specific view by ID
@@ -182,26 +138,6 @@ module.exports = HomeWizardDriver;
 //
 //
 // // PRESETS
-// Homey.manager('flow').on('condition.check_preset', function( callback, args ){
-//     homewizard.call(args.device.id, '/get-status/', function(err, response) {
-//       if (err === null) {
-//         if (response.preset == args.preset) {
-//             Homey.log('Yes, preset is: '+ response.preset+'!');
-//             if(typeof callback === 'function') {
-//                 callback(null, true);
-//             }
-//         } else {
-//             Homey.log('Preset is: ' + response.preset+', not '+args.preset);
-//             if(typeof callback === 'function') {
-//                 callback(null, false);
-//             }
-//         }
-//       } else {
-//         callback(err, false); // err
-//       }
-//     });
-// });
-//
 //
 // Homey.manager('flow').on('action.set_preset', function( callback, args ){
 //     var uri = '/preset/' + args.preset;
