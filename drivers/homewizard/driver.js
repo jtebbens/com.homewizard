@@ -70,11 +70,11 @@ class HomeWizardDriver extends Homey.Driver {
                 return new Promise((resolve, reject) => {
                     homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
                         if(err) {
-                            this.log('ERR flowCardAction switch_scene_on  -> returned false');
+                            me.log('ERR flowCardAction switch_scene_on  -> returned false');
                             return resolve(false);
                         }
 
-                        this.log('flowCardAction switch_scene_on  -> returned true');
+                        me.log('flowCardAction switch_scene_on  -> returned true');
                         return resolve(true);
 
                     });
@@ -83,38 +83,75 @@ class HomeWizardDriver extends Homey.Driver {
             .getArgument('scene')
             .registerAutocompleteListener(async (query, args) => {
                 this.log('CALLED flowCardAction switch_scene_on autocomplete');
-                if (! args.device) {
-                    me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE');
-                    return false;
-                }
 
-                return new Promise((resolve, reject) => {
-                    homewizard.call(args.device.getData().id, '/gplist', function(err, response) {
-                        if(err) {
-                            me.log('ERR flowCardAction switch_scene_on autocomplete');
-
-                            return resolve(false);
-                        }
-
-                        var arrayAutocomplete = [];
-
-                        for (var i = 0, len = response.length; i < len; i++) {
-                            arrayAutocomplete.push({
-                                name: response[i].name,
-                                id: response[i].id
-                            });
-                        }
-
-                        me.log('flowCardAction switch_scene_on autocomplete result', arrayAutocomplete);
-
-                        return resolve(arrayAutocomplete);
-                    });
-                });
-
+                return this._onGetSceneAutcomplete(args);
 
 
             });
 
+        // SCENES
+        new Homey.FlowCardAction('switch_scene_off')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
+                        if(err) {
+                            this.log('ERR flowCardAction switch_scene_off  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction switch_scene_off  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            })
+            .getArgument('scene')
+            .registerAutocompleteListener(async (query, args) => {
+                this.log('CALLED flowCardAction switch_scene_off autocomplete');
+
+                return this._onGetSceneAutcomplete(args);
+
+
+            });
+
+    }
+
+    _onGetSceneAutcomplete(args) {
+
+        var me = this;
+
+        if (! args.device) {
+            me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE');
+            return false;
+        }
+
+        return new Promise((resolve, reject) => {
+            homewizard.call(args.device.getData().id, '/gplist', function(err, response) {
+                if(err) {
+                    me.log('ERR flowCardAction switch_scene_on autocomplete');
+
+                    return resolve(false);
+                }
+
+                var arrayAutocomplete = [];
+
+                for (var i = 0, len = response.length; i < len; i++) {
+                    arrayAutocomplete.push({
+                        name: response[i].name,
+                        id: response[i].id
+                    });
+                }
+
+                me.log('_onGetSceneAutcomplete result', arrayAutocomplete);
+
+                return resolve(arrayAutocomplete);
+            });
+        });
     }
 
     onPair( socket ) {
@@ -178,22 +215,3 @@ class HomeWizardDriver extends Homey.Driver {
 }
 
 module.exports = HomeWizardDriver;
-
-// // SCENES
-//
-// Homey.manager('flow').on('action.switch_scene_off.scene.autocomplete', function( callback, args ){
-//     homewizard.getScenes(args, function(err, response) {
-//       callback(err, response ); // err, results
-//     });
-// });
-//
-// Homey.manager('flow').on('action.switch_scene_off', function( callback, args ){
-//     homewizard.call(args.device.id, '/gp/' + args.scene.id + '/off', function(err, response) {
-//       if (err === null) {
-//         Homey.log('Scene is off');
-//         callback( null, true );
-//       } else {
-//         callback(err, false); // err
-//       }
-//     });
-// });
