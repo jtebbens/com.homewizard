@@ -66,6 +66,8 @@ class HomeWizardThermometer extends Homey.Device {
 									var te = (callback[index].te.toFixed(1) * 2) / 2;
 									var hu = (callback[index].hu.toFixed(1) * 2) / 2;
 
+									console.log("Thermometer ID and Data - " + thermometer_id + " Temp: " + te + " Hum: " + hu);
+
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
 										console.log("New TE - "+ te);
@@ -93,7 +95,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			Homey.log("--Stopped Polling--");
+			console.log("--Stopped Polling--");
 		}
 
 		this.log('deleted: ' + JSON.stringify(this));
