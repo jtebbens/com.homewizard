@@ -1,211 +1,217 @@
+'use strict';
+
+const Homey = require('homey');
+const request = require('request');
+
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
-var request = require('request');
 var refreshIntervalId;
 
-var preset_text = '';
-var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
-var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
-var homey_lang = Homey.manager('i18n').getLanguage();
+class HomeWizardDriver extends Homey.Driver {
+    onInit() {
+        this.log('HomeWizard has been inited');
 
-// SETTINGS
-module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
-    Homey.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
-    try {
-	    changedKeysArr.forEach(function (key) {
-		    devices[device_data.id].settings[key] = newSettingsObj[key];
-		});
-        homewizard.setDevices(devices);
-		callback(null, true);
-    } catch (error) {
-      callback(error); 
-    }
-};
+        var me = this;
 
-module.exports.pair = function( socket ) {
-    socket.on('manual_add', function (device, callback) {
-        var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-status/';
-        //Homey.log('Calling '+ url);
-        request(url, function (error, response, body) {
-          if (response === null || response === undefined) {
-            socket.emit("error", "http error");
-            return;
-          }
-		  if (!error && response.statusCode == 200) {
-			var jsonObject = JSON.parse(body);
-			if (jsonObject.status == 'ok') {
-				//true
-                Homey.log('HW added');
-                devices[device.data.id] = {
-                  id: device.data.id,
-                  name: device.name,
-                  settings: device.settings,
-                  capabilities: device.capabilities
-                };
-                homewizard.setDevices(devices);
-                callback( null, devices );
-                socket.emit("success", device);
-                startPolling();
-      } else {
-				//false
-                socket.emit("error", "no response");
-			}
-		  } else {
-			// false
-            socket.emit("error", "http error: "+response.statusCode);
-		  }
-		});
-    });
-    
-    socket.on('disconnect', function(){
-        console.log("User aborted pairing, or pairing is finished");
-    });
-}
-
-module.exports.init = function(devices_data, callback) {
-    if (homewizard.debug) {
-        devices_data = homewizard.debug_devices_data;
-    }
-    
-    devices_data.forEach(function initdevice(device) {
-        Homey.log('add device: ' + JSON.stringify(device));
-        devices[device.id] = device;
-        module.exports.getSettings(device, function(err, settings){
-            devices[device.id].settings = settings;
-        });
-    });
-    homewizard.setDevices(devices);
-    homewizard.startpoll();
-    
-    if (Object.keys(devices).length > 0) {
-      startPolling();
-    }
-    
-	Homey.log('HomeWizard driver init done');
-	callback (null, true);
-};
-
-module.exports.deleted = function( device_data ) {
-    delete devices[device_data.id];
-    if (Object.keys(devices).length === 0) {
-      clearInterval(refreshIntervalId);
-      Homey.log("--Stopped Polling--");
-    }
-    Homey.log('deleted: ' + JSON.stringify(device_data));
-};
-
-// SCENES
-Homey.manager('flow').on('action.switch_scene_on.scene.autocomplete', function( callback, args ){
-	Homey.log('getScenes autocomplete called');
-    homewizard.getScenes(args, function(err, response) {
-      callback(err, response ); // err, results
-    });
-});
-
-Homey.manager('flow').on('action.switch_scene_on', function( callback, args ){
-	Homey.log('args.device.id: ' + JSON.stringify(args.device.id));
-	Homey.log('args.scene.id: ' + JSON.stringify(args.scene.id));
-    homewizard.call(args.device.id, '/gp/' + args.scene.id + '/on', function(err, response) {
-      if (err === null) {
-        Homey.log('Scene is on');
-        callback( null, true );
-      } else {
-        callback(err, false); // err
-      }
-    });
-});  
-
-Homey.manager('flow').on('action.switch_scene_off.scene.autocomplete', function( callback, args ){
-    homewizard.getScenes(args, function(err, response) {
-      callback(err, response ); // err, results
-    });
-});
-
-Homey.manager('flow').on('action.switch_scene_off', function( callback, args ){
-    homewizard.call(args.device.id, '/gp/' + args.scene.id + '/off', function(err, response) {
-      if (err === null) {
-        Homey.log('Scene is off');
-        callback( null, true );
-      } else {
-        callback(err, false); // err
-      }
-    });
-});  
-
-
-// PRESETS
-Homey.manager('flow').on('condition.check_preset', function( callback, args ){
-    homewizard.call(args.device.id, '/get-status/', function(err, response) {
-      if (err === null) {
-        if (response.preset == args.preset) {
-            Homey.log('Yes, preset is: '+ response.preset+'!');
-            if(typeof callback === 'function') {
-                callback(null, true);
-            }
-        } else {
-            Homey.log('Preset is: ' + response.preset+', not '+args.preset);
-            if(typeof callback === 'function') {
-                callback(null, false);
-            }
-        }
-      } else {
-        callback(err, false); // err
-      }
-    });
-});
-	
-	
-Homey.manager('flow').on('action.set_preset', function( callback, args ){
-    var uri = '/preset/' + args.preset;
-    homewizard.call(args.device.id, uri, function(err, response) {
-      if (err === null) {
-        homewizard.ledring_pulse(args.device.id, 'green');
-        callback(null, true);
-      } else {
-        homewizard.ledring_pulse(args.device.id, 'red');
-        callback(err, false); // err
-      }
-    });
-});
-
-
-function getStatus(device_id) {
-    homewizard.getDeviceData(device_id, 'preset', function(callback) {
-        Homey.log('PRESET:' + callback);
-        try {
-            if (!('preset' in devices[device_id])) {
-                Homey.log('Preset was set to ' + callback);
-                devices[device_id].preset = callback;
-            }
-            
-            if (('preset' in devices[device_id]) && devices[device_id].preset != callback) {
-                devices[device_id].preset = callback;
-                Homey.log('Flow call!' + callback);
-                if (homey_lang == "nl") {
-                    preset_text = preset_text_nl[callback];
-                } else {
-                    preset_text = preset_text_en[callback];
+        // PRESETS
+        new Homey.FlowCardCondition('check_preset')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
                 }
-                Homey.log(preset_text);
-                Homey.manager('flow').triggerDevice('preset_changed', { preset: callback, preset_text: preset_text }, null, { id: device_id } , (err) => {
-                if (err) return Homey.error('Error triggeringDevice:', err);
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/get-status/', (err, response) => {
+                        if (err) {
+                            this.log('ERR flowCardCondition  -> returned false');
+                            // You can make a choice here: reject the promise with the error,
+                            // or resolve it to return "false" return resolve(false); // OR: return reject(err)
+                        }
+                        this.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+                        this.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
+                        return resolve(args.preset == response.preset);
+                    });
+                });
             });
-                Homey.log('Preset was changed!');
-            }
-        } catch(err) {
-            console.log ("HomeWizard data corrupt");
-        }
-    });
-}
- 
-function startPolling() {
-    if (refreshIntervalId) {
-        clearInterval(refreshIntervalId);
+
+        new Homey.FlowCardAction('set_preset')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+
+                    var uri = '/preset/' + args.preset;
+
+                    homewizard.call(args.device.getData().id, uri, function(err, response) {
+                        if(err) {
+                            me.log('ERR flowCardAction set_preset  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction set_preset  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            });
+
+        // SCENES
+        new Homey.FlowCardAction('switch_scene_on')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
+                        if(err) {
+                            me.log('ERR flowCardAction switch_scene_on  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction switch_scene_on  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            })
+            .getArgument('scene')
+            .registerAutocompleteListener(async (query, args) => {
+                this.log('CALLED flowCardAction switch_scene_on autocomplete');
+
+                return this._onGetSceneAutcomplete(args);
+
+
+            });
+
+        // SCENES
+        new Homey.FlowCardAction('switch_scene_off')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (! args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
+                        if(err) {
+                            this.log('ERR flowCardAction switch_scene_off  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction switch_scene_off  -> returned true');
+                        return resolve(true);
+
+                    });
+                });
+            })
+            .getArgument('scene')
+            .registerAutocompleteListener(async (query, args) => {
+                this.log('CALLED flowCardAction switch_scene_off autocomplete');
+
+                return this._onGetSceneAutcomplete(args);
+
+
+            });
+
     }
-    refreshIntervalId = setInterval(function () {
-        Homey.log("--Start HomeWizard Polling-- ");
-        Object.keys(devices).forEach(function (device_id) {
-            getStatus(device_id);
+
+    _onGetSceneAutcomplete(args) {
+
+        var me = this;
+
+        if (! args.device) {
+            me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE');
+            return false;
+        }
+
+        return new Promise((resolve, reject) => {
+            homewizard.call(args.device.getData().id, '/gplist', function(err, response) {
+                if(err) {
+                    me.log('ERR flowCardAction switch_scene_on autocomplete');
+
+                    return resolve(false);
+                }
+
+                var arrayAutocomplete = [];
+
+                for (var i = 0, len = response.length; i < len; i++) {
+                    arrayAutocomplete.push({
+                        name: response[i].name,
+                        id: response[i].id
+                    });
+                }
+
+                me.log('_onGetSceneAutcomplete result', arrayAutocomplete);
+
+                return resolve(arrayAutocomplete);
+            });
         });
-    }, 1000 * 10);
+    }
+
+    onPair( socket ) {
+        // Show a specific view by ID
+        socket.showView('start');
+
+        // Show the next view
+        socket.nextView();
+
+        // Show the previous view
+        socket.prevView();
+
+        // Close the pair session
+        socket.done();
+
+        // Received when a view has changed
+        socket.on('showView', ( viewId, callback ) => {
+            callback();
+            console.log('View: ' + viewId);
+        });
+
+        socket.on('manual_add', function (device, callback) {
+
+            var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-status/';
+
+            console.log('Calling '+ url);
+
+            request(url, function (error, response, body) {
+                if (response === null || response === undefined) {
+                            socket.emit("error", "http error");
+                            return;
+                }
+                if (!error && response.statusCode == 200) {
+                    var jsonObject = JSON.parse(body);
+
+                    if (jsonObject.status == 'ok') {
+                        console.log('Call OK');
+
+                        devices[device.data.id] = {
+                            id: device.data.id,
+                            name: device.name,
+                            settings: device.settings,
+                            capabilities: device.capabilities
+                        };
+                        homewizard.setDevices(devices);
+
+                        callback( null, devices );
+                        socket.emit("success", device);
+                    }
+                }
+            });
+        });
+
+        socket.on('disconnect', () => {
+            console.log("User aborted pairing, or pairing is finished");
+        });
+    }
+
+
+
 }
+
+module.exports = HomeWizardDriver;
