@@ -60,13 +60,13 @@ class HomeWizardThermometer extends Homey.Device {
 				homewizard.getDeviceData(homewizard_id, 'thermometers', function(callback) {
 					if (Object.keys(callback).length > 0) {
 						try {
-							for (var index in callback) {
+							//Rename index to index2 to avoid overwrite
+							for (var index2 in callback) {
+								if (callback[index2].id == thermometer_id) {
+									var te = (callback[index2].te.toFixed(1) * 2) / 2;
+									var hu = (callback[index2].hu.toFixed(1) * 2) / 2;
 
-								if (callback[index].id == thermometer_id) {
-									var te = (callback[index].te.toFixed(1) * 2) / 2;
-									var hu = (callback[index].hu.toFixed(1) * 2) / 2;
-
-									console.log("Thermometer ID and Data - " + thermometer_id + " Temp: " + te + " Hum: " + hu);
+									// console.log("Thermometer ID and Data - " + thermometer_id + " Temp: " + te + " Hum: " + hu);
 
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {

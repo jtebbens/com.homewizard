@@ -258,7 +258,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 		clearInterval(refreshIntervalId);
 		clearInterval(refreshIntervalIdReadings);
-		Homey.log("--Stopped Polling--");
+		console.log("--Stopped Polling--");
 		this.log('deleted: ' + JSON.stringify(this));
 
 	}

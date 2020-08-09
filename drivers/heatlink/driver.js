@@ -4,13 +4,17 @@ const Homey = require('homey');
 const request = require('request');
 
 const { ManagerDrivers } = require('homey');
+const driver = ManagerDrivers.getDriver('homewizard');
+
+var devices = {};
+var homewizard = require('./../../includes/homewizard.js');
+var homewizard_devices;
 
 class HomeWizardHeatlink extends Homey.Driver {
 
     onInit() {
         this.log('HomeWizard Heatlink has been inited');
     }
-
 }
 
 module.exports = HomeWizardHeatlink;
@@ -223,7 +227,7 @@ module.exports = HomeWizardHeatlink;
 // 		     clearInterval(refreshIntervalId);
 // 	   }
 //      refreshIntervalId = setInterval(function () {
-//          Homey.log("--Start Heatlink Polling-- ");
+//          console.log("--Start Heatlink Polling-- ");
 //          Object.keys(devices).forEach(function (device_id) {
 //              getStatus(device_id);
 //          });
