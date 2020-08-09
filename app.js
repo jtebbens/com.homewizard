@@ -1,9 +1,11 @@
 "use strict";
 
-function init() {
-	var request = require('request');
-	Homey.log("HomeWizard app ready!");
-	
+const Homey = require('homey');
+
+class HomeWizardApp extends Homey.App {
+	onInit() {
+		this.log("HomeWizard app ready!");
+	}
 }
 
-module.exports.init = init;
+module.exports = HomeWizardApp;

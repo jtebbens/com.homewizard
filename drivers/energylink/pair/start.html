@@ -35,7 +35,7 @@ function saveSettings () {
 			settings: {
                 'homewizard_id': device.settings.homewizard_id,
             },
-            name: device.name
+            name: "EnergyLink"
         }, function( err, result ){
             if( err ) return console.error(err);
             Homey.done();
