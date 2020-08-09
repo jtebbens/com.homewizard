@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "0.2.9",
+  "version": "0.3.0",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
