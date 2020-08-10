@@ -1,4 +1,8 @@
+'use strict';
+
 var request = require('request');
+
+const Homey = require('homey');
 
 module.exports = (function(){
    var homewizard = {};
@@ -19,7 +23,6 @@ module.exports = (function(){
       ],
       "weatherdisplays":[],
       "energymeters": [],
-	  //"energylinks": [], 
       "energylinks": [
          {"id":0,"favorite":"no","name":"EnergyLink","code":"942991","t1":"solar","c1":1000,"t2":"water","c2":1,"tariff":1,"s1":{"po":0,"dayTotal":10.24,"po+":2498,"po+t":"11:22","po-":0,"po-t":"00:01"},"s2":{"po":4,"dayTotal":162.00,"po+":7,"po+t":"08:49","po-":0,"po-t":"00:01"},"aggregate":{"po":511,"dayTotal":-3.19,"po+":2873,"po+t":"09:22","po-":-1857,"po-t":"11:55"},"used":{"po":511,"dayTotal":7.04,"po+":3791,"po+t":"11:45","po-":204,"po-t":"16:34"},"gas":{"lastHour":0.44,"dayTotal":4.07},"kwhindex":2.87,"wp":3570}
       ],
@@ -40,8 +43,6 @@ module.exports = (function(){
    homewizard.debug_devices_data =  [ { id: 'HW12345' }];
    
    homewizard.setDevices = function(devices){
-      Homey.log('Devices SET!');
-      Homey.log(devices);
       if (homewizard.debug) {
          self.devices = homewizard.debug_devices;
       } else {
@@ -54,6 +55,7 @@ module.exports = (function(){
    };
    
    homewizard.getDeviceData = function(device_id, data_part, callback) {
+
       if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
          callback([]); 
       } else {
@@ -65,7 +67,7 @@ module.exports = (function(){
       if (homewizard.debug) {
          callback(null, testdata); 
       } else {
-         Homey.log('Call device' + device_id);
+         console.log('Call device ' + device_id);
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
@@ -85,11 +87,14 @@ module.exports = (function(){
                      
                      if (jsonObject.status == 'ok') {
                         if(typeof callback === 'function') {
-                          callback(null, jsonObject.response); 
+                            callback(null, jsonObject.response);
+                        } else {
+                            console.log('Not typeoffunction');
                         }
                      }
                   } catch (exception) {
-                     Homey.log('JSON: '+ body);
+                      console.log(exception);
+                     console.log('EXCEPTION JSON : '+ body);
                      jsonObject = null;
                      callback('Invalid data', []); 
                   }
@@ -97,34 +102,33 @@ module.exports = (function(){
                   if(typeof callback === 'function') {
                     callback('Error', []); 
                   }
-                  Homey.log('Error: '+error);
+                  console.log('Error: '+error);
                }
            });
          } else {
-            Homey.log('Homewizard '+ device_id +': settings not found!');
+            console.log('Homewizard '+ device_id +': settings not found!');
         }
       } 
    };
    
-   homewizard.getScenes = function(args, callback) {
-	  this.call(args.args.device.data.id, '/gplist', function(err, response) {
-	    Homey.log('Error: '+err);
-		Homey.log('Response: '+response);
-        if (err === null) {
-          var output = [];
-	      for (var i = 0, len = response.length; i < len; i++) {
-              if (response[i].name.toLowerCase().indexOf(args.query.toLowerCase()) !== -1) {
-                  output[output.length] = response[i];
-              }
-          }
-          if(typeof callback === 'function') {
-            callback(null, output); 
-          }  
-        } else {
-          callback(err); // err
-	    }
-      });
-   };
+   // homewizard.getScenes = function(args, callback) {
+   //
+	//   this.call(args.device.getData().id, '/gplist', function(err, response) {
+   //
+	//       console.log('Call GetScenes');
+   //
+   //        var arrayAutocomplete = [];
+   //
+   //        for (var i = 0, len = response.length; i < len; i++) {
+   //              arrayAutocomplete.push({
+   //                  id: response[i].id,
+   //                  name: response[i].name
+   //              });
+   //        }
+   //
+   //        return arrayAutocomplete;
+   //    });
+   // };
    
    homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
@@ -167,10 +171,11 @@ module.exports = (function(){
 			   self.devices[device_id].polldata.windmeters = response.windmeters;
             
                if (Object.keys(response.energylinks).length !== 0) {
-                  homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
-                     if (err === null) {
+
+                   homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+                     if(err == null) {
                         self.devices[device_id].polldata.energylink_el = response2;
-                        Homey.log('HW-Data polled for slimme meter: '+device_id);
+                        console.log('HW-Data polled for slimme meter: '+device_id);
                      }
                   });
                }
