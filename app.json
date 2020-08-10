@@ -45,6 +45,11 @@
       }
     }
   },
+  "bugs": {
+     "url": "https://github.com/jtebbens/com.homewizard/issues"
+  },
+  "source": "https://github.com/jtebbens/com.homewizard",
+  "homeyCommunityTopicId": 19267,
   "flow": {
     "triggers": [
       {
