@@ -64,8 +64,11 @@ module.exports = (function(){
    };
    
    homewizard.call = function(device_id, uri_part, callback) {
+
+       var me = this;
+
       if (homewizard.debug) {
-         callback(null, testdata); 
+         return testdata;
       } else {
          console.log('Call device ' + device_id);
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
@@ -106,7 +109,7 @@ module.exports = (function(){
                }
            });
          } else {
-            console.log('Homewizard '+ device_id +': settings not found!');
+            me.log('Homewizard '+ device_id +': settings not found!');
         }
       } 
    };
