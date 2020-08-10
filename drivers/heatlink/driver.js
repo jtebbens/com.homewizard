@@ -13,6 +13,7 @@ class HomeWizardHeatlink extends Homey.Driver {
 
     onInit() {
         this.log('HomeWizard Heatlink has been inited');
+
     }
 
     onPair(socket) {

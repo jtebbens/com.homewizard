@@ -7,6 +7,7 @@ const driver = ManagerDrivers.getDriver('heatlink');
 
 var refreshIntervalId;
 var devices = {};
+var temperature;
 
 class HomeWizardHeatlink extends Homey.Device {
 
@@ -14,8 +15,62 @@ class HomeWizardHeatlink extends Homey.Device {
 
 		this.log('HomeWizard Heatlink '+this.getName() +' has been inited');
 
+		const devices = driver.getDevices();
+		devices.forEach(function initdevice(device) {
+			console.log('add device: ' + JSON.stringify(device.getName()));
+
+			devices[device.getData().id] = device;
+			devices[device.getData().id].settings = device.getSettings();
+		});
+
 		this.startPolling();
 
+		this.registerCapabilityListener('target_temperature', ( temperature, opts ) => {
+			// Catch faulty trigger and max/min temp
+			if (!temperature) {
+				callback(true, temperature);
+				return false;
+			}
+			else if (temperature < 5) {
+				temperature = 5;
+			}
+			else if (temperature > 35) {
+				temperature = 35;
+			}
+			temperature = Math.round(temperature.toFixed(1) * 2) / 2;
+			var url = '/hl/0/settarget/'+temperature;
+			console.log(url);
+			var homewizard_id = this.getSetting('homewizard_id');
+			homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
+				console.log(err);
+				if (response) callback(err, temperature);
+			});
+
+			return Promise.resolve();
+		});
+
+	}
+
+	setTargetTemparature(temparature) {
+        // Catch faulty trigger and max/min temp
+        if (!temperature) {
+          callback(true, temperature);
+          return false;
+        }
+        else if (temperature < 5) {
+          temperature = 5;
+        }
+        else if (temperature > 35) {
+          temperature = 35;
+        }
+        temperature = Math.round(temperature.toFixed(1) * 2) / 2;
+        var url = '/hl/0/settarget/'+temperature;
+        console.log(url);
+        var homewizard_id = this.getSetting('homewizard_id');
+        homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
+            console.log(err);
+            if (callback) callback(err, temperature);
+        });
 	}
 
 	startPolling() {
@@ -42,14 +97,13 @@ class HomeWizardHeatlink extends Homey.Device {
 
 		var me = this;
 
-
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
 			me.log('Gather data');
 
 			homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
-				console.log(callback);
+
 				if (Object.keys(callback).length > 0) {
 
 					try {
@@ -59,12 +113,36 @@ class HomeWizardHeatlink extends Homey.Device {
                 		var tte = (callback[0].tte.toFixed(1) * 2) / 2;
 
 						//Check current temperature
-						if (device.getCapabilityValue('temperature') != rte) {
+						if (me.getStoreValue('temperature') != rte) {
 						  console.log("New RTE - "+ rte);
-							device.setCapabilityValue('measure_temperature', rte );
-							device.setCapabilityValue('temperature',rte);
+							me.setCapabilityValue('measure_temperature', rte );
+							me.setStoreValue('temperature',rte);
 						} else {
 						  console.log("RTE: no change");
+						}
+
+						//Check thermostat temperature
+						if (me.getStoreValue('thermTemperature') != rsp) {
+						  console.log("New RSP - "+ rsp);
+						  if (me.getStoreValue('setTemperature') === 0) {
+							  me.setCapabilityValue('target_temperature', rsp);
+						  }
+							me.setStoreValue('thermTemperature',rsp);
+						} else {
+						  console.log("RSP: no change");
+						}
+
+						//Check heatlink set temperature
+						if (me.getStoreValue('setTemperature') != tte) {
+						  console.log("New TTE - "+ tte);
+						  if (tte > 0) {
+							  me.setCapabilityValue('target_temperature', tte);
+						  } else {
+							  me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature'));
+						  }
+							me.setStoreValue('setTemperature',tte);
+						} else {
+						  console.log("TTE: no change");
 						}
 					} catch (err) {
 						console.log ("Heatlink data corrupt", err);
@@ -76,55 +154,13 @@ class HomeWizardHeatlink extends Homey.Device {
 		} else {
 			console.log('HW ID not found');
 		}
-		// if(devices[device_id].settings.homewizard_id !== undefined ) {
-//         var homewizard_id = devices[device_id].settings.homewizard_id;
-//         homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
-//             if (Object.keys(callback).length > 0) {
-//            	try {
-//                 var rte = (callback[0].rte.toFixed(1) * 2) / 2;
-//                 var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
-//                 var tte = (callback[0].tte.toFixed(1) * 2) / 2;
-//
-//                 //Check current temperature
-//                 if (devices[device_id].temperature != rte) {
-//                   console.log("New RTE - "+ rte);
-//                   module.exports.realtime( { id: device_id }, "measure_temperature", rte );
-//                   devices[device_id].temperature = rte;
-//                 } else {
-//                   console.log("RTE: no change");
-//                 }
-//
-//                 //Check thermostat temperature
-//                 if (devices[device_id].thermTemperature != rsp) {
-//                   console.log("New RSP - "+ rsp);
-//                   if (devices[device_id].setTemperature === 0) {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", rsp );
-//                   }
-//                   devices[device_id].thermTemperature = rsp;
-//                 } else {
-//                   console.log("RSP: no change");
-//                 }
-//
-//                 //Check heatlink set temperature
-//                 if (devices[device_id].setTemperature != tte) {
-//                   console.log("New TTE - "+ tte);
-//                   if (tte > 0) {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", tte );
-//                   } else {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", devices[device_id].thermTemperature );
-//                   }
-//                   devices[device_id].setTemperature = tte;
-//                 } else {
-//                   console.log("TTE: no change");
-//                 }
-
 	}
 
 	onDeleted() {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			Homey.log("--Stopped Polling--");
+			console.log("--Stopped Polling--");
 		}
 
 		this.log('deleted: ' + JSON.stringify(this));
