@@ -29,7 +29,7 @@ module.exports = (function(){
       "heatlinks": [{"id": 0, "favorite": "no", "name": "HeatLink", "code": "384699", "pump": "on", "heating": "off", "dhw": "off", "rte": 19.375, "rsp": 20.000, "tte": 0.000, "ttm": null, "wp": 1.628, "wte": 52.988, "ofc": 0, "odc": 0, "presets": [{ "id": 0, "te": 20.00},{ "id": 1, "te": 15.00},{ "id": 2, "te": 21.00},{ "id": 3, "te": 12.00}]}],
       "hues": []};
       
-   homewizard.debug = false;
+   homewizard.debug = true;
    homewizard.debug_devices = [];
    homewizard.debug_devices.HW12345 = {
       id: 'HW12345',
@@ -57,7 +57,7 @@ module.exports = (function(){
    homewizard.getDeviceData = function(device_id, data_part, callback) {
 
       if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
-         callback([]); 
+         callback([]);
       } else {
          callback(self.devices[device_id].polldata[data_part]);   
       }

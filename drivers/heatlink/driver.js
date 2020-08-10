@@ -4,11 +4,76 @@ const Homey = require('homey');
 const request = require('request');
 
 const { ManagerDrivers } = require('homey');
+const driver = ManagerDrivers.getDriver('homewizard');
+var devices = {};
+var homewizard = require('./../../includes/homewizard.js');
+var homewizard_devices;
 
 class HomeWizardHeatlink extends Homey.Driver {
 
     onInit() {
         this.log('HomeWizard Heatlink has been inited');
+    }
+
+    onPair(socket) {
+
+        // Show a specific view by ID
+        socket.showView('start');
+
+        // Show the next view
+        socket.nextView();
+
+        // Show the previous view
+        socket.prevView();
+
+        // Close the pair session
+        socket.done();
+
+        // Received when a view has changed
+        socket.on('showView', (viewId, callback) => {
+            callback();
+            console.log('View: ' + viewId);
+        });
+
+        socket.on('get_homewizards', function () {
+
+            homewizard_devices = driver.getDevices();
+
+            homewizard.getDevices(function ( homewizard_devices)  {
+                var hw_devices = {};
+
+                Object.keys(homewizard_devices).forEach(function (key) {
+                    hw_devices[key] = homewizard_devices[key];
+                });
+
+                console.log(hw_devices);
+                socket.emit('hw_devices', hw_devices);
+
+            });
+        });
+
+        socket.on('manual_add', function (device, callback) {
+
+            if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
+                //true
+                console.log('HeatLink added ' + device.data.id);
+                devices[device.data.id] = {
+                  id: device.data.id,
+                  name: device.name,
+                  settings: device.settings,
+                };
+                callback( null, devices );
+                socket.emit("success", device);
+
+            } else {
+                socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
+            }
+        });
+
+        socket.on('disconnect', function(){
+            console.log("User aborted pairing, or pairing is finished");
+        });
+
     }
 
 }
@@ -31,59 +96,7 @@ module.exports = HomeWizardHeatlink;
 //       callback(error);
 //     }
 // };
-//
-// module.exports.pair = function( socket ) {
-//     socket.on('get_homewizards', function () {
-//         homewizard.getDevices(function(homewizard_devices) {
-//
-//             Homey.log(homewizard_devices);
-//             var hw_devices = {};
-//             Object.keys(homewizard_devices).forEach(function(key) {
-//                 hw_devices[key] = homewizard_devices[key];
-//             });
-//
-//             socket.emit('hw_devices', hw_devices);
-//         });
-//     });
-//
-//     socket.on('manual_add', function (device, callback) {
-//         if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-//             //true
-//             Homey.log('HeatLink added ' + device.data.id);
-//             devices[device.data.id] = {
-//               id: device.data.id,
-//               name: device.name,
-//               settings: device.settings,
-//             };
-//             callback( null, devices );
-//             socket.emit("success", device);
-//             startPolling();
-//         } else {
-//             socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
-//         }
-//     });
-//
-//     socket.on('disconnect', function(){
-//         console.log("User aborted pairing, or pairing is finished");
-//     });
-// }
-//
-// module.exports.init = function(devices_data, callback) {
-//     devices_data.forEach(function initdevice(device) {
-//         Homey.log('add device: ' + JSON.stringify(device));
-//         devices[device.id] = device;
-//         module.exports.getSettings(device, function(err, settings){
-//             devices[device.id].settings = settings;
-//         });
-//
-//     });
-//     if (Object.keys(devices).length > 0) {
-//       startPolling();
-//     }
-// 	Homey.log('Heatlink driver init done');
-//
-// 	callback (null, true);
-// };
+
 //
 // module.exports.deleted = function( device_data ) {
 //     delete devices[device_data.id];

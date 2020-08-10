@@ -57,14 +57,14 @@ class HomeWizardThermometer extends Homey.Device {
 			if(devices[index].settings.homewizard_id !== undefined ) {
 				var homewizard_id = devices[index].settings.homewizard_id;
 				var thermometer_id = devices[index].settings.thermometer_id;
-				homewizard.getDeviceData(homewizard_id, 'thermometers', function(callback) {
-					if (Object.keys(callback).length > 0) {
+				homewizard.getDeviceData(homewizard_id, 'thermometers', function(result) {
+					if (Object.keys(result).length > 0) {
 						try {
-							for (var index in callback) {
+							for (var index in result) {
 
-								if (callback[index].id == thermometer_id) {
-									var te = (callback[index].te.toFixed(1) * 2) / 2;
-									var hu = (callback[index].hu.toFixed(1) * 2) / 2;
+								if (result[index].id == thermometer_id) {
+									var te = (result[index].te.toFixed(1) * 2) / 2;
+									var hu = (result[index].hu.toFixed(1) * 2) / 2;
 
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {

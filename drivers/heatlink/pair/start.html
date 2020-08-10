@@ -3,9 +3,17 @@ $( document ).ready(function() {
 	Homey.emit('get_homewizards');
 
 	Homey.on('hw_devices', function(hw_devices){
-		$.each(hw_devices, function( index, value ) {
-			$('#homewizard_select').append($("<option>").attr('value',value.id).text(value.settings.homewizard_ip));
-		});
+		// $.each(hw_devices, function( index, value ) {
+		// 	$('#homewizard_select').append($("<option>").attr('value',value.id).text(value.settings.homewizard_ip));
+		// });
+
+        hw_device_list = hw_devices;
+        $('#homewizard_select').find('option').remove();
+        $('#homewizard_select').append('<option>Select HomeWizard</option>');
+        $.each(hw_devices, function( index, value ) {
+            $('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
+        });
+        // $('#homewizard_select').trigger('change');
     });
 });
 
