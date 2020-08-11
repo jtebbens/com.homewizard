@@ -26,7 +26,7 @@ module.exports = (function(){
       "energylinks": [
          {"id":0,"favorite":"no","name":"EnergyLink","code":"942991","t1":"solar","c1":1000,"t2":"water","c2":1,"tariff":1,"s1":{"po":0,"dayTotal":10.24,"po+":2498,"po+t":"11:22","po-":0,"po-t":"00:01"},"s2":{"po":4,"dayTotal":162.00,"po+":7,"po+t":"08:49","po-":0,"po-t":"00:01"},"aggregate":{"po":511,"dayTotal":-3.19,"po+":2873,"po+t":"09:22","po-":-1857,"po-t":"11:55"},"used":{"po":511,"dayTotal":7.04,"po+":3791,"po+t":"11:45","po-":204,"po-t":"16:34"},"gas":{"lastHour":0.44,"dayTotal":4.07},"kwhindex":2.87,"wp":3570}
       ],
-      "heatlinks": [{"id": 0, "favorite": "no", "name": "HeatLink", "code": "384699", "pump": "on", "heating": "off", "dhw": "off", "rte": 19.375, "rsp": 20.000, "tte": 0.000, "ttm": null, "wp": 1.628, "wte": 52.988, "ofc": 0, "odc": 0, "presets": [{ "id": 0, "te": 20.00},{ "id": 1, "te": 15.00},{ "id": 2, "te": 21.00},{ "id": 3, "te": 12.00}]}],
+      "heatlinks": [{"id": 0, "favorite": "no", "name": "HeatLink", "code": "384699", "pump": "on", "heating": "off", "dhw": "off", "rte": 19.1, "rsp": 20.000, "tte": 0.000, "ttm": null, "wp": 1.628, "wte": 52.988, "ofc": 0, "odc": 0, "presets": [{ "id": 0, "te": 20.00},{ "id": 1, "te": 15.00},{ "id": 2, "te": 21.00},{ "id": 3, "te": 12.00}]}],
       "hues": []};
       
    homewizard.debug = false;
@@ -49,7 +49,11 @@ module.exports = (function(){
          self.devices = devices;  
       }
    };
-   
+
+   homewizard.getRandom = function(min, max) {
+      return Math.random() * (max - min) + min;
+   }
+
    homewizard.getDevices = function(callback) {
       callback(self.devices); 
    };
@@ -57,16 +61,15 @@ module.exports = (function(){
    homewizard.getDeviceData = function(device_id, data_part, callback) {
 
       if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
-         callback([]); 
+         callback([]);
       } else {
          callback(self.devices[device_id].polldata[data_part]);   
       }
    };
    
    homewizard.call = function(device_id, uri_part, callback) {
-      if (homewizard.debug) {
-         callback(null, testdata); 
-      } else {
+
+         var me = this;
          console.log('Call device ' + device_id);
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
@@ -77,14 +80,14 @@ module.exports = (function(){
                timeout: 20000,
              }, function (error, response, body) {
                if (response === null || response === undefined) {
-                   callback('No response', []); 
+                   callback('No response', []);
                    return;
                }
                if (!error && response.statusCode == 200) {
                   var jsonObject;
                   try {
                      jsonObject = JSON.parse(body);
-                     
+
                      if (jsonObject.status == 'ok') {
                         if(typeof callback === 'function') {
                             callback(null, jsonObject.response);
@@ -96,19 +99,19 @@ module.exports = (function(){
                       console.log(exception);
                      console.log('EXCEPTION JSON : '+ body);
                      jsonObject = null;
-                     callback('Invalid data', []); 
+                     callback('Invalid data', []);
                   }
-               } else {        
+               } else {
                   if(typeof callback === 'function') {
-                    callback('Error', []); 
+                    callback('Error', []);
                   }
                   console.log('Error: '+error);
                }
            });
          } else {
-            console.log('Homewizard '+ device_id +': settings not found!');
-        }
-      } 
+            me.log('Homewizard '+ device_id +': settings not found!');
+         }
+
    };
    
    // homewizard.getScenes = function(args, callback) {
@@ -156,33 +159,50 @@ module.exports = (function(){
    };
    
    homewizard.poll = function() {
-      Object.keys(self.devices).forEach(function (device_id) {
-         if (typeof self.devices[device_id].polldata === 'undefined') {
-            self.devices[device_id].polldata = [];  
-         }
-         homewizard.call(device_id, '/get-sensors', function(err, response) {
-            if (err === null) {
-               self.devices[device_id].polldata.preset = response.preset;
-               self.devices[device_id].polldata.heatlinks = response.heatlinks;
-               self.devices[device_id].polldata.energylinks = response.energylinks;
-               self.devices[device_id].polldata.energymeters = response.energymeters;
-               self.devices[device_id].polldata.thermometers = response.thermometers;
-               self.devices[device_id].polldata.rainmeters = response.rainmeters;
-			   self.devices[device_id].polldata.windmeters = response.windmeters;
-            
-               if (Object.keys(response.energylinks).length !== 0) {
 
-                   homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
-                     if(err == null) {
-                        self.devices[device_id].polldata.energylink_el = response2;
-                        console.log('HW-Data polled for slimme meter: '+device_id);
-                     }
-                  });
-               }
+      if (homewizard.debug) {
+
+         var response = testdata;
+
+         self.devices['HW12345'].polldata = [];
+         self.devices['HW12345'].polldata.preset = response.preset;
+         self.devices['HW12345'].polldata.heatlinks = response.heatlinks;
+         self.devices['HW12345'].polldata.energylinks = response.energylinks;
+         self.devices['HW12345'].polldata.energymeters = response.energymeters;
+         self.devices['HW12345'].polldata.thermometers = response.thermometers;
+         self.devices['HW12345'].polldata.rainmeters = response.rainmeters;
+         self.devices['HW12345'].polldata.windmeters = response.windmeters;
+
+      } else {
+         Object.keys(self.devices).forEach(function (device_id) {
+            if (typeof self.devices[device_id].polldata === 'undefined') {
+               self.devices[device_id].polldata = [];
             }
-         });
+            homewizard.call(device_id, '/get-sensors', function(err, response) {
+               if (err === null) {
+                  self.devices[device_id].polldata.preset = response.preset;
+                  self.devices[device_id].polldata.heatlinks = response.heatlinks;
+                  self.devices[device_id].polldata.energylinks = response.energylinks;
+                  self.devices[device_id].polldata.energymeters = response.energymeters;
+                  self.devices[device_id].polldata.thermometers = response.thermometers;
+                  self.devices[device_id].polldata.rainmeters = response.rainmeters;
+                  self.devices[device_id].polldata.windmeters = response.windmeters;
 
-      });
+                  if (Object.keys(response.energylinks).length !== 0) {
+
+                     homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+                        if(err == null) {
+                           self.devices[device_id].polldata.energylink_el = response2;
+                           console.log('HW-Data polled for slimme meter: '+device_id);
+                        }
+                     });
+                  }
+               }
+            });
+
+         });
+      }
+
    };
    
    return homewizard;
