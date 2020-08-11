@@ -14,6 +14,28 @@ class HomeWizardHeatlink extends Homey.Driver {
     onInit() {
         this.log('HomeWizard Heatlink has been inited');
 
+        new Homey.FlowCardAction('heatlink_off')
+            .register()
+            .registerRunListener( async (args, state) => {
+                if (!args.device) {
+                    return false;
+                }
+
+                return new Promise((resolve, reject) => {
+
+                    homewizard.call(args.device.id, '/hl/0/settarget/0', function(err, response) {
+                        if(err) {
+                            me.log('ERR flowCardAction heatlink_off  -> returned false');
+                            return resolve(false);
+                        }
+
+                        me.log('flowCardAction heatlink_off  -> returned true');
+                        return resolve(true);
+                    });
+
+                });
+            });
+
     }
 
     onPair(socket) {
