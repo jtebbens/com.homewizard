@@ -57,16 +57,14 @@ class HomeWizardThermometer extends Homey.Device {
 			if(devices[index].settings.homewizard_id !== undefined ) {
 				var homewizard_id = devices[index].settings.homewizard_id;
 				var thermometer_id = devices[index].settings.thermometer_id;
-				homewizard.getDeviceData(homewizard_id, 'thermometers', function(callback) {
-					if (Object.keys(callback).length > 0) {
+				homewizard.getDeviceData(homewizard_id, 'thermometers', function(result) {
+					if (Object.keys(result).length > 0) {
 						try {
-							//Rename index to index2 to avoid overwrite
-							for (var index2 in callback) {
-								if (callback[index2].id == thermometer_id) {
-									var te = (callback[index2].te.toFixed(1) * 2) / 2;
-									var hu = (callback[index2].hu.toFixed(1) * 2) / 2;
+							for (var index in result) {
 
-									// console.log("Thermometer ID and Data - " + thermometer_id + " Temp: " + te + " Hum: " + hu);
+								if (result[index].id == thermometer_id) {
+									var te = (result[index].te.toFixed(1) * 2) / 2;
+									var hu = (result[index].hu.toFixed(1) * 2) / 2;
 
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
@@ -95,7 +93,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			console.log("--Stopped Polling--");
+			Homey.log("--Stopped Polling--");
 		}
 
 		this.log('deleted: ' + JSON.stringify(this));

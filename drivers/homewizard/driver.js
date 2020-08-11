@@ -112,16 +112,12 @@ class HomeWizardDriver extends Homey.Driver {
             })
             .getArgument('scene')
             .registerAutocompleteListener(async (query, args) => {
-                this.log('CALLED flowCardAction switch_scene_off autocomplete');
-
-                return this._onGetSceneAutcomplete(args);
-
-
+                return this._onGetSceneAutcomplete(args)
             });
 
     }
 
-    _onGetSceneAutcomplete(args) {
+    _onGetSceneAutcomplete = function(args) {
 
         var me = this;
 
