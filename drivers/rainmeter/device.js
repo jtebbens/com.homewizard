@@ -25,6 +25,12 @@ class HomeWizardRainmeter extends Homey.Device {
 
 		this.startPolling();
 
+		this._flowTriggerValueChanged = new Homey.FlowCardTriggerDevice('rainmeter_value_changed').register();
+
+	}
+
+	flowTriggerValueChanged( device, tokens ) {
+		this._flowTriggerValueChanged.trigger( device, tokens ).catch( this.error )
 	}
 
 
@@ -50,6 +56,48 @@ class HomeWizardRainmeter extends Homey.Device {
 
 	getStatus() {
 
+		var me = this;
+
+		if(this.getSetting('homewizard_id') !== undefined ) {
+			var homewizard_id = this.getSetting('homewizard_id');
+
+			homewizard.getDeviceData(homewizard_id, 'rainmeters', function(callback) {
+				if (Object.keys(callback).length > 0) {
+					try {
+						me.setAvailable();
+
+						var rain_daytotal = ( callback[0].mm ); // Total Rain in mm used JSON $rainmeters[0]['mm']
+						var rain_last3h = ( callback[0]['3h'] ); // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
+						// Rain last 3 hours
+						me.setCapabilityValue("measure_rain.last3h", rain_last3h );
+						// Rain total day
+						me.setCapabilityValue("measure_rain.total", rain_daytotal );
+
+						// Trigger flows
+						if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
+							console.log("Current Total Rainfall - "+ rain_daytotal);
+							me.flowTriggerValueChanged(me, {rainmeter_changed: rain_daytotal})
+							me.setStoreValue("last_raintotal",rain_daytotal); // Update last_raintotal
+						}
+
+					} catch (err) {
+						console.log('ERROR RainMeter getStatus ', err);
+						me.setUnavailable();
+					}
+				}
+			});
+		} else {
+			console.log('Rainmeter settings not found, stop polling set unavailable');
+			this.setUnavailable();
+
+			// Only clear interval when the unavailable device is the only device on this driver
+			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
+
+			if(Object.keys(devices).length === 1) {
+				clearInterval(refreshIntervalId);
+			}
+		}
 	}
 
 	onDeleted() {

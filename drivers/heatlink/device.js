@@ -51,28 +51,6 @@ class HomeWizardHeatlink extends Homey.Device {
 
 	}
 
-	setTargetTemparature(temparature) {
-        // Catch faulty trigger and max/min temp
-        if (!temperature) {
-          callback(true, temperature);
-          return false;
-        }
-        else if (temperature < 5) {
-          temperature = 5;
-        }
-        else if (temperature > 35) {
-          temperature = 35;
-        }
-        temperature = Math.round(temperature.toFixed(1) * 2) / 2;
-        var url = '/hl/0/settarget/'+temperature;
-        console.log(url);
-        var homewizard_id = this.getSetting('homewizard_id');
-        homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
-            console.log(err);
-            if (callback) callback(err, temperature);
-        });
-	}
-
 	startPolling() {
 
 		var me = this;
