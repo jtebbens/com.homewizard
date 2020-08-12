@@ -50,7 +50,7 @@ class HomeWizardHeatlink extends Homey.Device {
 		});
 
 	}
-	
+
 	startPolling() {
 
 		var me = this;
