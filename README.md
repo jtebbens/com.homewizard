@@ -3,8 +3,8 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section.
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
-v0.3.0:
-* Rewrite to SDK2 so it works on Homey Firmware V3 - V5
+v1.0.0:
+* Complete rewrite to SDK2 so it will on Homey Firmware V3 - V5 (Thanks & Credits to Freddie Welvering)
 
 V0.2.8:
 * Updated measure_power to reflect Netto power vs Used (Solar needs to add its own power generation in Homey)

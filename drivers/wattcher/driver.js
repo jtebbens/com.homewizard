@@ -56,7 +56,7 @@ class HomeWizardWattcher extends Homey.Driver {
 
             if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
-                console.log('Windmeter added ' + device.data.id);
+                console.log('Wattcher added ' + device.data.id);
                 devices[device.data.id] = {
                     id: device.data.id,
                     name: device.name,
