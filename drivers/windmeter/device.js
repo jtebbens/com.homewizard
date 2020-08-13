@@ -25,12 +25,6 @@ class HomeWizardWindmeter extends Homey.Device {
 
 		this.startPolling();
 
-		// this._flowTriggerValueChanged = new Homey.FlowCardTriggerDevice('rainmeter_value_changed').register();
-
-	}
-
-	flowTriggerValueChanged( device, tokens ) {
-		this._flowTriggerValueChanged.trigger( device, tokens ).catch( this.error )
 	}
 
 
