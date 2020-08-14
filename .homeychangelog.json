@@ -1,5 +1,5 @@
 {
-  "1.0.0": {
-    "en": "Full rewrite to SDKv2"
+  "1.0.1": {
+    "en": "Added power usage meter support for Energylink S1 and S2 "
   }
 }

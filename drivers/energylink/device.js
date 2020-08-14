@@ -164,6 +164,25 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setCapabilityValue("measure_water", water_current_cons);
 					}
 
+					if (value_s1 == 'other' ) {
+						var other_current_cons = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
+						var other_daytotal_cons = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
+						console.log("Other- " + other_daytotal_cons);
+						// Used water m3
+						me.setCapabilityValue("meter_power.s1other", other_daytotal_cons);
+						me.setCapabilityValue("measure_power.s1other", other_current_cons);
+
+					}
+
+					if (value_s2 == 'other' ) {
+						var other_current_cons = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
+						var other_daytotal_cons = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
+						console.log("Other- " + other_daytotal_cons);
+						// Used water m3
+						me.setCapabilityValue("meter_power.s2other", other_daytotal_cons);
+						me.setCapabilityValue("measure_power.s2other", other_current_cons);
+					}
+
 					// Trigger flows
 					if (energy_current_cons != me.getStoreValue("last_measure_power_used") && energy_current_cons != undefined && energy_current_cons != null) {
 						console.log("Current Power - "+ energy_current_cons);

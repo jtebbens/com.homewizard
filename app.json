@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -561,6 +561,10 @@
         "measure_power.used",
         "measure_power.netto",
         "measure_power.s1",
+        "measure_power.s1other",
+        "meter_power.s1other",
+        "measure_power.s2other",
+        "meter_power.s2other",
         "meter_gas.today",
         "meter_gas.reading",
         "meter_water",
@@ -592,10 +596,34 @@
             "nl": "Dag opbrengst"
           }
         },
+        "measure_power.s1other": {
+          "title": {
+            "en": "Power current S1",
+            "nl": "Huidig vermogen S1"
+          }
+        },
+        "meter_power.s1other": {
+          "title": {
+            "en": "Day usage S1",
+            "nl": "Dag gebruik S1"
+          }
+        },
         "measure_power.used": {
           "title": {
             "en": "Power current",
             "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.s2other": {
+          "title": {
+            "en": "Power current S2",
+            "nl": "Huidig vermogen S2"
+          }
+        },
+        "meter_power.s2other": {
+          "title": {
+            "en": "Day usage S2",
+            "nl": "Dag gebruik S2"
           }
         },
         "measure_power.netto": {
