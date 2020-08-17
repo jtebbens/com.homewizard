@@ -118,7 +118,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					me.setCapabilityValue('meter_power.used', energy_daytotal_cons);
 					// Consumed elec total day
 					me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr);
-
+          // Disable meter_power
+					me.removeCapability('meter_power');
 					// Set solar used to zero before counting
 					var solar_current_prod = 0;
 					var solar_daytotal_prod = 0;
@@ -129,7 +130,8 @@ class HomeWizardEnergylink extends Homey.Device {
 
 						var solar_current_prod = solar_current_prod + energy_current_prod;
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
-
+						me.removeCapability('meter_power.s1other');
+            me.removeCapability('measure_power.s1other');
 					}
 
 					if (value_s2 == 'solar' ) {
@@ -138,11 +140,15 @@ class HomeWizardEnergylink extends Homey.Device {
 
 						var solar_current_prod = solar_current_prod + energy_current_prod;
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
+						me.removeCapability('meter_power.s2other');
+            me.removeCapability('measure_power.s2other');
 					}
 
 					if(value_s1 == 'solar' || value_s2 == 'solar') {
 						me.setCapabilityValue("measure_power.s1", solar_current_prod );
 						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod );
+						me.removeCapability('meter_power.s1other');
+            me.removeCapability('measure_power.s1other');
 					}
 
 					if (value_s1 == 'water' ) {
@@ -152,6 +158,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						// Used water m3
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
+						me.removeCapability('meter_power.s1other');
+						me.removeCapability('measure_power.s1other');
 
 					}
 
@@ -162,6 +170,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						// Used water m3
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
+						me.removeCapability('meter_power.s2other');
+						me.removeCapability('measure_power.s2other');
 					}
 
 					if (value_s1 == 'other' ) {
@@ -171,7 +181,6 @@ class HomeWizardEnergylink extends Homey.Device {
 						// Used water m3
 						me.setCapabilityValue("meter_power.s1other", other_daytotal_cons);
 						me.setCapabilityValue("measure_power.s1other", other_current_cons);
-
 					}
 
 					if (value_s2 == 'other' ) {

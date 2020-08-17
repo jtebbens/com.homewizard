@@ -1,5 +1,8 @@
 {
   "1.0.1": {
     "en": "Added power usage meter support for Energylink S1 and S2 "
+  },
+  "1.0.2": {
+    "en": "Bug fix: remove S1 & S2 power tracking from UI if there is already solar and water meters active"
   }
 }
