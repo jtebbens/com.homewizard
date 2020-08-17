@@ -3,6 +3,10 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section.
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
+
+v1.0.1:
+* Added power usage meter support for Energylink port S1 and S2
+
 v1.0.0:
 * Complete rewrite to SDK2 so it will on Homey Firmware V3 - V5 (Thanks & Credits to Freddie Welvering)
 
