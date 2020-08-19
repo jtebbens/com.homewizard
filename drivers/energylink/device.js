@@ -168,6 +168,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
 						console.log("Water- " + water_daytotal_cons);
 						// Used water m3
+						me.setCapabilityOptions("meter_water", {"decimals":3});
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
 						me.removeCapability('meter_power.s2other');

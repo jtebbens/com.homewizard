@@ -171,7 +171,7 @@ class HomeWizardDriver extends Homey.Driver {
 
         socket.on('manual_add', function (device, callback) {
 
-            var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-status/';
+            var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-sensors/';
 
             console.log('Calling '+ url);
 

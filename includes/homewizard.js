@@ -27,8 +27,10 @@ module.exports = (function(){
          {"id":0,"favorite":"no","name":"EnergyLink","code":"942991","t1":"solar","c1":1000,"t2":"water","c2":1,"tariff":1,"s1":{"po":0,"dayTotal":10.24,"po+":2498,"po+t":"11:22","po-":0,"po-t":"00:01"},"s2":{"po":4,"dayTotal":162.00,"po+":7,"po+t":"08:49","po-":0,"po-t":"00:01"},"aggregate":{"po":511,"dayTotal":-3.19,"po+":2873,"po+t":"09:22","po-":-1857,"po-t":"11:55"},"used":{"po":511,"dayTotal":7.04,"po+":3791,"po+t":"11:45","po-":204,"po-t":"16:34"},"gas":{"lastHour":0.44,"dayTotal":4.07},"kwhindex":2.87,"wp":3570}
       ],
       "heatlinks": [{"id": 0, "favorite": "no", "name": "HeatLink", "code": "384699", "pump": "on", "heating": "off", "dhw": "off", "rte": 19.1, "rsp": 20.000, "tte": 0.000, "ttm": null, "wp": 1.628, "wte": 52.988, "ofc": 0, "odc": 0, "presets": [{ "id": 0, "te": 20.00},{ "id": 1, "te": 15.00},{ "id": 2, "te": 21.00},{ "id": 3, "te": 12.00}]}],
-      "hues": []};
-      
+      "hues": [],
+      "kakusensors": [{"id":0,"name":"Beweging","status":"no","type":"motion","favorite":"no","timestamp":"13:56","cameraid":null},{"id":1,"name":"Kantoor","status":"yes","type":"motion","favorite":"no","timestamp":"14:43","cameraid":null},{“id”:5,“name”:“Rookmelder Keuken”,“status”:“no”,“type”:“smoke868”,“favorite”:“no”,“timestamp”:“09:35”,“cameraid”:null,“lowBattery”:“no”,“lastSeen”:“2020-08-19 09:35:14”}],
+    };
+
    homewizard.debug = false;
    homewizard.debug_devices = [];
    homewizard.debug_devices.HW12345 = {
@@ -41,12 +43,12 @@ module.exports = (function(){
       }
    };
    homewizard.debug_devices_data =  [ { id: 'HW12345' }];
-   
+
    homewizard.setDevices = function(devices){
       if (homewizard.debug) {
          self.devices = homewizard.debug_devices;
       } else {
-         self.devices = devices;  
+         self.devices = devices;
       }
    };
 
@@ -55,18 +57,18 @@ module.exports = (function(){
    }
 
    homewizard.getDevices = function(callback) {
-      callback(self.devices); 
+      callback(self.devices);
    };
-   
+
    homewizard.getDeviceData = function(device_id, data_part, callback) {
 
       if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
          callback([]);
       } else {
-         callback(self.devices[device_id].polldata[data_part]);   
+         callback(self.devices[device_id].polldata[data_part]);
       }
    };
-   
+
    homewizard.call = function(device_id, uri_part, callback) {
 
          var me = this;
@@ -113,7 +115,7 @@ module.exports = (function(){
          }
 
    };
-   
+
    // homewizard.getScenes = function(args, callback) {
    //
 	//   this.call(args.device.getData().id, '/gplist', function(err, response) {
@@ -132,12 +134,12 @@ module.exports = (function(){
    //        return arrayAutocomplete;
    //    });
    // };
-   
+
    homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
       if (homewizard_ledring) {
         Homey.manager('ledring').animate(
-            'pulse', // animation name (choose from loading, pulse, progress, solid) 
+            'pulse', // animation name (choose from loading, pulse, progress, solid)
             {
                 color: colorName,
             },
@@ -150,14 +152,14 @@ module.exports = (function(){
         );
       }
    };
-   
+
    homewizard.startpoll = function() {
          homewizard.poll();
          self.polls.device_id = setInterval(function () {
             homewizard.poll();
          }, 1000 * 10);
    };
-   
+
    homewizard.poll = function() {
 
       if (homewizard.debug) {
@@ -204,6 +206,6 @@ module.exports = (function(){
       }
 
    };
-   
+
    return homewizard;
 })();

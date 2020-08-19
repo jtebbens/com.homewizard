@@ -3,6 +3,12 @@
 This app let's you connect your HomeWizard to Homey. You can add your HomeWizard in the device section.
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
+NOTE: As of verion 1.0.0 you must (re)pair your homewizard and other subcomponents (Energylink, Heatlink etc.) as they will fail due
+to the big code change from SDKv1 to SDKv2.
+
+v1.0.3:
+* User request: Water meter has now 3 decimals
+
 v1.0.2:
 * Bug fix: remove S1 & S2 power tracking from UI if there is already solar and water meters active
 
@@ -11,34 +17,6 @@ v1.0.1:
 
 v1.0.0:
 * Complete rewrite to SDK2 so it will on Homey Firmware V3 - V5 (Thanks & Credits to Freddie Welvering)
-
-V0.2.8:
-* Updated measure_power to reflect Netto power vs Used (Solar needs to add its own power generation in Homey)
-
-v0.2.6:
-* Netto power usage added (Current power/watts which will go negative if you produce power via solar)
-
-v0.2.5:
-* Bugfix Rainmeter and EnergyLink triggers
-
-v0.2.2:
-* Rainmeter flow trigger added (Rainfall total based)
-
-v0.2.1:
-* Windmeter fix and heatlink action card added
-
-v0.2.0:
-* Added windmeter
-* Changed device class to make it work on Homey V2
-
-v0.1.7:
-* Save readings from your smart meter
-* Fixed EnergyLink not correctly saving solar from S2 port.
-
-v0.1.6:
-* Added rainmeter
-* SIDENOTE just as the Energylink, heatlink etc you need to add Rain and Windmeter separately.
-  Verify homewizard has its windmeter units set to km/h else you get funny measures
 
 **If you like this app, then consider to buy me a beer :)**
 
