@@ -1,5 +1,5 @@
 {
-  "1.0.4": {
-    "en": "Bug fix: Heatlink callback error and action card Heatlink off"
+  "1.0.5": {
+    "en": "Bug fix: repeated crashes on function call which is a method instead - unexpected token"
   }
 }

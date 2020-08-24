@@ -84,7 +84,7 @@ class HomeWizardDriver extends Homey.Driver {
             .registerAutocompleteListener(async (query, args) => {
                 this.log('CALLED flowCardAction switch_scene_on autocomplete');
 
-                return this._onGetSceneAutcomplete(args);
+                return this._onGetSceneAutocomplete(args);
 
 
             });
@@ -112,12 +112,12 @@ class HomeWizardDriver extends Homey.Driver {
             })
             .getArgument('scene')
             .registerAutocompleteListener(async (query, args) => {
-                return this._onGetSceneAutcomplete(args)
+                return this._onGetSceneAutocomplete(args)
             });
 
     }
 
-    _onGetSceneAutcomplete = function(args) {
+    _onGetSceneAutocomplete(args) {
 
         var me = this;
 
@@ -143,7 +143,7 @@ class HomeWizardDriver extends Homey.Driver {
                     });
                 }
 
-                me.log('_onGetSceneAutcomplete result', arrayAutocomplete);
+                me.log('_onGetSceneAutocomplete result', arrayAutocomplete);
 
                 return resolve(arrayAutocomplete);
             });
