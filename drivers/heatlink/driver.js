@@ -23,13 +23,13 @@ class HomeWizardHeatlink extends Homey.Driver {
 
                 return new Promise((resolve, reject) => {
 
-                    homewizard.call(args.device.id, '/hl/0/settarget/0', function(err, response) {
+                    homewizard.call(args.device.getData().id, '/hl/0/settarget/0', function(err, response) {
                         if(err) {
-                            me.log('ERR flowCardAction heatlink_off  -> returned false');
+                            console.log('ERR flowCardAction heatlink_off  -> returned false');
                             return resolve(false);
                         }
 
-                        me.log('flowCardAction heatlink_off  -> returned true');
+                        console.log('flowCardAction heatlink_off  -> returned true');
                         return resolve(true);
                     });
 

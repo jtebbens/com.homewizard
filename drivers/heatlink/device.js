@@ -38,17 +38,22 @@ class HomeWizardHeatlink extends Homey.Device {
 				temperature = 35;
 			}
 			temperature = Math.round(temperature.toFixed(1) * 2) / 2;
-			var url = '/hl/0/settarget/'+temperature;
-			console.log(url);
-			var homewizard_id = this.getSetting('homewizard_id');
-			homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
-				console.log(err);
-				if (response) callback(err, temperature);
-			});
 
+			return new Promise((resolve, reject) => {
+					var url = '/hl/0/settarget/'+temperature;
+					console.log(url); // Console log url
+					var homewizard_id = this.getSetting('homewizard_id');
+			    homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
+						if (err) {
+							console.log('ERR settarget target_temperature -> returned false');
+							return resolve(false);
+						}
+						console.log('settarget target_temperature - returned true');
+						return resolve(true);
+				});
+			});
 			return Promise.resolve();
 		});
-
 	}
 
 	startPolling() {

@@ -1,5 +1,5 @@
 {
-  "1.0.3": {
-    "en": "Bug fix: remove S1 & S2 power tracking from UI if there is already solar and water meters active. User request: Water meter extended from 2 to 3 decimals."
+  "1.0.4": {
+    "en": "Bug fix: Heatlink callback error and action card Heatlink off"
   }
 }
