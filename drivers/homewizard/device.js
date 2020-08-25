@@ -46,7 +46,7 @@ class HomeWizardDevice extends Homey.Device {
 		this._flowTriggerPresetChanged.trigger( device, tokens ).catch( this.error )
 	}
 
-	startPolling = function(devices) {
+	startPolling(devices) {
 
 		var me = this;
 
