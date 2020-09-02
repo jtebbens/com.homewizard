@@ -1,5 +1,5 @@
 {
-  "1.0.5": {
-    "en": "Bug fix: repeated crashes on function call which is a method instead - unexpected token"
+  "1.0.6": {
+    "en": "Bug fix: s1 & s2 Energylink doesnt update"
   }
 }

@@ -87,9 +87,8 @@ class HomeWizardEnergylink extends Homey.Device {
 				try {
 					var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
 					var value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
-
-					// console.log("t1- " + value_s1);
-					// console.log("t2- " + value_s2);
+					console.log("t1- " + value_s1);
+					console.log("t2- " + value_s2);
 
 					// Common Energylink data
 					var energy_current_cons = ( callback[0].used.po ); // WATTS Energy used JSON $energylink[0]['used']['po']
