@@ -148,7 +148,7 @@ module.exports = (function(){
             3000, // duration
             function(err, success) { // callback
                 if(err) return Homey.error(err);
-                Homey.log("Ledring pulsing "+colorName);
+                console.log("Ledring pulsing "+colorName);
             }
         );
       }

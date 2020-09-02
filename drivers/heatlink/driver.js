@@ -109,7 +109,7 @@ module.exports = HomeWizardHeatlink;
 //
 // // SETTINGS
 // module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
-//     Homey.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
+//     console.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
 //     try {
 // 	    changedKeysArr.forEach(function (key) {
 // 		    devices[device_data.id].settings[key] = newSettingsObj[key];
@@ -125,9 +125,9 @@ module.exports = HomeWizardHeatlink;
 //     delete devices[device_data.id];
 //     if (Object.keys(devices).length === 0) {
 //         clearInterval(refreshIntervalId);
-//         Homey.log("--Stopped Polling--");
+//         console.log("--Stopped Polling--");
 //     }
-//     Homey.log('deleted: ' + JSON.stringify(device_data));
+//     console.log('deleted: ' + JSON.stringify(device_data));
 // };
 //
 //
@@ -187,7 +187,7 @@ module.exports = HomeWizardHeatlink;
 // Homey.manager('flow').on('action.heatlink_off', function( callback, args ){
 //     homewizard.call(args.device.id, '/hl/0/settarget/0', function(err, response) {
 //       if (err === null) {
-//         Homey.log('Heatlink Off');
+//         console.log('Heatlink Off');
 //         callback( null, true );
 //       } else {
 //         callback(err, false); // err
@@ -243,7 +243,7 @@ module.exports = HomeWizardHeatlink;
 //             }
 //         });
 //     } else {
-//         Homey.log('Removed Heatlink '+ device_id +' (old settings)');
+//         console.log('Removed Heatlink '+ device_id +' (old settings)');
 //         module.exports.setUnavailable({id: device_id}, "No Heatlink found" );
 //         // Only clear interval when the unavailable device is the only device on this driver
 //         // This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
@@ -259,7 +259,7 @@ module.exports = HomeWizardHeatlink;
 // 		     clearInterval(refreshIntervalId);
 // 	   }
 //      refreshIntervalId = setInterval(function () {
-//          Homey.log("--Start Heatlink Polling-- ");
+//          console.log("--Start Heatlink Polling-- ");
 //          Object.keys(devices).forEach(function (device_id) {
 //              getStatus(device_id);
 //          });

@@ -93,7 +93,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			Homey.log("--Stopped Polling--");
+			console.log("--Stopped Polling--");
 		}
 
 		console.log('deleted: ' + JSON.stringify(this));
