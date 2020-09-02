@@ -13,7 +13,7 @@ class HomeWizardWattcher extends Homey.Device {
 
 	onInit() {
 
-		this.log('HomeWizard Wattcher '+this.getName() +' has been inited');
+		console.log('HomeWizard Wattcher '+this.getName() +' has been inited');
 
 		const devices = driver.getDevices();
 		devices.forEach(function initdevice(device) {
@@ -101,7 +101,7 @@ class HomeWizardWattcher extends Homey.Device {
 			console.log("--Stopped Polling--");
 		}
 
-		this.log('deleted: ' + JSON.stringify(this));
+		console.log('deleted: ' + JSON.stringify(this));
 	}
 
 }

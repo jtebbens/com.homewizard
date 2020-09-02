@@ -18,7 +18,7 @@ class HomeWizardDevice extends Homey.Device {
 
 	onInit() {
 
-		this.log('HomeWizard Appliance has been inited');
+		console.log('HomeWizard Appliance has been inited');
 
 		const devices = drivers.getDevices();
 

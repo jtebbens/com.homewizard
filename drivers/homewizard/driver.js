@@ -9,7 +9,7 @@ var refreshIntervalId;
 
 class HomeWizardDriver extends Homey.Driver {
     onInit() {
-        this.log('HomeWizard has been inited');
+        console.log('HomeWizard has been inited');
 
         var me = this;
 
@@ -24,12 +24,12 @@ class HomeWizardDriver extends Homey.Driver {
                 return new Promise((resolve, reject) => {
                     homewizard.call(args.device.getData().id, '/get-status/', (err, response) => {
                         if (err) {
-                            this.log('ERR flowCardCondition  -> returned false');
+                            console.log('ERR flowCardCondition  -> returned false');
                             // You can make a choice here: reject the promise with the error,
                             // or resolve it to return "false" return resolve(false); // OR: return reject(err)
                         }
-                        this.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-                        this.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
+                        console.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+                        console.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
                         return resolve(args.preset == response.preset);
                     });
                 });
@@ -82,7 +82,7 @@ class HomeWizardDriver extends Homey.Driver {
             })
             .getArgument('scene')
             .registerAutocompleteListener(async (query, args) => {
-                this.log('CALLED flowCardAction switch_scene_on autocomplete');
+                console.log('CALLED flowCardAction switch_scene_on autocomplete');
 
                 return this._onGetSceneAutocomplete(args);
 
@@ -100,7 +100,7 @@ class HomeWizardDriver extends Homey.Driver {
                 return new Promise((resolve, reject) => {
                     homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
                         if(err) {
-                            this.log('ERR flowCardAction switch_scene_off  -> returned false');
+                            console.log('ERR flowCardAction switch_scene_off  -> returned false');
                             return resolve(false);
                         }
 

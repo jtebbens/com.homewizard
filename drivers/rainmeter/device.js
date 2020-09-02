@@ -13,7 +13,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
 	onInit() {
 
-		this.log('HomeWizard Rainmeter '+this.getName() +' has been inited');
+		console.log('HomeWizard Rainmeter '+this.getName() +' has been inited');
 
 		const devices = driver.getDevices();
 		devices.forEach(function initdevice(device) {
@@ -107,7 +107,7 @@ class HomeWizardRainmeter extends Homey.Device {
 			console.log("--Stopped Polling--");
 		}
 
-		this.log('deleted: ' + JSON.stringify(this));
+		console.log('deleted: ' + JSON.stringify(this));
 	}
 
 }

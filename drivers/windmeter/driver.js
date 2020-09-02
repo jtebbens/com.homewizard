@@ -12,7 +12,7 @@ var homewizard_devices;
 class HomeWizardWindmeter extends Homey.Driver {
 
     onInit() {
-        this.log('HomeWizard Windmeter has been inited');
+        console.log('HomeWizard Windmeter has been inited');
     }
 
     onPair(socket) {

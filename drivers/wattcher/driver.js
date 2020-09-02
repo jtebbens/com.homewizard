@@ -12,7 +12,7 @@ var homewizard_devices;
 class HomeWizardWattcher extends Homey.Driver {
 
     onInit() {
-        this.log('HomeWizard Wattcher has been inited');
+        console.log('HomeWizard Wattcher has been inited');
     }
 
     onPair(socket) {

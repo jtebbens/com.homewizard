@@ -14,7 +14,7 @@ var homewizard_devices;
 class HomeWizardThermometer extends Homey.Driver {
 
     onInit() {
-        this.log('HomeWizard Thermometer has been inited');
+        console.log('HomeWizard Thermometer has been inited');
     }
 
     onPair(socket) {

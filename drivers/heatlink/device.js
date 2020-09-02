@@ -13,7 +13,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
 	onInit() {
 
-		this.log('HomeWizard Heatlink '+this.getName() +' has been inited');
+		console.log('HomeWizard Heatlink '+this.getName() +' has been inited');
 
 		const devices = driver.getDevices();
 		devices.forEach(function initdevice(device) {
@@ -146,7 +146,7 @@ class HomeWizardHeatlink extends Homey.Device {
 			console.log("--Stopped Polling--");
 		}
 
-		this.log('deleted: ' + JSON.stringify(this));
+		console.log('deleted: ' + JSON.stringify(this));
 	}
 
 }

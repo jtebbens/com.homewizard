@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.0.5",
+  "version": "1.0.8",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -145,6 +145,35 @@
         ]
       },
       {
+        "id": "power_s2_changed",
+        "title": {
+          "en": "Power usage S2 changed",
+          "nl": "Huidige gebruik S2 veranderd"
+        },
+        "args": [
+          {
+            "name": "Energylink",
+            "type": "device",
+            "filter": "driver_id=energylink",
+            "placeholder": {
+              "en": "Which energylink",
+              "nl": "Welke energylink"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_s2",
+            "type": "number",
+            "title": {
+              "en": "Watt",
+              "nl": "Watt"
+            },
+            "example": 15
+          }
+        ]
+      },
+      {
         "id": "power_netto_changed",
         "title": {
           "en": "Daily netto usage changed",
@@ -251,6 +280,35 @@
         "tokens": [
           {
             "name": "power_daytotal_s1",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_power_s2_changed",
+        "title": {
+          "en": "Daily usage S2 changed",
+          "nl": "Dag gebruik S2 veranderd"
+        },
+        "args": [
+          {
+            "name": "Energylink",
+            "type": "device",
+            "filter": "driver_id=energylink",
+            "placeholder": {
+              "en": "Which energylink",
+              "nl": "Welke energylink"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_daytotal_s2",
             "type": "number",
             "title": {
               "en": "kWh",

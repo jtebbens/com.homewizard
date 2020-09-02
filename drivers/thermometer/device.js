@@ -13,7 +13,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 	onInit() {
 
-		this.log('HomeWizard Thermometer '+this.getName() +' has been inited');
+		console.log('HomeWizard Thermometer '+this.getName() +' has been inited');
 
 		const devices = driver.getDevices();
 
@@ -96,7 +96,7 @@ class HomeWizardThermometer extends Homey.Device {
 			Homey.log("--Stopped Polling--");
 		}
 
-		this.log('deleted: ' + JSON.stringify(this));
+		console.log('deleted: ' + JSON.stringify(this));
 	}
 
 }
