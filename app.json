@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.0.8",
+  "version": "1.0.9",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -742,6 +742,12 @@
           "title": {
             "en": "Meter reading produced normal",
             "nl": "Stand terug levering normaal"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Aggregated meter",
+            "nl": "Geaggregeerde meterstand"
           }
         }
       },

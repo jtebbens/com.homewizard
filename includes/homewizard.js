@@ -112,7 +112,7 @@ module.exports = (function(){
                }
            });
          } else {
-            me.log('Homewizard '+ device_id +': settings not found!');
+            console.log('Homewizard '+ device_id +': settings not found!');
          }
 
    };

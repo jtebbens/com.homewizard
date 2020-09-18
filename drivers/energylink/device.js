@@ -127,7 +127,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					// Consumed elec total day
 					me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr);
           // Disable meter_power
-					me.removeCapability('meter_power');
+					// me.removeCapability('meter_power');
 					// Set solar used to zero before counting
 					var solar_current_prod = 0;
 					var solar_daytotal_prod = 0;
@@ -302,9 +302,13 @@ class HomeWizardEnergylink extends Homey.Device {
 					var metered_electricity_produced_t1 = callback[0].produced;
 					var metered_electricity_consumed_t2 = callback[1].consumed;
 					var metered_electricity_produced_t2 = callback[1].produced;
+					var aggregated_meter_power = (metered_electricity_consumed_t1+metered_electricity_consumed_t2)-(metered_electricity_produced_t1+metered_electricity_produced_t2);
 
 					// Save export data
+					me.removeCapability('meter_power');
+					me.addCapability('meter_power');
 					me.setCapabilityValue("meter_gas.reading", metered_gas);
+					me.setCapabilityValue("meter_power", aggregated_meter_power);
 					me.setCapabilityValue("meter_power.consumed.t1", metered_electricity_consumed_t1);
 					me.setCapabilityValue("meter_power.produced.t1", metered_electricity_produced_t1);
 					me.setCapabilityValue("meter_power.consumed.t2", metered_electricity_consumed_t2);
