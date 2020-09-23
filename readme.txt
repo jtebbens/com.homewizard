@@ -7,6 +7,8 @@ Support for:
 - Windmeter (Direction, Speed, Gusts)
 - Rainmeter
 - Wattcher (the alternative "Energylink" which only tracks usage from the blinking led)
+- Motion sensor
+- Smoke sensor 
 
 Required steps:
 1) Install the HomeWizard application for Homey

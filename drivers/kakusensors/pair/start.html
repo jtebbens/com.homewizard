@@ -1,0 +1,105 @@
+<script>
+$( document ).ready(function() {
+	var hw_device_list = [];
+
+	Homey.emit('get_homewizards');
+
+	Homey.on('hw_devices', function(hw_devices){
+
+		hw_device_list = hw_devices;
+		$('#homewizard_select').find('option').remove();
+		$('#homewizard_select').append('<option>Select HomeWizard</option>');
+		$.each(hw_devices, function( index, value ) {
+			$('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
+		});
+		$('#homewizard_select').trigger('change');
+    });
+
+	$('#homewizard_select').on('change', function() {
+		$('#sensor_select').find('option').remove();
+        $('#sensor_select').append('<option>Select Sensor</option>');
+		$.each(JSON.parse(hw_device_list[$('#homewizard_select').val()].kakusensors), function( index, value ) {
+			$('#sensor_select').append($("<option>").attr('value',value.id).text(value.name));
+		});
+	});
+});
+
+function saveSettings () {
+    $('#error').html('');
+	$('#save').prop('disabled', true);
+	console.log('MA');
+	Homey.emit('manual_add', {
+	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+	        id: 'HW_TM'+Math.floor(Date.now() / 1000)
+	    },
+		settings: {
+		    'homewizard_id': $('#homewizard_select').val(),
+			'kakusensor_id': $('#sensor_select').val(),
+	    },
+	    name: $("#sensor_select option:selected").text(),
+	}, function( err, result ){
+	    if( err ) return console.error(err);
+	});
+
+    Homey.on('success', function(device){
+		$('#error').html('Saving...');
+        $('#save').prop('disabled', true);
+        Homey.addDevice({
+            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+                id: device.data.id
+            },
+			settings: {
+                'homewizard_id': device.settings.homewizard_id,
+				'kakusensor_id': device.settings.kakusensor_id,
+            },
+            name: device.name
+        }, function( err, result ){
+            if( err ) return console.error(err);
+            Homey.done();
+        });
+    });
+
+    Homey.on('error', function(message){
+        $('#error').html('Error: '+message);
+        $('#save').prop('disabled', false);
+    });
+}
+</script>
+<!doctype html>
+<html>
+    <head>
+        <style>
+            label {
+                width: 150px;
+                display:inline-block !important;
+            }
+            input {
+                border: 1px solid #ccc;
+                padding: 3px;
+            }
+            button {
+                padding: 10px;
+                background-color: #ddd;
+                border: 1px solid #ccc;
+            }
+            #error {
+                color: red;
+            }
+        </style>
+    </head>
+    <body>
+        <p data-i18n="settings.sensor_intro"></p>
+            <div class="field row">
+				<select id="homewizard_select">
+					<option>Select HomeWizard</option>
+				</select>
+				<br>
+				<select id="sensor_select">
+					<option>Select Sensor</option>
+				</select>
+            </div>
+            <br>
+            <p id="error"></p>
+        <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
+    </body>
+</html>

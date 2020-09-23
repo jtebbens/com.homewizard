@@ -175,6 +175,7 @@ module.exports = (function(){
          self.devices['HW12345'].polldata.thermometers = response.thermometers;
          self.devices['HW12345'].polldata.rainmeters = response.rainmeters;
          self.devices['HW12345'].polldata.windmeters = response.windmeters;
+         self.devices['HW12345'].polldata.kakusensors = response.kakusensors;
 
       } else {
          Object.keys(self.devices).forEach(function (device_id) {
@@ -190,6 +191,7 @@ module.exports = (function(){
                   self.devices[device_id].polldata.thermometers = response.thermometers;
                   self.devices[device_id].polldata.rainmeters = response.rainmeters;
                   self.devices[device_id].polldata.windmeters = response.windmeters;
+                  self.devices[device_id].polldata.kakusensors = response.kakusensors;
 
                   if (Object.keys(response.energylinks).length !== 0) {
 
