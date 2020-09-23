@@ -6,6 +6,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE: As of verion 1.0.0 you must (re)pair your homewizard and other subcomponents (Energylink, Heatlink etc.) as they will fail due
 to the big code change from SDKv1 to SDKv2.
 
+v1.1.1
+* Extended support for door/window contact
+* Added lowBattery for smoke868 type sensor
+* Added lowBattery for thermometers
+* Added smoke 434Mhz types
+
 v1.1.0
 * By popular demand, smoke sensor support (upon adding it show all kakusensors, you need to pick the smoke detectors yourself)
 * Also made motion sensor possible since its the same code section in Homewizard (but there is a delay of 10 seconds so not useful for direct action cards)

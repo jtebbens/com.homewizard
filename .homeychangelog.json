@@ -1,5 +1,5 @@
 {
-  "1.1.0": {
-    "en": "By popular demand, smoke sensor support"
+  "1.1.1": {
+    "en": "Support for door/window contact, smoke sensor 434mhz and lowBattery detection for smoke sensors and thermometers"
   }
 }

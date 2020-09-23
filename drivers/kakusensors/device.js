@@ -55,6 +55,7 @@ class HomeWizardKakusensors extends Homey.Device {
 		console.log('Start Polling');
 		var me = this;
 		var sensor_status = null;
+		var lowBattery_status = null;
 
 		for (var index in devices) {
 
@@ -89,6 +90,46 @@ class HomeWizardKakusensors extends Homey.Device {
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
+										}
+
+										try {
+											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+													console.log(result[index2].lowBattery);
+													devices[index].addCapability('alarm_battery');
+													var lowBattery_temp = result[index2].lowBattery;
+													if (lowBattery_temp == 'yes') {
+															lowBattery_status = true }
+													else {
+															lowBattery_status = false
+												 }
+												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+														console.log("New status - "+ lowBattery_status);
+														devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
+												}
+											}
+										} catch (e) {
+											console.log(e)
+										}
+									}
+
+									if (result[index2].type == "smoke" ) {
+										// MOTION SENSOR 	alarm_smoke
+										me.addCapability('alarm_smoke');
+										me.removeCapability('alarm_motion');
+										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
+											console.log("New status - "+ sensor_status);
+											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
+										}
+									}
+
+									if (result[index2].type == "contact" ) {
+										// MOTION SENSOR 	alarm_smoke
+										me.addCapability('alarm_contact');
+										me.removeCapability('alarm_smoke');
+										me.removeCapability('alarm_motion');
+										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
+											console.log("New status - "+ sensor_status);
+											devices[index].setCapabilityValue('alarm_contact', sensor_status);
 										}
 									}
 

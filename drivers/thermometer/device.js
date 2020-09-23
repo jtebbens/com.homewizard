@@ -51,6 +51,7 @@ class HomeWizardThermometer extends Homey.Device {
 	getStatus(devices) {
 		console.log('Start Polling');
 		var me = this;
+		var lowBattery_status = null;
 
 		for (var index in devices) {
 
@@ -76,6 +77,25 @@ class HomeWizardThermometer extends Homey.Device {
 									if (devices[index].getCapabilityValue('measure_humidity') != hu) {
 										console.log("New HU - "+ hu);
 										devices[index].setCapabilityValue('measure_humidity', hu);
+									}
+									// console.log(result[index2].lowBattery);
+									try {
+										if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+												console.log(result[index2].lowBattery);
+												devices[index].addCapability('alarm_battery');
+												var lowBattery_temp = result[index2].lowBattery;
+												if (lowBattery_temp == 'yes') {
+														lowBattery_status = true }
+												else {
+														lowBattery_status = false
+											 }
+											 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+													console.log("New status - "+ lowBattery_status);
+													devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
+											}
+										}
+									} catch (e) {
+										console.log(e)
 									}
 								}
 							}
