@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.1.1",
+  "version": "1.1.6",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -803,18 +803,15 @@
     {
       "id": "kakusensors",
       "name": {
-        "en": "Kakusensors",
-        "nl": "Kakusensors"
+        "en": "Smoke, Motion and door senors",
+        "nl": "Rook, beweging en deur sensors"
       },
       "images": {
         "large": "drivers/kakusensors/assets/images/large.jpg",
         "small": "drivers/kakusensors/assets/images/small.jpg"
       },
       "class": "sensor",
-      "capabilities": [
-        "alarm_motion",
-        "alarm_smoke"
-      ],
+      "capabilities": ["alarm_smoke", "alarm_motion"],
       "pair": [
         {
           "id": "start"

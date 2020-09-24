@@ -77,6 +77,7 @@ class HomeWizardKakusensors extends Homey.Device {
 										// MOTION SENSOR 	alarm_motion
 										me.addCapability('alarm_motion');
 										me.removeCapability('alarm_smoke');
+										//me.removeCapability('alarm_smoke');
 										if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_motion', sensor_status);
@@ -87,6 +88,7 @@ class HomeWizardKakusensors extends Homey.Device {
 										// MOTION SENSOR 	alarm_smoke
 										me.addCapability('alarm_smoke');
 										me.removeCapability('alarm_motion');
+										//me.removeCapability('alarm_motion');
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
@@ -130,6 +132,17 @@ class HomeWizardKakusensors extends Homey.Device {
 										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_contact', sensor_status);
+										}
+									}
+
+									if (result[index2].type == "doorbell" ) {
+										// MOTION SENSOR 	alarm_smoke
+										me.addCapability('alarm_generic');
+										me.removeCapability('alarm_smoke');
+										me.removeCapability('alarm_motion');
+										if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
+											console.log("New status - "+ sensor_status);
+											devices[index].setCapabilityValue('alarm_generic', sensor_status);
 										}
 									}
 
