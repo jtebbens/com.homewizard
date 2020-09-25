@@ -81,8 +81,10 @@ class HomeWizardThermometer extends Homey.Device {
 									// console.log(result[index2].lowBattery);
 									try {
 										if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-												console.log(result[index2].lowBattery);
-												devices[index].addCapability('alarm_battery');
+												//console.log(result[index2].lowBattery);
+												if (!devices[index].hasCapability('alarm_battery')) {
+													devices[index].addCapability('alarm_battery');
+												}
 												var lowBattery_temp = result[index2].lowBattery;
 												if (lowBattery_temp == 'yes') {
 														lowBattery_status = true }

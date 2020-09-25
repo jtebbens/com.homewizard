@@ -90,7 +90,7 @@ class HomeWizardHeatlink extends Homey.Device {
 				if (Object.keys(callback).length > 0) {
 
 					try {
-
+						me.setAvailable();
 						var rte = (callback[0].rte.toFixed(1) * 2) / 2;
                 		var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
                 		var tte = (callback[0].tte.toFixed(1) * 2) / 2;
@@ -129,6 +129,7 @@ class HomeWizardHeatlink extends Homey.Device {
 						}
 					} catch (err) {
 						console.log ("Heatlink data corrupt", err);
+						me.setUnavailable();
 					}
 				} else {
 					me.log('No data');

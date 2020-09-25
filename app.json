@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.1.6",
+  "version": "1.1.8",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -811,7 +811,7 @@
         "small": "drivers/kakusensors/assets/images/small.jpg"
       },
       "class": "sensor",
-      "capabilities": ["alarm_smoke", "alarm_motion"],
+      "capabilities": [],
       "pair": [
         {
           "id": "start"

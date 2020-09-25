@@ -3,7 +3,6 @@
 const Homey = require('homey');
 const request = require('request');
 
-
 const { ManagerDrivers } = require('homey');
 const driver = ManagerDrivers.getDriver('homewizard');
 
@@ -62,10 +61,18 @@ class HomeWizardKakusensors extends Homey.Driver {
             if (typeof device.settings.homewizard_id == "string" && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
                 console.log('Kakusensor added ' + device.data.id);
+                //console.log(device);
+                //console.log(device.kakusensors);
+                //console.log(device.kakusensors[device.settings.kakusensors_id].type);
+                
+
                 devices[device.data.id] = {
                   id: device.data.id,
                   name: device.name,
                   settings: device.settings,
+                  //data: {
+                  //      capabilities: [];
+                  //}
                 };
                 callback( null, devices );
                 socket.emit("success", device);

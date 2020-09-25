@@ -72,12 +72,13 @@ class HomeWizardKakusensors extends Homey.Device {
 									if (sensor_status_temp == 'yes') {
 											sensor_status = true }
 											else {sensor_status = false}
-
-									if (result[index2].type == "motion" ) {
+                  if (result[index2].type == "motion" ) {
 										// MOTION SENSOR 	alarm_motion
-										me.addCapability('alarm_motion');
-										me.removeCapability('alarm_smoke');
 										//me.removeCapability('alarm_smoke');
+										if (!devices[index].hasCapability('alarm_motion')) {
+        							devices[index].addCapability('alarm_motion');
+      							}
+
 										if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_motion', sensor_status);
@@ -86,9 +87,9 @@ class HomeWizardKakusensors extends Homey.Device {
 
 									if (result[index2].type == "smoke868" ) {
 										// MOTION SENSOR 	alarm_smoke
-										me.addCapability('alarm_smoke');
-										me.removeCapability('alarm_motion');
-										//me.removeCapability('alarm_motion');
+										if (!devices[index].hasCapability('alarm_smoke')) {
+											devices[index].addCapability('alarm_smoke');
+										}
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
@@ -97,7 +98,10 @@ class HomeWizardKakusensors extends Homey.Device {
 										try {
 											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
 													console.log(result[index2].lowBattery);
-													devices[index].addCapability('alarm_battery');
+													if (!devices[index].hasCapability('alarm_battery')) {
+														devices[index].addCapability('alarm_battery');
+													}
+
 													var lowBattery_temp = result[index2].lowBattery;
 													if (lowBattery_temp == 'yes') {
 															lowBattery_status = true }
@@ -116,8 +120,13 @@ class HomeWizardKakusensors extends Homey.Device {
 
 									if (result[index2].type == "smoke" ) {
 										// MOTION SENSOR 	alarm_smoke
-										me.addCapability('alarm_smoke');
-										me.removeCapability('alarm_motion');
+										if (!devices[index].hasCapability('alarm_smoke')) {
+											devices[index].addCapability('alarm_smoke');
+										}
+										if (devices[index].hasCapability('alarm_battery')) {
+											devices[index].removeCapability('alarm_battery');
+										}
+
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
@@ -126,9 +135,9 @@ class HomeWizardKakusensors extends Homey.Device {
 
 									if (result[index2].type == "contact" ) {
 										// MOTION SENSOR 	alarm_smoke
-										me.addCapability('alarm_contact');
-										me.removeCapability('alarm_smoke');
-										me.removeCapability('alarm_motion');
+										if (!devices[index].hasCapability('alarm_contact')) {
+											devices[index].addCapability('alarm_contact');
+										}
 										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_contact', sensor_status);
@@ -137,9 +146,9 @@ class HomeWizardKakusensors extends Homey.Device {
 
 									if (result[index2].type == "doorbell" ) {
 										// MOTION SENSOR 	alarm_smoke
-										me.addCapability('alarm_generic');
-										me.removeCapability('alarm_smoke');
-										me.removeCapability('alarm_motion');
+										if (!devices[index].hasCapability('alarm_generic')) {
+											devices[index].addCapability('alarm_generic');
+										}
 										if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
 											console.log("New status - "+ sensor_status);
 											devices[index].setCapabilityValue('alarm_generic', sensor_status);

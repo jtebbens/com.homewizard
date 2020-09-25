@@ -94,6 +94,8 @@ class HomeWizardEnergylink extends Homey.Device {
 			if (Object.keys(callback).length > 0) {
 
 				try {
+
+					me.setAvailable();
 					var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
 					var value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
 					console.log("t1- " + value_s1);
@@ -138,8 +140,11 @@ class HomeWizardEnergylink extends Homey.Device {
 
 						var solar_current_prod = solar_current_prod + energy_current_prod;
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
-						me.removeCapability('meter_power.s1other');
-            me.removeCapability('measure_power.s1other');
+
+						if (me.hasCapability('meter_power.s1other')) {
+							me.removeCapability('meter_power.s1other');
+	            me.removeCapability('measure_power.s1other');
+						}
 					}
 
 					if (value_s2 == 'solar' ) {
@@ -148,45 +153,53 @@ class HomeWizardEnergylink extends Homey.Device {
 
 						var solar_current_prod = solar_current_prod + energy_current_prod;
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
-						me.removeCapability('meter_power.s2other');
-            me.removeCapability('measure_power.s2other');
+						if (me.hasCapability('meter_power.s2other')) {
+							me.removeCapability('meter_power.s2other');
+	            me.removeCapability('measure_power.s2other');
+						}
 					}
 
 					if(value_s1 == 'solar' || value_s2 == 'solar') {
 						me.setCapabilityValue("measure_power.s1", solar_current_prod );
 						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod );
-						me.removeCapability('meter_power.s1other');
-            me.removeCapability('measure_power.s1other');
+						if (me.hasCapability('meter_power.s1other')) {
+							me.removeCapability('meter_power.s1other');
+							me.removeCapability('measure_power.s1other');
+						}
 					}
 
 					if (value_s1 == 'water' ) {
 						var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
 						var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
-						console.log("Water- " + water_daytotal_cons);
+						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
-						me.removeCapability('meter_power.s1other');
-						me.removeCapability('measure_power.s1other');
 
+						if (me.hasCapability('meter_power.s1other')) {
+							me.removeCapability('meter_power.s1other');
+	            me.removeCapability('measure_power.s1other');
+						}
 					}
 
 					if (value_s2 == 'water' ) {
 						var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
 						var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
-						console.log("Water- " + water_daytotal_cons);
+						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
 						me.setCapabilityOptions("meter_water", {"decimals":3});
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
-						me.removeCapability('meter_power.s2other');
-						me.removeCapability('measure_power.s2other');
+						if (me.hasCapability('meter_power.s2other')) {
+							me.removeCapability('meter_power.s2other');
+	            me.removeCapability('measure_power.s2other');
+						}
 					}
 
 					if (value_s1 == 'other' ) {
 						var other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
 						var other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
-						console.log("Other- " + other_daytotal_cons_s1);
+						//console.log("Other- " + other_daytotal_cons_s1);
 						// Used power
 						me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1);
 						me.setCapabilityValue("measure_power.s1other", other_current_cons_s1);
@@ -195,7 +208,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					if (value_s2 == 'other' ) {
 						var other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
 						var other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
-						console.log("Other- " + other_daytotal_cons_s2);
+						//console.log("Other- " + other_daytotal_cons_s2);
 						// Used power
 						me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2);
 						me.setCapabilityValue("measure_power.s2other", other_current_cons_s2);
@@ -203,19 +216,19 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					// Trigger flows
 					if (energy_current_cons != me.getStoreValue("last_measure_power_used") && energy_current_cons != undefined && energy_current_cons != null) {
-						console.log("Current Power - "+ energy_current_cons);
+						//console.log("Current Power - "+ energy_current_cons);
 						me.flowTriggerPowerUsed(me, { power_used: energy_current_cons });
 						me.setStoreValue("last_measure_power_used",energy_current_cons);
 					}
 					if (energy_current_netto != me.getStoreValue('last_measure_power_netto') && energy_current_netto != undefined && energy_current_netto != null) {
-					    console.log("Current Netto Power - "+ energy_current_netto);
+					    //console.log("Current Netto Power - "+ energy_current_netto);
 						me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto });
 						me.setStoreValue("last_measure_power_netto",energy_current_netto);
 					}
 
 					if (value_s1 != 'other') {
 						if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
-					        console.log("Current S1 Solar- "+ solar_current_prod);
+					        //console.log("Current S1 Solar- "+ solar_current_prod);
 						me.flowTriggerPowerS1(me, { power_s1: solar_current_prod });
 						me.setStoreValue("last_measure_power_s1",solar_current_prod);
 
@@ -223,7 +236,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 					if (value_s1 == 'other') {
 						if (other_current_cons_s1 != me.getStoreValue('last_measure_power_s1') && other_current_cons_s1 != undefined && other_current_cons_s1 != null) {
-									console.log("Current S1 - "+ other_current_cons_s1);
+									//console.log("Current S1 - "+ other_current_cons_s1);
 						me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 });
 						me.setStoreValue("last_measure_power_s1",other_current_cons_s1);
 
@@ -232,7 +245,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					if (value_s2 == 'other') {
 						if (other_current_cons_s2 != me.getStoreValue('last_measure_power_s2') && other_current_cons_s2 != undefined && other_current_cons_s2 != null) {
-									console.log("Current S2 - "+ other_current_cons_s2);
+									//console.log("Current S2 - "+ other_current_cons_s2);
 						me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 });
 						me.setStoreValue("last_measure_power_s2",other_current_cons_s2);
 
@@ -241,14 +254,14 @@ class HomeWizardEnergylink extends Homey.Device {
 
 
 					if (energy_daytotal_cons != me.getStoreValue('last_meter_power_used') && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
-					    console.log("Used Daytotal- "+ energy_daytotal_cons);
+					    //console.log("Used Daytotal- "+ energy_daytotal_cons);
 						me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod });
 						me.setStoreValue("last_meter_power_used",energy_daytotal_cons);
 					}
 
           if (value_s1 != 'other') {
 						if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
-					    	console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
+					    	//console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod });
 								me.setStoreValue("last_meter_power_s1",solar_daytotal_prod);
 								}
@@ -256,7 +269,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					if (value_s1 == 'other') {
 						if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
-					    	console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
+					    	//console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 });
 								me.setStoreValue("last_meter_power_s1",other_daytotal_cons_s1);
 								}
@@ -264,14 +277,14 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					if (value_s2 == 'other') {
 						if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
-					    	console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
+					    	//console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
 								me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 });
 								me.setStoreValue("last_meter_power_s2",other_daytotal_cons_s2);
 								}
 					}
 
 					if (energy_daytotal_aggr != me.getStoreValue('last_meter_power_aggr') && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
-					    console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
+					    //console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
 						me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr });
 						me.setStoreValue("last_meter_power_aggr",energy_daytotal_aggr);
 
@@ -279,6 +292,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 				} catch (err) {
 					console.log(err);
+					me.setUnavailable();
 				}
 			}
 
@@ -305,8 +319,11 @@ class HomeWizardEnergylink extends Homey.Device {
 					var aggregated_meter_power = (metered_electricity_consumed_t1+metered_electricity_consumed_t2)-(metered_electricity_produced_t1+metered_electricity_produced_t2);
 
 					// Save export data
-					me.removeCapability('meter_power');
-					me.addCapability('meter_power');
+
+					if (!me.hasCapability('meter_power')) {
+						me.addCapability('meter_power');
+					}
+
 					me.setCapabilityValue("meter_gas.reading", metered_gas);
 					me.setCapabilityValue("meter_power", aggregated_meter_power);
 					me.setCapabilityValue("meter_power.consumed.t1", metered_electricity_consumed_t1);
