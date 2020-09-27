@@ -13,12 +13,13 @@ var preset_text = '';
 var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
 var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
 var homey_lang = ManagerI18n.getLanguage();
+var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
 	onInit() {
 
-		console.log('HomeWizard Appliance has been inited');
+		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
 		const devices = drivers.getDevices();
 
@@ -54,8 +55,8 @@ class HomeWizardDevice extends Homey.Device {
 			clearInterval(refreshIntervalId);
 		}
 		refreshIntervalId = setInterval(function () {
-			me.log("--Start HomeWizard Polling-- ");
-			console.log("--Start HomeWizard Polling-- ");
+			if (debug) {me.log("--Start HomeWizard Polling-- ");}
+			if (debug) {console.log("--Start HomeWizard Polling-- ");}
 
 				me.getStatus(devices);
 
@@ -72,7 +73,7 @@ class HomeWizardDevice extends Homey.Device {
 
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
-						me.log('Preset was set to ' + callback);
+						if (debug) {me.log('Preset was set to ' + callback);}
 
 						devices[index].getStoreValue('preset', callback);
 					}
@@ -81,7 +82,7 @@ class HomeWizardDevice extends Homey.Device {
 
 						devices[index].setStoreValue('preset', callback);
 
-						me.log('Flow call! -> ' + callback);
+						if (debug) {me.log('Flow call! -> ' + callback);}
 
 						if (homey_lang == "nl") {
 							preset_text = preset_text_nl[callback];
@@ -90,7 +91,7 @@ class HomeWizardDevice extends Homey.Device {
 						}
 						me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text})
 
-						me.log('Preset was changed! ->'+ preset_text);
+						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
 					}
 				} catch(err) {
 					console.log ("HomeWizard data corrupt");

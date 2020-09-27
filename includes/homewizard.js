@@ -1,8 +1,13 @@
 'use strict';
 
-var request = require('request');
+//var request = require('request');
+
+const util = require('util');
+const request = util.promisify(require('request'));
 
 const Homey = require('homey');
+
+var debug = false;
 
 module.exports = (function(){
    var homewizard = {};
@@ -73,68 +78,52 @@ module.exports = (function(){
    homewizard.call = function(device_id, uri_part, callback) {
 
          var me = this;
-         console.log('Call device ' + device_id);
+         if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
-            request({
-               uri: 'http://' + homewizard_ip + '/' + homewizard_pass + uri_part,
-               method: "GET",
-               timeout: 20000,
-             }, function (error, response, body) {
-               if (response === null || response === undefined) {
-                   callback('No response', []);
-                   return;
-               }
-               if (!error && response.statusCode == 200) {
-                  var jsonObject;
-                  try {
-                     jsonObject = JSON.parse(body);
 
-                     if (jsonObject.status == 'ok') {
-                        if(typeof callback === 'function') {
-                            callback(null, jsonObject.response);
-                        } else {
-                            console.log('Not typeoffunction');
-                        }
-                     }
-                  } catch (exception) {
-                      console.log(exception);
-                     console.log('EXCEPTION JSON : '+ body);
-                     jsonObject = null;
-                     callback('Invalid data', []);
-                  }
-               } else {
-                  if(typeof callback === 'function') {
-                    callback('Error', []);
-                  }
-                  console.log('Error: '+error);
-               }
-           });
+            request('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+            .then((response) => {
+              if (response.statusCode == 200) {
+                 var jsonObject;
+                 try {
+                    jsonObject = JSON.parse(response.body);
+
+                    if (jsonObject.status == 'ok') {
+                       if(typeof callback === 'function') {
+                           callback(null, jsonObject.response);
+                       } else {
+                           console.log('Not typeoffunction');
+                       }
+                    }
+                 } catch (exception) {
+                     console.log(exception);
+                    console.log('EXCEPTION JSON : '+ body);
+                    jsonObject = null;
+                    callback('Invalid data', []);
+                 }
+              } else {
+                 if(typeof callback === 'function') {
+                   callback('Error', []);
+                 }
+                 console.log('Error: '+error);
+              }
+
+             //console.error(`status code: ${response && response.statusCode}`)
+             //console.log(response.body)
+
+
+            })
+            .catch((error) => {
+             console.error('error: ' + error)
+            })
+
          } else {
             console.log('Homewizard '+ device_id +': settings not found!');
          }
 
    };
-
-   // homewizard.getScenes = function(args, callback) {
-   //
-	//   this.call(args.device.getData().id, '/gplist', function(err, response) {
-   //
-	//       console.log('Call GetScenes');
-   //
-   //        var arrayAutocomplete = [];
-   //
-   //        for (var i = 0, len = response.length; i < len; i++) {
-   //              arrayAutocomplete.push({
-   //                  id: response[i].id,
-   //                  name: response[i].name
-   //              });
-   //        }
-   //
-   //        return arrayAutocomplete;
-   //    });
-   // };
 
    homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
@@ -198,7 +187,7 @@ module.exports = (function(){
                      homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
                         if(err == null) {
                            self.devices[device_id].polldata.energylink_el = response2;
-                           console.log('HW-Data polled for slimme meter: '+device_id);
+                           if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}
                         }
                      });
                   }

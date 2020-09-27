@@ -1,5 +1,5 @@
 {
-  "1.1.8": {
-    "en": "Different handling of capabilities"
+  "1.1.9": {
+    "en": "Promisify request core"
   }
 }

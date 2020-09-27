@@ -8,17 +8,18 @@ const driver = ManagerDrivers.getDriver('thermometer');
 var refreshIntervalId;
 var devices = {};
 const thermometers = {};
+var debug = false;
 
 class HomeWizardThermometer extends Homey.Device {
 
 	onInit() {
 
-		console.log('HomeWizard Thermometer '+this.getName() +' has been inited');
+		if (debug) {console.log('HomeWizard Thermometer '+this.getName() +' has been inited');}
 
 		const devices = driver.getDevices();
 
 		devices.forEach(function initdevice(device) {
-			console.log('add device: ' + JSON.stringify(device.getName()));
+			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
 
 			devices[device.getData().id] = device;
 			devices[device.getData().id].settings = device.getSettings();
@@ -40,7 +41,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		// Start polling for thermometer
 		refreshIntervalId = setInterval(function () {
-			console.log("--Start Thermometer Polling-- ");
+			if (debug) {console.log("--Start Thermometer Polling-- ");}
 
 			me.getStatus(devices);
 
@@ -49,7 +50,7 @@ class HomeWizardThermometer extends Homey.Device {
 	}
 
 	getStatus(devices) {
-		console.log('Start Polling');
+		if (debug) {console.log('Start Polling');}
 		var me = this;
 		var lowBattery_status = null;
 
@@ -69,13 +70,13 @@ class HomeWizardThermometer extends Homey.Device {
 
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
-										console.log("New TE - "+ te);
+										if (debug) {console.log("New TE - "+ te);}
 										devices[index].setCapabilityValue('measure_temperature', te);
 									}
 
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_humidity') != hu) {
-										console.log("New HU - "+ hu);
+										if (debug) {console.log("New HU - "+ hu);}
 										devices[index].setCapabilityValue('measure_humidity', hu);
 									}
 									// console.log(result[index2].lowBattery);
@@ -92,7 +93,7 @@ class HomeWizardThermometer extends Homey.Device {
 														lowBattery_status = false
 											 }
 											 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-													console.log("New status - "+ lowBattery_status);
+													if (debug) {console.log("New status - "+ lowBattery_status);}
 													devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
 											}
 										}
@@ -115,7 +116,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			console.log("--Stopped Polling--");
+			if (debug) {console.log("--Stopped Polling--");}
 		}
 
 		console.log('deleted: ' + JSON.stringify(this));

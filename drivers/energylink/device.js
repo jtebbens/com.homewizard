@@ -3,6 +3,8 @@
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
 
+var debug = false;
+
 var refreshIntervalId;
 var refreshIntervalIdReadings;
 
@@ -10,7 +12,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 	onInit() {
 
-		console.log('HomeWizard Energylink '+this.getName() +' has been inited');
+		if (debug) { console.log('HomeWizard Energylink '+this.getName() +' has been inited'); }
 
 		this.startPolling();
 
@@ -62,10 +64,10 @@ class HomeWizardEnergylink extends Homey.Device {
 		var me = this;
 		refreshIntervalId = setInterval(function () {
 
-			console.log("--Start Energylink Polling-- ");
-			console.log(me.getSetting('homewizard_id'));
+			if (debug) {console.log("--Start Energylink Polling-- ");}
+			if (debug) {console.log(me.getSetting('homewizard_id'));}
 			if(me.getSetting('homewizard_id') !== undefined ) {
-				console.log('Poll for '+me.getName());
+				if (debug) {console.log('Poll for '+me.getName());}
 
 				me.getStatus();
 			}
@@ -73,10 +75,10 @@ class HomeWizardEnergylink extends Homey.Device {
 		}, 1000 * 10);
 
 		refreshIntervalIdReadings = setInterval(function () {
-			console.log("--Start Energylink Readings Polling-- ");
+			if (debug) {console.log("--Start Energylink Readings Polling-- ");}
 
 			if(me.getSetting('homewizard_id') !== undefined ) {
-				console.log('Poll for ' + me.getName());
+				if (debug) {console.log('Poll for ' + me.getName());}
 
 				me.getReadings();
 
@@ -98,8 +100,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					me.setAvailable();
 					var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
 					var value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
-					console.log("t1- " + value_s1);
-					console.log("t2- " + value_s2);
+					if (debug) {console.log("t1- " + value_s1);}
+					if (debug) {console.log("t2- " + value_s2);}
 
 					// Common Energylink data
 					var energy_current_cons = ( callback[0].used.po ); // WATTS Energy used JSON $energylink[0]['used']['po']

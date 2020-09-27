@@ -4,6 +4,7 @@ const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
 const { ManagerDrivers } = require('homey');
 const driver = ManagerDrivers.getDriver('kakusensors');
+var debug false;
 
 var refreshIntervalId;
 var devices = {};
@@ -13,12 +14,12 @@ class HomeWizardKakusensors extends Homey.Device {
 
 	onInit() {
 
-		console.log('HomeWizard Kakusensors '+this.getName() +' has been inited');
+		if (debug) {console.log('HomeWizard Kakusensors '+this.getName() +' has been inited');}
 
 		const devices = driver.getDevices();
 
 		devices.forEach(function initdevice(device) {
-			console.log('add device: ' + JSON.stringify(device.getName()));
+			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
 
 			devices[device.getData().id] = device;
 			devices[device.getData().id].settings = device.getSettings();
@@ -43,7 +44,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 		// Start polling for thermometer
 		refreshIntervalId = setInterval(function () {
-			console.log("--Start Kakusensors Polling-- ");
+			if (debug) {console.log("--Start Kakusensors Polling-- ");}
 
 			me.getStatus(devices);
 
@@ -52,7 +53,7 @@ class HomeWizardKakusensors extends Homey.Device {
 	}
 
 	getStatus(devices) {
-		console.log('Start Polling');
+		if (debug) {console.log('Start Polling');}
 		var me = this;
 		var sensor_status = null;
 		var lowBattery_status = null;
@@ -80,7 +81,7 @@ class HomeWizardKakusensors extends Homey.Device {
       							}
 
 										if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
-											console.log("New status - "+ sensor_status);
+											if (debug) {console.log("New status - "+ sensor_status);}
 											devices[index].setCapabilityValue('alarm_motion', sensor_status);
 										}
 									}
@@ -91,13 +92,13 @@ class HomeWizardKakusensors extends Homey.Device {
 											devices[index].addCapability('alarm_smoke');
 										}
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
-											console.log("New status - "+ sensor_status);
+											if (debug) {console.log("New status - "+ sensor_status);}
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
 										}
 
 										try {
 											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-													console.log(result[index2].lowBattery);
+													if (debug) {console.log(result[index2].lowBattery);}
 													if (!devices[index].hasCapability('alarm_battery')) {
 														devices[index].addCapability('alarm_battery');
 													}
@@ -128,7 +129,7 @@ class HomeWizardKakusensors extends Homey.Device {
 										}
 
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
-											console.log("New status - "+ sensor_status);
+											if (debug) {console.log("New status - "+ sensor_status);}
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
 										}
 									}
@@ -139,7 +140,7 @@ class HomeWizardKakusensors extends Homey.Device {
 											devices[index].addCapability('alarm_contact');
 										}
 										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
-											console.log("New status - "+ sensor_status);
+											if (debug) {console.log("New status - "+ sensor_status);}
 											devices[index].setCapabilityValue('alarm_contact', sensor_status);
 										}
 									}
@@ -150,7 +151,7 @@ class HomeWizardKakusensors extends Homey.Device {
 											devices[index].addCapability('alarm_generic');
 										}
 										if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
-											console.log("New status - "+ sensor_status);
+											if (debug) {console.log("New status - "+ sensor_status);}
 											devices[index].setCapabilityValue('alarm_generic', sensor_status);
 										}
 									}
@@ -171,7 +172,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);
-			console.log("--Stopped Polling--");
+			if (debug) {console.log("--Stopped Polling--");}
 		}
 
 		console.log('deleted: ' + JSON.stringify(this));
