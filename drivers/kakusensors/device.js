@@ -119,6 +119,39 @@ class HomeWizardKakusensors extends Homey.Device {
 										}
 									}
 
+									if (result[index2].type == "leakage" ) {
+										// MOTION SENSOR 	alarm_water
+										if (!devices[index].hasCapability('alarm_water')) {
+											devices[index].addCapability('alarm_water');
+										}
+										if (devices[index].getCapabilityValue('alarm_water') != sensor_status) {
+											if (debug) {console.log("New status - "+ sensor_status);}
+											devices[index].setCapabilityValue('alarm_water', sensor_status);
+										}
+
+										try {
+											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+													if (debug) {console.log(result[index2].lowBattery);}
+													if (!devices[index].hasCapability('alarm_battery')) {
+														devices[index].addCapability('alarm_battery');
+													}
+
+													var lowBattery_temp = result[index2].lowBattery;
+													if (lowBattery_temp == 'yes') {
+															lowBattery_status = true }
+													else {
+															lowBattery_status = false
+												 }
+												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+														console.log("New status - "+ lowBattery_status);
+														devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
+												}
+											}
+										} catch (e) {
+											console.log(e)
+										}
+									}
+
 									if (result[index2].type == "smoke" ) {
 										// MOTION SENSOR 	alarm_smoke
 										if (!devices[index].hasCapability('alarm_smoke')) {
@@ -133,6 +166,7 @@ class HomeWizardKakusensors extends Homey.Device {
 											devices[index].setCapabilityValue('alarm_smoke', sensor_status);
 										}
 									}
+
 
 									if (result[index2].type == "contact" ) {
 										// MOTION SENSOR 	alarm_smoke

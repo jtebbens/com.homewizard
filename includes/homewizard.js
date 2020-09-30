@@ -88,7 +88,7 @@ module.exports = (function(){
               if (response.statusCode == 200) {
                  var jsonObject;
                  try {
-                    jsonObject = JSON.parse(response.body);
+                    jsonObject = JSON.parse(response.body); //sync call cannot by async
 
                     if (jsonObject.status == 'ok') {
                        if(typeof callback === 'function') {
