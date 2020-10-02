@@ -1,5 +1,5 @@
 {
-  "1.1.11": {
-    "en": "Core request module replaced with node-fetch, performance boost and lower memory footprint."
+  "1.1.12": {
+    "en": "Bug fix: var debug missed a ="
   }
 }

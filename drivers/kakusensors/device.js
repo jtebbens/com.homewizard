@@ -4,7 +4,7 @@ const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
 const { ManagerDrivers } = require('homey');
 const driver = ManagerDrivers.getDriver('kakusensors');
-var debug false;
+var debug = false;
 
 var refreshIntervalId;
 var devices = {};

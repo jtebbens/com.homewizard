@@ -1,9 +1,5 @@
 'use strict';
 
-//var request = require('request');
-
-const util = require('util');
-//const request = util.promisify(require('request'));
 const fetch = require('node-fetch');
 
 const Homey = require('homey');
@@ -78,25 +74,23 @@ module.exports = (function(){
 
    homewizard.call = async function(device_id, uri_part, callback) {
          var me = this;
+         let status;
          if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+            const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+            .then((res) => {
+              status = res.status;
+              return res.json()
+            })
+            .then((jsonData) => {
 
-//            request('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
-//            .then((response) => {
-              const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part).then(res => res.json())
-              //.then(res => {
-              //console.log(json);
-              if (json.status == 'ok') {
-              //var jsonObject;
+              if (status == 200) {
                  try {
-                    //jsonObject = JSON.parse(response.body); //sync call cannot by async
-                    var jsonObject = json;
-
-                    if (jsonObject.status == 'ok') {
+                    if (jsonData.status == 'ok') {
                        if(typeof callback === 'function') {
-                           callback(null, jsonObject.response);
+                           callback(null, jsonData.response);
                        } else {
                            console.log('Not typeoffunction');
                        }
@@ -113,16 +107,11 @@ module.exports = (function(){
                  }
                  console.log('Error: no clue what is going on here.');
               }
+            })
+            .catch((err) => {
+              console.error(err);
+            });
 
-             //console.error(`status code: ${response && response.statusCode}`)
-             //console.log(response.body)
-
-
-//            })
-//            .catch((error) => {
-//             console.error('error: ' + error)
-//            })
-//});
          } else {
             console.log('Homewizard '+ device_id +': settings not found!');
          }
