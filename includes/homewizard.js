@@ -3,7 +3,8 @@
 //var request = require('request');
 
 const util = require('util');
-const request = util.promisify(require('request'));
+//const request = util.promisify(require('request'));
+const fetch = require('node-fetch');
 
 const Homey = require('homey');
 
@@ -75,20 +76,23 @@ module.exports = (function(){
       }
    };
 
-   homewizard.call = function(device_id, uri_part, callback) {
-
+   homewizard.call = async function(device_id, uri_part, callback) {
          var me = this;
          if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
 
-            request('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
-            .then((response) => {
-              if (response.statusCode == 200) {
-                 var jsonObject;
+//            request('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+//            .then((response) => {
+              const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part).then(res => res.json())
+              //.then(res => {
+              //console.log(json);
+              if (json.status == 'ok') {
+              //var jsonObject;
                  try {
-                    jsonObject = JSON.parse(response.body); //sync call cannot by async
+                    //jsonObject = JSON.parse(response.body); //sync call cannot by async
+                    var jsonObject = json;
 
                     if (jsonObject.status == 'ok') {
                        if(typeof callback === 'function') {
@@ -107,18 +111,18 @@ module.exports = (function(){
                  if(typeof callback === 'function') {
                    callback('Error', []);
                  }
-                 console.log('Error: '+error);
+                 console.log('Error: no clue what is going on here.');
               }
 
              //console.error(`status code: ${response && response.statusCode}`)
              //console.log(response.body)
 
 
-            })
-            .catch((error) => {
-             console.error('error: ' + error)
-            })
-
+//            })
+//            .catch((error) => {
+//             console.error('error: ' + error)
+//            })
+//});
          } else {
             console.log('Homewizard '+ device_id +': settings not found!');
          }
@@ -147,7 +151,7 @@ module.exports = (function(){
          homewizard.poll();
          self.polls.device_id = setInterval(function () {
             homewizard.poll();
-         }, 1000 * 10);
+         }, 1000 * 9);
    };
 
    homewizard.poll = function() {

@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const request = require('request');
+//const request = require('request');
+const fetch = require('node-fetch');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
@@ -169,12 +170,30 @@ class HomeWizardDriver extends Homey.Driver {
             console.log('View: ' + viewId);
         });
 
-        socket.on('manual_add', function (device, callback) {
+        socket.on('manual_add', async function (device, callback) {
 
             var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-sensors/';
 
+            const json = await fetch(url).then(res => res.json())
+
             console.log('Calling '+ url);
 
+            if (json.status == 'ok') {
+              console.log('Call OK');
+
+              devices[device.data.id] = {
+                  id: device.data.id,
+                  name: device.name,
+                  settings: device.settings,
+                  capabilities: device.capabilities
+              };
+              homewizard.setDevices(devices);
+
+              callback( null, devices );
+              socket.emit("success", device);
+
+            }
+/*
             request(url, function (error, response, body) {
                 if (response === null || response === undefined) {
                             socket.emit("error", "http error");
@@ -199,6 +218,7 @@ class HomeWizardDriver extends Homey.Driver {
                     }
                 }
             });
+  */
         });
 
         socket.on('disconnect', () => {

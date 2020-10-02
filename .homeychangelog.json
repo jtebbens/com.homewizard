@@ -1,5 +1,5 @@
 {
-  "1.1.10": {
-    "en": "Water/leak sensor added"
+  "1.1.11": {
+    "en": "Core request module replaced with node-fetch, performance boost and lower memory footprint."
   }
 }

@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const request = require('request');
+//const request = require('request');
 
 const { ManagerDrivers } = require('homey');
 const driver = ManagerDrivers.getDriver('homewizard');
@@ -64,7 +64,7 @@ class HomeWizardKakusensors extends Homey.Driver {
                 //console.log(device);
                 //console.log(device.kakusensors);
                 //console.log(device.kakusensors[device.settings.kakusensors_id].type);
-                
+
 
                 devices[device.data.id] = {
                   id: device.data.id,

@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const request = require('request');
+//const request = require('request');
 
 
 const { ManagerDrivers } = require('homey');
