@@ -90,11 +90,16 @@ class HomeWizardThermometer extends Homey.Device {
 												if (lowBattery_temp == 'yes') {
 														lowBattery_status = true }
 												else {
-														lowBattery_status = false
+														lowBattery_status = false;
 											 }
 											 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
 													if (debug) {console.log("New status - "+ lowBattery_status);}
 													devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
+											}
+										}
+										else {
+											if (devices[index].hasCapability('alarm_battery')) {
+												devices[index].removeCapability('alarm_battery');
 											}
 										}
 									} catch (e) {
