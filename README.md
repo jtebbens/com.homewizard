@@ -6,6 +6,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE: As of verion 1.0.0 you must (re)pair your homewizard and other subcomponents (Energylink, Heatlink etc.) as they will fail due
 to the big code change from SDKv1 to SDKv2.
 
+v1.1.14
+* Fix: Memory hog when homewizard has unstable wifi connection and has incomplete JSON payload, added catch error handling
+
 v1.1.12
 * Core request module replaced with node-fetch for performance boost and lower memory usage
 * Some svg icons added else you will see multiple Homewizard icons (request from Homey reviewer)

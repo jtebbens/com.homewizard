@@ -79,10 +79,19 @@ module.exports = (function(){
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
-            const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
-            .then((res) => {
+            const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part,
+            {
+              headers: {
+                'User-Agent': 'Homey-Homewizard-App-Agent-fetch'
+              }
+            })
+            .then(async(res) => {
+              try {
               status = res.status;
-              return res.json()
+              return await res.json();
+            } catch (err) {
+               console.error(err);
+            }
             })
             .then((jsonData) => {
 
@@ -108,6 +117,7 @@ module.exports = (function(){
                  console.log('Error: no clue what is going on here.');
               }
             })
+
             .catch((err) => {
               console.error(err);
             });
@@ -140,7 +150,7 @@ module.exports = (function(){
          homewizard.poll();
          self.polls.device_id = setInterval(function () {
             homewizard.poll();
-         }, 1000 * 9);
+         }, 1000 * 10);
    };
 
    homewizard.poll = function() {

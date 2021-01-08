@@ -1,5 +1,5 @@
 {
-  "1.1.12": {
-    "en": "Bug fix: var debug missed a ="
+  "1.1.14": {
+    "en": "Fix memory issues, updated the error handling"
   }
 }
