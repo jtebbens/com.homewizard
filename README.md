@@ -6,6 +6,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE: As of verion 1.0.0 you must (re)pair your homewizard and other subcomponents (Energylink, Heatlink etc.) as they will fail due
 to the big code change from SDKv1 to SDKv2.
 
+v1.1.16
+* Installed AbortController npm library
+* Added AbortController handling for Node-Fetch with a 5 seconds timeout to avoid socket hang up issues and potential JSON errors (i.e. JSON isnt properly formatted)
+
 v1.1.14
 * Fix: Memory hog when homewizard has unstable wifi connection and has incomplete JSON payload, added catch error handling
 
