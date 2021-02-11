@@ -97,19 +97,25 @@ module.exports = (function(){
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 5000
+              timeout: 8000
             })
             .then(async(res) => {
-              try {
-              status = res.status;
-              return await res.json();
-            } catch (err) {
-               console.error(err);
-            }
+                          try {
+                              if (status !== 'undefined') {
+                                 status = res.status;
+                                 return await res.json();
+                              }
+                              else {
+                                  console.log('Status undefined');
+                              }
+                          }
+                          catch (err) {
+                          console.error(err);
+                        }
             })
             .then((jsonData) => {
-
-              if (status == 200) {
+              try {
+               if (status == 200) {
                  try {
                     if (jsonData.status == 'ok') {
                        if(typeof callback === 'function') {
@@ -117,6 +123,8 @@ module.exports = (function(){
                        } else {
                            console.log('Not typeoffunction');
                        }
+                    } else {
+                      console.log('jsonData.status not ok');
                     }
                  } catch (exception) {
                      console.log(exception);
@@ -130,8 +138,10 @@ module.exports = (function(){
                  }
                  console.log('Error: no clue what is going on here.');
               }
+            } catch (exception) {
+                console.log(exception);
+              }
             })
-
             .catch((err) => {
               console.error(err);
             });
@@ -164,7 +174,7 @@ module.exports = (function(){
          homewizard.poll();
          self.polls.device_id = setInterval(function () {
             homewizard.poll();
-         }, 1000 * 10);
+         }, 1000 * 15);
    };
 
    homewizard.poll = function() {
