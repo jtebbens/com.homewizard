@@ -91,7 +91,7 @@ class HomeWizardEnergylink extends Homey.Device {
 		var homewizard_id = this.getSetting('homewizard_id');
 
 		var me = this;
-		homewizard.getDeviceData(homewizard_id, 'energylinks', function(callback){
+		homewizard.getDeviceData(homewizard_id, 'energylinks', async function(callback){
 
 			if (Object.keys(callback).length > 0) {
 
@@ -144,8 +144,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 
 						if (me.hasCapability('meter_power.s1other')) {
-							me.removeCapability('meter_power.s1other');
-	            me.removeCapability('measure_power.s1other');
+							await me.removeCapability('meter_power.s1other');
+							await me.removeCapability('measure_power.s1other');
 						}
 					}
 
@@ -156,8 +156,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						var solar_current_prod = solar_current_prod + energy_current_prod;
 						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 						if (me.hasCapability('meter_power.s2other')) {
-							me.removeCapability('meter_power.s2other');
-	            me.removeCapability('measure_power.s2other');
+							await me.removeCapability('meter_power.s2other');
+							await me.removeCapability('measure_power.s2other');
 						}
 					}
 
@@ -165,8 +165,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setCapabilityValue("measure_power.s1", solar_current_prod );
 						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod );
 						if (me.hasCapability('meter_power.s1other')) {
-							me.removeCapability('meter_power.s1other');
-							me.removeCapability('measure_power.s1other');
+							await me.removeCapability('meter_power.s1other');
+							await me.removeCapability('measure_power.s1other');
 						}
 					}
 
@@ -179,8 +179,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setCapabilityValue("measure_water", water_current_cons);
 
 						if (me.hasCapability('meter_power.s1other')) {
-							me.removeCapability('meter_power.s1other');
-	            me.removeCapability('measure_power.s1other');
+							await me.removeCapability('meter_power.s1other');
+							await me.removeCapability('measure_power.s1other');
 						}
 					}
 
@@ -193,8 +193,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setCapabilityValue("meter_water", water_daytotal_cons);
 						me.setCapabilityValue("measure_water", water_current_cons);
 						if (me.hasCapability('meter_power.s2other')) {
-							me.removeCapability('meter_power.s2other');
-	            me.removeCapability('measure_power.s2other');
+							await me.removeCapability('meter_power.s2other');
+							await me.removeCapability('measure_power.s2other');
 						}
 					}
 
@@ -307,7 +307,7 @@ class HomeWizardEnergylink extends Homey.Device {
 		var homewizard_id = this.getSetting('homewizard_id');
 
 		var me = this;
-		homewizard.getDeviceData(homewizard_id, 'energylink_el', function (callback) {
+		homewizard.getDeviceData(homewizard_id, 'energylink_el', async function (callback) {
 
 			if (Object.keys(callback).length > 0) {
 				try {
@@ -323,7 +323,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					// Save export data
 
 					if (!me.hasCapability('meter_power')) {
-						me.addCapability('meter_power');
+						await me.addCapability('meter_power');
 					}
 
 					me.setCapabilityValue("meter_gas.reading", metered_gas);

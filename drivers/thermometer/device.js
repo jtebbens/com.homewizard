@@ -59,7 +59,7 @@ class HomeWizardThermometer extends Homey.Device {
 			if(devices[index].settings.homewizard_id !== undefined ) {
 				var homewizard_id = devices[index].settings.homewizard_id;
 				var thermometer_id = devices[index].settings.thermometer_id;
-				homewizard.getDeviceData(homewizard_id, 'thermometers', function(result) {
+				homewizard.getDeviceData(homewizard_id, 'thermometers', async function(result) {
 					if (Object.keys(result).length > 0) {
 						try {
 							for (var index2 in result) {
@@ -84,7 +84,7 @@ class HomeWizardThermometer extends Homey.Device {
 										if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
 												//console.log(result[index2].lowBattery);
 												if (!devices[index].hasCapability('alarm_battery')) {
-													devices[index].addCapability('alarm_battery');
+													await devices[index].addCapability('alarm_battery');
 												}
 												var lowBattery_temp = result[index2].lowBattery;
 												if (lowBattery_temp == 'yes') {
@@ -99,7 +99,7 @@ class HomeWizardThermometer extends Homey.Device {
 										}
 										else {
 											if (devices[index].hasCapability('alarm_battery')) {
-												devices[index].removeCapability('alarm_battery');
+												await devices[index].removeCapability('alarm_battery');
 											}
 										}
 									} catch (e) {
