@@ -507,8 +507,8 @@
     {
       "id": "homewizard",
       "name": {
-        "en": "HomeWizard",
-        "nl": "HomeWizard"
+        "en": "HomeWizar Base Station",
+        "nl": "HomeWizard Base Station"
       },
       "images": {
         "large": "drivers/homewizard/assets/images/large.jpg",
@@ -1013,6 +1013,10 @@
       "id": "energy",
       "name": {
         "en": "Energy (P1 Dongle)"
+      },
+      "images": {
+        "large": "drivers/energy/assets/images/large.png",
+        "small": "drivers/energy/assets/images/small.png"
       },
       "class": "sensor",
       "discovery": "energy",
