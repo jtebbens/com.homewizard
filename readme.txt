@@ -9,6 +9,7 @@ Support for:
 - Wattcher (the alternative "Energylink" which only tracks usage from the blinking led)
 - Motion sensor
 - Smoke sensor 
+- Energy (P1 Dongle)
 
 Required steps:
 1) Install the HomeWizard application for Homey

@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "1.1.17",
+  "version": "1.2.0",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -35,6 +35,10 @@
       {
         "name": "Freddie Welvering",
         "email": "freddie@welvering.eu"
+      },
+      {
+        "name": "Emile Nijssen",
+        "email": "emile@emilenijssen.nl"
       }
     ]
   },
@@ -1004,9 +1008,44 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "energy",
+      "name": {
+        "en": "Energy (P1 Dongle)"
+      },
+      "class": "sensor",
+      "discovery": "energy",
+      "capabilities": [ "measure_power", "meter_gas" ],
+      "energy": {
+        "cumulative": true
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "permissions": [
     "homey:manager:ledring"
-  ]
+  ],
+  "discovery": {
+    "energy": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}"
+    }
+  }
 }
