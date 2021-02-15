@@ -2,8 +2,10 @@
 
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
-v2.0.0
+v2.0.1
 * One brand one app the application "Homewizard Energy" has been merged with this Homewizard application big thanks to Athom develop team.
+* P1 dongle will also be automatically detected via mdns on your local network so no need to add ip manually
+* Added all other meters for HomeWizard Energy P1 dongle
 
 v1.1.18
 * fix: await add/remove capability

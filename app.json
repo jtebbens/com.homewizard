@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.0.0",
+  "version": "2.0.1",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -1020,9 +1020,82 @@
       },
       "class": "sensor",
       "discovery": "energy",
-      "capabilities": [ "measure_power", "meter_gas" ],
+      "capabilities": [
+          "measure_power.active_power_w",
+          "meter_gas",
+          "meter_power",
+          "meter_power.consumed.t1",
+          "meter_power.produced.t1",
+          "meter_power.consumed.t2",
+          "meter_power.produced.t2",
+          "measure_power.l1",
+          "measure_power.l2",
+          "measure_power.l3"
+      ],
       "energy": {
         "cumulative": true
+      },
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.active_power_w": {
+          "title": {
+            "en": "Current usage all phases",
+            "nl": "Huidig gebruik alle fases"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "measure_power.l2": {
+          "title": {
+            "en": "Current usage phase 2",
+            "nl": "Huidig gebruik fase 2"
+          }
+        },
+        "measure_power.l3": {
+          "title": {
+            "en": "Current usage phase 3",
+            "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power.consumed.t2": {
+          "title": {
+            "en": "Total t2 usage",
+            "nl": "Totaal t2 gebruik"
+          }
+        },
+        "meter_power.produced.t2": {
+          "title": {
+            "en": "Total t2 deliver",
+            "nl": "Totaal t2 teruglevering"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        }
       },
       "pair": [
         {
