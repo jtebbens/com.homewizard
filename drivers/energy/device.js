@@ -77,6 +77,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 								await this.setCapabilityValue("meter_power.produced.t1", data.total_power_export_t1_kwh).catch(this.error);
 								await this.setCapabilityValue("meter_power.produced.t2", data.total_power_export_t2_kwh).catch(this.error);
 			}
+      else if (data.total_power_export_t1_kwh < 1) {
+              await this.removeCapability('meter_power.produced.t1');
+              await this.removeCapability('meter_power.produced.t2');
+      }
 
       // aggregated meter for Power by the hour support
       if (!this.hasCapability('meter_power')) {
@@ -101,6 +105,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           await this.removeCapability('measure_power.l1').catch(this.error);
           await this.removeCapability('measure_power.l2').catch(this.error);
           await this.removeCapability('measure_power.l3').catch(this.error);
+          await this.removeCapability('measure_power.active_power_w').catch(this.error);
         }
       }
 

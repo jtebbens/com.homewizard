@@ -1,5 +1,5 @@
 {
-  "2.0.1": {
-    "en": "Added all other meters for the Homewizard P1 dongle that were available in the Homewizard Energy application"
+  "2.0.2": {
+    "en": "Bug fix: removed empty meters for people that don't have phase 3 or solar production"
   }
 }
