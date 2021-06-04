@@ -25,6 +25,8 @@ class HomeWizardEnergylink extends Homey.Device {
 		this._flowTriggerMeterPowerS2 = new Homey.FlowCardTriggerDevice('meter_power_s2_changed').register();
 		this._flowTriggerMeterPowerUsed = new Homey.FlowCardTriggerDevice('meter_power_used_changed').register();
 		this._flowTriggerMeterPowerAggregated = new Homey.FlowCardTriggerDevice('meter_power_aggregated_changed').register();
+		this._flowTriggerMeterReturnT1 = new Homey.FlowCardTriggerDevice('meter_return_t1_changed').register();
+		this._flowTriggerMeterReturnT2 = new Homey.FlowCardTriggerDevice('meter_return_t2_changed').register();
 
 	}
 
@@ -57,6 +59,14 @@ class HomeWizardEnergylink extends Homey.Device {
 
 	flowTriggerMeterPowerAggregated( device, tokens ) {
 		this._flowTriggerMeterPowerAggregated.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerMeterReturnT1( device, tokens ) {
+		this._flowTriggerMeterReturnT1.trigger( device, tokens ).catch( this.error )
+	}
+
+	flowTriggerMeterReturnT2( device, tokens ) {
+		this._flowTriggerMeterReturnT2.trigger( device, tokens ).catch( this.error )
 	}
 
 	startPolling() {
@@ -332,6 +342,16 @@ class HomeWizardEnergylink extends Homey.Device {
 					me.setCapabilityValue("meter_power.produced.t1", metered_electricity_produced_t1);
 					me.setCapabilityValue("meter_power.consumed.t2", metered_electricity_consumed_t2);
 					me.setCapabilityValue("meter_power.produced.t2", metered_electricity_produced_t2);
+
+					if (metered_electricity_produced_t1 != me.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
+					    	me.flowTriggerMeterReturnT1(me, { meter_power_produced_t1: metered_electricity_produced_t1 });
+								me.setStoreValue("last_meter_return_t1", metered_electricity_produced_t1);
+					}
+
+					if (metered_electricity_produced_t2 != me.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
+					    	me.flowTriggerMeterReturnT2(me, { meter_power_produced_t2: metered_electricity_produced_t2 });
+								me.setStoreValue("last_meter_return_t2", metered_electricity_produced_t2);
+					}
 
 
 				} catch (err) {

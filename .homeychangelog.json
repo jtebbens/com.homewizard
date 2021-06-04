@@ -1,5 +1,5 @@
 {
-  "2.0.2": {
-    "en": "Bug fix: removed empty meters for people that don't have phase 3 or solar production"
+  "2.0.5": {
+    "en": "Additional error handling and Kwh1 (SDM230) support."
   }
 }

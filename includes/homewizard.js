@@ -117,7 +117,7 @@ module.exports = (function(){
               try {
                if (status == 200) {
                  try {
-                    if (jsonData.status == 'ok') {
+                    if (jsonData.status == 'ok' && jsonData.status !== undefined) {
                        if(typeof callback === 'function') {
                            callback(null, jsonData.response);
                        } else {
@@ -127,8 +127,12 @@ module.exports = (function(){
                       console.log('jsonData.status not ok');
                     }
                  } catch (exception) {
-                     console.log(exception);
-                    console.log('EXCEPTION JSON : '+ body);
+                    console.log(exception);
+                    // catch if undefined body else it complains ReferenceError: body is not defined
+                    if (body !== 'undefined' || body !== undefined)
+                    {
+                        console.log('EXCEPTION JSON : '+ body);
+                    }
                     jsonObject = null;
                     callback('Invalid data', []);
                  }

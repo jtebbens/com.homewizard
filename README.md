@@ -2,6 +2,15 @@
 
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
+v2.0.5
+* Extra error handling main driver (Homewizard legacy/old unit connectivity) - memory leak when there are connection issues
+* SDM230 support (1-fase kwh meter)
+
+v2.0.3
+* SDM630 support added for "HomeWizard WiFi kWh meter 3-fase"
+* Updated icon
+* Extra error handling connection (timeouts etc)
+
 v2.0.1
 * One brand one app the application "Homewizard Energy" has been merged with this Homewizard application big thanks to Athom develop team.
 * P1 dongle will also be automatically detected via mdns on your local network so no need to add ip manually

@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.0.2",
+  "version": "2.0.5",
   "sdk": 2,
   "compatibility": ">=1.5",
   "description": {
@@ -313,6 +313,64 @@
         "tokens": [
           {
             "name": "power_daytotal_s2",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_return_t1_changed",
+        "title": {
+          "en": "Meter return t1 changed",
+          "nl": "Meter teruglevering t1 veranderd"
+        },
+        "args": [
+          {
+            "name": "Energylink",
+            "type": "device",
+            "filter": "driver_id=energylink",
+            "placeholder": {
+              "en": "Which energylink",
+              "nl": "Welke energylink"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "meter_power_produced_t1",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_return_t2_changed",
+        "title": {
+          "en": "Meter return t2 changed",
+          "nl": "Meter teruglevering t2 veranderd"
+        },
+        "args": [
+          {
+            "name": "Energylink",
+            "type": "device",
+            "filter": "driver_id=energylink",
+            "placeholder": {
+              "en": "Which energylink",
+              "nl": "Welke energylink"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "meter_power_produced_t2",
             "type": "number",
             "title": {
               "en": "kWh",
@@ -1110,6 +1168,156 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "SDM630",
+      "name": {
+        "en": "kwh meter (3 phase)"
+      },
+      "images": {
+        "large": "drivers/SDM630/assets/images/large.png",
+        "small": "drivers/SDM630/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "SDM630",
+      "capabilities": [
+          "measure_power.active_power_w",
+          "meter_power",
+          "measure_power.l1",
+          "measure_power.l2",
+          "measure_power.l3"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.active_power_w": {
+          "title": {
+            "en": "Current usage all phases",
+            "nl": "Huidig gebruik alle fases"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "measure_power.l2": {
+          "title": {
+            "en": "Current usage phase 2",
+            "nl": "Huidig gebruik fase 2"
+          }
+        },
+        "measure_power.l3": {
+          "title": {
+            "en": "Current usage phase 3",
+            "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
+    },
+    {
+      "id": "SDM230",
+      "name": {
+        "en": "kwh meter (1 phase)"
+      },
+      "images": {
+        "large": "drivers/SDM230/assets/images/large.png",
+        "small": "drivers/SDM230/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "SDM230",
+      "capabilities": [
+          "measure_power.active_power_w",
+          "meter_power",
+          "measure_power.l1"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.active_power_w": {
+          "title": {
+            "en": "Current usage all phases",
+            "nl": "Huidig gebruik alle fases"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "permissions": [
@@ -1122,7 +1330,77 @@
         "name": "hwenergy",
         "protocol": "tcp"
       },
-      "id": "{{txt.serial}}"
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-P1"
+            }
+          },
+          {
+            "field": "txt.api_enabled",
+            "match": {
+              "type": "string",
+              "value": "1"
+            }
+          }
+        ]
+      ]
+    },
+    "SDM630": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "SDM630-wifi"
+            }
+          },
+          {
+            "field": "txt.api_enabled",
+            "match": {
+              "type": "string",
+              "value": "1"
+            }
+          }
+        ]
+      ]
+    },
+    "SDM230": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "SDM230-wifi"
+            }
+          },
+          {
+            "field": "txt.api_enabled",
+            "match": {
+              "type": "string",
+              "value": "1"
+            }
+          }
+        ]
+      ]
     }
   }
 }
