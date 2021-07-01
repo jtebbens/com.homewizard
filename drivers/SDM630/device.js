@@ -46,7 +46,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       if (!this.hasCapability('meter_power.consumed.t1')) {
         await this.addCapability('meter_power.consumed.t1').catch(this.error);
-        await this.addCapability('meter_power.consumed.t2').catch(this.error);
+      //  await this.addCapability('meter_power.consumed.t2').catch(this.error);
       }
 
       // Update values 3phase kwh
@@ -60,19 +60,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
       await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
-      await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
+      //await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
       if (data.total_power_export_t1_kwh > 1) {
 								if (!this.hasCapability('meter_power.produced.t1')) {
                   // add production meters
-									await this.addCapability('meter_power.produced.t1');
+									await this.addCapability('meter_power.produced.t1').catch(this.error);
 								}
                 // update values for solar production
-								await this.setCapabilityValue("meter_power.produced.t1", data.total_power_export_t1_kwh).catch(this.error);
+								await this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh).catch(this.error);
 			}
       else if (data.total_power_export_t1_kwh < 1) {
-              await this.removeCapability('meter_power.produced.t1');
+              await this.removeCapability('meter_power.produced.t1').catch(this.error);
       }
 
       // aggregated meter for Power by the hour support
@@ -89,9 +89,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
            await this.addCapability('measure_power.l2').catch(this.error);
            await this.addCapability('measure_power.l3').catch(this.error);
         }
-        this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error);
-        this.setCapabilityValue("measure_power.l2", data.active_power_l2_w).catch(this.error);
-        this.setCapabilityValue("measure_power.l3", data.active_power_l3_w).catch(this.error);
+        this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
+        this.setCapabilityValue('measure_power.l2', data.active_power_l2_w).catch(this.error);
+        this.setCapabilityValue('measure_power.l3', data.active_power_l3_w).catch(this.error);
       }
       else if (data.active_power_l2_w == null) {
         if (this.hasCapability('measure_power.l2')) {

@@ -29,8 +29,8 @@ class HomeWizardDriver extends Homey.Driver {
                             // You can make a choice here: reject the promise with the error,
                             // or resolve it to return "false" return resolve(false); // OR: return reject(err)
                         }
-                        console.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-                        console.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
+                        //console.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+                        //console.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
                         return resolve(args.preset == response.preset);
                     });
                 });

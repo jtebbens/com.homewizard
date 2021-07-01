@@ -1,5 +1,5 @@
 {
-  "2.0.5": {
-    "en": "Additional error handling and Kwh1 (SDM230) support."
+  "2.0.8": {
+    "en": "Bug fix: setClass(solar)"
   }
 }
