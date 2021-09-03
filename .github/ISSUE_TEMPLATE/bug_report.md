@@ -10,7 +10,10 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
+** Version of Homey **
 ** Version of the Homewizard Homey app **
+** Version of the firmware of the device you are trying to add (Homewizard wifi dongle p1 must be 2.09)
+** Confirm Local API has been enabled in Homewizard Energy app needed for discovery
 
 **To Reproduce**
 Steps to reproduce the behavior:
