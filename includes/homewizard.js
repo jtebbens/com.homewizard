@@ -74,7 +74,7 @@ module.exports = (function(){
    };
 
   async function fetchWithTimeout(resource, options) {
-    const { timeout = 8000 } = options;
+    const { timeout = 20000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -89,6 +89,7 @@ module.exports = (function(){
   }
 
    homewizard.call = async function(device_id, uri_part, callback) {
+     try {
          var me = this;
          let status;
          if (debug) {console.log('Call device ' + device_id);}
@@ -97,7 +98,7 @@ module.exports = (function(){
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 8000
+              timeout: 20000
             })
             .then(async(res) => {
                           try {
@@ -115,9 +116,9 @@ module.exports = (function(){
             })
             .then((jsonData) => {
               try {
-               if (status == 200 && status !== 'undefined') {
+               if (status == 200) {
                  try {
-                    if (jsonData.status == 'ok' && jsonData.status !== undefined && jsonData.status !== 'undefined') {
+                    if (jsonData.status !== undefined && jsonData.status == 'ok') {
                        if(typeof callback === 'function') {
                            callback(null, jsonData.response);
                        } else {
@@ -128,11 +129,11 @@ module.exports = (function(){
                     }
                  } catch (exception) {
                     console.log(exception);
-                    // catch if undefined body else it complains ReferenceError: body is not defined
-                    if (jsonData.body !== undefined || body !== 'undefined' || body !== undefined)
-                    {
-                        console.log('EXCEPTION JSON CAUGHT');
-                    }
+//                    // catch if undefined body else it complains ReferenceError: body is not defined
+//                    if (!jsonData.body || jsonData.body !== undefined || body !== 'undefined' || body !== undefined)
+//                    {
+//                        console.log('EXCEPTION JSON CAUGHT');
+//                    }
                     jsonObject = null;
                     callback('Invalid data', []);
                  }
@@ -153,7 +154,10 @@ module.exports = (function(){
          } else {
             console.log('Homewizard '+ device_id +': settings not found!');
          }
-
+       } // end of try
+         catch (error) {
+           console.log(error,name === 'AbortError');
+        }
    };
 
    homewizard.ledring_pulse = function(device_id, colorName) {

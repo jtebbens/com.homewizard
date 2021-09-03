@@ -1,4 +1,4 @@
-Connect your HomeWizard products to Homey.
+Connect your HomeWizard products with Homey.
 
 After connecting your HomeWizard Base Station, you can add the following devices:
 - Thermometers
@@ -8,7 +8,8 @@ After connecting your HomeWizard Base Station, you can add the following devices
 - Rainmeter
 - Wattcher (the alternative "Energylink" which only tracks usage from the blinking led)
 - Motion sensor
-- Smoke sensor 
+- Smoke sensor
 
 These products can be connected without the HomeWizard Base Station:
 - Energy (P1 Dongle)
+- kwh meter 1 and 3 phase type

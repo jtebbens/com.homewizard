@@ -2,6 +2,9 @@
 
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
+v2.0.9
+* Bug fixes (memory)
+
 v2.0.8
 * Populating missing meters/metrics
 * Flagging the kwh1 as solarpanel if the active_power_w goes negative which means there is a solarpanel unit attached to it

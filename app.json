@@ -3,11 +3,12 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.0.8",
+  "version": "2.0.10",
   "sdk": 2,
+  "brandColor": "#000000",
   "compatibility": ">=1.5",
   "description": {
-    "en": "Control HomeWizard using Homey"
+    "en": "Homewizard - connect your HomeWizard products with Homey"
   },
   "category": "appliances",
   "images": {

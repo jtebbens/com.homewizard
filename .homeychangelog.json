@@ -1,5 +1,11 @@
 {
   "2.0.8": {
     "en": "Bug fix: setClass(solar)"
+  },
+  "2.0.9": {
+    "en": "Bug fixes (memory)"
+  },
+  "2.0.10": {
+    "en": "node-fetch increased timeout 20s"
   }
 }
