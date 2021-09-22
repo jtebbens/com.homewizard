@@ -3,14 +3,14 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.0.10",
+  "version": "2.0.17",
   "sdk": 2,
   "brandColor": "#000000",
   "compatibility": ">=1.5",
   "description": {
-    "en": "Homewizard - connect your HomeWizard products with Homey"
+    "en": "Homewizard - Combine the Smarthome power"
   },
-  "category": "appliances",
+  "category": ["appliances", "energy", "climate"],
   "images": {
     "large": "assets/images/large.jpg",
     "small": "assets/images/small.jpg"
@@ -1080,7 +1080,7 @@
       "class": "sensor",
       "discovery": "energy",
       "capabilities": [
-          "measure_power.active_power_w",
+          "measure_power",
           "meter_gas",
           "meter_power",
           "meter_power.consumed.t1",
@@ -1099,12 +1099,6 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.active_power_w": {
-          "title": {
-            "en": "Current usage all phases",
-            "nl": "Huidig gebruik alle fases"
           }
         },
         "measure_power.l1": {
@@ -1182,7 +1176,7 @@
       "class": "sensor",
       "discovery": "SDM630",
       "capabilities": [
-          "measure_power.active_power_w",
+          "measure_power",
           "meter_power",
           "measure_power.l1",
           "measure_power.l2",
@@ -1193,12 +1187,6 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.active_power_w": {
-          "title": {
-            "en": "Current usage all phases",
-            "nl": "Huidig gebruik alle fases"
           }
         },
         "measure_power.l1": {
@@ -1264,7 +1252,7 @@
       "class": "sensor",
       "discovery": "SDM230",
       "capabilities": [
-          "measure_power.active_power_w",
+          "measure_power",
           "meter_power",
           "measure_power.l1"
       ],
@@ -1273,12 +1261,6 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.active_power_w": {
-          "title": {
-            "en": "Current usage all phases",
-            "nl": "Huidig gebruik alle fases"
           }
         },
         "measure_power.l1": {

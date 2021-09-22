@@ -2,8 +2,10 @@
 
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
-v2.0.9
-* Bug fixes (memory)
+v2.0.17
+* Bug fixes (memory, p1 and SDM230)
+* Module node-fetch increased timeout 20s to compensate bad wifi connection with HomeWizard
+* Better SVG icons for Heatlink and Energylink (thanks for community sharing)
 
 v2.0.8
 * Populating missing meters/metrics

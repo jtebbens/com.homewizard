@@ -7,5 +7,26 @@
   },
   "2.0.10": {
     "en": "node-fetch increased timeout 20s"
+  },
+  "2.0.11": {
+    "en": "Bug fixes on P1 dongle (removal of Current usage all phases -> duplicate)"
+  },
+  "2.0.12": {
+    "en": "Bug fix attempt (customer request SDM230 & P1 dongle)"
+  },
+  "2.0.13": {
+    "en": "Solar class fix for KWH module"
+  },
+  "2.0.14": {
+    "en": "Bugfix SDM230 (Measure_power value empty)"
+  },
+  "2.0.15": {
+    "en": "Manifest update"
+  },
+  "2.0.16": {
+    "en": "Heatlink and Energylink icon update"
+  },
+  "2.0.17": {
+    "en": "svg files size issue"
   }
 }

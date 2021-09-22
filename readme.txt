@@ -12,4 +12,4 @@ After connecting your HomeWizard Base Station, you can add the following devices
 
 These products can be connected without the HomeWizard Base Station:
 - Energy (P1 Dongle)
-- kwh meter 1 and 3 phase type
+- kwh meter 1 and 3 phase type (SDM230 and SDM630)

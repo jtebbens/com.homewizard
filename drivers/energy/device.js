@@ -44,6 +44,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.addCapability('measure_power').catch(this.error);
       }
 
+      if (this.hasCapability('measure_power.active_power_w')) {
+        await this.removeCapability('measure_power.active_power_w').catch(this.error);
+      } // remove
+
       if (!this.hasCapability('meter_power.consumed.t1')) {
         await this.addCapability('meter_power.consumed.t1').catch(this.error);
         await this.addCapability('meter_power.consumed.t2').catch(this.error);

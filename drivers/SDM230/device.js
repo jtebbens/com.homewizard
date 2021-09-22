@@ -44,9 +44,17 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.addCapability('measure_power').catch(this.error);
       }
 
+      if (this.hasCapability('measure_power.active_power_w')) {
+        await this.removeCapability('measure_power.active_power_w').catch(this.error);
+      } // remove
+
       if (!this.hasCapability('meter_power.consumed.t1')) {
         await this.addCapability('meter_power.consumed.t1').catch(this.error);
         //await this.addCapability('meter_power.consumed.t2').catch(this.error);
+      }
+
+      if (!this.hasCapability('measure_power.l1')) {
+        await this.addCapability('measure_power.l1').catch(this.error);
       }
 
       // Update values 3phase kwh
@@ -60,14 +68,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       // First we need to check if the kwh active_power_w is negative (solar)
 
-      if (data.active_power_w < 0) {
+      if ((data.active_power_w < 0) || (data.active_power_l1_w < 0)) {
         if (this.getClass() != 'solarpanel') {
           await this.setClass('solarpanel').catch(this.error);
         }
       }
 
       await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
-      await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
+      //await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
       await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
       await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
       //await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
