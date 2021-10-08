@@ -1301,6 +1301,73 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "energy_socket",
+      "name": {
+        "en": "Energy Socket"
+      },
+      "images": {
+        "large": "drivers/energy/assets/images/large.png",
+        "small": "drivers/energy/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "energy_socket",
+      "capabilities": [
+          "onoff",
+          "dim",
+          "locked",
+          "measure_power",
+          "meter_power",
+          "meter_power.consumed.t1",
+          "meter_power.produced.t1",
+          "measure_power.l1"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "permissions": [
@@ -1321,6 +1388,32 @@
             "match": {
               "type": "string",
               "value": "HWE-P1"
+            }
+          },
+          {
+            "field": "txt.api_enabled",
+            "match": {
+              "type": "string",
+              "value": "1"
+            }
+          }
+        ]
+      ]
+    },
+    "energy_socket": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-SKT"
             }
           },
           {
