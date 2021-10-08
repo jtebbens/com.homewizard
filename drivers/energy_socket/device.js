@@ -90,9 +90,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       }
 
       // Update values
-      await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
-      await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
-      await this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error);
+      if (this.getCapabilityValue('measure_power') != data.active_power_w)
+        await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
+      if (this.getCapabilityValue('meter_power.consumed.t1') != data.total_power_import_t1_kwh)
+        await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
+      if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
+        await this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error);
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
       if (data.total_power_export_t1_kwh > 1) {
@@ -101,7 +104,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 									await this.addCapability('meter_power.produced.t1');
 								}
                 // update values for solar production
-								await this.setCapabilityValue("meter_power.produced.t1", data.total_power_export_t1_kwh).catch(this.error);
+                if (this.getCapabilityValue('meter_power.produced.t1') != data.total_power_export_t1_kwh)
+								  await this.setCapabilityValue("meter_power.produced.t1", data.total_power_export_t1_kwh).catch(this.error);
 			}
       else if (data.total_power_export_t1_kwh < 1) {
               await this.removeCapability('meter_power.produced.t1');
@@ -112,7 +116,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
           await this.addCapability('meter_power').catch(this.error);
       }
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh)).catch(this.error);
+      if (this.getCapabilityValue('meter_power') != (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh))
+        this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh)).catch(this.error);
     })
       .then(() => {
         this.setAvailable().catch(this.error);
@@ -146,9 +151,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       }
 
       // Update values
-      await this.setCapabilityValue('onoff', data.power_on).catch(this.error);
-      await this.setCapabilityValue('dim', data.brightness * (1/255)).catch(this.error);
-      await this.setCapabilityValue('locked', data.switch_lock).catch(this.error);
+      if (this.getCapabilityValue('onoff') != data.power_on)
+        await this.setCapabilityValue('onoff', data.power_on).catch(this.error);
+      if (this.getCapabilityValue('dim') != data.brightness)
+        await this.setCapabilityValue('dim', data.brightness * (1/255)).catch(this.error);
+      if (this.getCapabilityValue('locked') != data.switch_lock)
+        await this.setCapabilityValue('locked', data.switch_lock).catch(this.error);
     })
   }
 
