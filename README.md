@@ -2,6 +2,11 @@
 
 Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
 
+v2.1.1
+* Energy Socket support - Credits to denniedegroot
+* Only update values when changed (P1) - Credits to denniedegroot
+
+
 v2.0.17
 * Bug fixes (memory, p1 and SDM230)
 * Module node-fetch increased timeout 20s to compensate bad wifi connection with HomeWizard
