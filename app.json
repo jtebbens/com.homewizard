@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.1",
+  "version": "2.1.2",
   "sdk": 2,
   "brandColor": "#000000",
   "compatibility": ">=1.5",
@@ -40,6 +40,10 @@
       {
         "name": "Emile Nijssen",
         "email": "emile@emilenijssen.nl"
+      },
+      {
+        "name": "Dennie de Groot",
+        "email": "mail@denniedegroot.nl"
       }
     ]
   },
@@ -1308,8 +1312,8 @@
         "en": "Energy Socket"
       },
       "images": {
-        "large": "drivers/energy/assets/images/large.png",
-        "small": "drivers/energy/assets/images/small.png"
+        "large": "drivers/energy_socket/assets/images/large.png",
+        "small": "drivers/energy_socket/assets/images/small.png"
       },
       "class": "sensor",
       "discovery": "energy_socket",
