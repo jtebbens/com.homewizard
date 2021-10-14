@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.2",
+  "version": "2.1.3",
   "sdk": 2,
   "brandColor": "#000000",
   "compatibility": ">=1.5",
@@ -1390,8 +1390,8 @@
           {
             "field": "txt.product_type",
             "match": {
-              "type": "string",
-              "value": "HWE-P1"
+              "type": "regex",
+              "value": "^HWE-P1"
             }
           },
           {
@@ -1399,6 +1399,13 @@
             "match": {
               "type": "string",
               "value": "1"
+            }
+          },
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^p1meter"
             }
           }
         ]
@@ -1416,8 +1423,8 @@
           {
             "field": "txt.product_type",
             "match": {
-              "type": "string",
-              "value": "HWE-SKT"
+              "type": "regex",
+              "value": "^HWE-SKT"
             }
           },
           {
@@ -1425,6 +1432,13 @@
             "match": {
               "type": "string",
               "value": "1"
+            }
+          },
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^energysocket-"
             }
           }
         ]
@@ -1452,6 +1466,13 @@
               "type": "string",
               "value": "1"
             }
+          },
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^kwhmeter-"
+            }
           }
         ]
       ]
@@ -1477,6 +1498,13 @@
             "match": {
               "type": "string",
               "value": "1"
+            }
+          },
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^kwhmeter-"
             }
           }
         ]
