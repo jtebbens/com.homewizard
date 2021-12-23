@@ -853,6 +853,29 @@
       "energy": {
         "batteries": [ "AA", "AA" ]
       },
+      "settings": [ {
+  				"type": "group",
+  				"label": {
+  					"en": "Sensor offset",
+  					"nl": "Sensor compensatie"
+  				},
+  				"children": [{
+  					"id": "offset_temperature",
+  					"type": "number",
+  					"label": {
+  						"en": "Temperature", "nl": "Temperatuur"
+  					},
+  					"value": 0
+  				}, {
+  					"id": "offset_humidity",
+  					"type": "number",
+  					"label": {
+  						"en": "Humidity", "nl": "Vochtigheid"
+  					},
+  					"value": 0
+  				}]
+  			}
+  		],
       "pair": [
         {
           "id": "start"
