@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.4
+* Thermometer and Humidity offset support (Thanks to stevenv2201)
+
 v2.1.3
 * Energy Socket support - Credits to denniedegroot
 * Only update values when changed (P1) - Credits to denniedegroot
