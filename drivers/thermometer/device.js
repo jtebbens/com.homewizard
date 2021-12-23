@@ -64,17 +64,28 @@ class HomeWizardThermometer extends Homey.Device {
 						try {
 							for (var index2 in result) {
 
+						
+							
 								if (result[index2].id == thermometer_id && result[index2].te != undefined && result[index2].hu != undefined) {
 									var te = (result[index2].te.toFixed(1) * 2) / 2;
 									var hu = (result[index2].hu.toFixed(1) * 2) / 2;
-
+									
+									//first adjust retrieved temperature with offset									
+									let offset_temp = devices[index].getSetting('offset_temperature');
+									te += offset_temp;
+									
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
 										if (debug) {console.log("New TE - "+ te);}
 										devices[index].setCapabilityValue('measure_temperature', te);
-									}
 
-									//Check current temperature
+									}
+									
+									//first adjust retrieved humidity with offset									
+									let offset_hu = devices[index].getSetting('offset_humidity');
+									hu += offset_hu;
+
+									//Check current humidity
 									if (devices[index].getCapabilityValue('measure_humidity') != hu) {
 										if (debug) {console.log("New HU - "+ hu);}
 										devices[index].setCapabilityValue('measure_humidity', hu);
@@ -127,6 +138,42 @@ class HomeWizardThermometer extends Homey.Device {
 		console.log('deleted: ' + JSON.stringify(this));
 	}
 
+	
+	
+	
+	
+  // Catch offset updates
+  onSettings(oldSettings, newSettings, changedKeys, callback) {
+    this.log('Settings updated')
+    // Update display values if offset has changed
+    for (let k in changedKeys) {
+      let key = changedKeys[k]
+      if (key.slice(0, 7) === 'offset_') {
+        let cap = 'measure_' + key.slice(7)
+        let value = this.getCapabilityValue(cap)
+        let delta = newSettings[key] - oldSettings[key]
+        this.log('Updating value of', cap, 'from', value, 'to', value + delta)
+        this.setCapabilityValue(cap, value + delta)
+          .catch(err => this.error(err))
+      }
+    }
+    callback(null, true);
+  }
+
+  updateValue(cap, value) {
+    // add offset if defined
+    this.log('Updating value of', this.id, 'with capability', cap, 'to', value)
+    let cap_offset = cap.replace('measure', 'offset')
+    let offset = this.getSetting(cap_offset)
+    this.log(cap_offset, offset)
+    if (offset != null) {
+      value += offset
+    }
+    this.setCapabilityValue(cap, value)
+      .catch(err => this.error(err))
+  }
+	
+	
 }
 
 module.exports = HomeWizardThermometer;
