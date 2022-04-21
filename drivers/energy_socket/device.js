@@ -56,7 +56,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       method: 'PUT',
       body: JSON.stringify(body),
       headers: {'Content-Type': 'application/json'}
-    });
+    }).catch(this.error);
 
     if( !res.ok )
       throw new Error(res.statusText);
@@ -101,14 +101,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       if (data.total_power_export_t1_kwh > 1) {
 								if (!this.hasCapability('meter_power.produced.t1')) {
                   // add production meters
-									await this.addCapability('meter_power.produced.t1');
+									await this.addCapability('meter_power.produced.t1').catch(this.error);
 								}
                 // update values for solar production
                 if (this.getCapabilityValue('meter_power.produced.t1') != data.total_power_export_t1_kwh)
 								  await this.setCapabilityValue("meter_power.produced.t1", data.total_power_export_t1_kwh).catch(this.error);
 			}
       else if (data.total_power_export_t1_kwh < 1) {
-              await this.removeCapability('meter_power.produced.t1');
+              await this.removeCapability('meter_power.produced.t1').catch(this.error);
       }
 
       // aggregated meter for Power by the hour support
@@ -132,7 +132,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     if( !this.url ) return;
 
     Promise.resolve().then(async () => {
-      const res = await fetch(`${this.url}/state`);
+      const res = await fetch(`${this.url}/state`).catch(this.error); //Error: Not Found
       if( !res.ok )
         throw new Error(res.statusText);
 

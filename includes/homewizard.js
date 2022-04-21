@@ -73,8 +73,24 @@ module.exports = (function(){
       }
    };
 
+   class HTTPResponseError extends Error {
+   	constructor(response, ...args) {
+   		super(`HTTP Error Response: ${response.status} ${response.statusText}`, ...args);
+   		this.response = response;
+   	}
+  };
+
+   const checkStatus = response => {
+   	if (response.ok) {
+   		// response.status >= 200 && response.status < 300
+   		return response;
+   	} else {
+   		throw new HTTPResponseError(response);
+   	}
+  };
+
   async function fetchWithTimeout(resource, options) {
-    const { timeout = 20000 } = options;
+    const { timeout = 8000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -85,7 +101,16 @@ module.exports = (function(){
     });
     clearTimeout(id);
 
-  return response;
+  // return response;
+    try {
+	      checkStatus(response);
+        } catch (error) {
+	        console.error(error);
+
+	       const errorBody = await error.response.text();
+	        console.error(`Error body: ${errorBody}`);
+        }
+      return response;
   }
 
    homewizard.call = async function(device_id, uri_part, callback) {
@@ -98,7 +123,7 @@ module.exports = (function(){
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 20000
+              timeout: 8000
             })
             .then(async(res) => {
                           try {

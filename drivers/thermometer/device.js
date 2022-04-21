@@ -64,24 +64,24 @@ class HomeWizardThermometer extends Homey.Device {
 						try {
 							for (var index2 in result) {
 
-						
-							
+
+
 								if (result[index2].id == thermometer_id && result[index2].te != undefined && result[index2].hu != undefined) {
 									var te = (result[index2].te.toFixed(1) * 2) / 2;
 									var hu = (result[index2].hu.toFixed(1) * 2) / 2;
-									
-									//first adjust retrieved temperature with offset									
+
+									//first adjust retrieved temperature with offset
 									let offset_temp = devices[index].getSetting('offset_temperature');
 									te += offset_temp;
-									
+
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
 										if (debug) {console.log("New TE - "+ te);}
 										devices[index].setCapabilityValue('measure_temperature', te);
 
 									}
-									
-									//first adjust retrieved humidity with offset									
+
+									//first adjust retrieved humidity with offset
 									let offset_hu = devices[index].getSetting('offset_humidity');
 									hu += offset_hu;
 
@@ -110,7 +110,7 @@ class HomeWizardThermometer extends Homey.Device {
 										}
 										else {
 											if (devices[index].hasCapability('alarm_battery')) {
-												await devices[index].removeCapability('alarm_battery');
+												await devices[index].removeCapability('alarm_battery').catch(this.error); // catch this?
 											}
 										}
 									} catch (e) {
@@ -138,10 +138,10 @@ class HomeWizardThermometer extends Homey.Device {
 		console.log('deleted: ' + JSON.stringify(this));
 	}
 
-	
-	
-	
-	
+
+
+
+
   // Catch offset updates
   onSettings(oldSettings, newSettings, changedKeys, callback) {
     this.log('Settings updated')
@@ -172,8 +172,8 @@ class HomeWizardThermometer extends Homey.Device {
     this.setCapabilityValue(cap, value)
       .catch(err => this.error(err))
   }
-	
-	
+
+
 }
 
 module.exports = HomeWizardThermometer;

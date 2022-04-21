@@ -40,5 +40,17 @@
   },
   "2.1.4": {
     "en": "Thermometer and Humidity offset support"
+  },
+  "2.1.5": {
+    "en": "Attempt to catch unhandled rejections"
+  },
+  "2.1.6": {
+    "en": "async fixes"
+  },
+  "2.1.7": {
+    "en": "measure_rain invalid check"
+  },
+  "2.1.8": {
+    "en": "Energylink error catch fixes"
   }
 }

@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.4",
+  "version": "2.1.8",
   "sdk": 2,
   "brandColor": "#000000",
   "compatibility": ">=1.5",
@@ -1414,7 +1414,7 @@
             "field": "txt.product_type",
             "match": {
               "type": "regex",
-              "value": "^HWE-P1"
+              "value": "HWE-P1"
             }
           },
           {
@@ -1428,7 +1428,7 @@
             "field": "host",
             "match": {
               "type": "regex",
-              "value": "^p1meter"
+              "value": "^p1meter-"
             }
           }
         ]
@@ -1447,7 +1447,7 @@
             "field": "txt.product_type",
             "match": {
               "type": "regex",
-              "value": "^HWE-SKT"
+              "value": "HWE-SKT"
             }
           },
           {

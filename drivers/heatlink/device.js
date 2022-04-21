@@ -85,7 +85,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
 			me.log('Gather data');
 
-			homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'heatlinks', async function(callback) {
 
 				if (Object.keys(callback).length > 0) {
 
@@ -98,8 +98,8 @@ class HomeWizardHeatlink extends Homey.Device {
 						//Check current temperature
 						if (me.getStoreValue('temperature') != rte) {
 						  console.log("New RTE - "+ rte);
-							me.setCapabilityValue('measure_temperature', rte );
-							me.setStoreValue('temperature',rte);
+							await me.setCapabilityValue('measure_temperature', rte ).catch(me.error);
+							await me.setStoreValue('temperature',rte).catch(me.error);
 						} else {
 						  console.log("RTE: no change");
 						}
@@ -108,9 +108,9 @@ class HomeWizardHeatlink extends Homey.Device {
 						if (me.getStoreValue('thermTemperature') != rsp) {
 						  console.log("New RSP - "+ rsp);
 						  if (me.getStoreValue('setTemperature') === 0) {
-							  me.setCapabilityValue('target_temperature', rsp);
+							  await me.setCapabilityValue('target_temperature', rsp).catch(me.error);
 						  }
-							me.setStoreValue('thermTemperature',rsp);
+							await me.setStoreValue('thermTemperature',rsp).catch(me.error);
 						} else {
 						  console.log("RSP: no change");
 						}
@@ -119,11 +119,11 @@ class HomeWizardHeatlink extends Homey.Device {
 						if (me.getStoreValue('setTemperature') != tte) {
 						  console.log("New TTE - "+ tte);
 						  if (tte > 0) {
-							  me.setCapabilityValue('target_temperature', tte);
+							  await me.setCapabilityValue('target_temperature', tte).catch(me.error);
 						  } else {
-							  me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature'));
+							  await me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature')).catch(me.error);
 						  }
-							me.setStoreValue('setTemperature',tte);
+							await me.setStoreValue('setTemperature',tte).catch(me.error);
 						} else {
 						  console.log("TTE: no change");
 						}
