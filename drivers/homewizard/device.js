@@ -69,18 +69,18 @@ class HomeWizardDevice extends Homey.Device {
 		var me = this;
 
 		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
+			homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) { // async added
 
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
 						if (debug) {me.log('Preset was set to ' + callback);}
 
-						await devices[index].getStoreValue('preset', callback).catch(me.error);
+						devices[index].getStoreValue('preset', callback);
 					}
 
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						await devices[index].setStoreValue('preset', callback).catch(me.error);
+						devices[index].setStoreValue('preset', callback);
 
 						if (debug) {me.log('Flow call! -> ' + callback);}
 
@@ -89,7 +89,7 @@ class HomeWizardDevice extends Homey.Device {
 						} else {
 							preset_text = preset_text_en[callback];
 						}
-						await me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text}).catch(me.error);
+						me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
 
 						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
 					}

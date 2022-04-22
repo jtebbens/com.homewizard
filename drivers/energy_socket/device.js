@@ -158,6 +158,9 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       if (this.getCapabilityValue('locked') != data.switch_lock)
         await this.setCapabilityValue('locked', data.switch_lock).catch(this.error);
     })
+    .catch(err => {
+      this.error(err);
+    })
   }
 
 }

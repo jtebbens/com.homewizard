@@ -4,6 +4,14 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.9
+* Adjusted timeouts for slower Homewizard devices (wifi connection issues)
+* Added catch for energy_sockets that give state check errors
+
+v2.1.8
+* Additional error handling catch in preparation for Homey 7.4.0 release
+* Improved HTTPResponseError handling to avoid Homewizard Legacy connectivity issues
+
 v2.1.4
 * Thermometer and Humidity offset support (Thanks to stevenv2201)
 

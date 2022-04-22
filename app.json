@@ -3,12 +3,12 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.8",
+  "version": "2.1.9",
   "sdk": 2,
   "brandColor": "#000000",
   "compatibility": ">=1.5",
   "description": {
-    "en": "Homewizard - Combine the Smarthome power"
+    "en": "Combine the Smarthome power"
   },
   "category": ["appliances", "energy", "climate"],
   "images": {
