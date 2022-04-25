@@ -43,7 +43,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
 			me.getStatus();
 
-		}, 1000 * 10 );
+		}, 1000 * 20 );
 
 	}
 
@@ -55,7 +55,7 @@ class HomeWizardWindmeter extends Homey.Device {
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
-			homewizard.getDeviceData(homewizard_id, 'windmeters', async function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'windmeters', function(callback) {
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
@@ -86,19 +86,19 @@ class HomeWizardWindmeter extends Homey.Device {
 						console.log("Temperature windchill: "+ temp_windchill);
 
 						// // Wind angle
-						await me.setCapabilityValue("measure_wind_angle", wind_angle ).catch(me.error);
+						me.setCapabilityValue("measure_wind_angle", wind_angle ).catch(me.error);
 						// // Wind speed current
-						await me.setCapabilityValue("measure_wind_strength.cur", wind_strength_current ).catch(me.error);
+						me.setCapabilityValue("measure_wind_strength.cur", wind_strength_current ).catch(me.error);
 						// // Wind speed min
-						await me.setCapabilityValue("measure_wind_strength.min", wind_strength_min ).catch(me.error);
+						me.setCapabilityValue("measure_wind_strength.min", wind_strength_min ).catch(me.error);
 						// // Wind speed max
-						await me.setCapabilityValue("measure_wind_strength.max", wind_strength_max ).catch(me.error);
+						me.setCapabilityValue("measure_wind_strength.max", wind_strength_max ).catch(me.error);
 						// // Wind speed
-						await me.setCapabilityValue("measure_gust_strength", gust_strength ).catch(me.error);
+						me.setCapabilityValue("measure_gust_strength", gust_strength ).catch(me.error);
 						// // Temp real
-						await me.setCapabilityValue("measure_temperature.real", temp_real ).catch(me.error);
+						me.setCapabilityValue("measure_temperature.real", temp_real ).catch(me.error);
 						// // Temp Windchill
-						await me.setCapabilityValue("measure_temperature.windchill", temp_windchill ).catch(me.error);
+						me.setCapabilityValue("measure_temperature.windchill", temp_windchill ).catch(me.error);
 
 					} catch (err) {
 						console.log('ERROR WindMeter getStatus ', err);

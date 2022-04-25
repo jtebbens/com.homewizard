@@ -43,7 +43,7 @@ class HomeWizardWattcher extends Homey.Device {
 
 			me.getStatus();
 
-		}, 1000 * 10 );
+		}, 1000 * 20 );
 
 	}
 
@@ -55,7 +55,7 @@ class HomeWizardWattcher extends Homey.Device {
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
-			homewizard.getDeviceData(homewizard_id, 'energymeters', async function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'energymeters', function(callback) {
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
@@ -66,9 +66,9 @@ class HomeWizardWattcher extends Homey.Device {
 						var energy_daytotal_cons = ( callback[0].dayTotal ); // KWH Energy used JSON $energymeters[0]['dayTotal']
 
 						 // Wattcher elec current
-						 await me.setCapabilityValue("measure_power", energy_current_cons ).catch(me.error);
+						 me.setCapabilityValue("measure_power", energy_current_cons ).catch(me.error);
 						 // Wattcher elec total day
-						 await me.setCapabilityValue("meter_power", energy_daytotal_cons ).catch(me.error);
+						 me.setCapabilityValue("meter_power", energy_daytotal_cons ).catch(me.error);
 
 						 me.log('End capturing data');
 						 console.log("Wattcher usage- "+ energy_current_cons);

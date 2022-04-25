@@ -55,5 +55,11 @@
   },
   "2.1.9": {
     "en": "Adjusting timeouts polling for slow Homewizard legacy devices"
+  },
+  "2.1.10": {
+    "en": "Homewizard Legacy polling to 20seconds and timeout 18seconds"
+  },
+  "2.1.11": {
+    "en": "Energylink bug fix"
   }
 }

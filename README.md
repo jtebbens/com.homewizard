@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.11
+* Energylink bug fix
+* Increased Homewizard Legacy polling to 20s and timetout to 18s due to slower devices that have local wifi issues with app users.
+
 v2.1.9
 * Adjusted timeouts for slower Homewizard devices (wifi connection issues)
 * Added catch for energy_sockets that give state check errors

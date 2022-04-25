@@ -90,7 +90,7 @@ module.exports = (function(){
   };
 
   async function fetchWithTimeout(resource, options) {
-    const { timeout = 13000 } = options;
+    const { timeout = 25000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -123,7 +123,7 @@ module.exports = (function(){
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 13000
+              timeout: 25000
             })
             .then(async(res) => {
                           try {
@@ -207,7 +207,7 @@ module.exports = (function(){
          homewizard.poll();
          self.polls.device_id = setInterval(function () {
             homewizard.poll();
-         }, 1000 * 15);
+         }, 1000 * 20);
    };
 
    homewizard.poll = function() {

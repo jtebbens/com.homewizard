@@ -71,7 +71,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
 			me.getStatus();
 
-		}, 1000 * 10 );
+		}, 1000 * 20 );
 
 	}
 

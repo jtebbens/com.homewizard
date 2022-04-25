@@ -48,7 +48,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 			me.getStatus(devices);
 
-		}, 1000 *10 );
+		}, 1000 * 20 );
 
 	}
 

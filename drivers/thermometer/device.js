@@ -45,7 +45,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 			me.getStatus(devices);
 
-		}, 1000 *20 );
+		}, 1000 * 20 );
 
 	}
 
@@ -95,7 +95,7 @@ class HomeWizardThermometer extends Homey.Device {
 										if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
 												//console.log(result[index2].lowBattery);
 												if (!devices[index].hasCapability('alarm_battery')) {
-													await devices[index].addCapability('alarm_battery');
+													await devices[index].addCapability('alarm_battery').catch(this.error);
 												}
 												var lowBattery_temp = result[index2].lowBattery;
 												if (lowBattery_temp == 'yes') {
