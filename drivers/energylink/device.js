@@ -123,7 +123,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					try {
 						var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
 						// Consumed gas
-						me.setCapabilityValue("meter_gas.today", gas_daytotal_cons);
+						me.setCapabilityValue("meter_gas.today", gas_daytotal_cons).catch(me.error);
 					}
 					catch(err) {
 						// Error with Energylink no data in Energylink
@@ -172,8 +172,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if(value_s1 == 'solar' || value_s2 == 'solar') {
-						me.setCapabilityValue("measure_power.s1", solar_current_prod );
-						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod );
+						me.setCapabilityValue("measure_power.s1", solar_current_prod ).catch(me.error);
+						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod ).catch(me.error);
 						if (me.hasCapability('meter_power.s1other')) {
 							await me.removeCapability('meter_power.s1other').catch(me.error);
 							await me.removeCapability('measure_power.s1other').catch(me.error);
@@ -185,8 +185,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
-						me.setCapabilityValue("meter_water", water_daytotal_cons);
-						me.setCapabilityValue("measure_water", water_current_cons);
+						me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
+						me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
 
 						if (me.hasCapability('meter_power.s1other')) {
 							await me.removeCapability('meter_power.s1other').catch(me.error);
@@ -333,7 +333,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					// Save export data
 
 					if (!me.hasCapability('meter_power')) {
-						await me.addCapability('meter_power');
+						await me.addCapability('meter_power').catch(me.error);
 					}
 
 					me.setCapabilityValue("meter_gas.reading", metered_gas).catch(me.error);

@@ -90,7 +90,7 @@ module.exports = (function(){
   };
 
   async function fetchWithTimeout(resource, options) {
-    const { timeout = 25000 } = options;
+    const { timeout = 19000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -123,7 +123,7 @@ module.exports = (function(){
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 25000
+              timeout: 19000
             })
             .then(async(res) => {
                           try {
@@ -153,13 +153,14 @@ module.exports = (function(){
                       console.log('jsonData.status not ok');
                     }
                  } catch (exception) {
-                    console.log(exception);
+                    console.log('Device timeout');
 //                    // catch if undefined body else it complains ReferenceError: body is not defined
 //                    if (!jsonData.body || jsonData.body !== undefined || body !== 'undefined' || body !== undefined)
 //                    {
 //                        console.log('EXCEPTION JSON CAUGHT');
 //                    }
-                    jsonObject = null;
+
+                    jsonData = null;
                     callback('Invalid data', []);
                  }
               } else {
@@ -181,8 +182,19 @@ module.exports = (function(){
          }
        } // end of try
          catch (error) {
-           console.log(error,name === 'AbortError');
+           if (error.name === "AbortError") {
+            // fetch aborted either due to timeout or due to user clicking the cancel button
+            console.log(error.name === 'AbortError');
+         }
+         if (error.name === "FetchError") {
+          // fetch aborted either due to timeout or due to user clicking the cancel button
+          console.log(error.name === 'FetchError');
+         }
+         else {
+            // network error or json parsing error
+            console.log('Network problem or JSON parsing error')
         }
+      }
    };
 
    homewizard.ledring_pulse = function(device_id, colorName) {
