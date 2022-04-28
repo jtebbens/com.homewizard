@@ -61,5 +61,8 @@
   },
   "2.1.11": {
     "en": "Energylink bug fix"
+  },
+  "2.1.13": {
+    "en": "AbortController & FetchError catch error handling"
   }
 }

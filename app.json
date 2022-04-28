@@ -3,14 +3,21 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.11",
+  "version": "2.1.13",
+  "platforms": [
+    "local"
+  ],
   "sdk": 2,
   "brandColor": "#000000",
-  "compatibility": ">=1.5",
+  "compatibility": ">=5.0.0",
   "description": {
     "en": "Combine the Smarthome power"
   },
-  "category": ["appliances", "energy", "climate"],
+  "category": [
+    "appliances",
+    "energy",
+    "climate"
+  ],
   "images": {
     "large": "assets/images/large.jpg",
     "small": "assets/images/small.jpg"
@@ -55,10 +62,11 @@
     }
   },
   "bugs": {
-     "url": "https://github.com/jtebbens/com.homewizard/issues"
+    "url": "https://github.com/jtebbens/com.homewizard/issues"
   },
   "source": "https://github.com/jtebbens/com.homewizard",
   "homeyCommunityTopicId": 19267,
+  "support": "https://community.homey.app/t/app-pro-homewizard/19267",
   "flow": {
     "triggers": [
       {
@@ -422,6 +430,10 @@
           "en": "Preset !{{is|isn't}}",
           "nl": "Preset !{{is|is niet}}"
         },
+        "titleFormatted": {
+          "en": "Check !{{is|isn't}} [[preset]]",
+          "nl": "Controleer !{{is|isn't}} [[preset]]"
+        },
         "args": [
           {
             "name": "preset",
@@ -472,6 +484,10 @@
           "en": "Activate preset",
           "nl": "Activeer preset"
         },
+        "titleFormatted": {
+          "en": "Active preset [[preset]]",
+          "nl": "Activeer preset [[preset]]"
+        },
         "args": [
           {
             "name": "preset",
@@ -520,6 +536,10 @@
           "en": "Switch scene on",
           "nl": "Zet scene aan"
         },
+        "titleFormatted": {
+          "en": "Active scene [[scene]]",
+          "nl": "Activeer scene [[scene]]"
+        },
         "args": [
           {
             "name": "scene",
@@ -538,6 +558,10 @@
           "en": "Switch scene off",
           "nl": "Zet scene uit"
         },
+        "titleFormatted": {
+          "en": "Deactive scene [[scene]]",
+          "nl": "Deactiveer scene [[scene]]"
+        },
         "args": [
           {
             "name": "scene",
@@ -555,6 +579,10 @@
         "title": {
           "en": "Heatlink off",
           "nl": "Zet heatlink uit"
+        },
+        "titleFormatted": {
+          "en": "Deactive heatlink [[device]]",
+          "nl": "Deactiveer heatlink [[device]]"
         },
         "args": [
           {
@@ -851,31 +879,40 @@
         "measure_humidity"
       ],
       "energy": {
-        "batteries": [ "AA", "AA" ]
+        "batteries": [
+          "AA",
+          "AA"
+        ]
       },
-      "settings": [ {
-  				"type": "group",
-  				"label": {
-  					"en": "Sensor offset",
-  					"nl": "Sensor compensatie"
-  				},
-  				"children": [{
-  					"id": "offset_temperature",
-  					"type": "number",
-  					"label": {
-  						"en": "Temperature", "nl": "Temperatuur"
-  					},
-  					"value": 0
-  				}, {
-  					"id": "offset_humidity",
-  					"type": "number",
-  					"label": {
-  						"en": "Humidity", "nl": "Vochtigheid"
-  					},
-  					"value": 0
-  				}]
-  			}
-  		],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Sensor offset",
+            "nl": "Sensor compensatie"
+          },
+          "children": [
+            {
+              "id": "offset_temperature",
+              "type": "number",
+              "label": {
+                "en": "Temperature",
+                "nl": "Temperatuur"
+              },
+              "value": 0
+            },
+            {
+              "id": "offset_humidity",
+              "type": "number",
+              "label": {
+                "en": "Humidity",
+                "nl": "Vochtigheid"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
       "pair": [
         {
           "id": "start"
@@ -1107,16 +1144,16 @@
       "class": "sensor",
       "discovery": "energy",
       "capabilities": [
-          "measure_power",
-          "meter_gas",
-          "meter_power",
-          "meter_power.consumed.t1",
-          "meter_power.produced.t1",
-          "meter_power.consumed.t2",
-          "meter_power.produced.t2",
-          "measure_power.l1",
-          "measure_power.l2",
-          "measure_power.l3"
+        "measure_power",
+        "meter_gas",
+        "meter_power",
+        "meter_power.consumed.t1",
+        "meter_power.produced.t1",
+        "meter_power.consumed.t2",
+        "meter_power.produced.t2",
+        "measure_power.l1",
+        "measure_power.l2",
+        "measure_power.l3"
       ],
       "energy": {
         "cumulative": true
@@ -1203,11 +1240,11 @@
       "class": "sensor",
       "discovery": "SDM630",
       "capabilities": [
-          "measure_power",
-          "meter_power",
-          "measure_power.l1",
-          "measure_power.l2",
-          "measure_power.l3"
+        "measure_power",
+        "meter_power",
+        "measure_power.l1",
+        "measure_power.l2",
+        "measure_power.l3"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1279,9 +1316,9 @@
       "class": "sensor",
       "discovery": "SDM230",
       "capabilities": [
-          "measure_power",
-          "meter_power",
-          "measure_power.l1"
+        "measure_power",
+        "meter_power",
+        "measure_power.l1"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1341,14 +1378,14 @@
       "class": "sensor",
       "discovery": "energy_socket",
       "capabilities": [
-          "onoff",
-          "dim",
-          "locked",
-          "measure_power",
-          "meter_power",
-          "meter_power.consumed.t1",
-          "meter_power.produced.t1",
-          "measure_power.l1"
+        "onoff",
+        "dim",
+        "locked",
+        "measure_power",
+        "meter_power",
+        "meter_power.consumed.t1",
+        "meter_power.produced.t1",
+        "measure_power.l1"
       ],
       "capabilitiesOptions": {
         "measure_power": {
