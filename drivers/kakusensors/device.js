@@ -63,7 +63,7 @@ class HomeWizardKakusensors extends Homey.Device {
 			if(devices[index].settings.homewizard_id !== undefined ) {
 				var homewizard_id = devices[index].settings.homewizard_id;
 				var kakusensor_id = devices[index].settings.kakusensor_id;
-				homewizard.getDeviceData(homewizard_id, 'kakusensors', async function(result) {
+				homewizard.getDeviceData(homewizard_id, 'kakusensors', function(result) {
 					 if (Object.keys(result).length > 0) {
 					 try {
 							for (var index2 in result) {
@@ -77,30 +77,30 @@ class HomeWizardKakusensors extends Homey.Device {
 										// MOTION SENSOR 	alarm_motion
 										//me.removeCapability('alarm_smoke');
 										if (!devices[index].hasCapability('alarm_motion')) {
-        							await devices[index].addCapability('alarm_motion').catch(me.error);
+        							devices[index].addCapability('alarm_motion').catch(me.error);
       							}
 
 										if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_motion', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_motion', sensor_status).catch(me.error);
 										}
 									}
 
 									if (result[index2].type == "smoke868" ) {
 										// MOTION SENSOR 	alarm_smoke
 										if (!devices[index].hasCapability('alarm_smoke')) {
-											await devices[index].addCapability('alarm_smoke').catch(me.error);
+											devices[index].addCapability('alarm_smoke').catch(me.error);
 										}
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
 										}
 
 										try {
 											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
 													if (debug) {console.log(result[index2].lowBattery);}
 													if (!devices[index].hasCapability('alarm_battery')) {
-														await devices[index].addCapability('alarm_battery').catch(me.error);
+														devices[index].addCapability('alarm_battery').catch(me.error);
 													}
 
 													var lowBattery_temp = result[index2].lowBattery;
@@ -111,7 +111,7 @@ class HomeWizardKakusensors extends Homey.Device {
 												 }
 												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
 														console.log("New status - "+ lowBattery_status);
-														await devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
+														devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
 												}
 											}
 										} catch (e) {
@@ -122,18 +122,18 @@ class HomeWizardKakusensors extends Homey.Device {
 									if (result[index2].type == "leakage" ) {
 										// MOTION SENSOR 	alarm_water
 										if (!devices[index].hasCapability('alarm_water')) {
-											await devices[index].addCapability('alarm_water').catch(me.error);
+											devices[index].addCapability('alarm_water').catch(me.error);
 										}
 										if (devices[index].getCapabilityValue('alarm_water') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_water', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_water', sensor_status).catch(me.error);
 										}
 
 										try {
 											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
 													if (debug) {console.log(result[index2].lowBattery);}
 													if (!devices[index].hasCapability('alarm_battery')) {
-														await devices[index].addCapability('alarm_battery').catch(me.error);
+														devices[index].addCapability('alarm_battery').catch(me.error);
 													}
 
 													var lowBattery_temp = result[index2].lowBattery;
@@ -144,7 +144,7 @@ class HomeWizardKakusensors extends Homey.Device {
 												 }
 												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
 														console.log("New status - "+ lowBattery_status);
-														await devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
+														devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
 												}
 											}
 										} catch (e) {
@@ -155,15 +155,15 @@ class HomeWizardKakusensors extends Homey.Device {
 									if (result[index2].type == "smoke" ) {
 										// MOTION SENSOR 	alarm_smoke
 										if (!devices[index].hasCapability('alarm_smoke')) {
-											await devices[index].addCapability('alarm_smoke').catch(me.error);
+											devices[index].addCapability('alarm_smoke').catch(me.error);
 										}
 										if (devices[index].hasCapability('alarm_battery')) {
-											await devices[index].removeCapability('alarm_battery').catch(me.error);
+											devices[index].removeCapability('alarm_battery').catch(me.error);
 										}
 
 										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
 										}
 									}
 
@@ -171,22 +171,22 @@ class HomeWizardKakusensors extends Homey.Device {
 									if (result[index2].type == "contact" ) {
 										// MOTION SENSOR 	alarm_smoke
 										if (!devices[index].hasCapability('alarm_contact')) {
-											await devices[index].addCapability('alarm_contact').catch(me.error);
+											devices[index].addCapability('alarm_contact').catch(me.error);
 										}
 										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_contact', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_contact', sensor_status).catch(me.error);
 										}
 									}
 
 									if (result[index2].type == "doorbell" ) {
 										// MOTION SENSOR 	alarm_smoke
 										if (!devices[index].hasCapability('alarm_generic')) {
-											await devices[index].addCapability('alarm_generic').catch(me.error);
+											devices[index].addCapability('alarm_generic').catch(me.error);
 										}
 										if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
 											if (debug) {console.log("New status - "+ sensor_status);}
-											await devices[index].setCapabilityValue('alarm_generic', sensor_status).catch(me.error);
+											devices[index].setCapabilityValue('alarm_generic', sensor_status).catch(me.error);
 										}
 									}
 

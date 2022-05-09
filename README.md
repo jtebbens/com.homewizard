@@ -4,10 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v2.1.12
+v2.1.15
+* Rainmeter fix
+
+v2.1.13
 * Added AbortController & FetchError catch error handling
 * titleFormatted added for some action and condition flow cards
-
 
 v2.1.11
 * Energylink bug fix
