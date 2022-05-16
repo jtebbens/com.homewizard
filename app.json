@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.15",
+  "version": "2.1.16",
   "platforms": [
     "local"
   ],
@@ -1448,17 +1448,10 @@
       "conditions": [
         [
           {
-            "field": "txt.product_type",
+            "field": "host",
             "match": {
               "type": "regex",
-              "value": "HWE-P1"
-            }
-          },
-          {
-            "field": "txt.api_enabled",
-            "match": {
-              "type": "string",
-              "value": "1"
+              "value": "^p1meter-"
             }
           },
           {
@@ -1481,17 +1474,10 @@
       "conditions": [
         [
           {
-            "field": "txt.product_type",
+            "field": "host",
             "match": {
               "type": "regex",
-              "value": "HWE-SKT"
-            }
-          },
-          {
-            "field": "txt.api_enabled",
-            "match": {
-              "type": "string",
-              "value": "1"
+              "value": "^energysocket-"
             }
           },
           {
@@ -1521,17 +1507,10 @@
             }
           },
           {
-            "field": "txt.api_enabled",
+            "field": "txt.product_type",
             "match": {
               "type": "string",
-              "value": "1"
-            }
-          },
-          {
-            "field": "host",
-            "match": {
-              "type": "regex",
-              "value": "^kwhmeter-"
+              "value": "SDM630-wifi"
             }
           }
         ]
@@ -1554,17 +1533,10 @@
             }
           },
           {
-            "field": "txt.api_enabled",
+            "field": "txt.product_type",
             "match": {
               "type": "string",
-              "value": "1"
-            }
-          },
-          {
-            "field": "host",
-            "match": {
-              "type": "regex",
-              "value": "^kwhmeter-"
+              "value": "SDM230-wifi"
             }
           }
         ]

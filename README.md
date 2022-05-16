@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.16
+* Adjusted mdns condition check as it was matching the wrong devices
+
 v2.1.15
 * Rainmeter fix
 

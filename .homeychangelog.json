@@ -70,5 +70,8 @@
   },
   "2.1.15": {
     "en": "Typo fix for rainmeter"
+  },
+  "2.1.16": {
+    "en": "Adjusted mdns condition check as it was matching the wrong devices"
   }
 }
