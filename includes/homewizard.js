@@ -1,4 +1,5 @@
 'use strict';
+var tcpPortUsed = require('tcp-port-used');
 
 const fetch = require('node-fetch');
 const AbortController = require('abort-controller');
@@ -90,7 +91,7 @@ module.exports = (function(){
   };
 
   async function fetchWithTimeout(resource, options) {
-    const { timeout = 19000 } = options;
+    const { timeout = 25000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
@@ -116,15 +117,30 @@ module.exports = (function(){
    homewizard.call = async function(device_id, uri_part, callback) {
      try {
          var me = this;
+         var inUse = true // wait until port in use
          let status;
+         var timeout_options = 19000;
          if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
             //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+            if (uri_part == '/get-sensors') {
+              timeout_options = 19000
+            } else {timeout_options = 59000}
+
+            // port reachable checkStatus
+            tcpPortUsed.waitUntilFreeOnHost(80, homewizard_ip, 19000, 60000)
+            .then(function() {
+              console.log('');
+            }, function(err) {
+              console.log('');
+            });
+
+
             const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 19000
-            })
+                  timeout: timeout_options
+                })
             .then(async(res) => {
                           try {
                               if (status !== 'undefined') {

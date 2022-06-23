@@ -73,5 +73,11 @@
   },
   "2.1.16": {
     "en": "Adjusted mdns condition check as it was matching the wrong devices"
+  },
+  "2.1.17": {
+    "en": "Changed mdns discovery string for sdm230 and sdm630 to host = kwhmeter"
+  },
+  "2.1.18": {
+    "en": "Conditional timeouts and code fixes"
   }
 }

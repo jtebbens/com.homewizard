@@ -72,6 +72,7 @@ class HomeWizardDevice extends Homey.Device {
 			homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) { // async added
 
 				try {
+					me.setAvailable();
 					if (devices[index].getStoreValue('preset') === null) {
 						if (debug) {me.log('Preset was set to ' + callback);}
 
@@ -96,6 +97,7 @@ class HomeWizardDevice extends Homey.Device {
 				} catch(err) {
 					console.log ("HomeWizard data corrupt");
 					console.log(err);
+					me.setUnavailable(); // Set HomeWizard Unavailable
 				}
 			});
 

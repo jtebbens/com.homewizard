@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.16",
+  "version": "2.1.18",
   "platforms": [
     "local"
   ],
@@ -1526,17 +1526,17 @@
       "conditions": [
         [
           {
-            "field": "txt.product_type",
+            "field": "host",
             "match": {
-              "type": "string",
-              "value": "SDM230-wifi"
+              "type": "regex",
+              "value": "^kwhmeter-"
             }
           },
           {
-            "field": "txt.product_type",
+            "field": "host",
             "match": {
-              "type": "string",
-              "value": "SDM230-wifi"
+              "type": "regex",
+              "value": "^kwhmeter-"
             }
           }
         ]

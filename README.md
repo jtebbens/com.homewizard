@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.17
+* Changed mdns discovery string to host kwhmeter (this will match both sdm230 and sdm630)
+
 v2.1.16
 * Adjusted mdns condition check as it was matching the wrong devices
 

@@ -6,9 +6,9 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "node-fetch": "^2.6.1",
-    "save": "^2.4.0"
+    "save": "^2.4.0",
+    "tcp-port-used": "^1.0.2"
   },
-  "devDependencies": {},
   "scripts": {
     "test": "athom app run"
   },
