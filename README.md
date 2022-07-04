@@ -4,6 +4,14 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.25
+* Homewizard Energy - Watermeter support
+* Dropped AbortController implementation (prone to memory problems)
+* Temporary disabled precheck tcp
+
+v2.1.23
+* Added precheck Homewizard Legacy if device is available before attempting JSON pull
+
 v2.1.17
 * Changed mdns discovery string to host kwhmeter (this will match both sdm230 and sdm630)
 

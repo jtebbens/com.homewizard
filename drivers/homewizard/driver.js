@@ -23,7 +23,7 @@ class HomeWizardDriver extends Homey.Driver {
                 }
 
                 return new Promise((resolve, reject) => {
-                    homewizard.call(args.device.getData().id, '/get-status/', (err, response) => {
+                    homewizard.callnew(args.device.getData().id, '/get-status/', (err, response) => {
                         if (err) {
                             console.log('ERR flowCardCondition  -> returned false');
                             // You can make a choice here: reject the promise with the error,
@@ -47,7 +47,7 @@ class HomeWizardDriver extends Homey.Driver {
 
                     var uri = '/preset/' + args.preset;
 
-                    homewizard.call(args.device.getData().id, uri, function(err, response) {
+                    homewizard.callnew(args.device.getData().id, uri, function(err, response) {
                         if(err) {
                             me.log('ERR flowCardAction set_preset  -> returned false');
                             return resolve(false);
@@ -69,7 +69,7 @@ class HomeWizardDriver extends Homey.Driver {
                 }
 
                 return new Promise((resolve, reject) => {
-                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
+                    homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
                         if(err) {
                             me.log('ERR flowCardAction switch_scene_on  -> returned false');
                             return resolve(false);
@@ -99,7 +99,7 @@ class HomeWizardDriver extends Homey.Driver {
                 }
 
                 return new Promise((resolve, reject) => {
-                    homewizard.call(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
+                    homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
                         if(err) {
                             console.log('ERR flowCardAction switch_scene_off  -> returned false');
                             return resolve(false);
@@ -128,7 +128,7 @@ class HomeWizardDriver extends Homey.Driver {
         }
 
         return new Promise((resolve, reject) => {
-            homewizard.call(args.device.getData().id, '/gplist', function(err, response) {
+            homewizard.callnew(args.device.getData().id, '/gplist', function(err, response) {
                 if(err) {
                     me.log('ERR flowCardAction switch_scene_on autocomplete');
 

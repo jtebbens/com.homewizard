@@ -1,9 +1,12 @@
 'use strict';
-var tcpPortUsed = require('tcp-port-used');
-
+//var tcpPortUsed = require('tcp-port-used');
 const fetch = require('node-fetch');
-const AbortController = require('abort-controller');
+//const AbortController = require('abort-controller');
 
+//const Promise = require("bluebird");
+//const axios = require("axios");
+//const getJson = require("axios-get-json-response");
+//axios.defaults.timeout === 8000;
 const Homey = require('homey');
 
 var debug = false;
@@ -74,35 +77,36 @@ module.exports = (function(){
       }
    };
 
-   class HTTPResponseError extends Error {
-   	constructor(response, ...args) {
+/*
+ class HTTPResponseError extends Error {
+    	constructor(response, ...args) {
    		super(`HTTP Error Response: ${response.status} ${response.statusText}`, ...args);
    		this.response = response;
    	}
-  };
+};
 
-   const checkStatus = response => {
-   	if (response.ok) {
-   		// response.status >= 200 && response.status < 300
-   		return response;
-   	} else {
-   		throw new HTTPResponseError(response);
-   	}
-  };
+const checkStatus = response => {
+	if (response.ok) {
+ 		// response.status >= 200 && response.status < 300
+ 		return response;
+ 	} else {
+ 		throw new HTTPResponseError(response);
+ 	}
+};
 
-  async function fetchWithTimeout(resource, options) {
+async function fetchWithTimeout(resource, options) {
     const { timeout = 25000 } = options;
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
 
-    const response = await fetch(resource, {
+  const response = await fetch(resource, {
       ...options,
     signal: controller.signal
     });
     clearTimeout(id);
 
-  // return response;
+  return response;
     try {
 	      checkStatus(response);
         } catch (error) {
@@ -113,35 +117,118 @@ module.exports = (function(){
         }
       return response;
   }
+*/
 
+/*
+  homewizard.call = function (device_id, uri_part, callback) {
+     if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
+       var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
+       var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+       // Using the Request Config
+       axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, getJson.axiosConfiguration, { timeout: 8000 })
+       .then((response) => {
+          let parsedJson = getJson.parse(response);
+          return parsedJson;
+        })
+        .then((jsonData) => {
+          callback(null, jsonData.response)
+        })
+        .catch((error) => {
+            console.error(error);
+        });
+      }
+   }
+*/
+   homewizard.callnew = function (device_id, uri_part, callback) {
+      if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
+        var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
+        var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+        let status;
+        // Using the Request Config
+        const json = fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+        .then(async(res) => {
+                try {
+                    if (status !== 'undefined') {
+                       status = res.status;
+                       return await res.json();
+                    }
+                    else {
+                        console.log('Status undefined');
+                    }
+                }
+                catch (err) {
+                console.error(err);
+              }
+            })
+        .then((jsonData) => {
+          try {
+            if (status == 200) {
+              try {
+                if (jsonData.status !== undefined && jsonData.status == 'ok') {
+                  if(typeof callback === 'function') {
+                    callback(null, jsonData.response);
+                  } else {
+                    console.log('Not typeoffunction');
+               }
+             } else {
+               console.log('jsonData.status not ok');
+             }
+           } catch (exception) {
+             console.log(exception); // Old "Device timeout message in log"
+             jsonData = null;
+             callback('Invalid data', []);
+           }
+         } else {
+            if(typeof callback === 'function') {
+              callback('Error', []);
+            }
+            console.log('Error: no clue what is going on here.');
+        }
+      } catch (exception) {
+            console.log(exception);
+        }
+    })
+       }
+}
+
+
+/*
    homewizard.call = async function(device_id, uri_part, callback) {
      try {
          var me = this;
-         var inUse = true // wait until port in use
+         var inUse = true; // wait until port in use
          let status;
+         const regexExp = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/gi;
          var timeout_options = 19000;
          if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
             var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
             var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
-            //const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
-            if (uri_part == '/get-sensors') {
-              timeout_options = 19000
-            } else {timeout_options = 59000}
-
+            const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+//            if (uri_part == '/get-sensors') {
+//              timeout_options = 19000
+//            } else {timeout_options = 59000}
+//            // check if homewizard_ip is an ip or fqdn
+            // console.log("Before test homewizard_ip: ", homewizard_ip);
+            if (!regexExp.test(homewizard_ip)) {
+              var fields = homewizard_ip.split(':');
+              var homewizard_ip_temp = fields[0];
+              var homewizard_port_temp = parseInt(fields[1]);
+              //console.log("Not valid IP - homewizard_ip_temp: ", homewizard_ip_temp);
+              //console.log("Not valid IP - homewizard_port_temp: ", homewizard_port_temp);
+            } else {
+                  var homewizard_ip_temp = homewizard_ip;
+                  var homewizard_port_temp = 80;
+                // console.log("Valid IP - homewizard_ip_temp: ", homewizard_ip_temp);
+                // console.log("Valid IP - homewizard_port_temp: ", +homewizard_port_temp);
+            }
             // port reachable checkStatus
-            tcpPortUsed.waitUntilFreeOnHost(80, homewizard_ip, 19000, 60000)
+            tcpPortUsed.waitForStatus(homewizard_port_temp, homewizard_ip_temp, inUse, 8000, 19000)
             .then(function() {
-              console.log('');
-            }, function(err) {
-              console.log('');
-            });
-
-
-            const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-                  timeout: timeout_options
-                })
-            .then(async(res) => {
+                let json = fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
+                    timeout: timeout_options
+                  })
+                  .then(async(res) => {
                           try {
                               if (status !== 'undefined') {
                                  status = res.status;
@@ -154,30 +241,24 @@ module.exports = (function(){
                           catch (err) {
                           console.error(err);
                         }
-            })
-            .then((jsonData) => {
-              try {
-               if (status == 200) {
-                 try {
-                    if (jsonData.status !== undefined && jsonData.status == 'ok') {
-                       if(typeof callback === 'function') {
-                           callback(null, jsonData.response);
+                      })
+                  .then((jsonData) => {
+                    try {
+                      if (status == 200) {
+                        try {
+                          if (jsonData.status !== undefined && jsonData.status == 'ok') {
+                            if(typeof callback === 'function') {
+                              callback(null, jsonData.response);
+                            } else {
+                              console.log('Not typeoffunction');
+                         }
                        } else {
-                           console.log('Not typeoffunction');
+                         console.log('jsonData.status not ok');
                        }
-                    } else {
-                      console.log('jsonData.status not ok');
-                    }
-                 } catch (exception) {
-                    console.log('Device timeout');
-//                    // catch if undefined body else it complains ReferenceError: body is not defined
-//                    if (!jsonData.body || jsonData.body !== undefined || body !== 'undefined' || body !== undefined)
-//                    {
-//                        console.log('EXCEPTION JSON CAUGHT');
-//                    }
-
-                    jsonData = null;
-                    callback('Invalid data', []);
+                     } catch (exception) {
+                       console.log(exception); // Old "Device timeout message in log"
+                       jsonData = null;
+                       callback('Invalid data', []);
                  }
               } else {
                  if(typeof callback === 'function') {
@@ -189,10 +270,23 @@ module.exports = (function(){
                 console.log(exception);
               }
             })
-            .catch((err) => {
-              console.error(err);
+            .catch((error) => {
+                console.error(error);//
+                if (error.name === "AbortError") {
+                  // fetch aborted either due to timeout or due to user clicking the cancel button
+                  console.log(error.name === 'AbortError: ' + error);
+                }
+                if (error.name === "FetchError") {
+                  // fetch aborted either due to timeout or due to user clicking the cancel button
+                  console.log(error.name === 'FetchError: ' + error);
+            }
             });
+//
+              }, function(error) {
 
+            console.log('Error:', error.message);
+          });
+// Here tcpPortUsed
          } else {
             console.log('Homewizard '+ device_id +': settings not found!');
          }
@@ -208,10 +302,12 @@ module.exports = (function(){
          }
          else {
             // network error or json parsing error
-            console.log('Network problem or JSON parsing error')
+            console.log('Network problem or JSON parsing error' +error)
         }
       }
    };
+
+*/
 
    homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
@@ -259,7 +355,7 @@ module.exports = (function(){
             if (typeof self.devices[device_id].polldata === 'undefined') {
                self.devices[device_id].polldata = [];
             }
-            homewizard.call(device_id, '/get-sensors', function(err, response) {
+            homewizard.callnew(device_id, '/get-sensors', function(err, response) {
                if (err === null) {
                   self.devices[device_id].polldata.preset = response.preset;
                   self.devices[device_id].polldata.heatlinks = response.heatlinks;
@@ -272,7 +368,7 @@ module.exports = (function(){
 
                   if (Object.keys(response.energylinks).length !== 0) {
 
-                     homewizard.call(device_id, '/el/get/0/readings', function(err, response2) {
+                     homewizard.callnew(device_id, '/el/get/0/readings', function(err, response2) {
                         if(err == null) {
                            self.devices[device_id].polldata.energylink_el = response2;
                            if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}

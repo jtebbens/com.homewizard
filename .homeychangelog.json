@@ -79,5 +79,23 @@
   },
   "2.1.18": {
     "en": "Conditional timeouts and code fixes"
+  },
+  "2.1.19": {
+    "en": "Added precheck for Homewizard Legacy before attempting node-fetch connect"
+  },
+  "2.1.20": {
+    "en": "Typo fix"
+  },
+  "2.1.21": {
+    "en": "Code fix (removed async on json parse, didnt update the values)"
+  },
+  "2.1.22": {
+    "en": "Potential workaround for fqdn based ip for homewizard legacy"
+  },
+  "2.1.23": {
+    "en": "Fix for string to number convert (Homewizard port)"
+  },
+  "2.1.25": {
+    "en": "Added Homewizard Energy - Watermeter support"
   }
 }

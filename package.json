@@ -1,11 +1,14 @@
 {
   "name": "com.homewizard",
-  "version": "1.1.10",
+  "version": "2.1.25",
   "description": "Homewizard app for Homey",
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
-    "node-fetch": "^2.6.1",
+    "axios": "^0.27.2",
+    "axios-get-json-response": "^1.0.1",
+    "bluebird": "^3.7.2",
+    "node-fetch": "^2.6.7",
     "save": "^2.4.0",
     "tcp-port-used": "^1.0.2"
   },

@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.18",
+  "version": "2.1.25",
   "platforms": [
     "local"
   ],
@@ -1432,6 +1432,62 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "watermeter",
+      "name": {
+        "en": "Watermeter"
+      },
+      "images": {
+        "large": "drivers/watermeter/assets/images/large.png",
+        "small": "drivers/watermeter/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "watermeter",
+      "capabilities": [
+        "measure_water",
+        "meter_water"
+      ],
+      "capabilitiesOptions": {
+        "measure_water": {
+          "type": "number",
+          "title": {
+            "en": "Water L/min",
+            "nl": "Water L/min"
+          },
+          "units": {
+            "en": "L/min"
+          },
+          "desc": {
+            "en": "Water flow in Liters per minute (L/min)",
+            "nl": "Waterdoorstroming in Liters per minuut (L/min)"
+          },
+          "chartType": "stepLine",
+          "decimals": 1,
+          "getable": true,
+          "setable": false
+        },
+        "meter_water": {
+          "decimals": 3,
+          "title": {
+            "en": "Total verbruik",
+            "nl": "Totaal verbruik"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "permissions": [
@@ -1537,6 +1593,32 @@
             "match": {
               "type": "regex",
               "value": "^kwhmeter-"
+            }
+          }
+        ]
+      ]
+    },
+    "watermeter": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^watermeter-"
+            }
+          },
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^watermeter-"
             }
           }
         ]
