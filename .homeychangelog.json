@@ -97,5 +97,11 @@
   },
   "2.1.25": {
     "en": "Added Homewizard Energy - Watermeter support"
+  },
+  "2.1.26": {
+    "en": "Fix unhandledRejection"
+  },
+  "2.1.27": {
+    "en": "Replaced node-fetch with Axios for Homewizard Legacy as its easier for timeout issues."
   }
 }
