@@ -1,12 +1,12 @@
 'use strict';
 //var tcpPortUsed = require('tcp-port-used');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 //const AbortController = require('abort-controller');
 
 //const Promise = require("bluebird");
-//const axios = require("axios");
-//const getJson = require("axios-get-json-response");
-//axios.defaults.timeout === 8000;
+const axios = require("axios");
+const getJson = require("axios-get-json-response");
+axios.defaults.timeout === 8000;
 const Homey = require('homey');
 
 var debug = false;
@@ -119,8 +119,9 @@ async function fetchWithTimeout(resource, options) {
   }
 */
 
-/*
-  homewizard.call = function (device_id, uri_part, callback) {
+
+  homewizard.callnew = function (device_id, uri_part, callback) {
+    try {
      if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
        var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
        var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
@@ -137,15 +138,19 @@ async function fetchWithTimeout(resource, options) {
             console.error(error);
         });
       }
+   } catch (error) {
+     console.error(error);
    }
-*/
+}
+/*
    homewizard.callnew = function (device_id, uri_part, callback) {
+     try {
       if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
         var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
         var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
         let status;
         // Using the Request Config
-        const json = fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
+        const json = fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: AbortSignal.timeout(8000)})
         .then(async(res) => {
                 try {
                     if (status !== 'undefined') {
@@ -189,8 +194,25 @@ async function fetchWithTimeout(resource, options) {
         }
     })
        }
+
+     } // end of try
+       catch (error) {
+         if (error.name === "AbortError") {
+          // fetch aborted either due to timeout or due to user clicking the cancel button
+          console.log(error.name === 'AbortError');
+       }
+       if (error.name === "FetchError") {
+        // fetch aborted either due to timeout or due to user clicking the cancel button
+        console.log(error.name === 'FetchError');
+       }
+       else {
+          // network error or json parsing error
+          console.log('Network problem or JSON parsing error' +error)
+      }
+    }
 }
 
+*/
 
 /*
    homewizard.call = async function(device_id, uri_part, callback) {

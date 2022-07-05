@@ -51,6 +51,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 	getStatus(devices) {
 		if (debug) {console.log('Start Polling');}
+//	Promise.resolve().then(async () => {
 		var me = this;
 		var lowBattery_status = null;
 
@@ -126,6 +127,17 @@ class HomeWizardThermometer extends Homey.Device {
 				});
 			}
 		}
+	// Promise resolve
+	/*
+				})
+	      .then(() => {
+	        this.setAvailable().catch(this.error);
+	      })
+	      .catch(err => {
+	        this.error(err);
+	        this.setUnavailable(err).catch(this.error);
+	      })
+				*/
 	}
 
 	onDeleted() {

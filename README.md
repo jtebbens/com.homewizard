@@ -4,10 +4,11 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v2.1.25
+v2.1.27
 * Homewizard Energy - Watermeter support
 * Dropped AbortController implementation (prone to memory problems)
 * Temporary disabled precheck tcp
+* Replaced node-fetch library with axios as its has easier timeout handling for Homewizard Legacy devices
 
 v2.1.23
 * Added precheck Homewizard Legacy if device is available before attempting JSON pull
