@@ -43,7 +43,7 @@ class HomeWizardHeatlink extends Homey.Device {
 					var url = '/hl/0/settarget/'+temperature;
 					console.log(url); // Console log url
 					var homewizard_id = this.getSetting('homewizard_id');
-			    homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
+			    homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
 						if (err) {
 							console.log('ERR settarget target_temperature -> returned false');
 							return resolve(false);

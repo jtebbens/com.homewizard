@@ -120,13 +120,13 @@ async function fetchWithTimeout(resource, options) {
 */
 
 
-  homewizard.callnew = function (device_id, uri_part, callback) {
+  homewizard.callnew = async function (device_id, uri_part, callback) {
     try {
      if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
        var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
        var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
        // Using the Request Config
-       axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, getJson.axiosConfiguration, { timeout: 8000 })
+       await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, getJson.axiosConfiguration, { timeout: 8000 })
        .then((response) => {
           let parsedJson = getJson.parse(response);
           return parsedJson;
@@ -349,14 +349,14 @@ async function fetchWithTimeout(resource, options) {
       }
    };
 
-   homewizard.startpoll = function() {
-         homewizard.poll();
-         self.polls.device_id = setInterval(function () {
-            homewizard.poll();
+   homewizard.startpoll = async function() {
+         await homewizard.poll();
+         self.polls.device_id = setInterval(async function () {
+            await homewizard.poll();
          }, 1000 * 20);
    };
 
-   homewizard.poll = function() {
+   homewizard.poll = async function() {
 
       if (homewizard.debug) {
 
