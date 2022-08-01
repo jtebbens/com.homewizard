@@ -103,5 +103,8 @@
   },
   "2.1.27": {
     "en": "Replaced node-fetch with Axios for Homewizard Legacy as its easier for timeout issues."
+  },
+  "2.1.28": {
+    "en": "Heatlink function error fix"
   }
 }
