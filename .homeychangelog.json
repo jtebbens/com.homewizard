@@ -106,5 +106,8 @@
   },
   "2.1.28": {
     "en": "Heatlink function error fix"
+  },
+  "2.1.29": {
+    "en": "Adjusted error logging to show less details, added axios abort controller to enforce abort to pending session."
   }
 }

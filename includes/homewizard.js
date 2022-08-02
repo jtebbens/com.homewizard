@@ -6,7 +6,7 @@
 //const Promise = require("bluebird");
 const axios = require("axios");
 const getJson = require("axios-get-json-response");
-axios.defaults.timeout === 8000;
+axios.defaults.timeout === 15000;
 const Homey = require('homey');
 
 var debug = false;
@@ -121,12 +121,13 @@ async function fetchWithTimeout(resource, options) {
 
 
   homewizard.callnew = async function (device_id, uri_part, callback) {
+    const controller = new AbortController();
     try {
      if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
        var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
        var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
        // Using the Request Config
-       await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, getJson.axiosConfiguration, { timeout: 8000 })
+       await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, getJson.axiosConfiguration, {signal: controller.signal})
        .then((response) => {
           let parsedJson = getJson.parse(response);
           return parsedJson;
@@ -135,12 +136,35 @@ async function fetchWithTimeout(resource, options) {
           callback(null, jsonData.response)
         })
         .catch((error) => {
-            console.error(error);
+          // Error
+            controller.abort();
+            if (error.response) {
+            /*
+             * The request was made and the server responded with a
+             * status code that falls out of the range of 2xx
+             */
+            console.log('Error Response Data', error.response.data);
+            console.log('Error Response Status', error.response.status);
+            console.log('Error Response Headers', error.response.headers);
+        } else if (error.request) {
+            /*
+             * The request was made but no response was received, `error.request`
+             * is an instance of XMLHttpRequest in the browser and an instance
+             * of http.ClientRequest in Node.js
+             */
+            console.log('Error Homewizard Request - CONNECTION PROBLEM');
+        } else {
+            // Something happened in setting up the request and triggered an Error
+            console.log('Error', error.message);
+        }
+
         });
       }
    } catch (error) {
+     controller.abort();
      console.error(error);
    }
+   controller.abort();
 }
 /*
    homewizard.callnew = function (device_id, uri_part, callback) {
