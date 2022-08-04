@@ -4,7 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v2.1.28
+v2.1.30
+* Homewizard context/preset fix
+
+v2.1.29
 * Heatlink fix - function error
 
 v2.1.27

@@ -65,15 +65,15 @@ class HomeWizardDevice extends Homey.Device {
 	}
 
 	getStatus(devices) {
-    Promise.resolve().then(async () => {
+
+		var me = this;
 
 		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) {
+			homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) { // async added
 
 				try {
-					//setAvailable();
 					if (devices[index].getStoreValue('preset') === null) {
-						if (debug) {this.log('Preset was set to ' + callback);}
+						if (debug) {me.log('Preset was set to ' + callback);}
 
 						devices[index].getStoreValue('preset', callback);
 					}
@@ -82,33 +82,24 @@ class HomeWizardDevice extends Homey.Device {
 
 						devices[index].setStoreValue('preset', callback);
 
-						if (debug) {this.log('Flow call! -> ' + callback);}
+						if (debug) {me.log('Flow call! -> ' + callback);}
 
 						if (homey_lang == "nl") {
 							preset_text = preset_text_nl[callback];
 						} else {
 							preset_text = preset_text_en[callback];
 						}
-						this.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
+						me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
 
-						if (debug) {this.log('Preset was changed! ->'+ preset_text);}
+						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
 					}
 				} catch(err) {
 					console.log ("HomeWizard data corrupt");
 					console.log(err);
-					//this.setUnavailable(); // Set HomeWizard Unavailable
 				}
 			});
 
 		}
-	})
-		.then(() => {
-			this.setAvailable().catch(this.error);
-		})
-		.catch(err => {
-			this.error(err);
-			this.setUnavailable(err).catch(this.error);
-		})
 	}
 }
 
