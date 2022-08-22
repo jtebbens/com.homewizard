@@ -112,5 +112,8 @@
   },
   "2.1.30": {
     "en": "Homewizard context/preset bug fix"
+  },
+  "2.1.31": {
+    "en": "Watermeter offset support to align with real value"
   }
 }

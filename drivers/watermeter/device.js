@@ -39,6 +39,8 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
       const data = await res.json();
 
+      let offset_water_m3 = this.getSetting('offset_water');
+
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_water')) {
         await this.addCapability('measure_water').catch(this.error);
@@ -48,11 +50,13 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         await this.addCapability('meter_water').catch(this.error);
       }
 
+      let temp_total_liter_m3 = data.total_liter_m3 + offset_water_m3;
+
       // Update values
       if (this.getCapabilityValue('measure_water') != data.active_liter_lpm)
         await this.setCapabilityValue('measure_water', data.active_liter_lpm).catch(this.error);
-      if (this.getCapabilityValue('meter_water') != data.total_liter_m3)
-          await this.setCapabilityValue('meter_water', data.total_liter_m3).catch(this.error);
+      if (this.getCapabilityValue('meter_water') != temp_total_liter_m3)
+          await this.setCapabilityValue('meter_water', temp_total_liter_m3).catch(this.error);
 
     })
       .then(() => {
@@ -62,6 +66,37 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         this.error(err);
         this.setUnavailable(err).catch(this.error);
       })
+  }
+
+  // Catch offset updates
+  onSettings(oldSettings, newSettings, changedKeys, callback) {
+    this.log('Settings updated')
+    // Update display values if offset has changed
+    for (let k in changedKeys) {
+      let key = changedKeys[k]
+      if (key.slice(0, 7) === 'offset_') {
+        let cap = 'meter_' + key.slice(7)
+        let value = this.getCapabilityValue(cap)
+        let delta = newSettings[key] - oldSettings[key]
+        this.log('Updating value of', cap, 'from', value, 'to', value + delta)
+        this.setCapabilityValue(cap, value + delta)
+          .catch(err => this.error(err))
+      }
+    }
+    callback(null, true);
+  }
+
+  updateValue(cap, value) {
+    // add offset if defined
+    this.log('Updating value of', this.id, 'with capability', cap, 'to', value)
+    let cap_offset = cap.replace('meter', 'offset')
+    let offset = this.getSetting(cap_offset)
+    this.log(cap_offset, offset)
+    if (offset != null) {
+      value += offset
+    }
+    this.setCapabilityValue(cap, value)
+      .catch(err => this.error(err))
   }
 
 }

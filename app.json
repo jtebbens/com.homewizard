@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.30",
+  "version": "2.1.31",
   "platforms": [
     "local"
   ],
@@ -1470,11 +1470,31 @@
         "meter_water": {
           "decimals": 3,
           "title": {
-            "en": "Total verbruik",
+            "en": "Total usage",
             "nl": "Totaal verbruik"
           }
         }
       },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Watermeter offset",
+            "nl": "Watermeter compensatie"
+          },
+          "children": [
+            {
+              "id": "offset_water",
+              "type": "number",
+              "label": {
+                "en": "Offset watermeter m3",
+                "nl": "compensatie watermeter m3"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
       "pair": [
         {
           "id": "list_devices",
