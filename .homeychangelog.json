@@ -115,5 +115,8 @@
   },
   "2.1.31": {
     "en": "Watermeter offset support to align with real value"
+  },
+  "2.1.32": {
+    "en": "Updated kwh1 and kwh3 icons"
   }
 }
