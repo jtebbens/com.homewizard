@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.32
+* Homewizard Energy Watermeter offset support (align meter with your current value of the physical watermeter)
+* Updated kwh1 and kwh3 icon (credits to basvanderploeg)
+
 v2.1.30
 * Homewizard context/preset fix
 
