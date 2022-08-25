@@ -118,5 +118,8 @@
   },
   "2.1.32": {
     "en": "Updated kwh1 and kwh3 icons"
+  },
+  "2.1.33": {
+    "en": "Updated icons for Homewizard legacy devices (credits to basvanderploeg)"
   }
 }
