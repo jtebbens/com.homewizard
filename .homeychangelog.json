@@ -121,5 +121,8 @@
   },
   "2.1.33": {
     "en": "Updated icons for Homewizard legacy devices (credits to basvanderploeg)"
+  },
+  "2.1.34": {
+    "en": "Energylink car support and Wifi signal strength value added to Energy Sockets"
   }
 }
