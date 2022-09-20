@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.34",
+  "version": "2.1.35",
   "platforms": [
     "local"
   ],
@@ -605,7 +605,7 @@
       "setable": false,
       "uiComponent": "sensor",
       "insights": false,
-      "icon": "drivers/energy_socket/assets/rssi.svg",
+      "icon": "assets/rssi.svg",
       "units": {
         "en": "RSSI",
         "nl": "RSSI"
@@ -1171,7 +1171,8 @@
         "meter_power.produced.t2",
         "measure_power.l1",
         "measure_power.l2",
-        "measure_power.l3"
+        "measure_power.l3",
+        "rssi"
       ],
       "energy": {
         "cumulative": true
@@ -1262,7 +1263,8 @@
         "meter_power",
         "measure_power.l1",
         "measure_power.l2",
-        "measure_power.l3"
+        "measure_power.l3",
+        "rssi"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1336,7 +1338,8 @@
       "capabilities": [
         "measure_power",
         "meter_power",
-        "measure_power.l1"
+        "measure_power.l1",
+        "rssi"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1465,7 +1468,8 @@
       "discovery": "watermeter",
       "capabilities": [
         "measure_water",
-        "meter_water"
+        "meter_water",
+        "rssi"
       ],
       "capabilitiesOptions": {
         "measure_water": {

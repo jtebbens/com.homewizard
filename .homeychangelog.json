@@ -124,5 +124,8 @@
   },
   "2.1.34": {
     "en": "Energylink car support and Wifi signal strength value added to Energy Sockets"
+  },
+  "2.1.35": {
+    "en": "Updated wifi ssid logo, added P1, watermeter, kwh1 & kwh3 wifi strength signal support"
   }
 }
