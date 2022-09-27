@@ -62,7 +62,7 @@ module.exports = (function(){
 
    homewizard.getRandom = function(min, max) {
       return Math.random() * (max - min) + min;
-   }
+   };
 
    homewizard.getDevices = function(callback) {
       callback(self.devices);
@@ -153,9 +153,11 @@ async function fetchWithTimeout(resource, options) {
              * of http.ClientRequest in Node.js
              */
             console.log('Error Homewizard Request - CONNECTION PROBLEM');
+            controller.abort();
         } else {
             // Something happened in setting up the request and triggered an Error
             console.log('Error', error.message);
+            controller.abort();
         }
 
         });
@@ -165,78 +167,7 @@ async function fetchWithTimeout(resource, options) {
      console.error(error);
    }
    controller.abort();
-}
-/*
-   homewizard.callnew = function (device_id, uri_part, callback) {
-     try {
-      if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
-        var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
-        var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
-        let status;
-        // Using the Request Config
-        const json = fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: AbortSignal.timeout(8000)})
-        .then(async(res) => {
-                try {
-                    if (status !== 'undefined') {
-                       status = res.status;
-                       return await res.json();
-                    }
-                    else {
-                        console.log('Status undefined');
-                    }
-                }
-                catch (err) {
-                console.error(err);
-              }
-            })
-        .then((jsonData) => {
-          try {
-            if (status == 200) {
-              try {
-                if (jsonData.status !== undefined && jsonData.status == 'ok') {
-                  if(typeof callback === 'function') {
-                    callback(null, jsonData.response);
-                  } else {
-                    console.log('Not typeoffunction');
-               }
-             } else {
-               console.log('jsonData.status not ok');
-             }
-           } catch (exception) {
-             console.log(exception); // Old "Device timeout message in log"
-             jsonData = null;
-             callback('Invalid data', []);
-           }
-         } else {
-            if(typeof callback === 'function') {
-              callback('Error', []);
-            }
-            console.log('Error: no clue what is going on here.');
-        }
-      } catch (exception) {
-            console.log(exception);
-        }
-    })
-       }
-
-     } // end of try
-       catch (error) {
-         if (error.name === "AbortError") {
-          // fetch aborted either due to timeout or due to user clicking the cancel button
-          console.log(error.name === 'AbortError');
-       }
-       if (error.name === "FetchError") {
-        // fetch aborted either due to timeout or due to user clicking the cancel button
-        console.log(error.name === 'FetchError');
-       }
-       else {
-          // network error or json parsing error
-          console.log('Network problem or JSON parsing error' +error)
-      }
-    }
-}
-
-*/
+};
 
 /*
    homewizard.call = async function(device_id, uri_part, callback) {

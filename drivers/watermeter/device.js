@@ -50,6 +50,10 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         await this.addCapability('meter_water').catch(this.error);
       }
 
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi').catch(this.error);
+      }
+
       let temp_total_liter_m3 = data.total_liter_m3 + offset_water_m3;
 
       // Update values
@@ -57,6 +61,8 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         await this.setCapabilityValue('measure_water', data.active_liter_lpm).catch(this.error);
       if (this.getCapabilityValue('meter_water') != temp_total_liter_m3)
           await this.setCapabilityValue('meter_water', temp_total_liter_m3).catch(this.error);
+      if (this.getCapabilityValue('rssi') != data.wifi_strength)
+          await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
 
     })
       .then(() => {

@@ -53,6 +53,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.addCapability('meter_power.consumed.t2').catch(this.error);
       }
 
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi').catch(this.error);
+      }
+
       // Update values
       if (this.getCapabilityValue('measure_power') != data.active_power_w)
         await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
@@ -60,6 +64,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
       if (this.getCapabilityValue('meter_power.consumed.t2') != data.total_power_import_t2_kwh)
         await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
+      if (this.getCapabilityValue('rssi') != data.wifi_strength)
+        await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
 
       // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
       if (data.total_gas_m3 !== null) {

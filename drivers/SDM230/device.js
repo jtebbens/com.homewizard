@@ -57,6 +57,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.addCapability('measure_power.l1').catch(this.error);
       }
 
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi').catch(this.error);
+      }
+
+      if (this.getCapabilityValue('rssi') != data.wifi_strength)
+        await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
+
       // Update values 3phase kwh
       // KWH 1 fase
       // total_power_import_t1_kwh *

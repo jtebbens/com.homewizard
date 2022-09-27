@@ -69,7 +69,7 @@ class HomeWizardDevice extends Homey.Device {
 		var me = this;
 
 		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) { // async added
+			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
 
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
@@ -80,7 +80,7 @@ class HomeWizardDevice extends Homey.Device {
 
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						devices[index].setStoreValue('preset', callback);
+						await devices[index].setStoreValue('preset', callback).catch(me.error);
 
 						if (debug) {me.log('Flow call! -> ' + callback);}
 

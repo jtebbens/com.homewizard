@@ -12,6 +12,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     this.onPollStateInterval = setInterval(this.onPollState.bind(this), POLL_STATE_INTERVAL);
 
+    if (this.getClass() == 'sensor') {
+      this.setClass("socket");
+    };
+
     this.registerCapabilityListener('onoff', async (value) => {
       if (this.getCapabilityValue('locked'))
         throw new Error('Device is locked');
@@ -89,13 +93,19 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         await this.addCapability('measure_power.l1').catch(this.error);
       }
 
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi').catch(this.error);
+      }
+
       // Update values
       if (this.getCapabilityValue('measure_power') != data.active_power_w)
         await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
       if (this.getCapabilityValue('meter_power.consumed.t1') != data.total_power_import_t1_kwh)
         await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
       if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
-        await this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error);
+        await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
+      if (this.getCapabilityValue('rssi') != data.wifi_strength)
+        await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
       if (data.total_power_export_t1_kwh > 1) {

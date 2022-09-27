@@ -4,6 +4,15 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v2.1.37
+* Changed energy_socket to class socket (was sensor)
+* Minor fixes on energy_socket
+
+v2.1.35
+* Energylink S1 & S2 electric car support
+* Wifi strength value added to Energy Sockets, P1, SDM230/SDM630, watermeter (user request)
+
+
 v2.1.32
 * Homewizard Energy Watermeter offset support (align meter with your current value of the physical watermeter)
 * Updated kwh1 and kwh3 icon (credits to basvanderploeg)

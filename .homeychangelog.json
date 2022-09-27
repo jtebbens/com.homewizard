@@ -127,5 +127,11 @@
   },
   "2.1.35": {
     "en": "Updated wifi ssid logo, added P1, watermeter, kwh1 & kwh3 wifi strength signal support"
+  },
+  "2.1.36": {
+    "en": "Changed energy_socket to class socket (was sensor)."
+  },
+  "2.1.37": {
+    "en": "Minor fixes on energy_socket adjustment"
   }
 }

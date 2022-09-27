@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.35",
+  "version": "2.1.37",
   "platforms": [
     "local"
   ],
@@ -1396,7 +1396,7 @@
         "large": "drivers/energy_socket/assets/images/large.png",
         "small": "drivers/energy_socket/assets/images/small.png"
       },
-      "class": "sensor",
+      "class": "socket",
       "discovery": "energy_socket",
       "capabilities": [
         "onoff",

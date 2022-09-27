@@ -208,7 +208,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						}
 					}
 
-					if (value_s1 == 'other' ) {
+					if (value_s1 == 'other' || value_s1 == 'car') {
 						var other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
 						var other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s1);
@@ -217,7 +217,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setCapabilityValue("measure_power.s1other", other_current_cons_s1).catch(me.error);
 					}
 
-					if (value_s2 == 'other' ) {
+					if (value_s2 == 'other' || value_s2 == 'car' ) {
 						var other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
 						var other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s2);
@@ -238,7 +238,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setStoreValue("last_measure_power_netto",energy_current_netto);
 					}
 
-					if (value_s1 != 'other') {
+					if (value_s1 != 'other' || value_s1 != 'car') {
 						if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
 					        //console.log("Current S1 Solar- "+ solar_current_prod);
 						me.flowTriggerPowerS1(me, { power_s1: solar_current_prod });
@@ -246,7 +246,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 						}
 					}
-					if (value_s1 == 'other') {
+					if (value_s1 == 'other' || value_s1 == 'car') {
 						if (other_current_cons_s1 != me.getStoreValue('last_measure_power_s1') && other_current_cons_s1 != undefined && other_current_cons_s1 != null) {
 									//console.log("Current S1 - "+ other_current_cons_s1);
 						me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 });
@@ -255,7 +255,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						}
 					}
 
-					if (value_s2 == 'other') {
+					if (value_s2 == 'other' || value_s2 == 'car') {
 						if (other_current_cons_s2 != me.getStoreValue('last_measure_power_s2') && other_current_cons_s2 != undefined && other_current_cons_s2 != null) {
 									//console.log("Current S2 - "+ other_current_cons_s2);
 						me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 });
@@ -271,7 +271,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setStoreValue("last_meter_power_used",energy_daytotal_cons);
 					}
 
-          if (value_s1 != 'other') {
+          if (value_s1 != 'other' || value_s1 != 'car') {
 						if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
 					    	//console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod });
@@ -279,7 +279,7 @@ class HomeWizardEnergylink extends Homey.Device {
 								}
 					}
 
-					if (value_s1 == 'other') {
+					if (value_s1 == 'other' || value_s1 == 'car') {
 						if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
 					    	//console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 });
@@ -287,7 +287,7 @@ class HomeWizardEnergylink extends Homey.Device {
 								}
 					}
 
-					if (value_s2 == 'other') {
+					if (value_s2 == 'other' || value_s2 == 'car') {
 						if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
 					    	//console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
 								me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 });
