@@ -9,6 +9,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+    if (this.getClass() == 'sensor') {
+      this.setClass('socket');
+      console.log('Changed sensor to socket.');
+    }
   }
 
   onDeleted() {
@@ -38,6 +42,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         throw new Error(res.statusText);
 
       const data = await res.json();
+
+      if (this.getClass() == 'sensor') {
+        this.setClass('socket');
+        console.log('Changed sensor to socket.');
+      }
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {
@@ -75,11 +84,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       // First we need to check if the kwh active_power_w is negative (solar)
 
-      if ((data.active_power_w < 0) || (data.active_power_l1_w < 0)) {
-        if (this.getClass() != 'solarpanel') {
-          await this.setClass('solarpanel').catch(this.error);
-        }
-      }
+//      if ((data.active_power_w < 0) || (data.active_power_l1_w < 0) || (this.getClass() != 'socket')) {
+//        if (this.getClass() != 'solarpanel') {
+//          await this.setClass('solarpanel').catch(this.error);
+//        }
+//      }
 
       await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
       //await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);

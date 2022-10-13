@@ -133,5 +133,17 @@
   },
   "2.1.37": {
     "en": "Minor fixes on energy_socket adjustment"
+  },
+  "2.1.38": {
+    "en": "Changed SDM230 to socket type to allow Solar based tracking (was sensor)"
+  },
+  "2.1.39": {
+    "en": "Bug fix"
+  },
+  "2.1.40": {
+    "en": "Modified solar flag to ignore socket type"
+  },
+  "2.1.41": {
+    "en": "Force socket type to SDM230"
   }
 }

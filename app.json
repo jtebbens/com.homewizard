@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.37",
+  "version": "2.1.41",
   "platforms": [
     "local"
   ],
@@ -1333,7 +1333,7 @@
         "large": "drivers/SDM230/assets/images/large.png",
         "small": "drivers/SDM230/assets/images/small.png"
       },
-      "class": "sensor",
+      "class": "socket",
       "discovery": "SDM230",
       "capabilities": [
         "measure_power",
