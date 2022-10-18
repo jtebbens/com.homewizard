@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('homewizard');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('homewizard');
 
 var homewizard = require('./../../includes/homewizard.js');
 var homewizard_devices;
@@ -34,10 +34,13 @@ class HomeWizardEnergyLink extends Homey.Driver {
             console.log('View: ' + viewId);
         });
 
-        socket.on('get_homewizards', function () {
+        //socket.on('get_homewizards', function () {
 
-            homewizard_devices = driver.getDevices();
+          socket.on('get_homewizards', () => {
+              homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
+            //homewizard_devices = driver.getDevices();
+          
             homewizard.getDevices(function ( homewizard_devices)  {
                 var hw_devices = {};
 

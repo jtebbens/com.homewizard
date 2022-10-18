@@ -3,8 +3,8 @@
 const Homey = require('homey');
 //const request = require('request');
 
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('homewizard');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('homewizard');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
@@ -36,9 +36,11 @@ class HomeWizardKakusensors extends Homey.Driver {
         });
 
 
-        socket.on('get_homewizards', function () {
+        //socket.on('get_homewizards', function () {
+        socket.on('get_homewizards', () => {
 
-            homewizard_devices = driver.getDevices();
+            //homewizard_devices = driver.getDevices();
+            homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
             homewizard.getDevices(function ( homewizard_devices)  {
                 var hw_devices = {};

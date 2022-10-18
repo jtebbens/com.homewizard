@@ -3,8 +3,8 @@
 const Homey = require('homey');
 //const request = require('request');
 
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('homewizard');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('homewizard');
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
 var homewizard_devices;

@@ -1,13 +1,13 @@
 {
-  "id": "com.homewizard",
+  "id": "com.homewizardv3",
   "name": {
-    "en": "HomeWizard"
+    "en": "HomeWizardv3"
   },
-  "version": "2.1.41",
+  "version": "2.2.1",
   "platforms": [
     "local"
   ],
-  "sdk": 2,
+  "sdk": 3,
   "brandColor": "#000000",
   "compatibility": ">=8.0.0",
   "description": {
