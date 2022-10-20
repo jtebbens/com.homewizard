@@ -29,18 +29,21 @@ class HomeWizardEnergyLink extends Homey.Driver {
         socket.done();
 
         // Received when a view has changed
-        socket.on('showView', ( viewId, callback ) => {
-            callback();
-            console.log('View: ' + viewId);
+        socket.setHandler('showView', async function (viewId) {
+          if (errorMsg) {
+                     Homey.app.log(`[Driver] - Show errorMsg:`, errorMsg);
+                     socket.emit('error_msg', errorMsg);
+                     errorMsg = false;
+          }
         });
 
         //socket.on('get_homewizards', function () {
 
-          socket.on('get_homewizards', () => {
+        socket.setHandler('get_homewizards', () => {
               homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
             //homewizard_devices = driver.getDevices();
-          
+
             homewizard.getDevices(function ( homewizard_devices)  {
                 var hw_devices = {};
 
@@ -59,7 +62,7 @@ class HomeWizardEnergyLink extends Homey.Driver {
             });
         });
 
-        socket.on('manual_add', function (device, callback) {
+        socket.setHandler('manual_add', async function (device) {
 
             console.log(device.settings.homewizard_id);
             console.log(device.settings.homewizard_id.indexOf('HW_'));
@@ -76,15 +79,16 @@ class HomeWizardEnergyLink extends Homey.Driver {
                     name: "EnergyLink",
                     settings: device.settings,
                 };
-                callback( null, devices );
+                //callback( null, devices );
                 socket.emit("success", device);
+                return devices;
 
             } else {
                 socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
             }
         });
 
-        socket.on('disconnect', function(){
+        socket.setHandler('disconnect', async function() {
             console.log("User aborted pairing, or pairing is finished");
         });
     }

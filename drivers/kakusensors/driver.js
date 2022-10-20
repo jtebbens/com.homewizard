@@ -30,14 +30,14 @@ class HomeWizardKakusensors extends Homey.Driver {
         socket.done();
 
         // Received when a view has changed
-        socket.on('showView', (viewId, callback) => {
-            callback();
-            console.log('View: ' + viewId);
+        socket.setHandler('showView', async function (viewId) {
+          console.log('View: ' + viewId);
+          this.log("data", data);
         });
 
 
         //socket.on('get_homewizards', function () {
-        socket.on('get_homewizards', () => {
+        socket.setHandler('get_homewizards', () => {
 
             //homewizard_devices = driver.getDevices();
             homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
@@ -59,7 +59,7 @@ class HomeWizardKakusensors extends Homey.Driver {
             });
         });
 
-        socket.on('manual_add', function (device, callback) {
+        socket.setHandler('manual_add', async function (device) {
             if (typeof device.settings.homewizard_id == "string" && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
                 console.log('Kakusensor added ' + device.data.id);
@@ -76,15 +76,16 @@ class HomeWizardKakusensors extends Homey.Driver {
                   //      capabilities: [];
                   //}
                 };
-                callback( null, devices );
+                //callback( null, devices );
                 socket.emit("success", device);
+                return devices;
 
             } else {
                 socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
             }
         });
 
-        socket.on('disconnect', () => {
+        socket.setHandler('disconnect', () => {
             console.log("User aborted pairing, or pairing is finished");
         });
     };

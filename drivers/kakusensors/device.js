@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('kakusensors');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('kakusensors');
 var debug = false;
 
 var refreshIntervalId;
@@ -16,7 +16,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 		if (debug) {console.log('HomeWizard Kakusensors '+this.getName() +' has been inited');}
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
 		devices.forEach(function initdevice(device) {
 			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}

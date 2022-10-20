@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.0.0
+* SDKv3 support (Early Homey Pro 2023)
+
 v2.1.37
 * Changed energy_socket to class socket (was sensor)
 * Minor fixes on energy_socket

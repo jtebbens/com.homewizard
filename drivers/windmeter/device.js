@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('windmeter');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('windmeter');
 
 var refreshIntervalId;
 var devices = {};
@@ -15,7 +15,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
 		console.log('HomeWizard Windmeter '+this.getName() +' has been inited');
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('windmeter').getDevices();
 		devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
 

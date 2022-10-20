@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('heatlink');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('heatlink');
 
 var refreshIntervalId;
 var devices = {};
@@ -15,7 +15,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
 		console.log('HomeWizard Heatlink '+this.getName() +' has been inited');
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
 		devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
 

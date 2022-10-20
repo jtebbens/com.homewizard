@@ -192,7 +192,7 @@ class HomeWizardDriver extends Homey.Driver {
               };
               homewizard.setDevices(devices);
 
-              socket.emit("manual_add", device);
+              socket.emit("success", device);
               return devices;
 
             }

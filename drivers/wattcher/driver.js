@@ -30,12 +30,12 @@ class HomeWizardWattcher extends Homey.Driver {
         socket.done();
 
         // Received when a view has changed
-        socket.on('showView', (viewId, callback) => {
-            callback();
-            console.log('View: ' + viewId);
+        socket.setHandler('showView', (viewId, callback) => {
+          console.log('View: ' + viewId);
+          this.log("data", data);
         });
 
-        socket.on('get_homewizards', () => {
+        socket.setHandler('get_homewizards', () => {
             homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
         //socket.on('get_homewizards', function () {
 
@@ -54,7 +54,7 @@ class HomeWizardWattcher extends Homey.Driver {
             });
         });
 
-        socket.on('manual_add', function (device, callback) {
+        socket.setHandler('manual_add', async function (device) {
 
             if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
@@ -64,15 +64,15 @@ class HomeWizardWattcher extends Homey.Driver {
                     name: device.name,
                     settings: device.settings,
                 };
-                callback(null, devices);
                 socket.emit("success", device);
+                return devices;
 
             } else {
                 socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
             }
         });
 
-        socket.on('disconnect', function () {
+        socket.setHandler('disconnect', () => {
             console.log("User aborted pairing, or pairing is finished");
         });
     }

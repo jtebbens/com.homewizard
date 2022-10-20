@@ -15,7 +15,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
 		console.log('HomeWizard Rainmeter '+this.getName() +' has been inited');
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('rainmeter').getDevices();
 		devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
 
@@ -25,7 +25,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
 		this.startPolling();
 
-		this._flowTriggerValueChanged = new Homey.FlowCardTriggerDevice('rainmeter_value_changed').register();
+		this._flowTriggerValueChanged = this.homey.flow.getDeviceTriggerCard('rainmeter_value_changed');
 
 	}
 

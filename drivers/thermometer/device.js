@@ -16,7 +16,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (debug) {console.log('HomeWizard Thermometer '+this.getName() +' has been inited');}
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('thermometer').getDevices();
 
 		devices.forEach(function initdevice(device) {
 			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
