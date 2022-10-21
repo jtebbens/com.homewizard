@@ -1,9 +1,9 @@
 {
   "id": "com.homewizard",
   "name": {
-    "en": "HomeWizardv3"
+    "en": "HomeWizard"
   },
-  "version": "3.0.0",
+  "version": "3.0.1",
   "platforms": [
     "local"
   ],
