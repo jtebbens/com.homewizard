@@ -35,7 +35,7 @@ class HomeWizardWindmeter extends Homey.Driver {
           this.log("data", data);
         });
 
-        socket.setHandler('get_homewizards', function () {
+        socket.setHandler('get_homewizards', () => {
 
             const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 

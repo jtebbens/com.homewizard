@@ -83,7 +83,7 @@ class HomeWizardHeatlink extends Homey.Device {
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
-			me.log('Gather data');
+			//me.log('Gather data');
 
 			homewizard.getDeviceData(homewizard_id, 'heatlinks', async function(callback) {
 
@@ -91,10 +91,11 @@ class HomeWizardHeatlink extends Homey.Device {
 
 					try {
 						me.setAvailable();
+						if (callback[0].rte != null) {
 						var rte = (callback[0].rte.toFixed(1) * 2) / 2;
                 		var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
                 		var tte = (callback[0].tte.toFixed(1) * 2) / 2;
-
+						}
 						//Check current temperature
 						if (me.getStoreValue('temperature') != rte) {
 						  console.log("New RTE - "+ rte);
