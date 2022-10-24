@@ -151,5 +151,8 @@
   },
   "3.0.1": {
     "en": "Textual fix in app name (showed v3 at end)"
+  },
+  "3.0.2": {
+    "en": "Code cleanup and bugfix"
   }
 }
