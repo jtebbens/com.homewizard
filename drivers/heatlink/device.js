@@ -138,6 +138,9 @@ class HomeWizardHeatlink extends Homey.Device {
 			});
 		} else {
 			console.log('HW ID not found');
+			if(Object.keys(devices).length === 1) {
+				clearInterval(refreshIntervalId);
+			}
 		}
 	}
 

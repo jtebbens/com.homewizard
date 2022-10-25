@@ -45,7 +45,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 			me.getStatus(devices);
 
-		}, 1000 * 20 );
+		}, 1000 * 60 );
 
 	}
 
