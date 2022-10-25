@@ -145,5 +145,14 @@
   },
   "2.1.41": {
     "en": "Force socket type to SDM230"
+  },
+  "3.0.0": {
+    "en": "SDKv3 Support (in prep for Pro2023 release)"
+  },
+  "3.0.1": {
+    "en": "Textual fix in app name (showed v3 at end)"
+  },
+  "3.0.2": {
+    "en": "Code cleanup and bugfix"
   }
 }

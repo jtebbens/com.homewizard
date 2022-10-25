@@ -15,8 +15,8 @@ class HomeWizardDriver extends Homey.Driver {
         var me = this;
 
         // PRESETS
-        new Homey.FlowCardCondition('check_preset')
-            .register()
+         this.homey.flow.getConditionCard('check_preset')
+            //.register()
             .registerRunListener( async (args, state) => {
                 if (! args.device) {
                     return false;
@@ -36,8 +36,8 @@ class HomeWizardDriver extends Homey.Driver {
                 });
             });
 
-        new Homey.FlowCardAction('set_preset')
-            .register()
+        this.homey.flow.getActionCard('set_preset')
+            //.register()
             .registerRunListener( async (args, state) => {
                 if (! args.device) {
                     return false;
@@ -61,8 +61,8 @@ class HomeWizardDriver extends Homey.Driver {
             });
 
         // SCENES
-        new Homey.FlowCardAction('switch_scene_on')
-            .register()
+        this.homey.flow.getActionCard('switch_scene_on')
+            //.register()
             .registerRunListener( async (args, state) => {
                 if (! args.device) {
                     return false;
@@ -91,8 +91,8 @@ class HomeWizardDriver extends Homey.Driver {
             });
 
         // SCENES
-        new Homey.FlowCardAction('switch_scene_off')
-            .register()
+        this.homey.flow.getActionCard('switch_scene_off')
+            //.register()
             .registerRunListener( async (args, state) => {
                 if (! args.device) {
                     return false;
@@ -165,12 +165,15 @@ class HomeWizardDriver extends Homey.Driver {
         socket.done();
 
         // Received when a view has changed
-        socket.on('showView', ( viewId, callback ) => {
-            callback();
-            console.log('View: ' + viewId);
+        socket.setHandler('showView', async function (viewId) {
+          if (errorMsg) {
+                     Homey.app.log(`[Driver] - Show errorMsg:`, errorMsg);
+                     socket.emit('error_msg', errorMsg);
+                     errorMsg = false;
+          }
         });
 
-        socket.on('manual_add', async function (device, callback) {
+        socket.setHandler('manual_add', async function (device) {
 
             var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-sensors/';
 
@@ -189,8 +192,8 @@ class HomeWizardDriver extends Homey.Driver {
               };
               homewizard.setDevices(devices);
 
-              callback( null, devices );
               socket.emit("success", device);
+              return devices;
 
             }
 /*
@@ -221,7 +224,7 @@ class HomeWizardDriver extends Homey.Driver {
   */
         });
 
-        socket.on('disconnect', () => {
+        socket.setHandler('disconnect', async function() {
             console.log("User aborted pairing, or pairing is finished");
         });
     }

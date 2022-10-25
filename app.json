@@ -3,11 +3,11 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "2.1.41",
+  "version": "3.0.2",
   "platforms": [
     "local"
   ],
-  "sdk": 2,
+  "sdk": 3,
   "brandColor": "#000000",
   "compatibility": ">=8.0.0",
   "description": {

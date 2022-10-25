@@ -4,6 +4,11 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.0.2
+* SDKv3 support (Big thanks to Bram Chlon for alpha testing the code with his HW equipment)
+* Bugfixes
+* Adjusted threshold to remove return meter (Less than 1kWh)
+
 v2.1.37
 * Changed energy_socket to class socket (was sensor)
 * Minor fixes on energy_socket

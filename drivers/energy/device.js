@@ -81,7 +81,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-      if (data.total_power_export_t1_kwh > 0) {
+      if (data.total_power_export_t1_kwh > 1) {
 								if (!this.hasCapability('meter_power.produced.t1')) {
                   // add production meters
 									await this.addCapability('meter_power.produced.t1').catch(this.error);
@@ -93,7 +93,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 if (this.getCapabilityValue('meter_power.produced.t2') != data.total_power_export_t2_kwh)
 								  await this.setCapabilityValue("meter_power.produced.t2", data.total_power_export_t2_kwh).catch(this.error);
 			}
-      else if (data.total_power_export_t1_kwh < 0) {
+      else if (data.total_power_export_t1_kwh < 1) {
               await this.removeCapability('meter_power.produced.t1').catch(this.error);
               await this.removeCapability('meter_power.produced.t2').catch(this.error);
       }

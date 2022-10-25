@@ -3,8 +3,8 @@
 const Homey = require('homey');
 //const request = require('request');
 
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('homewizard');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('homewizard');
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
 var homewizard_devices;
@@ -30,14 +30,14 @@ class HomeWizardWindmeter extends Homey.Driver {
         socket.done();
 
         // Received when a view has changed
-        socket.on('showView', (viewId, callback) => {
-            callback();
-            console.log('View: ' + viewId);
+        socket.setHandler('showView', async function (viewId) {
+          console.log('View: ' + viewId);
+          this.log("data", data);
         });
 
-        socket.on('get_homewizards', function () {
+        socket.setHandler('get_homewizards', () => {
 
-            homewizard_devices = driver.getDevices();
+            const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
             homewizard.getDevices(function (homewizard_devices) {
                 var hw_devices = {};
@@ -52,7 +52,7 @@ class HomeWizardWindmeter extends Homey.Driver {
             });
         });
 
-        socket.on('manual_add', function (device, callback) {
+        socket.setHandler('manual_add', async function (device) {
 
             if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
@@ -62,15 +62,15 @@ class HomeWizardWindmeter extends Homey.Driver {
                     name: device.name,
                     settings: device.settings,
                 };
-                callback(null, devices);
                 socket.emit("success", device);
+                return devices;
 
             } else {
                 socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
             }
         });
 
-        socket.on('disconnect', function () {
+        socket.setHandler('disconnect', function () {
             console.log("User aborted pairing, or pairing is finished");
         });
     }

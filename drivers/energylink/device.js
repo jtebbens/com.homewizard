@@ -17,16 +17,16 @@ class HomeWizardEnergylink extends Homey.Device {
 		this.startPolling();
 
 		// Init flow triggers
-		this._flowTriggerPowerUsed = new Homey.FlowCardTriggerDevice('power_used_changed').register();
-		this._flowTriggerPowerNetto = new Homey.FlowCardTriggerDevice('power_netto_changed').register();
-		this._flowTriggerPowerS1 = new Homey.FlowCardTriggerDevice('power_s1_changed').register();
-		this._flowTriggerMeterPowerS1 = new Homey.FlowCardTriggerDevice('meter_power_s1_changed').register();
-		this._flowTriggerPowerS2 = new Homey.FlowCardTriggerDevice('power_s2_changed').register();
-		this._flowTriggerMeterPowerS2 = new Homey.FlowCardTriggerDevice('meter_power_s2_changed').register();
-		this._flowTriggerMeterPowerUsed = new Homey.FlowCardTriggerDevice('meter_power_used_changed').register();
-		this._flowTriggerMeterPowerAggregated = new Homey.FlowCardTriggerDevice('meter_power_aggregated_changed').register();
-		this._flowTriggerMeterReturnT1 = new Homey.FlowCardTriggerDevice('meter_return_t1_changed').register();
-		this._flowTriggerMeterReturnT2 = new Homey.FlowCardTriggerDevice('meter_return_t2_changed').register();
+		this._flowTriggerPowerUsed = this.homey.flow.getDeviceTriggerCard('power_used_changed');
+		this._flowTriggerPowerNetto = this.homey.flow.getDeviceTriggerCard('power_netto_changed');
+		this._flowTriggerPowerS1 = this.homey.flow.getDeviceTriggerCard('power_s1_changed');
+		this._flowTriggerMeterPowerS1 = this.homey.flow.getDeviceTriggerCard('meter_power_s1_changed');
+		this._flowTriggerPowerS2 = this.homey.flow.getDeviceTriggerCard('power_s2_changed');
+		this._flowTriggerMeterPowerS2 = this.homey.flow.getDeviceTriggerCard('meter_power_s2_changed');
+		this._flowTriggerMeterPowerUsed = this.homey.flow.getDeviceTriggerCard('meter_power_used_changed');
+		this._flowTriggerMeterPowerAggregated = this.homey.flow.getDeviceTriggerCard('meter_power_aggregated_changed');
+		this._flowTriggerMeterReturnT1 = this.homey.flow.getDeviceTriggerCard('meter_return_t1_changed');
+		this._flowTriggerMeterReturnT2 = this.homey.flow.getDeviceTriggerCard('meter_return_t2_changed');
 
 	}
 
@@ -357,6 +357,9 @@ class HomeWizardEnergylink extends Homey.Device {
 				} catch (err) {
 					// Error with Energylink no data in Energylink
 					console.log("No Energylink found");
+					if(Object.keys(devices).length === 1) {
+						clearInterval(refreshIntervalId);
+					}
 					me.setUnavailable();
 				}
 			}

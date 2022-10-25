@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
-const { ManagerDrivers } = require('homey');
-const driver = ManagerDrivers.getDriver('thermometer');
+//const { ManagerDrivers } = require('homey');
+//const driver = ManagerDrivers.getDriver('thermometer');
 
 var refreshIntervalId;
 var devices = {};
@@ -16,7 +16,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 		if (debug) {console.log('HomeWizard Thermometer '+this.getName() +' has been inited');}
 
-		const devices = driver.getDevices();
+		const devices = this.homey.drivers.getDriver('thermometer').getDevices();
 
 		devices.forEach(function initdevice(device) {
 			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
@@ -45,7 +45,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 			me.getStatus(devices);
 
-		}, 1000 * 20 );
+		}, 1000 * 60 );
 
 	}
 

@@ -5,8 +5,8 @@ const fetch = require('node-fetch');
 
 module.exports = class HomeWizardEnergyDriver extends Homey.Driver {
 
-  onPairListDevices(data, callback) {
-    Promise.resolve().then(async () => {
+  async onPairListDevices() {
+
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
@@ -30,9 +30,6 @@ module.exports = class HomeWizardEnergyDriver extends Homey.Driver {
         }
       }));
       return devices;
-    })
-      .then(result => callback(null, result))
-      .catch(err => callback(err));
-  }
 
+  }
 }

@@ -1,9 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-const { ManagerDrivers } = require('homey');
-const drivers = ManagerDrivers.getDriver('homewizard');
-const { ManagerI18n } = require('homey');
+//const { ManagerDrivers } = require('homey');
+//const drivers = ManagerDrivers.getDriver('homewizard');
+//const { ManagerI18n } = require('homey');
 
 var homewizard = require('./../../includes/homewizard.js');
 var refreshIntervalId;
@@ -12,7 +12,7 @@ var homeWizard_devices = {};
 var preset_text = '';
 var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
 var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
-var homey_lang = ManagerI18n.getLanguage();
+
 var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
@@ -21,7 +21,7 @@ class HomeWizardDevice extends Homey.Device {
 
 		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
-		const devices = drivers.getDevices();
+		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
 		devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
@@ -39,7 +39,7 @@ class HomeWizardDevice extends Homey.Device {
 		}
 
 		// Init flow triggers
-		this._flowTriggerPresetChanged = new Homey.FlowCardTriggerDevice('preset_changed').register();
+		this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed');
 
 	}
 
@@ -67,6 +67,8 @@ class HomeWizardDevice extends Homey.Device {
 	getStatus(devices) {
 
 		var me = this;
+
+		var homey_lang = this.homey.i18n.getLanguage();
 
 		for (var index in devices) {
 			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
