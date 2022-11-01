@@ -154,5 +154,8 @@
   },
   "3.0.2": {
     "en": "Code cleanup and bugfix"
+  },
+  "3.0.3": {
+    "en": "Offset watermeter and thermometer fixed (callback is not a function error)"
   }
 }
