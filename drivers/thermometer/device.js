@@ -153,7 +153,7 @@ class HomeWizardThermometer extends Homey.Device {
 
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings, changedKeys, callback) {
+  onSettings(oldSettings, newSettings, changedKeys) {
     this.log('Settings updated')
     // Update display values if offset has changed
     for (let k in changedKeys) {
@@ -167,7 +167,7 @@ class HomeWizardThermometer extends Homey.Device {
           .catch(err => this.error(err))
       }
     }
-    callback(null, true);
+    
   }
 
   updateValue(cap, value) {

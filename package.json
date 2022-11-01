@@ -1,23 +1,21 @@
 {
   "name": "com.homewizard",
-  "version": "2.1.25",
+  "version": "3.0.2",
   "description": "Homewizard app for Homey",
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
     "axios": "^0.27.2",
     "axios-get-json-response": "^1.0.1",
-    "bluebird": "^3.7.2",
     "node-fetch": "^2.6.7",
-    "save": "^2.4.0",
-    "tcp-port-used": "^1.0.2"
+    "save": "^2.4.0"
   },
   "scripts": {
     "test": "athom app run"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jtebbens/com.homewizard"
+    "url": "git+https://github.com/jtebbens/com.homewizard.git"
   },
   "author": "Jeroen Tebbens",
   "license": "ISC",

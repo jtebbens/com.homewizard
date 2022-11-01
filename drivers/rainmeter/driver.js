@@ -15,19 +15,19 @@ class HomeWizardRainmeter extends Homey.Driver {
         console.log('HomeWizard Rainmeter has been inited');
     }
 
-    onPair(socket) {
+    async onPair(socket) {
 
         // Show a specific view by ID
-        socket.showView('start');
+        await socket.showView('start');
 
         // Show the next view
-        socket.nextView();
+        await socket.nextView();
 
         // Show the previous view
-        socket.prevView();
+        await socket.prevView();
 
         // Close the pair session
-        socket.done();
+        await socket.done();
 
         // Received when a view has changed
         socket.setHandler('showView', async function (viewId) {

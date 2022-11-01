@@ -75,7 +75,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   }
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings, changedKeys, callback) {
+  onSettings(oldSettings, newSettings, changedKeys) {
     this.log('Settings updated')
     // Update display values if offset has changed
     for (let k in changedKeys) {
@@ -89,7 +89,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
           .catch(err => this.error(err))
       }
     }
-    callback(null, true);
+    //return true;
   }
 
   updateValue(cap, value) {

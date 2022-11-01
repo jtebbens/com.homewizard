@@ -357,7 +357,7 @@ class HomeWizardEnergylink extends Homey.Device {
 				} catch (err) {
 					// Error with Energylink no data in Energylink
 					console.log("No Energylink found");
-					if(Object.keys(devices).length === 1) {
+					if(Object.keys(callback).length === 1) {
 						clearInterval(refreshIntervalId);
 					}
 					me.setUnavailable();

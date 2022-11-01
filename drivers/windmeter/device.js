@@ -9,6 +9,8 @@ var refreshIntervalId;
 var devices = {};
 var temperature;
 
+
+
 class HomeWizardWindmeter extends Homey.Device {
 
 	onInit() {
@@ -39,7 +41,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
 		// Start polling for thermometer
 		refreshIntervalId = setInterval(function () {
-			console.log("--Start Rainmeter Polling-- ");
+			//console.log("--Start Windmeter Polling-- ");
 
 			me.getStatus();
 
@@ -51,6 +53,7 @@ class HomeWizardWindmeter extends Homey.Device {
 	getStatus() {
 
 		var me = this;
+		var debug = false;
 
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
@@ -60,7 +63,7 @@ class HomeWizardWindmeter extends Homey.Device {
 					try {
 						me.setAvailable();
 
-						me.log('Start capturing data')
+						if (debug) {me.log('Start capturing data')};
 						var wind_angle_tmp = ( callback[0].dir ); // $windmeters[0]['dir'] SW 225
 						var wind_angle_int = wind_angle_tmp.split(" ");
 						// var wind_angle = parseInt(wind_angle_tmp); // Capture only the angle portion (number)
@@ -71,12 +74,13 @@ class HomeWizardWindmeter extends Homey.Device {
 						var temp_real = ( callback[0].te ); // $windmeters[0]['te'] Temperature
 						var temp_windchill = ( callback[0].wc); // $windmeters[0]['wc'] Windchill temperature
 
-						me.log ("End capturing data");
+						if (debug) {me.log ("End capturing data")};
 						// Export the data
 						// Console data
 						var wind_angle_str = wind_angle_int[1];
 						var wind_angle = parseInt(wind_angle_str);
 
+						if (debug) {
 						console.log("Windangle in degrees: "+ wind_angle);
 						console.log("Windspeed in km/u: "+ wind_strength_current);
 						console.log("Min Windspeed in km/u: "+ wind_strength_min);
@@ -84,7 +88,7 @@ class HomeWizardWindmeter extends Homey.Device {
 						console.log("Gust strength in km/u: "+ gust_strength);
 						console.log("Temperature current: "+ temp_real);
 						console.log("Temperature windchill: "+ temp_windchill);
-
+					  };
 						// // Wind angle
 						me.setCapabilityValue("measure_wind_angle", wind_angle ).catch(me.error);
 						// // Wind speed current
@@ -114,9 +118,7 @@ class HomeWizardWindmeter extends Homey.Device {
 			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
 			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
 
-			if(Object.keys(devices).length === 1) {
-				clearInterval(refreshIntervalId);
-			}
+
 		}
 	}
 

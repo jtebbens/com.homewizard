@@ -45,7 +45,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
 		// Start polling for thermometer
 		refreshIntervalId = setInterval(function () {
-			console.log("--Start Rainmeter Polling-- ");
+			//console.log("--Start Rainmeter Polling-- ");
 
 			me.getStatus();
 
@@ -94,7 +94,7 @@ class HomeWizardRainmeter extends Homey.Device {
 			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
 			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
 
-			if(Object.keys(devices).length === 1) {
+			if(Object.keys(callback).length === 1) {
 				clearInterval(refreshIntervalId);
 			}
 		}
