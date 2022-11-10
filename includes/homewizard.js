@@ -80,7 +80,7 @@ module.exports = (function(){
    homewizard.callnew = async function (device_id, uri_part, callback) {
      Promise.resolve().then(async () => {
      try {
-         var me = this;
+         //var me = this;
          let status;
          if (debug) {console.log('Call device ' + device_id);}
          if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {

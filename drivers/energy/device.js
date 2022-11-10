@@ -81,7 +81,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-      if (data.total_power_export_t1_kwh > 1) {
+      if (data.total_power_export_t2_kwh > 1) {
 								if (!this.hasCapability('meter_power.produced.t1')) {
                   // add production meters
 									await this.addCapability('meter_power.produced.t1').catch(this.error);
@@ -93,7 +93,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 if (this.getCapabilityValue('meter_power.produced.t2') != data.total_power_export_t2_kwh)
 								  await this.setCapabilityValue("meter_power.produced.t2", data.total_power_export_t2_kwh).catch(this.error);
 			}
-      else if (data.total_power_export_t1_kwh < 1) {
+      else if (data.total_power_export_t2_kwh < 1) {
               await this.removeCapability('meter_power.produced.t1').catch(this.error);
               await this.removeCapability('meter_power.produced.t2').catch(this.error);
       }
@@ -103,9 +103,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           await this.addCapability('meter_power').catch(this.error);
       }
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      if (this.getCapabilityValue('meter_power') != ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh)))
-        this.setCapabilityValue('meter_power', ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh))).catch(this.error);
-
+      if (data.total_power_import_kwh == null) {
+        if (this.getCapabilityValue('meter_power') != ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh)))
+          this.setCapabilityValue('meter_power', ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh))).catch(this.error);
+      }
+      // Sweden P1 has only total_power_import_kwh
+      else if (data.total_power_import_kwh !== null) {
+        if (this.getCapabilityValue('meter_power') != (data.total_power_import_kwh-data.total_power_export_t1_kwh))
+          this.setCapabilityValue('meter_power', (data.total_power_import_kwh-data.total_power_export_t1_kwh)).catch(this.error);
+      }
       // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
      if (data.active_power_l2_w !== null) {
          if (!this.hasCapability('measure_power.l2')) {
