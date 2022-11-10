@@ -157,5 +157,8 @@
   },
   "3.0.3": {
     "en": "Offset watermeter and thermometer fixed (callback is not a function error)"
+  },
+  "3.0.4": {
+    "en": "P1 meter fix for returning power and for Sweden having different values from the P1 as aggregated meter."
   }
 }
