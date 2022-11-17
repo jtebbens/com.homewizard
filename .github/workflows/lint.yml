@@ -1,6 +1,7 @@
 name: Lint
 
 on:
+  push:
   pull_request:
     paths:
       - '**.js'
@@ -10,5 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: stefanoeb/eslint-action@1.0.2
+      - name: Install modules
+        run: npm install
+      - name: Run ESLint
+        run: eslint . --ext .js,.jsx,.ts,.tsx
       
