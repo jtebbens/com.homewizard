@@ -1,110 +1,99 @@
-'use strict';
+'use strict'
 
-const Homey = require('homey');
-//const request = require('request');
+const Homey = require('homey')
+// const request = require('request');
 
-//const { ManagerDrivers } = require('homey');
-//const driver = ManagerDrivers.getDriver('homewizard');
-var devices = {};
-var homewizard = require('./../../includes/homewizard.js');
-var homewizard_devices;
+// const { ManagerDrivers } = require('homey');
+// const driver = ManagerDrivers.getDriver('homewizard');
+const devices = {}
+const homewizard = require('./../../includes/homewizard.js')
+let homewizard_devices
 
 class HomeWizardHeatlink extends Homey.Driver {
+  onInit () {
+    console.log('HomeWizard Heatlink has been inited')
 
-    onInit() {
-        console.log('HomeWizard Heatlink has been inited');
+    this.homey.flow.getActionCard('heatlink_off')
+    // .register()
+      .registerRunListener(async (args, state) => {
+        if (!args.device) {
+          return false
+        }
 
-        this.homey.flow.getActionCard('heatlink_off')
-            //.register()
-            .registerRunListener( async (args, state) => {
-                if (!args.device) {
-                    return false;
-                }
-
-                return new Promise((resolve, reject) => {
-
-                    homewizard.callnew(args.device.getData().id, '/hl/0/settarget/0', function(err, response) {
-                        if(err) {
-                            console.log('ERR flowCardAction heatlink_off  -> returned false');
-                            return resolve(false);
-                        }
-
-                        console.log('flowCardAction heatlink_off  -> returned true');
-                        return resolve(true);
-                    });
-
-                });
-            });
-
-    }
-
-    async onPair(socket) {
-
-        // Show a specific view by ID
-        await socket.showView('start');
-
-        // Show the next view
-        await socket.nextView();
-
-        // Show the previous view
-        await socket.prevView();
-
-        // Close the pair session
-        await socket.done();
-
-        // Received when a view has changed
-        socket.setHandler('showView', async function (viewId) {
-            console.log('View: ' + viewId);
-            this.log("data", data);
-        });
-
-        //socket.on('get_homewizards', function () {
-        socket.setHandler('get_homewizards', () => {
-
-            //homewizard_devices = driver.getDevices();
-            homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
-
-            homewizard.getDevices(function ( homewizard_devices)  {
-                var hw_devices = {};
-
-                Object.keys(homewizard_devices).forEach(function (key) {
-                    hw_devices[key] = homewizard_devices[key];
-                });
-
-                console.log(hw_devices);
-                socket.emit('hw_devices', hw_devices);
-
-            });
-        });
-
-        socket.setHandler('manual_add', async function (device) {
-
-            if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-                //true
-                console.log('HeatLink added ' + device.data.id);
-                devices[device.data.id] = {
-                  id: device.data.id,
-                  name: device.name,
-                  settings: device.settings,
-                };
-                //callback( null, devices );
-                socket.emit("success", device);
-                return devices;
-
-            } else {
-                socket.emit("error", "No valid HomeWizard found, re-pair if problem persists");
+        return new Promise((resolve, reject) => {
+          homewizard.callnew(args.device.getData().id, '/hl/0/settarget/0', function (err, response) {
+            if (err) {
+              console.log('ERR flowCardAction heatlink_off  -> returned false')
+              return resolve(false)
             }
-        });
 
-        socket.setHandler('disconnect', async function() {
-            console.log("User aborted pairing, or pairing is finished");
-        });
+            console.log('flowCardAction heatlink_off  -> returned true')
+            return resolve(true)
+          })
+        })
+      })
+  }
 
-    }
+  async onPair (socket) {
+    // Show a specific view by ID
+    await socket.showView('start')
 
+    // Show the next view
+    await socket.nextView()
+
+    // Show the previous view
+    await socket.prevView()
+
+    // Close the pair session
+    await socket.done()
+
+    // Received when a view has changed
+    socket.setHandler('showView', async function (viewId) {
+      console.log('View: ' + viewId)
+      this.log('data', data)
+    })
+
+    // socket.on('get_homewizards', function () {
+    socket.setHandler('get_homewizards', () => {
+      // homewizard_devices = driver.getDevices();
+      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices()
+
+      homewizard.getDevices(function (homewizard_devices) {
+        const hw_devices = {}
+
+        Object.keys(homewizard_devices).forEach(function (key) {
+          hw_devices[key] = homewizard_devices[key]
+        })
+
+        console.log(hw_devices)
+        socket.emit('hw_devices', hw_devices)
+      })
+    })
+
+    socket.setHandler('manual_add', async function (device) {
+      if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
+        // true
+        console.log('HeatLink added ' + device.data.id)
+        devices[device.data.id] = {
+          id: device.data.id,
+          name: device.name,
+          settings: device.settings
+        }
+        // callback( null, devices );
+        socket.emit('success', device)
+        return devices
+      } else {
+        socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists')
+      }
+    })
+
+    socket.setHandler('disconnect', async function () {
+      console.log('User aborted pairing, or pairing is finished')
+    })
+  }
 }
 
-module.exports = HomeWizardHeatlink;
+module.exports = HomeWizardHeatlink
 
 // var devices = {};
 // var homewizard = require('./../../includes/homewizard.js');

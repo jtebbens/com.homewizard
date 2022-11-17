@@ -1,202 +1,192 @@
-'use strict';
+'use strict'
 
-const Homey = require('homey');
-//const request = require('request');
-const fetch = require('node-fetch');
+const Homey = require('homey')
+// const request = require('request');
+const fetch = require('node-fetch')
 
-var devices = {};
-var homewizard = require('./../../includes/homewizard.js');
-var refreshIntervalId;
+const devices = {}
+const homewizard = require('./../../includes/homewizard.js')
+let refreshIntervalId
 
 class HomeWizardDriver extends Homey.Driver {
-    onInit() {
-        console.log('HomeWizard has been inited');
+  onInit () {
+    console.log('HomeWizard has been inited')
 
-        var me = this;
+    const me = this
 
-        // PRESETS
-         this.homey.flow.getConditionCard('check_preset')
-            //.register()
-            .registerRunListener( async (args, state) => {
-                if (! args.device) {
-                    return false;
-                }
-
-                return new Promise((resolve, reject) => {
-                    homewizard.callnew(args.device.getData().id, '/get-status/', (err, response) => {
-                        if (err) {
-                            console.log('ERR flowCardCondition  -> returned false');
-                            // You can make a choice here: reject the promise with the error,
-                            // or resolve it to return "false" return resolve(false); // OR: return reject(err)
-                        }
-                        //console.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
-                        //console.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
-                        return resolve(args.preset == response.preset);
-                    });
-                });
-            });
-
-        this.homey.flow.getActionCard('set_preset')
-            //.register()
-            .registerRunListener( async (args, state) => {
-                if (! args.device) {
-                    return false;
-                }
-
-                return new Promise((resolve, reject) => {
-
-                    var uri = '/preset/' + args.preset;
-
-                    homewizard.callnew(args.device.getData().id, uri, function(err, response) {
-                        if(err) {
-                            me.log('ERR flowCardAction set_preset  -> returned false');
-                            return resolve(false);
-                        }
-
-                        me.log('flowCardAction set_preset  -> returned true');
-                        return resolve(true);
-
-                    });
-                });
-            });
-
-        // SCENES
-        this.homey.flow.getActionCard('switch_scene_on')
-            //.register()
-            .registerRunListener( async (args, state) => {
-                if (! args.device) {
-                    return false;
-                }
-
-                return new Promise((resolve, reject) => {
-                    homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/on', function(err, response) {
-                        if(err) {
-                            me.log('ERR flowCardAction switch_scene_on  -> returned false');
-                            return resolve(false);
-                        }
-
-                        me.log('flowCardAction switch_scene_on  -> returned true');
-                        return resolve(true);
-
-                    });
-                });
-            })
-            .getArgument('scene')
-            .registerAutocompleteListener(async (query, args) => {
-                console.log('CALLED flowCardAction switch_scene_on autocomplete');
-
-                return this._onGetSceneAutocomplete(args);
-
-
-            });
-
-        // SCENES
-        this.homey.flow.getActionCard('switch_scene_off')
-            //.register()
-            .registerRunListener( async (args, state) => {
-                if (! args.device) {
-                    return false;
-                }
-
-                return new Promise((resolve, reject) => {
-                    homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/off', function(err, response) {
-                        if(err) {
-                            console.log('ERR flowCardAction switch_scene_off  -> returned false');
-                            return resolve(false);
-                        }
-
-                        me.log('flowCardAction switch_scene_off  -> returned true');
-                        return resolve(true);
-
-                    });
-                });
-            })
-            .getArgument('scene')
-            .registerAutocompleteListener(async (query, args) => {
-                return this._onGetSceneAutocomplete(args)
-            });
-
-    }
-
-    _onGetSceneAutocomplete(args) {
-
-        var me = this;
-
-        if (! args.device) {
-            me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE');
-            return false;
+    // PRESETS
+    this.homey.flow.getConditionCard('check_preset')
+    // .register()
+      .registerRunListener(async (args, state) => {
+        if (!args.device) {
+          return false
         }
 
         return new Promise((resolve, reject) => {
-            homewizard.callnew(args.device.getData().id, '/gplist', function(err, response) {
-                if(err) {
-                    me.log('ERR flowCardAction switch_scene_on autocomplete');
+          homewizard.callnew(args.device.getData().id, '/get-status/', (err, response) => {
+            if (err) {
+              console.log('ERR flowCardCondition  -> returned false')
+              // You can make a choice here: reject the promise with the error,
+              // or resolve it to return "false" return resolve(false); // OR: return reject(err)
+            }
+            // console.log('arg.preset '+ args.preset + ' - hw preset ' +response.preset);
+            // console.log(' flowCardCondition CheckPreset -> returned', (args.preset == response.preset));
+            return resolve(args.preset == response.preset)
+          })
+        })
+      })
 
-                    return resolve(false);
-                }
+    this.homey.flow.getActionCard('set_preset')
+    // .register()
+      .registerRunListener(async (args, state) => {
+        if (!args.device) {
+          return false
+        }
 
-                var arrayAutocomplete = [];
+        return new Promise((resolve, reject) => {
+          const uri = '/preset/' + args.preset
 
-                for (var i = 0, len = response.length; i < len; i++) {
-                    arrayAutocomplete.push({
-                        name: response[i].name,
-                        id: response[i].id
-                    });
-                }
+          homewizard.callnew(args.device.getData().id, uri, function (err, response) {
+            if (err) {
+              me.log('ERR flowCardAction set_preset  -> returned false')
+              return resolve(false)
+            }
 
-                me.log('_onGetSceneAutocomplete result', arrayAutocomplete);
+            me.log('flowCardAction set_preset  -> returned true')
+            return resolve(true)
+          })
+        })
+      })
 
-                return resolve(arrayAutocomplete);
-            });
-        });
+    // SCENES
+    this.homey.flow.getActionCard('switch_scene_on')
+    // .register()
+      .registerRunListener(async (args, state) => {
+        if (!args.device) {
+          return false
+        }
+
+        return new Promise((resolve, reject) => {
+          homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/on', function (err, response) {
+            if (err) {
+              me.log('ERR flowCardAction switch_scene_on  -> returned false')
+              return resolve(false)
+            }
+
+            me.log('flowCardAction switch_scene_on  -> returned true')
+            return resolve(true)
+          })
+        })
+      })
+      .getArgument('scene')
+      .registerAutocompleteListener(async (query, args) => {
+        console.log('CALLED flowCardAction switch_scene_on autocomplete')
+
+        return this._onGetSceneAutocomplete(args)
+      })
+
+    // SCENES
+    this.homey.flow.getActionCard('switch_scene_off')
+    // .register()
+      .registerRunListener(async (args, state) => {
+        if (!args.device) {
+          return false
+        }
+
+        return new Promise((resolve, reject) => {
+          homewizard.callnew(args.device.getData().id, '/gp/' + args.scene.id + '/off', function (err, response) {
+            if (err) {
+              console.log('ERR flowCardAction switch_scene_off  -> returned false')
+              return resolve(false)
+            }
+
+            me.log('flowCardAction switch_scene_off  -> returned true')
+            return resolve(true)
+          })
+        })
+      })
+      .getArgument('scene')
+      .registerAutocompleteListener(async (query, args) => {
+        return this._onGetSceneAutocomplete(args)
+      })
+  }
+
+  _onGetSceneAutocomplete (args) {
+    const me = this
+
+    if (!args.device) {
+      me.log('ERR flowCardAction switch_scene_on autocomplete - NO DEVICE')
+      return false
     }
 
-    async onPair( socket ) {
-        // Show a specific view by ID
-        await socket.showView('start');
+    return new Promise((resolve, reject) => {
+      homewizard.callnew(args.device.getData().id, '/gplist', function (err, response) {
+        if (err) {
+          me.log('ERR flowCardAction switch_scene_on autocomplete')
 
-        // Show the next view
-        await socket.nextView();
+          return resolve(false)
+        }
 
-        // Show the previous view
-        await socket.prevView();
+        const arrayAutocomplete = []
 
-        // Close the pair session
-        await socket.done();
+        for (let i = 0, len = response.length; i < len; i++) {
+          arrayAutocomplete.push({
+            name: response[i].name,
+            id: response[i].id
+          })
+        }
 
-        // Received when a view has changed
-        socket.setHandler('showView', async function (viewId) {
-          if (errorMsg) {
-                     Homey.app.log(`[Driver] - Show errorMsg:`, errorMsg);
-                     socket.emit('error_msg', errorMsg);
-                     errorMsg = false;
-          }
-        });
+        me.log('_onGetSceneAutocomplete result', arrayAutocomplete)
 
-        socket.setHandler('manual_add', async function (device) {
+        return resolve(arrayAutocomplete)
+      })
+    })
+  }
 
-            var url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-sensors/';
+  async onPair (socket) {
+    // Show a specific view by ID
+    await socket.showView('start')
 
-            const json = await fetch(url).then(res => res.json())
+    // Show the next view
+    await socket.nextView()
 
-            console.log('Calling '+ url);
+    // Show the previous view
+    await socket.prevView()
 
-            if (json.status == 'ok') {
-              console.log('Call OK');
+    // Close the pair session
+    await socket.done()
 
-              devices[device.data.id] = {
-                  id: device.data.id,
-                  name: device.name,
-                  settings: device.settings,
-                  capabilities: device.capabilities
-              };
-              homewizard.setDevices(devices);
+    // Received when a view has changed
+    socket.setHandler('showView', async function (viewId) {
+      if (errorMsg) {
+        Homey.app.log('[Driver] - Show errorMsg:', errorMsg)
+        socket.emit('error_msg', errorMsg)
+        errorMsg = false
+      }
+    })
 
-              socket.emit("success", device);
-              return devices;
+    socket.setHandler('manual_add', async function (device) {
+      const url = 'http://' + device.settings.homewizard_ip + '/' + device.settings.homewizard_pass + '/get-sensors/'
 
-            }
-/*
+      const json = await fetch(url).then(res => res.json())
+
+      console.log('Calling ' + url)
+
+      if (json.status == 'ok') {
+        console.log('Call OK')
+
+        devices[device.data.id] = {
+          id: device.data.id,
+          name: device.name,
+          settings: device.settings,
+          capabilities: device.capabilities
+        }
+        homewizard.setDevices(devices)
+
+        socket.emit('success', device)
+        return devices
+      }
+      /*
             request(url, function (error, response, body) {
                 if (response === null || response === undefined) {
                             socket.emit("error", "http error");
@@ -222,15 +212,12 @@ class HomeWizardDriver extends Homey.Driver {
                 }
             });
   */
-        });
+    })
 
-        socket.setHandler('disconnect', async function() {
-            console.log("User aborted pairing, or pairing is finished");
-        });
-    }
-
-
-
+    socket.setHandler('disconnect', async function () {
+      console.log('User aborted pairing, or pairing is finished')
+    })
+  }
 }
 
-module.exports = HomeWizardDriver;
+module.exports = HomeWizardDriver

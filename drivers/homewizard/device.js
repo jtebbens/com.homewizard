@@ -1,118 +1,107 @@
-'use strict';
+'use strict'
 
-const Homey = require('homey');
-//const { ManagerDrivers } = require('homey');
-//const drivers = ManagerDrivers.getDriver('homewizard');
-//const { ManagerI18n } = require('homey');
+const Homey = require('homey')
+// const { ManagerDrivers } = require('homey');
+// const drivers = ManagerDrivers.getDriver('homewizard');
+// const { ManagerI18n } = require('homey');
 
-var homewizard = require('./../../includes/homewizard.js');
-var refreshIntervalId;
-var homeWizard_devices = {};
+const homewizard = require('./../../includes/homewizard.js')
+let refreshIntervalId
+const homeWizard_devices = {}
 
-var preset_text = '';
-var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
-var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
+let preset_text = ''
+const preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie']
+const preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday']
 
-var debug = false;
+const debug = false
 
 class HomeWizardDevice extends Homey.Device {
+  onInit () {
+    if (debug) { console.log('HomeWizard Appliance has been inited') }
 
-	onInit() {
+    const devices = this.homey.drivers.getDriver('homewizard').getDevices()
 
-		if (debug) {console.log('HomeWizard Appliance has been inited');}
+    devices.forEach(function initdevice (device) {
+      console.log('add device: ' + JSON.stringify(device.getName()))
 
-		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+      homeWizard_devices[device.getData().id] = {}
+      homeWizard_devices[device.getData().id].name = device.getName()
+      homeWizard_devices[device.getData().id].settings = device.getSettings()
+    })
 
-		devices.forEach(function initdevice(device) {
-			console.log('add device: ' + JSON.stringify(device.getName()));
+    homewizard.setDevices(homeWizard_devices)
+    homewizard.startpoll()
 
-			homeWizard_devices[device.getData().id] = {};
-			homeWizard_devices[device.getData().id].name = device.getName();
-			homeWizard_devices[device.getData().id].settings = device.getSettings();
-		});
+    if (Object.keys(homeWizard_devices).length > 0) {
+		  this.startPolling(devices)
+    }
 
-		homewizard.setDevices(homeWizard_devices);
-		homewizard.startpoll();
+    // Init flow triggers
+    this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed')
+  }
 
-		if (Object.keys(homeWizard_devices).length > 0) {
-		  this.startPolling(devices);
-		}
+  flowTriggerPresetChanged (device, tokens) {
+    this._flowTriggerPresetChanged.trigger(device, tokens).catch(this.error)
+  }
 
-		// Init flow triggers
-		this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed');
+  startPolling (devices) {
+    const me = this
 
-	}
+    if (refreshIntervalId) {
+      clearInterval(refreshIntervalId)
+    }
+    refreshIntervalId = setInterval(function () {
+      if (debug) { me.log('--Start HomeWizard Polling-- ') }
+      if (debug) { console.log('--Start HomeWizard Polling-- ') }
 
-	flowTriggerPresetChanged( device, tokens ) {
-		this._flowTriggerPresetChanged.trigger( device, tokens ).catch( this.error )
-	}
+      me.getStatus(devices)
+    }, 1000 * 20)
+  }
 
-	startPolling(devices) {
-
-		var me = this;
-
-		if (refreshIntervalId) {
-			clearInterval(refreshIntervalId);
-		}
-		refreshIntervalId = setInterval(function () {
-			if (debug) {me.log("--Start HomeWizard Polling-- ");}
-			if (debug) {console.log("--Start HomeWizard Polling-- ");}
-
-				me.getStatus(devices);
-
-		}, 1000 * 20);
-
-	}
-
-	getStatus(devices) {
+  getStatus (devices) {
     Promise.resolve().then(async () => {
-		//var me = this;
+      // var me = this;
 
-		var homey_lang = this.homey.i18n.getLanguage();
+      const homey_lang = this.homey.i18n.getLanguage()
 
-		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
+      for (var index in devices) {
+        homewizard.getDeviceData(devices[index].getData().id, 'preset', async function (callback) { // async added
+          try {
+            if (devices[index].getStoreValue('preset') === null) {
+              if (debug) { this.log('Preset was set to ' + callback) }
 
-				try {
-					if (devices[index].getStoreValue('preset') === null) {
-						if (debug) {this.log('Preset was set to ' + callback);}
+              devices[index].getStoreValue('preset', callback)
+            }
 
-						devices[index].getStoreValue('preset', callback);
-					}
+            if (devices[index].getStoreValue('preset') != callback) {
+              await devices[index].setStoreValue('preset', callback).catch(this.error)
 
-					if (devices[index].getStoreValue('preset') != callback) {
+              if (debug) { this.log('Flow call! -> ' + callback) }
 
-						await devices[index].setStoreValue('preset', callback).catch(this.error);
+              if (homey_lang == 'nl') {
+                preset_text = preset_text_nl[callback]
+              } else {
+                preset_text = preset_text_en[callback]
+              }
+              this.flowTriggerPresetChanged(devices[index], { preset: callback, preset_text })
 
-						if (debug) {this.log('Flow call! -> ' + callback);}
-
-						if (homey_lang == "nl") {
-							preset_text = preset_text_nl[callback];
-						} else {
-							preset_text = preset_text_en[callback];
-						}
-						this.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
-
-						if (debug) {this.log('Preset was changed! ->'+ preset_text);}
-					}
-				} catch(err) {
-					console.log ("HomeWizard data corrupt");
-					console.log(err);
-				}
-			});
-
-		}
-	})
-		.then(() => {
-			this.setAvailable().catch(this.error);
-		})
-		.catch(err => {
-			this.error(err);
-			this.setUnavailable(err).catch(this.error);
-		})
-	}
+              if (debug) { this.log('Preset was changed! ->' + preset_text) }
+            }
+          } catch (err) {
+            console.log('HomeWizard data corrupt')
+            console.log(err)
+          }
+        })
+      }
+    })
+      .then(() => {
+        this.setAvailable().catch(this.error)
+      })
+      .catch(err => {
+        this.error(err)
+        this.setUnavailable(err).catch(this.error)
+      })
+  }
 }
 
-
-
-module.exports = HomeWizardDevice;
+module.exports = HomeWizardDevice
