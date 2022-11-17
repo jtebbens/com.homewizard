@@ -39,7 +39,7 @@ class HomeWizardHeatlink extends Homey.Device {
         const url = '/hl/0/settarget/' + temperature
         console.log(url) // Console log url
         const homewizard_id = this.getSetting('homewizard_id')
-			    homewizard.callnew(homewizard_id, '/hl/0/settarget/' + temperature, function (err, response) {
+        homewizard.callnew(homewizard_id, '/hl/0/settarget/' + temperature, function (err, response) {
           if (err) {
             console.log('ERR settarget target_temperature -> returned false')
             return resolve(false)
@@ -82,40 +82,40 @@ class HomeWizardHeatlink extends Homey.Device {
             me.setAvailable()
             if (callback[0].rte != null) {
               var rte = (callback[0].rte.toFixed(1) * 2) / 2
-                		var rsp = (callback[0].rsp.toFixed(1) * 2) / 2
-                		var tte = (callback[0].tte.toFixed(1) * 2) / 2
+              var rsp = (callback[0].rsp.toFixed(1) * 2) / 2
+              var tte = (callback[0].tte.toFixed(1) * 2) / 2
             }
             // Check current temperature
             if (me.getStoreValue('temperature') != rte) {
-						  console.log('New RTE - ' + rte)
+              console.log('New RTE - ' + rte)
               await me.setCapabilityValue('measure_temperature', rte).catch(me.error)
               await me.setStoreValue('temperature', rte).catch(me.error)
             } else {
-						  console.log('RTE: no change')
+              console.log('RTE: no change')
             }
 
             // Check thermostat temperature
             if (me.getStoreValue('thermTemperature') != rsp) {
-						  console.log('New RSP - ' + rsp)
-						  if (me.getStoreValue('setTemperature') === 0) {
-							  await me.setCapabilityValue('target_temperature', rsp).catch(me.error)
-						  }
+              console.log('New RSP - ' + rsp)
+              if (me.getStoreValue('setTemperature') === 0) {
+                await me.setCapabilityValue('target_temperature', rsp).catch(me.error)
+              }
               await me.setStoreValue('thermTemperature', rsp).catch(me.error)
             } else {
-						  console.log('RSP: no change')
+              console.log('RSP: no change')
             }
 
             // Check heatlink set temperature
             if (me.getStoreValue('setTemperature') != tte) {
-						  console.log('New TTE - ' + tte)
-						  if (tte > 0) {
-							  await me.setCapabilityValue('target_temperature', tte).catch(me.error)
-						  } else {
-							  await me.setCapabilityValue('target_temperature', me.getStoreValue('thermTemperature')).catch(me.error)
-						  }
+              console.log('New TTE - ' + tte)
+              if (tte > 0) {
+                await me.setCapabilityValue('target_temperature', tte).catch(me.error)
+              } else {
+                await me.setCapabilityValue('target_temperature', me.getStoreValue('thermTemperature')).catch(me.error)
+              }
               await me.setStoreValue('setTemperature', tte).catch(me.error)
             } else {
-						  console.log('TTE: no change')
+              console.log('TTE: no change')
             }
           } catch (err) {
             console.log('Heatlink data corrupt', err)

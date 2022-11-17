@@ -11,5 +11,7 @@ module.exports = {
     sourceType: 'module'
   },
   rules: {
+    'n/no-callback-literal': 0,
+    camelcase: 0
   }
 }

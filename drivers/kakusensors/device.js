@@ -24,7 +24,7 @@ class HomeWizardKakusensors extends Homey.Device {
     })
 
     if (Object.keys(devices).length > 0) {
-		  this.startPolling(devices)
+      this.startPolling(devices)
     }
   }
 
@@ -55,8 +55,8 @@ class HomeWizardKakusensors extends Homey.Device {
         const homewizard_id = devices[index].settings.homewizard_id
         var kakusensor_id = devices[index].settings.kakusensor_id
         homewizard.getDeviceData(homewizard_id, 'kakusensors', function (result) {
-					 if (Object.keys(result).length > 0) {
-					 try {
+          if (Object.keys(result).length > 0) {
+            try {
               for (const index2 in result) {
                 if (result[index2].id == kakusensor_id) {
                   // BEGIN
@@ -65,11 +65,11 @@ class HomeWizardKakusensors extends Homey.Device {
                     sensor_status = true
                   } else { sensor_status = false }
                   if (result[index2].type == 'motion') {
-                    // MOTION SENSOR 	alarm_motion
+                    // MOTION SENSOR  alarm_motion
                     // me.removeCapability('alarm_smoke');
                     if (!devices[index].hasCapability('alarm_motion')) {
-        							devices[index].addCapability('alarm_motion').catch(me.error)
-      							}
+                      devices[index].addCapability('alarm_motion').catch(me.error)
+                    }
 
                     if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
                       if (debug) { console.log('New status - ' + sensor_status) }
@@ -78,7 +78,7 @@ class HomeWizardKakusensors extends Homey.Device {
                   }
 
                   if (result[index2].type == 'smoke868') {
-                    // MOTION SENSOR 	alarm_smoke
+                    // MOTION SENSOR  alarm_smoke
                     if (!devices[index].hasCapability('alarm_smoke')) {
                       devices[index].addCapability('alarm_smoke').catch(me.error)
                     }
@@ -99,8 +99,8 @@ class HomeWizardKakusensors extends Homey.Device {
                           lowBattery_status = true
                         } else {
                           lowBattery_status = false
-												 }
-												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+                        }
+                        if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
                           console.log('New status - ' + lowBattery_status)
                           devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error)
                         }
@@ -111,7 +111,7 @@ class HomeWizardKakusensors extends Homey.Device {
                   }
 
                   if (result[index2].type == 'leakage') {
-                    // MOTION SENSOR 	alarm_water
+                    // MOTION SENSOR  alarm_water
                     if (!devices[index].hasCapability('alarm_water')) {
                       devices[index].addCapability('alarm_water').catch(me.error)
                     }
@@ -132,8 +132,8 @@ class HomeWizardKakusensors extends Homey.Device {
                           lowBattery_status = true
                         } else {
                           lowBattery_status = false
-												 }
-												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+                        }
+                        if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
                           console.log('New status - ' + lowBattery_status)
                           devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error)
                         }
@@ -144,7 +144,7 @@ class HomeWizardKakusensors extends Homey.Device {
                   }
 
                   if (result[index2].type == 'smoke') {
-                    // MOTION SENSOR 	alarm_smoke
+                    // MOTION SENSOR  alarm_smoke
                     if (!devices[index].hasCapability('alarm_smoke')) {
                       devices[index].addCapability('alarm_smoke').catch(me.error)
                     }
@@ -159,7 +159,7 @@ class HomeWizardKakusensors extends Homey.Device {
                   }
 
                   if (result[index2].type == 'contact') {
-                    // MOTION SENSOR 	alarm_smoke
+                    // MOTION SENSOR  alarm_smoke
                     if (!devices[index].hasCapability('alarm_contact')) {
                       devices[index].addCapability('alarm_contact').catch(me.error)
                     }
@@ -170,7 +170,7 @@ class HomeWizardKakusensors extends Homey.Device {
                   }
 
                   if (result[index2].type == 'doorbell') {
-                    // MOTION SENSOR 	alarm_smoke
+                    // MOTION SENSOR  alarm_smoke
                     if (!devices[index].hasCapability('alarm_generic')) {
                       devices[index].addCapability('alarm_generic').catch(me.error)
                     }

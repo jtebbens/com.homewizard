@@ -33,7 +33,7 @@ class HomeWizardDevice extends Homey.Device {
     homewizard.startpoll()
 
     if (Object.keys(homeWizard_devices).length > 0) {
-		  this.startPolling(devices)
+      this.startPolling(devices)
     }
 
     // Init flow triggers

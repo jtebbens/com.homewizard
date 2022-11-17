@@ -103,10 +103,10 @@ module.exports = HomeWizardHeatlink
 // module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
 //     console.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
 //     try {
-// 	    changedKeysArr.forEach(function (key) {
-// 		    devices[device_data.id].settings[key] = newSettingsObj[key];
-// 		});
-// 		callback(null, true);
+//      changedKeysArr.forEach(function (key) {
+//        devices[device_data.id].settings[key] = newSettingsObj[key];
+//    });
+//    callback(null, true);
 //     } catch (error) {
 //       callback(error);
 //     }
@@ -192,7 +192,7 @@ module.exports = HomeWizardHeatlink
 //         var homewizard_id = devices[device_id].settings.homewizard_id;
 //         homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
 //             if (Object.keys(callback).length > 0) {
-//            	try {
+//              try {
 //                 var rte = (callback[0].rte.toFixed(1) * 2) / 2;
 //                 var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
 //                 var tte = (callback[0].tte.toFixed(1) * 2) / 2;
@@ -247,9 +247,9 @@ module.exports = HomeWizardHeatlink
 //  }
 //
 //  function startPolling() {
-// 	   if (refreshIntervalId) {
-// 		     clearInterval(refreshIntervalId);
-// 	   }
+//     if (refreshIntervalId) {
+//         clearInterval(refreshIntervalId);
+//     }
 //      refreshIntervalId = setInterval(function () {
 //          console.log("--Start Heatlink Polling-- ");
 //          Object.keys(devices).forEach(function (device_id) {

@@ -4,3 +4,6 @@ node_modules/
 
 # Added by Homey CLI
 /.homeybuild/
+
+# Jetbrains
+.idea

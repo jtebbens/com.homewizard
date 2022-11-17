@@ -26,28 +26,28 @@ module.exports = (function () {
     callback(self.devices)
   }
 
-  homewizard.getDeviceData = function (device_id, data_part, callback) {
-    if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
+  homewizard.getDeviceData = function (deviceId, dataPart, callback) {
+    if (typeof self.devices[deviceId] === 'undefined' || typeof self.devices[deviceId].polldata === 'undefined' || typeof self.devices[deviceId].polldata[dataPart] === 'undefined') {
       callback([])
     } else {
-      callback(self.devices[device_id].polldata[data_part])
+      callback(self.devices[deviceId].polldata[dataPart])
     }
   }
 
   class HTTPResponseError extends Error {
-   	constructor (response, ...args) {
-   		super(`HTTP Error Response: ${response.status} ${response.statusText}`, ...args)
-   		this.response = response
-   	}
+    constructor (response, ...args) {
+      super(`HTTP Error Response: ${response.status} ${response.statusText}`, ...args)
+      this.response = response
+    }
   };
 
   const checkStatus = response => {
-   	if (response.ok) {
-   		// response.status >= 200 && response.status < 300
-   		return response
-   	} else {
-   		throw new HTTPResponseError(response)
-   	}
+    if (response.ok) {
+      // response.status >= 200 && response.status < 300
+      return response
+    } else {
+      throw new HTTPResponseError(response)
+    }
   }
 
   async function fetchWithTimeout (resource, options = {}) {
@@ -64,29 +64,28 @@ module.exports = (function () {
 
     // return response;
     try {
-	      checkStatus(response)
+      checkStatus(response)
     } catch (error) {
-	        console.error(error)
+      console.error(error)
 
-	       const errorBody = await error.response.text()
-	        console.error(`Error body: ${errorBody}`)
+      const errorBody = await error.response.text()
+      console.error(`Error body: ${errorBody}`)
     }
     return response
   }
 
-  homewizard.callnew = async function (device_id, uri_part, callback) {
+  homewizard.callnew = async function (deviceId, uriPart, callback) {
     Promise.resolve().then(async () => {
       try {
         // var me = this;
         let status
-        if (debug) { console.log('Call device ' + device_id) }
-        if ((typeof self.devices[device_id] !== 'undefined') && ('settings' in self.devices[device_id]) && ('homewizard_ip' in self.devices[device_id].settings) && ('homewizard_pass' in self.devices[device_id].settings)) {
-          const homewizard_ip = self.devices[device_id].settings.homewizard_ip
-          const homewizard_pass = self.devices[device_id].settings.homewizard_pass
-          // const json = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part)
-          const json = await fetchWithTimeout('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-            timeout: 15000
-          })
+        if (debug) { console.log('Call device ' + deviceId) }
+        if ((typeof self.devices[deviceId] !== 'undefined') && ('settings' in self.devices[deviceId]) && ('homewizard_ip' in self.devices[deviceId].settings) && ('homewizard_pass' in self.devices[deviceId].settings)) {
+          const homewizardIp = self.devices[deviceId].settings.homewizard_ip
+          const homewizardPass = self.devices[deviceId].settings.homewizard_pass
+          // const json = await fetch('http://' + homewizardIp + '/' + homewizard_pass + uriPart)
+
+          await fetchWithTimeout('http://' + homewizardIp + '/' + homewizardPass + uriPart, { timeout: 15000 })
             .then(async (res) => {
               try {
                 if (status !== 'undefined') {
@@ -101,9 +100,9 @@ module.exports = (function () {
             })
             .then((jsonData) => {
               try {
-                if (status == 200) {
+                if (status === 200) {
                   try {
-                    if (jsonData.status !== undefined && jsonData.status == 'ok') {
+                    if (jsonData.status !== undefined && jsonData.status === 'ok') {
                       if (typeof callback === 'function') {
                         callback(null, jsonData.response)
                       } else {
@@ -119,7 +118,6 @@ module.exports = (function () {
                     //                    {
                     //                        console.log('EXCEPTION JSON CAUGHT');
                     //                    }
-                    jsonObject = null
                     callback('Invalid data', [])
                   }
                 } else {
@@ -133,13 +131,12 @@ module.exports = (function () {
               }
             })
             .catch((err) => {
-              console.error('FETCH PROBLEM')
+              console.error('FETCH PROBLEM: ' + err)
             })
         } else {
-          console.log('Homewizard ' + device_id + ': settings not found!')
+          console.log('Homewizard ' + deviceId + ': settings not found!')
         }
-      } // end of try
-      catch (error) {
+      } catch (error) {
         console.log(error, name === 'AbortError')
       }
     })
@@ -152,9 +149,9 @@ module.exports = (function () {
       })
   }
 
-  homewizard.ledring_pulse = function (device_id, colorName) {
-    const homewizard_ledring = self.devices[device_id].settings.homewizard_ledring
-    if (homewizard_ledring) {
+  homewizard.ledring_pulse = function (deviceId, colorName) {
+    const homewizardLedring = self.devices[deviceId].settings.homewizard_ledring
+    if (homewizardLedring) {
       Homey.manager('ledring').animate(
         'pulse', // animation name (choose from loading, pulse, progress, solid)
         {
@@ -172,32 +169,32 @@ module.exports = (function () {
 
   homewizard.startpoll = async function () {
     await homewizard.poll()
-    self.polls.device_id = setInterval(async function () {
+    self.polls.deviceId = setInterval(async function () {
       await homewizard.poll()
     }, 1000 * 20)
   }
 
   homewizard.poll = async function () {
-    await Object.keys(self.devices).forEach(async function (device_id) {
-      if (typeof self.devices[device_id].polldata === 'undefined') {
-        self.devices[device_id].polldata = []
+    await Object.keys(self.devices).forEach(async function (deviceId) {
+      if (typeof self.devices[deviceId].polldata === 'undefined') {
+        self.devices[deviceId].polldata = []
       }
-      await homewizard.callnew(device_id, '/get-sensors', function (err, response) {
+      await homewizard.callnew(deviceId, '/get-sensors', function (err, response) {
         if (err === null) {
-          self.devices[device_id].polldata.preset = response.preset
-          self.devices[device_id].polldata.heatlinks = response.heatlinks
-          self.devices[device_id].polldata.energylinks = response.energylinks
-          self.devices[device_id].polldata.energymeters = response.energymeters
-          self.devices[device_id].polldata.thermometers = response.thermometers
-          self.devices[device_id].polldata.rainmeters = response.rainmeters
-          self.devices[device_id].polldata.windmeters = response.windmeters
-          self.devices[device_id].polldata.kakusensors = response.kakusensors
+          self.devices[deviceId].polldata.preset = response.preset
+          self.devices[deviceId].polldata.heatlinks = response.heatlinks
+          self.devices[deviceId].polldata.energylinks = response.energylinks
+          self.devices[deviceId].polldata.energymeters = response.energymeters
+          self.devices[deviceId].polldata.thermometers = response.thermometers
+          self.devices[deviceId].polldata.rainmeters = response.rainmeters
+          self.devices[deviceId].polldata.windmeters = response.windmeters
+          self.devices[deviceId].polldata.kakusensors = response.kakusensors
 
           if (Object.keys(response.energylinks).length !== 0) {
-            homewizard.callnew(device_id, '/el/get/0/readings', function (err, response2) {
+            homewizard.callnew(deviceId, '/el/get/0/readings', function (err, response2) {
               if (err == null) {
-                self.devices[device_id].polldata.energylink_el = response2
-                if (debug) { console.log('HW-Data polled for slimme meter: ' + device_id) }
+                self.devices[deviceId].polldata.energylink_el = response2
+                if (debug) { console.log('HW-Data polled for slimme meter: ' + deviceId) }
               }
             })
           }

@@ -222,14 +222,14 @@ class HomeWizardEnergylink extends Homey.Device {
             me.setStoreValue('last_measure_power_used', energy_current_cons)
           }
           if (energy_current_netto != me.getStoreValue('last_measure_power_netto') && energy_current_netto != undefined && energy_current_netto != null) {
-					    // console.log("Current Netto Power - "+ energy_current_netto);
+            // console.log("Current Netto Power - "+ energy_current_netto);
             me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto })
             me.setStoreValue('last_measure_power_netto', energy_current_netto)
           }
 
           if (value_s1 != 'other' || value_s1 != 'car') {
             if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
-					        // console.log("Current S1 Solar- "+ solar_current_prod);
+              // console.log("Current S1 Solar- "+ solar_current_prod);
               me.flowTriggerPowerS1(me, { power_s1: solar_current_prod })
               me.setStoreValue('last_measure_power_s1', solar_current_prod)
             }
@@ -251,14 +251,14 @@ class HomeWizardEnergylink extends Homey.Device {
           }
 
           if (energy_daytotal_cons != me.getStoreValue('last_meter_power_used') && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
-					    // console.log("Used Daytotal- "+ energy_daytotal_cons);
+            // console.log("Used Daytotal- "+ energy_daytotal_cons);
             me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod })
             me.setStoreValue('last_meter_power_used', energy_daytotal_cons)
           }
 
           if (value_s1 != 'other' || value_s1 != 'car') {
             if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
-					    	// console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
+              // console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
               me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod })
               me.setStoreValue('last_meter_power_s1', solar_daytotal_prod)
             }
@@ -266,7 +266,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
           if (value_s1 == 'other' || value_s1 == 'car') {
             if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
-					    	// console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
+              // console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
               me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 })
               me.setStoreValue('last_meter_power_s1', other_daytotal_cons_s1)
             }
@@ -274,14 +274,14 @@ class HomeWizardEnergylink extends Homey.Device {
 
           if (value_s2 == 'other' || value_s2 == 'car') {
             if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
-					    	// console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
+              // console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
               me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 })
               me.setStoreValue('last_meter_power_s2', other_daytotal_cons_s2)
             }
           }
 
           if (energy_daytotal_aggr != me.getStoreValue('last_meter_power_aggr') && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
-					    // console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
+            // console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
             me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr })
             me.setStoreValue('last_meter_power_aggr', energy_daytotal_aggr)
           }
@@ -323,12 +323,12 @@ class HomeWizardEnergylink extends Homey.Device {
           me.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(me.error)
 
           if (metered_electricity_produced_t1 != me.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
-					    	me.flowTriggerMeterReturnT1(me, { meter_power_produced_t1: metered_electricity_produced_t1 })
+            me.flowTriggerMeterReturnT1(me, { meter_power_produced_t1: metered_electricity_produced_t1 })
             me.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1)
           }
 
           if (metered_electricity_produced_t2 != me.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
-					    	me.flowTriggerMeterReturnT2(me, { meter_power_produced_t2: metered_electricity_produced_t2 })
+            me.flowTriggerMeterReturnT2(me, { meter_power_produced_t2: metered_electricity_produced_t2 })
             me.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2)
           }
         } catch (err) {

@@ -77,7 +77,7 @@ class HomeWizardWindmeter extends Homey.Device {
               console.log('Gust strength in km/u: ' + gust_strength)
               console.log('Temperature current: ' + temp_real)
               console.log('Temperature windchill: ' + temp_windchill)
-					  };
+            };
             // // Wind angle
             me.setCapabilityValue('measure_wind_angle', wind_angle).catch(me.error)
             // // Wind speed current

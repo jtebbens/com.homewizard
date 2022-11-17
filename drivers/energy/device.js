@@ -63,13 +63,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
       if (data.total_gas_m3 !== null) {
-      								if (!this.hasCapability('meter_gas')) {
-      									await this.addCapability('meter_gas').catch(this.error)
-      								}
+        if (!this.hasCapability('meter_gas')) {
+          await this.addCapability('meter_gas').catch(this.error)
+        }
         if (this.getCapabilityValue('meter_gas') != data.total_gas_m3) { this.setCapabilityValue('meter_gas', data.total_gas_m3).catch(this.error) }
-      							} else if (data.total_gas_m3 == null) {
+      } else if (data.total_gas_m3 == null) {
         // delete gas meter
-      								await this.removeCapability('meter_gas').catch(this.error)
+        await this.removeCapability('meter_gas').catch(this.error)
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
