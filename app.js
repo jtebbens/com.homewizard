@@ -1,13 +1,11 @@
-"use strict";
+'use strict'
 
-const Homey = require('homey');
-
+const Homey = require('homey')
 
 class HomeWizardApp extends Homey.App {
-	onInit() {
-		console.log("HomeWizard app ready!");
-	 
-	}
+  onInit () {
+    console.log('HomeWizard app ready!')
+  }
 }
 
-module.exports = HomeWizardApp;
+module.exports = HomeWizardApp
