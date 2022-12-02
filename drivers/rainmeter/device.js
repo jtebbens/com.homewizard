@@ -7,7 +7,7 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var devices = {};
-var temperature;
+//var temperature;
 
 class HomeWizardRainmeter extends Homey.Device {
 
@@ -61,7 +61,7 @@ class HomeWizardRainmeter extends Homey.Device {
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
-			homewizard.getDeviceData(homewizard_id, 'rainmeters', function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'rainmeters', async function(callback) {
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
@@ -69,15 +69,15 @@ class HomeWizardRainmeter extends Homey.Device {
 						var rain_daytotal = ( callback[0].mm ); // Total Rain in mm used JSON $rainmeters[0]['mm']
 						var rain_last3h = ( callback[0]['3h'] ); // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
 						// Rain last 3 hours
-						me.setCapabilityValue("measure_rain.last3h", rain_last3h ).catch(me.error);
+						await me.setCapabilityValue("measure_rain.last3h", rain_last3h ).catch(me.error);
 						// Rain total day
-						me.setCapabilityValue("measure_rain.total", rain_daytotal ).catch(me.error);
+						await me.setCapabilityValue("measure_rain.total", rain_daytotal ).catch(me.error);
 
 						// Trigger flows
 						if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
-							console.log("Current Total Rainfall - "+ rain_daytotal);
+							//console.log("Current Total Rainfall - "+ rain_daytotal);
 							me.flowTriggerValueChanged(me, {rainmeter_changed: rain_daytotal})
-							me.setStoreValue("last_raintotal",rain_daytotal); // Update last_raintotal
+						await	me.setStoreValue("last_raintotal",rain_daytotal); // Update last_raintotal
 						}
 
 					} catch (err) {
@@ -94,9 +94,7 @@ class HomeWizardRainmeter extends Homey.Device {
 			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
 			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
 
-			if(Object.keys(callback).length === 1) {
-				clearInterval(refreshIntervalId);
-			}
+
 		}
 	}
 

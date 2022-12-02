@@ -7,13 +7,14 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var devices = {};
-var temperature;
+//var temperature;
 
 class HomeWizardHeatlink extends Homey.Device {
 
 	onInit() {
 
 		console.log('HomeWizard Heatlink '+this.getName() +' has been inited');
+
 
 		const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
 		devices.forEach(function initdevice(device) {
@@ -25,10 +26,10 @@ class HomeWizardHeatlink extends Homey.Device {
 
 		this.startPolling();
 
-		this.registerCapabilityListener('target_temperature', ( temperature, opts ) => {
+		this.registerCapabilityListener('target_temperature', ( temperature) => {
 			// Catch faulty trigger and max/min temp
 			if (!temperature) {
-				callback(true, temperature);
+				//callback(true, temperature);
 				return false;
 			}
 			else if (temperature < 5) {
@@ -39,11 +40,11 @@ class HomeWizardHeatlink extends Homey.Device {
 			}
 			temperature = Math.round(temperature.toFixed(1) * 2) / 2;
 
-			return new Promise((resolve, reject) => {
+			return new Promise((resolve) => {
 					var url = '/hl/0/settarget/'+temperature;
 					console.log(url); // Console log url
 					var homewizard_id = this.getSetting('homewizard_id');
-			    homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
+			    homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err) {
 						if (err) {
 							console.log('ERR settarget target_temperature -> returned false');
 							return resolve(false);
@@ -52,7 +53,7 @@ class HomeWizardHeatlink extends Homey.Device {
 						return resolve(true);
 				});
 			});
-			return Promise.resolve();
+			//return Promise.resolve(); eslint?
 		});
 	}
 
@@ -85,7 +86,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
 			//me.log('Gather data');
 
-			homewizard.getDeviceData(homewizard_id, 'heatlinks', async function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
 
 				if (Object.keys(callback).length > 0) {
 
@@ -99,8 +100,8 @@ class HomeWizardHeatlink extends Homey.Device {
 						//Check current temperature
 						if (me.getStoreValue('temperature') != rte) {
 						  console.log("New RTE - "+ rte);
-							await me.setCapabilityValue('measure_temperature', rte ).catch(me.error);
-							await me.setStoreValue('temperature',rte).catch(me.error);
+							me.setCapabilityValue('measure_temperature', rte ).catch(me.error);
+							me.setStoreValue('temperature',rte).catch(me.error);
 						} else {
 						  console.log("RTE: no change");
 						}
@@ -109,9 +110,9 @@ class HomeWizardHeatlink extends Homey.Device {
 						if (me.getStoreValue('thermTemperature') != rsp) {
 						  console.log("New RSP - "+ rsp);
 						  if (me.getStoreValue('setTemperature') === 0) {
-							  await me.setCapabilityValue('target_temperature', rsp).catch(me.error);
+							me.setCapabilityValue('target_temperature', rsp).catch(me.error);
 						  }
-							await me.setStoreValue('thermTemperature',rsp).catch(me.error);
+							me.setStoreValue('thermTemperature',rsp).catch(me.error);
 						} else {
 						  console.log("RSP: no change");
 						}
@@ -120,11 +121,11 @@ class HomeWizardHeatlink extends Homey.Device {
 						if (me.getStoreValue('setTemperature') != tte) {
 						  console.log("New TTE - "+ tte);
 						  if (tte > 0) {
-							  await me.setCapabilityValue('target_temperature', tte).catch(me.error);
+							 me.setCapabilityValue('target_temperature', tte).catch(me.error);
 						  } else {
-							  await me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature')).catch(me.error);
+							 me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature')).catch(me.error);
 						  }
-							await me.setStoreValue('setTemperature',tte).catch(me.error);
+							 me.setStoreValue('setTemperature',tte).catch(me.error);
 						} else {
 						  console.log("TTE: no change");
 						}

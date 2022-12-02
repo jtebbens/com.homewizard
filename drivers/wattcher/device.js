@@ -7,7 +7,7 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var devices = {};
-var temperature;
+//var temperature;
 
 class HomeWizardWattcher extends Homey.Device {
 

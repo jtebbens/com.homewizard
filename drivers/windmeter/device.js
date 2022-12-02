@@ -7,7 +7,7 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var devices = {};
-var temperature;
+//var temperature;
 
 
 
@@ -58,12 +58,12 @@ class HomeWizardWindmeter extends Homey.Device {
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
 
-			homewizard.getDeviceData(homewizard_id, 'windmeters', function(callback) {
+			homewizard.getDeviceData(homewizard_id, 'windmeters', async function(callback) {
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
 
-						if (debug) {me.log('Start capturing data')};
+						if (debug) {me.log('Start capturing data')}
 						var wind_angle_tmp = ( callback[0].dir ); // $windmeters[0]['dir'] SW 225
 						var wind_angle_int = wind_angle_tmp.split(" ");
 						// var wind_angle = parseInt(wind_angle_tmp); // Capture only the angle portion (number)
@@ -74,7 +74,7 @@ class HomeWizardWindmeter extends Homey.Device {
 						var temp_real = ( callback[0].te ); // $windmeters[0]['te'] Temperature
 						var temp_windchill = ( callback[0].wc); // $windmeters[0]['wc'] Windchill temperature
 
-						if (debug) {me.log ("End capturing data")};
+						if (debug) {me.log ("End capturing data")}
 						// Export the data
 						// Console data
 						var wind_angle_str = wind_angle_int[1];
@@ -88,21 +88,21 @@ class HomeWizardWindmeter extends Homey.Device {
 						console.log("Gust strength in km/u: "+ gust_strength);
 						console.log("Temperature current: "+ temp_real);
 						console.log("Temperature windchill: "+ temp_windchill);
-					  };
+					  }
 						// // Wind angle
-						me.setCapabilityValue("measure_wind_angle", wind_angle ).catch(me.error);
+						await me.setCapabilityValue("measure_wind_angle", wind_angle ).catch(me.error);
 						// // Wind speed current
-						me.setCapabilityValue("measure_wind_strength.cur", wind_strength_current ).catch(me.error);
+						await me.setCapabilityValue("measure_wind_strength.cur", wind_strength_current ).catch(me.error);
 						// // Wind speed min
-						me.setCapabilityValue("measure_wind_strength.min", wind_strength_min ).catch(me.error);
+						await me.setCapabilityValue("measure_wind_strength.min", wind_strength_min ).catch(me.error);
 						// // Wind speed max
-						me.setCapabilityValue("measure_wind_strength.max", wind_strength_max ).catch(me.error);
+						await me.setCapabilityValue("measure_wind_strength.max", wind_strength_max ).catch(me.error);
 						// // Wind speed
-						me.setCapabilityValue("measure_gust_strength", gust_strength ).catch(me.error);
+						await me.setCapabilityValue("measure_gust_strength", gust_strength ).catch(me.error);
 						// // Temp real
-						me.setCapabilityValue("measure_temperature.real", temp_real ).catch(me.error);
+						await me.setCapabilityValue("measure_temperature.real", temp_real ).catch(me.error);
 						// // Temp Windchill
-						me.setCapabilityValue("measure_temperature.windchill", temp_windchill ).catch(me.error);
+						await me.setCapabilityValue("measure_temperature.windchill", temp_windchill ).catch(me.error);
 
 					} catch (err) {
 						console.log('ERROR WindMeter getStatus ', err);

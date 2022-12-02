@@ -11,19 +11,20 @@ var homewizard_devices;
 
 class HomeWizardHeatlink extends Homey.Driver {
 
+
     onInit() {
         console.log('HomeWizard Heatlink has been inited');
 
         this.homey.flow.getActionCard('heatlink_off')
             //.register()
-            .registerRunListener( async (args, state) => {
+            .registerRunListener((args) => {
                 if (!args.device) {
                     return false;
                 }
 
-                return new Promise((resolve, reject) => {
+                return new Promise((resolve) => {
 
-                    homewizard.callnew(args.device.getData().id, '/hl/0/settarget/0', function(err, response) {
+                    homewizard.callnew(args.device.getData().id, '/hl/0/settarget/0', function(err) {
                         if(err) {
                             console.log('ERR flowCardAction heatlink_off  -> returned false');
                             return resolve(false);
@@ -53,18 +54,18 @@ class HomeWizardHeatlink extends Homey.Driver {
         await socket.done();
 
         // Received when a view has changed
-        socket.setHandler('showView', async function (viewId) {
+        await socket.setHandler('showView', function (viewId) {
             console.log('View: ' + viewId);
-            this.log("data", data);
+            //this.log("data", viewId);
         });
 
         //socket.on('get_homewizards', function () {
-        socket.setHandler('get_homewizards', () => {
+        await socket.setHandler('get_homewizards', () => {
 
             //homewizard_devices = driver.getDevices();
             homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-            homewizard.getDevices(function ( homewizard_devices)  {
+            homewizard.getDevices(function (homewizard_devices)  {
                 var hw_devices = {};
 
                 Object.keys(homewizard_devices).forEach(function (key) {
@@ -77,7 +78,7 @@ class HomeWizardHeatlink extends Homey.Driver {
             });
         });
 
-        socket.setHandler('manual_add', async function (device) {
+        await socket.setHandler('manual_add', function (device) {
 
             if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
@@ -96,7 +97,7 @@ class HomeWizardHeatlink extends Homey.Driver {
             }
         });
 
-        socket.setHandler('disconnect', async function() {
+        socket.setHandler('disconnect', function() {
             console.log("User aborted pairing, or pairing is finished");
         });
 

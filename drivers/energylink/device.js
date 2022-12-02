@@ -145,13 +145,18 @@ class HomeWizardEnergylink extends Homey.Device {
 					// Set solar used to zero before counting
 					var solar_current_prod = 0;
 					var solar_daytotal_prod = 0;
+					var energy_current_prod = 0;
+					var energy_daytotal_prod = 0;
+					var water_current_cons = 0;
+					var water_daytotal_cons = 0;
+
 
 					if (value_s1 == 'solar' ) {
-						var energy_current_prod = ( callback[0].s1.po ); // WATTS Energy produced via S1 $energylink[0]['s1']['po']
-						var energy_daytotal_prod = ( callback[0].s1.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s1']['po']
+						energy_current_prod = ( callback[0].s1.po ); // WATTS Energy produced via S1 $energylink[0]['s1']['po']
+						energy_daytotal_prod = ( callback[0].s1.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s1']['po']
 
-						var solar_current_prod = solar_current_prod + energy_current_prod;
-						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
+						solar_current_prod = solar_current_prod + energy_current_prod;
+						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 
 						if (me.hasCapability('meter_power.s1other')) {
 							await me.removeCapability('meter_power.s1other').catch(me.error);
@@ -160,11 +165,11 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s2 == 'solar' ) {
-						var energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
-						var energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
+						energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
+						energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
 
-						var solar_current_prod = solar_current_prod + energy_current_prod;
-						var solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
+						solar_current_prod = solar_current_prod + energy_current_prod;
+						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 						if (me.hasCapability('meter_power.s2other')) {
 							await me.removeCapability('meter_power.s2other').catch(me.error);
 							await me.removeCapability('measure_power.s2other').catch(me.error);
@@ -181,8 +186,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s1 == 'water' ) {
-						var water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
-						var water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
+						water_current_cons = ( callback[0].s1.po ); // Water used via S1 $energylink[0]['s1']['po']
+						water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
 						me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
@@ -195,8 +200,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s2 == 'water' ) {
-						var water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
-						var water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
+						water_current_cons = ( callback[0].s2.po ); // Water used via S2 $energylink[0]['s1']['po']
+						water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
 						me.setCapabilityOptions("meter_water", {"decimals":3}).catch(me.error);

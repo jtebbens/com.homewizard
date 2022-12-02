@@ -8,7 +8,7 @@ var debug = false;
 
 var refreshIntervalId;
 var devices = {};
-const thermometers = {};
+//const thermometers = {};
 
 class HomeWizardKakusensors extends Homey.Device {
 
@@ -57,6 +57,7 @@ class HomeWizardKakusensors extends Homey.Device {
 		var me = this;
 		var sensor_status = null;
 		var lowBattery_status = null;
+		//var lowBattery_temp = null;
 
 		for (var index in devices) {
 
@@ -136,7 +137,7 @@ class HomeWizardKakusensors extends Homey.Device {
 														devices[index].addCapability('alarm_battery').catch(me.error);
 													}
 
-													var lowBattery_temp = result[index2].lowBattery;
+													lowBattery_temp = result[index2].lowBattery;
 													if (lowBattery_temp == 'yes') {
 															lowBattery_status = true }
 													else {

@@ -29,12 +29,9 @@ class HomeWizardEnergyLink extends Homey.Driver {
         await socket.done();
 
         // Received when a view has changed
-        socket.setHandler('showView', async function (viewId) {
-          if (errorMsg) {
-                     Homey.app.log(`[Driver] - Show errorMsg:`, errorMsg);
-                     socket.emit('error_msg', errorMsg);
-                     errorMsg = false;
-          }
+        socket.setHandler('showView', function (viewId) {
+          console.log('View: ' + viewId);
+          //this.log("data", viewId);
         });
 
         //socket.on('get_homewizards', function () {
@@ -62,7 +59,7 @@ class HomeWizardEnergyLink extends Homey.Driver {
             });
         });
 
-        socket.setHandler('manual_add', async function (device) {
+        socket.setHandler('manual_add', function (device) {
 
             console.log(device.settings.homewizard_id);
             console.log(device.settings.homewizard_id.indexOf('HW_'));
@@ -88,7 +85,7 @@ class HomeWizardEnergyLink extends Homey.Driver {
             }
         });
 
-        socket.setHandler('disconnect', async function() {
+        socket.setHandler('disconnect', function() {
             console.log("User aborted pairing, or pairing is finished");
         });
     }

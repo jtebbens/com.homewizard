@@ -160,5 +160,11 @@
   },
   "3.0.4": {
     "en": "P1 meter fix for returning power and for Sweden having different values from the P1 as aggregated meter."
+  },
+  "3.0.5": {
+    "en": "Code cleanup"
+  },
+  "3.0.6": {
+    "en": "Revert legacy homewizard connectivity back to Axios module, others stay node-fetch"
   }
 }

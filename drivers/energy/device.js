@@ -73,7 +73,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       									await this.addCapability('meter_gas').catch(this.error);
       								}
                       if (this.getCapabilityValue('meter_gas') != data.total_gas_m3)
-      								  this.setCapabilityValue('meter_gas', data.total_gas_m3).catch(this.error);
+      								 await this.setCapabilityValue('meter_gas', data.total_gas_m3).catch(this.error);
       							}
       							else if (data.total_gas_m3 == null) {
                       // delete gas meter
@@ -105,12 +105,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
       if (data.total_power_import_kwh == null) {
         if (this.getCapabilityValue('meter_power') != ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh)))
-          this.setCapabilityValue('meter_power', ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh))).catch(this.error);
+          await this.setCapabilityValue('meter_power', ((data.total_power_import_t1_kwh+data.total_power_import_t2_kwh)-(data.total_power_export_t1_kwh+data.total_power_export_t2_kwh))).catch(this.error);
       }
       // Sweden P1 has only total_power_import_kwh
       else if (data.total_power_import_kwh !== null) {
         if (this.getCapabilityValue('meter_power') != (data.total_power_import_kwh-data.total_power_export_t1_kwh))
-          this.setCapabilityValue('meter_power', (data.total_power_import_kwh-data.total_power_export_t1_kwh)).catch(this.error);
+          await this.setCapabilityValue('meter_power', (data.total_power_import_kwh-data.total_power_export_t1_kwh)).catch(this.error);
       }
       // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
      if (data.active_power_l2_w !== null) {

@@ -17,13 +17,13 @@ var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
-	onInit() {
+	async onInit() {
 
 		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
-		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+		const devices = await this.homey.drivers.getDriver('homewizard').getDevices();
 
-		devices.forEach(function initdevice(device) {
+		await devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
 
 			homeWizard_devices[device.getData().id] = {};
@@ -31,11 +31,11 @@ class HomeWizardDevice extends Homey.Device {
 			homeWizard_devices[device.getData().id].settings = device.getSettings();
 		});
 
-		homewizard.setDevices(homeWizard_devices);
-		homewizard.startpoll();
+		await homewizard.setDevices(homeWizard_devices);
+		await homewizard.startpoll();
 
 		if (Object.keys(homeWizard_devices).length > 0) {
-		  this.startPolling(devices);
+		  await this.startPolling(devices);
 		}
 
 		// Init flow triggers
@@ -65,13 +65,14 @@ class HomeWizardDevice extends Homey.Device {
 	}
 
 	getStatus(devices) {
-    Promise.resolve().then(async () => {
+    Promise.resolve().then(() => {
 		//var me = this;
 
 		var homey_lang = this.homey.i18n.getLanguage();
 
 		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
+			try	{
+				homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) {
 
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
@@ -82,7 +83,7 @@ class HomeWizardDevice extends Homey.Device {
 
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						await devices[index].setStoreValue('preset', callback).catch(this.error);
+						devices[index].setStoreValue('preset', callback).catch(this.error);
 
 						if (debug) {this.log('Flow call! -> ' + callback);}
 
@@ -96,11 +97,14 @@ class HomeWizardDevice extends Homey.Device {
 						if (debug) {this.log('Preset was changed! ->'+ preset_text);}
 					}
 				} catch(err) {
-					console.log ("HomeWizard data corrupt");
+					console.log ("Preset changed - StoreValue and Trigger problem");
 					console.log(err);
 				}
 			});
-
+		} catch(err) {
+			console.log ("GetDeviceData - PRESET - HomeWizard data corrupt");
+			console.log(err);
+		}
 		}
 	})
 		.then(() => {

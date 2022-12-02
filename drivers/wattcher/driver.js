@@ -30,9 +30,9 @@ class HomeWizardWattcher extends Homey.Driver {
         await socket.done();
 
         // Received when a view has changed
-        socket.setHandler('showView', (viewId, callback) => {
+        socket.setHandler('showView', (viewId) => {
           console.log('View: ' + viewId);
-          this.log("data", data);
+          this.log("data", viewId);
         });
 
         socket.setHandler('get_homewizards', () => {
@@ -54,7 +54,7 @@ class HomeWizardWattcher extends Homey.Driver {
             });
         });
 
-        socket.setHandler('manual_add', async function (device) {
+        socket.setHandler('manual_add', function (device) {
 
             if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true

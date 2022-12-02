@@ -19,7 +19,7 @@ class HomeWizardThermometer extends Homey.Driver {
 
     async onPair(socket) {
         // Show a specific view by ID
-        socket.showView('start');
+        await socket.showView('start');
 
         // Show the next view
         await socket.nextView();
@@ -31,22 +31,19 @@ class HomeWizardThermometer extends Homey.Driver {
         await socket.done();
 
         // Received when a view has changed
-        socket.setHandler('showView', async function (viewId) {
-          if (errorMsg) {
-                     Homey.app.log(`[Driver] - Show errorMsg:`, errorMsg);
-                     socket.emit('error_msg', errorMsg);
-                     errorMsg = false;
-          }
+        await socket.setHandler('showView', function (viewId) {
+          console.log('View: ' + viewId);
+          //this.log("data", viewId);
         });
 
 
         //socket.on('get_homewizards', function () {
-        socket.setHandler('get_homewizards', () => {
+        await socket.setHandler('get_homewizards', async () => {
 
             //homewizard_devices = driver.getDevices();
-            homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
+            homewizard_devices = await this.homey.drivers.getDriver('homewizard').getDevices();
 
-            homewizard.getDevices(function ( homewizard_devices)  {
+            await homewizard.getDevices(function ( homewizard_devices)  {
                 var hw_devices = {};
 
                 Object.keys(homewizard_devices).forEach(function (key) {
@@ -63,7 +60,7 @@ class HomeWizardThermometer extends Homey.Driver {
             });
         });
 
-        socket.setHandler('manual_add', async function (device) {
+        await socket.setHandler('manual_add', function (device) {
             if (typeof device.settings.homewizard_id == "string" && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
                 //true
                 console.log('Thermometer added ' + device.data.id);
@@ -80,10 +77,10 @@ class HomeWizardThermometer extends Homey.Driver {
             }
         });
 
-        socket.setHandler('disconnect', () => {
+        await socket.setHandler('disconnect', () => {
             console.log("User aborted pairing, or pairing is finished");
         });
-    };
+    }
 
     onPairListDevices( data, callback ) {
         const devices = [
@@ -91,7 +88,7 @@ class HomeWizardThermometer extends Homey.Driver {
         ]
 
         callback(null, devices);
-    };
+    }
 
 }
 

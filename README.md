@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.0.6
+* Roleback to Axios for polling Homewizard legacy (better timeout handling)
+* Code clean up
+
 v3.0.3
 * Offset watermeter and thermometer fixed (callback not a function)
 

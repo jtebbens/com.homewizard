@@ -14,7 +14,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
     if (this.getClass() == 'sensor') {
       this.setClass("socket");
-    };
+    }
 
     this.registerCapabilityListener('onoff', async (value) => {
       if (this.getCapabilityValue('locked'))
@@ -44,13 +44,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  async onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    await this.onPoll();
   }
 
   async onRequest(body) {
