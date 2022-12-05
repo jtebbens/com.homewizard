@@ -115,22 +115,22 @@ controller.abort();
             if (typeof self.devices[device_id].polldata === 'undefined') {
                self.devices[device_id].polldata = [];
             }
-            await homewizard.callnew(device_id, '/get-sensors', async function(err, response) {
+            await homewizard.callnew(device_id, '/get-sensors', function(err, response) {
                if (err === null) {
-                  self.devices[device_id].polldata.preset = await response.preset;
-                  self.devices[device_id].polldata.heatlinks = await response.heatlinks;
-                  self.devices[device_id].polldata.energylinks = await response.energylinks;
-                  self.devices[device_id].polldata.energymeters = await response.energymeters;
-                  self.devices[device_id].polldata.thermometers = await response.thermometers;
-                  self.devices[device_id].polldata.rainmeters = await response.rainmeters;
-                  self.devices[device_id].polldata.windmeters = await response.windmeters;
-                  self.devices[device_id].polldata.kakusensors = await response.kakusensors;
+                  self.devices[device_id].polldata.preset = response.preset;
+                  self.devices[device_id].polldata.heatlinks = response.heatlinks;
+                  self.devices[device_id].polldata.energylinks = response.energylinks;
+                  self.devices[device_id].polldata.energymeters = response.energymeters;
+                  self.devices[device_id].polldata.thermometers = response.thermometers;
+                  self.devices[device_id].polldata.rainmeters = response.rainmeters;
+                  self.devices[device_id].polldata.windmeters = response.windmeters;
+                  self.devices[device_id].polldata.kakusensors = response.kakusensors;
 
                   if (Object.keys(response.energylinks).length !== 0) {
 
-                     homewizard.callnew(device_id, '/el/get/0/readings', async function(err, response2) {
+                    homewizard.callnew(device_id, '/el/get/0/readings', function(err, response2) {
                         if(err == null) {
-                           self.devices[device_id].polldata.energylink_el = await response2;
+                           self.devices[device_id].polldata.energylink_el = response2;
                            if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}
                         }
                      });
