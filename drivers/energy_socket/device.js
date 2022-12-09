@@ -44,13 +44,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
+    this.onPoll();
   }
 
   async onRequest(body) {

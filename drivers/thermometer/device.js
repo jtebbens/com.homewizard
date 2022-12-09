@@ -12,14 +12,14 @@ var debug = false;
 
 class HomeWizardThermometer extends Homey.Device {
 
-	async onInit() {
+	onInit() {
 
 		if (debug) {console.log('HomeWizard Thermometer '+this.getName() +' has been inited');}
 
-		const devices = await this.homey.drivers.getDriver('thermometer').getDevices();
+		const devices = this.homey.drivers.getDriver('thermometer').getDevices();
 
 		devices.forEach(function initdevice(device) {
-			console.log('add device: ' + JSON.stringify(device.getName()));
+			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
 			devices[device.getData().id] = device;
 			devices[device.getData().id].settings = device.getSettings();
 		});
@@ -44,13 +44,13 @@ class HomeWizardThermometer extends Homey.Device {
 
 			me.getStatus(devices);
 
-		}, 1000 * 60 );
+		}, 1000 * 10 );
 
 	}
 
 	getStatus(devices) {
-		if (debug) {console.log('Start Polling');}
-		Promise.resolve().then(() => {
+		//if (debug) {console.log('Start Polling');}
+		Promise.resolve().then(async () => {
 		//var me = this;
 		var lowBattery_status = null;
 
@@ -63,10 +63,8 @@ class HomeWizardThermometer extends Homey.Device {
 					if (Object.keys(result).length > 0) {
 						try {
 							for (var index2 in result) {
-
-
-
-								if (result[index2].id == thermometer_id && result[index2].te != undefined && result[index2].hu != undefined) {
+								//console.log("Thermometer - "+ result[index2].id);
+								if (result[index2].id == thermometer_id && result[index2].te != undefined && result[index2].hu != undefined && (typeof result[index2].te != 'undefined') && (typeof result[index2].hu != 'undefined')) {
 									var te = (result[index2].te.toFixed(1) * 2) / 2;
 									var hu = (result[index2].hu.toFixed(1) * 2) / 2;
 
@@ -77,8 +75,9 @@ class HomeWizardThermometer extends Homey.Device {
 									//Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
 										if (debug) {console.log("New TE - "+ te);}
-										devices[index].setCapabilityValue('measure_temperature', te).catch(this.error);
-
+										//devices[index].setCapabilityValue('measure_temperature', te).catch(this.error);
+										devices[index].setCapabilityValue('measure_temperature', te);
+										// TypeError: Cannot read properties of undefined (reading 'error')
 									}
 
 									//first adjust retrieved humidity with offset
@@ -88,7 +87,7 @@ class HomeWizardThermometer extends Homey.Device {
 									//Check current humidity
 									if (devices[index].getCapabilityValue('measure_humidity') != hu) {
 										if (debug) {console.log("New HU - "+ hu);}
-										devices[index].setCapabilityValue('measure_humidity', hu).catch(this.error);
+									  devices[index].setCapabilityValue('measure_humidity', hu);
 									}
 									// console.log(result[index2].lowBattery);
 									try {
@@ -119,8 +118,8 @@ class HomeWizardThermometer extends Homey.Device {
 								}
 							}
 						} catch (err) {
-							console.log(err);
-							console.log("Thermometer data corrupt");
+							//console.log(err);
+							console.log("Thermometer data corrupt - " + err);
 						}
 					}
 				});

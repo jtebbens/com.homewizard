@@ -12,7 +12,7 @@ var homewizard_devices;
 class HomeWizardHeatlink extends Homey.Driver {
 
 
-    onInit() {
+  onInit() {
         console.log('HomeWizard Heatlink has been inited');
 
         this.homey.flow.getActionCard('heatlink_off')

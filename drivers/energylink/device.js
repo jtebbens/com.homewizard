@@ -82,7 +82,7 @@ class HomeWizardEnergylink extends Homey.Device {
 				me.getStatus();
 			}
 
-		}, 1000 * 20);
+		}, 1000 * 15);
 
 		refreshIntervalIdReadings = setInterval(function () {
 			if (debug) {console.log("--Start Energylink Readings Polling-- ");}
@@ -123,7 +123,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					try {
 						var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
 						// Consumed gas
-						me.setCapabilityValue("meter_gas.today", gas_daytotal_cons).catch(me.error);
+						await me.setCapabilityValue("meter_gas.today", gas_daytotal_cons).catch(me.error);
 					}
 					catch(err) {
 						// Error with Energylink no data in Energylink
@@ -131,15 +131,15 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					// Consumed elec current
-					me.setCapabilityValue('measure_power.used', energy_current_cons).catch(me.error);
+					await me.setCapabilityValue('measure_power.used', energy_current_cons).catch(me.error);
 					// Consumed elec current
-					me.setCapabilityValue('measure_power', energy_current_netto).catch(me.error);
+					await me.setCapabilityValue('measure_power', energy_current_netto).catch(me.error);
 					// Consumed elec current Netto
-					me.setCapabilityValue('measure_power.netto', energy_current_netto).catch(me.error);
+					await me.setCapabilityValue('measure_power.netto', energy_current_netto).catch(me.error);
 					// Consumed elec total day
-					me.setCapabilityValue('meter_power.used', energy_daytotal_cons).catch(me.error);
+					await me.setCapabilityValue('meter_power.used', energy_daytotal_cons).catch(me.error);
 					// Consumed elec total day
-					me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error);
+				  await me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error);
           // Disable meter_power
 					// me.removeCapability('meter_power');
 					// Set solar used to zero before counting
@@ -190,8 +190,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
-						me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
-						me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
+						await me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
+						await me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
 
 						if (me.hasCapability('meter_power.s1other')) {
 							await me.removeCapability('meter_power.s1other').catch(me.error);
@@ -204,9 +204,9 @@ class HomeWizardEnergylink extends Homey.Device {
 						water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
-						me.setCapabilityOptions("meter_water", {"decimals":3}).catch(me.error);
-						me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
-						me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
+						await me.setCapabilityOptions("meter_water", {"decimals":3}).catch(me.error);
+						await me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
+						await me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
 						if (me.hasCapability('meter_power.s2other')) {
 							await me.removeCapability('meter_power.s2other').catch(me.error);
 							await me.removeCapability('measure_power.s2other').catch(me.error);
@@ -218,8 +218,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						var other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s1);
 						// Used power
-						me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1).catch(me.error);
-						me.setCapabilityValue("measure_power.s1other", other_current_cons_s1).catch(me.error);
+						await me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1).catch(me.error);
+						await me.setCapabilityValue("measure_power.s1other", other_current_cons_s1).catch(me.error);
 					}
 
 					if (value_s2 == 'other' || value_s2 == 'car' ) {
@@ -227,8 +227,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						var other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s2);
 						// Used power
-						me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2).catch(me.error);
-						me.setCapabilityValue("measure_power.s2other", other_current_cons_s2).catch(me.error);
+						await me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2).catch(me.error);
+						await me.setCapabilityValue("measure_power.s2other", other_current_cons_s2).catch(me.error);
 					}
 
 					// Trigger flows
@@ -341,12 +341,12 @@ class HomeWizardEnergylink extends Homey.Device {
 						await me.addCapability('meter_power').catch(me.error);
 					}
 
-					me.setCapabilityValue("meter_gas.reading", metered_gas).catch(me.error);
-					me.setCapabilityValue("meter_power", aggregated_meter_power).catch(me.error);
-					me.setCapabilityValue("meter_power.consumed.t1", metered_electricity_consumed_t1).catch(me.error);
-					me.setCapabilityValue("meter_power.produced.t1", metered_electricity_produced_t1).catch(me.error);
-					me.setCapabilityValue("meter_power.consumed.t2", metered_electricity_consumed_t2).catch(me.error);
-					me.setCapabilityValue("meter_power.produced.t2", metered_electricity_produced_t2).catch(me.error);
+					await me.setCapabilityValue("meter_gas.reading", metered_gas).catch(me.error);
+					await me.setCapabilityValue("meter_power", aggregated_meter_power).catch(me.error);
+					await me.setCapabilityValue("meter_power.consumed.t1", metered_electricity_consumed_t1).catch(me.error);
+					await me.setCapabilityValue("meter_power.produced.t1", metered_electricity_produced_t1).catch(me.error);
+					await me.setCapabilityValue("meter_power.consumed.t2", metered_electricity_consumed_t2).catch(me.error);
+					await me.setCapabilityValue("meter_power.produced.t2", metered_electricity_produced_t2).catch(me.error);
 
 					if (metered_electricity_produced_t1 != me.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
 					    	me.flowTriggerMeterReturnT1(me, { meter_power_produced_t1: metered_electricity_produced_t1 });

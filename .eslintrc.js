@@ -13,7 +13,6 @@ module.exports = {
   },
   rules: {
     "no-mixed-spaces-and-tabs": 0, // disable rule
-    "require-await" : "error",
     "callback-return": "off",
     "handle-callback-err": "error",
     "no-new-require": "error",

@@ -12,7 +12,7 @@ var devices = {};
 
 class HomeWizardKakusensors extends Homey.Device {
 
-	onInit() {
+onInit() {
 
 		if (debug) {console.log('HomeWizard Kakusensors '+this.getName() +' has been inited');}
 
@@ -33,7 +33,7 @@ class HomeWizardKakusensors extends Homey.Device {
 	}
 
 
-	startPolling(devices) {
+startPolling(devices) {
 
 		var me = this;
 
@@ -52,7 +52,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 	}
 
-	getStatus(devices) {
+getStatus(devices) {
 		if (debug) {console.log('Start Polling');}
 		var me = this;
 		var sensor_status = null;
@@ -203,7 +203,7 @@ class HomeWizardKakusensors extends Homey.Device {
 		}
 	}
 
-	onDeleted() {
+onDeleted() {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);

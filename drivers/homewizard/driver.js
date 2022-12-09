@@ -17,7 +17,7 @@ class HomeWizardDriver extends Homey.Driver {
         // PRESETS
          this.homey.flow.getConditionCard('check_preset')
             //.register()
-            .registerRunListener( (args) => {
+            .registerRunListener( async (args) => {
                 if (! args.device) {
                     return false;
                 }
@@ -38,7 +38,7 @@ class HomeWizardDriver extends Homey.Driver {
 
         this.homey.flow.getActionCard('set_preset')
             //.register()
-            .registerRunListener( (args) => {
+            .registerRunListener( async (args) => {
                 if (! args.device) {
                     return false;
                 }
@@ -63,7 +63,7 @@ class HomeWizardDriver extends Homey.Driver {
         // SCENES
         this.homey.flow.getActionCard('switch_scene_on')
             //.register()
-            .registerRunListener((args) => {
+            .registerRunListener(async(args) => {
                 if (! args.device) {
                     return false;
                 }
@@ -82,7 +82,7 @@ class HomeWizardDriver extends Homey.Driver {
                 });
             })
             .getArgument('scene')
-            .registerAutocompleteListener((query, args) => {
+            .registerAutocompleteListener(async(query, args) => {
                 console.log('CALLED flowCardAction switch_scene_on autocomplete');
 
                 return this._onGetSceneAutocomplete(args);
@@ -93,7 +93,7 @@ class HomeWizardDriver extends Homey.Driver {
         // SCENES
         this.homey.flow.getActionCard('switch_scene_off')
             //.register()
-            .registerRunListener((args) => {
+            .registerRunListener(async(args) => {
                 if (! args.device) {
                     return false;
                 }

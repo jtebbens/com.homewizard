@@ -4,7 +4,7 @@
 //const AbortController = require('abort-controller');
 const axios = require("axios");
 //const getJson = require("axios-get-json-response");
-axios.defaults.timeout === 15000;
+axios.defaults.timeout === 25000;
 const Homey = require('homey');
 
 
@@ -44,7 +44,7 @@ homewizard.callnew = async function (device_id, uri_part, callback) {
     var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
     var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
     // Using the Request Config
-    await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: controller.signal}, {timeout: 15000})
+    await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: controller.signal}, {timeout: 25000})
     .then((response) => {
        //let parsedJson = response.data;
        return response.data; //return json
@@ -109,14 +109,14 @@ controller.abort();
          }, 1000 * 20);
    };
 
-   homewizard.poll = function() {
+   homewizard.poll = async function() {
 
    Object.keys(self.devices).forEach(async function (device_id) {
-            if (typeof self.devices[device_id].polldata === 'undefined') {
+            if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined')) {
                self.devices[device_id].polldata = [];
             }
             await homewizard.callnew(device_id, '/get-sensors', function(err, response) {
-               if (err === null) {
+               if ((err === null) || (err == null)) {
                   self.devices[device_id].polldata.preset = response.preset;
                   self.devices[device_id].polldata.heatlinks = response.heatlinks;
                   self.devices[device_id].polldata.energylinks = response.energylinks;
@@ -128,7 +128,7 @@ controller.abort();
 
                   if (Object.keys(response.energylinks).length !== 0) {
 
-                    homewizard.callnew(device_id, '/el/get/0/readings', function(err, response2) {
+                    homewizard.callnew(device_id, '/el/get/0/readings', async function(err, response2) {
                         if(err == null) {
                            self.devices[device_id].polldata.energylink_el = response2;
                            if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}

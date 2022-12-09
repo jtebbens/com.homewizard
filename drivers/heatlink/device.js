@@ -145,7 +145,7 @@ class HomeWizardHeatlink extends Homey.Device {
 		}
 	}
 
-	onDeleted() {
+onDeleted() {
 
 		if (Object.keys(devices).length === 0) {
 			clearInterval(refreshIntervalId);

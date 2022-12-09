@@ -17,13 +17,13 @@ var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
-	async onInit() {
+	onInit() {
 
 		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
-		const devices = await this.homey.drivers.getDriver('homewizard').getDevices();
+		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-		await devices.forEach(function initdevice(device) {
+		devices.forEach(function initdevice(device) {
 			console.log('add device: ' + JSON.stringify(device.getName()));
 
 			homeWizard_devices[device.getData().id] = {};
@@ -31,11 +31,11 @@ class HomeWizardDevice extends Homey.Device {
 			homeWizard_devices[device.getData().id].settings = device.getSettings();
 		});
 
-		await homewizard.setDevices(homeWizard_devices);
-		await homewizard.startpoll();
+		homewizard.setDevices(homeWizard_devices);
+		homewizard.startpoll();
 
 		if (Object.keys(homeWizard_devices).length > 0) {
-		  await this.startPolling(devices);
+		  this.startPolling(devices);
 		}
 
 		// Init flow triggers
@@ -64,8 +64,8 @@ class HomeWizardDevice extends Homey.Device {
 
 	}
 
-	getStatus(devices) {
-    Promise.resolve().then(() => {
+	async getStatus(devices) {
+    Promise.resolve().then(async() => {
 		//var me = this;
 
 		var homey_lang = this.homey.i18n.getLanguage();
