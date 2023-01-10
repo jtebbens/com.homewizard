@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.0.8",
+  "version": "3.1.0",
   "platforms": [
     "local"
   ],
@@ -421,6 +421,35 @@
             "example": 15
           }
         ]
+      },
+      {
+        "id": "tariff_changed",
+        "title": {
+          "en": "Peak / Normal Tariff changed",
+          "nl": "Dal / Normaal Tarief veranderd"
+        },
+        "args": [
+          {
+            "name": "energy",
+            "type": "device",
+            "filter": "driver_id=energy",
+            "placeholder": {
+              "en": "Which meter",
+              "nl": "Welke meter"
+            }
+          }
+        ],
+        "tokens": [
+          {
+            "name": "tariff_changed",
+            "type": "number",
+            "title": {
+              "en": "tariff",
+              "nl": "tarief"
+            },
+            "example": 1
+          }
+        ]
       }
     ],
     "conditions": [
@@ -609,6 +638,22 @@
       "units": {
         "en": "RSSI",
         "nl": "RSSI"
+      }
+    },
+    "tariff": {
+      "type": "number",
+      "title": {
+        "en": "Active tariff",
+        "nl": "Tarief actief"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/tariff.svg",
+      "units": {
+        "en": "Tariff",
+        "nl": "Tarief"
       }
     }
   },
@@ -1172,7 +1217,11 @@
         "measure_power.l1",
         "measure_power.l2",
         "measure_power.l3",
-        "rssi"
+        "measure_current.l1",
+        "measure_current.l2",
+        "measure_current.l3",
+        "rssi",
+        "tariff"
       ],
       "energy": {
         "cumulative": true
@@ -1200,6 +1249,24 @@
           "title": {
             "en": "Current usage phase 3",
             "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current Amp phase 1",
+            "nl": "Huidig Amp fase 1"
+          }
+        },
+        "measure_current.l2": {
+          "title": {
+            "en": "Current Amp phase 2",
+            "nl": "Huidig Amp fase 2"
+          }
+        },
+        "measure_current.l3": {
+          "title": {
+            "en": "Current Amp phase 3",
+            "nl": "Huidig Amp fase 3"
           }
         },
         "meter_power.consumed.t1": {
