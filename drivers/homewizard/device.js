@@ -100,7 +100,7 @@ class HomeWizardDevice extends Homey.Device {
 					console.log ("Preset changed - StoreValue and Trigger problem");
 					console.log(err);
 				}
-			});
+			}).catch(this.error); //catch unhandled rejection
 		} catch(err) {
 			console.log ("GetDeviceData - PRESET - HomeWizard data corrupt");
 			console.log(err);

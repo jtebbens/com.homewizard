@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.1.0",
+  "version": "3.1.2",
   "platforms": [
     "local"
   ],
@@ -1220,6 +1220,9 @@
         "measure_current.l1",
         "measure_current.l2",
         "measure_current.l3",
+        "measure_voltage.l1",
+        "measure_voltage.l2",
+        "measure_voltage.l3",
         "rssi",
         "tariff"
       ],
@@ -1267,6 +1270,24 @@
           "title": {
             "en": "Current Amp phase 3",
             "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        },
+        "measure_voltage.l2": {
+          "title": {
+            "en": "Current Voltage phase 2",
+            "nl": "Huidig Voltage fase 2"
+          }
+        },
+        "measure_voltage.l3": {
+          "title": {
+            "en": "Current Voltage phase 3",
+            "nl": "Huidig Voltage fase 3"
           }
         },
         "meter_power.consumed.t1": {

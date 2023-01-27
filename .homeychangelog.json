@@ -175,5 +175,11 @@
   },
   "3.1.0": {
     "en": "New features P1 HW Energy firmware and bugfixes"
+  },
+  "3.1.1": {
+    "en": "Peak/OffPeak trigger fixed"
+  },
+  "3.1.2": {
+    "en": "Pre FW 4.x P1 dongle fix for T1 & T2 export meter values"
   }
 }

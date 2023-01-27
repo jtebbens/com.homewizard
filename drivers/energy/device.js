@@ -15,7 +15,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   flowTriggerTariff( device, tokens ) {
-    this._flowTriggerPowerUsed.trigger( device, tokens ).catch( this.error )
+    this._flowTriggerTariff.trigger( device, tokens ).catch( this.error )
   }
 
   onDeleted() {
@@ -84,9 +84,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
       if (this.getCapabilityValue('rssi') != data.wifi_strength)
         await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
-      if (this.getCapabilityValue('tariff') != data.active_tariff) {
-          await this.setCapabilityValue('tariff', data.active_tariff).catch(this.error);
-          this.flowTriggerTariff(this, { tariff_changed: data.active_tariff });
+      if (this.getCapabilityValue('tariff') != data.active_tariff)
+        await this.setCapabilityValue('tariff', data.active_tariff).catch(this.error);
+
+      //Trigger tariff
+      if (data.active_tariff != this.getStoreValue("last_active_tariff")) {
+        this.flowTriggerTariff(this, { tariff_changed: data.active_tariff });
+        this.setStoreValue("last_active_tariff",data.active_tariff).catch(this.error);
       }
 
 
@@ -104,7 +108,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-      if (data.total_power_export_kwh > 1) {
+      if ((data.total_power_export_kwh > 1) || (data.total_power_export_t2_kwh > 1)) {
 								if (!this.hasCapability('meter_power.produced.t1')) {
                   // add production meters
 									await this.addCapability('meter_power.produced.t1').catch(this.error);
@@ -116,7 +120,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 if (this.getCapabilityValue('meter_power.produced.t2') != data.total_power_export_t2_kwh)
 								  await this.setCapabilityValue("meter_power.produced.t2", data.total_power_export_t2_kwh).catch(this.error);
 			}
-      else if (data.total_power_export_kwh < 1) {
+      else if ((data.total_power_export_kwh < 1) || (data.total_power_export_t2_kwh < 1)) {
               await this.removeCapability('meter_power.produced.t1').catch(this.error);
               await this.removeCapability('meter_power.produced.t2').catch(this.error);
       }
@@ -170,6 +174,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           await this.removeCapability('measure_power.active_power_w').catch(this.error);
         }
       }
+
+      //Voltage
+      // active_voltage_l1_v:228.3
+      // active_voltage_l2_v:230.6
+      // active_voltage_l3_v:228.8
 
     })
       .then(() => {
