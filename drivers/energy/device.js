@@ -150,6 +150,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
            await this.addCapability('measure_current.l1').catch(this.error);
            await this.addCapability('measure_current.l2').catch(this.error);
            await this.addCapability('measure_current.l3').catch(this.error);
+           await this.addCapability('measure_voltage.l1').catch(this.error);
+           await this.addCapability('measure_voltage.l2').catch(this.error);
+           await this.addCapability('measure_voltage.l3').catch(this.error);
+           
         }
         if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
           this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error);
@@ -157,12 +161,20 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           this.setCapabilityValue("measure_power.l2", data.active_power_l2_w).catch(this.error);
         if (this.getCapabilityValue('measure_power.l3') != data.active_power_l3_w)
           this.setCapabilityValue("measure_power.l3", data.active_power_l3_w).catch(this.error);
+        //Amphere 3 fase
         if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
           this.setCapabilityValue("measure_current.l1", data.active_current_l1_a).catch(this.error);
         if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
           this.setCapabilityValue("measure_current.l2", data.active_current_l2_a).catch(this.error);
         if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
           this.setCapabilityValue("measure_current.l3", data.active_current_l3_a).catch(this.error);
+        //Voltage 3 fase
+        if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
+          this.setCapabilityValue("measure_voltage.l1", data.active_voltage_l1_v).catch(this.error);
+        if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
+          this.setCapabilityValue("measure_voltage.l2", data.active_voltage_l2_v).catch(this.error);
+        if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
+          this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_va).catch(this.error);  
 
 
       }
@@ -175,10 +187,6 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         }
       }
 
-      //Voltage
-      // active_voltage_l1_v:228.3
-      // active_voltage_l2_v:230.6
-      // active_voltage_l3_v:228.8
 
     })
       .then(() => {

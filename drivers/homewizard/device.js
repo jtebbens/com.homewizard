@@ -64,57 +64,46 @@ class HomeWizardDevice extends Homey.Device {
 
 	}
 
-	async getStatus(devices) {
-    Promise.resolve().then(async() => {
-		//var me = this;
+	getStatus(devices) {
+
+		var me = this;
 
 		var homey_lang = this.homey.i18n.getLanguage();
 
 		for (var index in devices) {
-			try	{
-				homewizard.getDeviceData(devices[index].getData().id, 'preset', function(callback) {
+			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
 
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
-						if (debug) {this.log('Preset was set to ' + callback);}
+						if (debug) {me.log('Preset was set to ' + callback);}
 
 						devices[index].getStoreValue('preset', callback);
 					}
 
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						devices[index].setStoreValue('preset', callback).catch(this.error);
+						await devices[index].setStoreValue('preset', callback).catch(me.error);
 
-						if (debug) {this.log('Flow call! -> ' + callback);}
+						if (debug) {me.log('Flow call! -> ' + callback);}
 
 						if (homey_lang == "nl") {
 							preset_text = preset_text_nl[callback];
 						} else {
 							preset_text = preset_text_en[callback];
 						}
-						this.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
+						me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
 
-						if (debug) {this.log('Preset was changed! ->'+ preset_text);}
+						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
 					}
 				} catch(err) {
-					console.log ("Preset changed - StoreValue and Trigger problem");
+					console.log ("HomeWizard data corrupt");
 					console.log(err);
 				}
-			}).catch(this.error); //catch unhandled rejection
-		} catch(err) {
-			console.log ("GetDeviceData - PRESET - HomeWizard data corrupt");
-			console.log(err);
+			});
+
 		}
-		}
-	})
-		.then(() => {
-			this.setAvailable().catch(this.error);
-		})
-		.catch(err => {
-			this.error(err);
-			this.setUnavailable(err).catch(this.error);
-		})
 	}
+	
 }
 
 

@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.1.3
+* Voltage support for P1 Dongle with 3 phase connection (1 phase does not have voltage datapoint in firmware sadly)
+* Rollback Homewizard preset code as getting undefined errors
+
 v3.1.2
 * New features P1 firmware (Peak/OffPeak & Dag/Nacht)
 * Bugfixes (Total usage KWH )
