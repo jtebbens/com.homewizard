@@ -143,7 +143,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
 
      if (data.active_power_l2_w !== undefined) {
-         if (!this.hasCapability('measure_power.l2')) {
+         if ((!this.hasCapability('measure_power.l2')) || (!this.hasCapability('measure_voltage.l3'))) {
            await this.addCapability('measure_power.l1').catch(this.error);
            await this.addCapability('measure_power.l2').catch(this.error);
            await this.addCapability('measure_power.l3').catch(this.error);
@@ -179,10 +179,16 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       }
       else if (data.active_power_l2_w === undefined) {
-        if (this.hasCapability('measure_power.l2')) {
+        if ((this.hasCapability('measure_power.l2')) || (this.hasCapability('measure_current.l3')) || (this.hasCapability('measure_voltage.l3'))) {
           await this.removeCapability('measure_power.l1').catch(this.error);
           await this.removeCapability('measure_power.l2').catch(this.error);
           await this.removeCapability('measure_power.l3').catch(this.error);
+          await this.removeCapability('measure_current.l1').catch(this.error);
+          await this.removeCapability('measure_current.l2').catch(this.error);
+          await this.removeCapability('measure_current.l3').catch(this.error);
+          await this.removeCapability('measure_voltage.l1').catch(this.error);
+          await this.removeCapability('measure_voltage.l2').catch(this.error);
+          await this.removeCapability('measure_voltage.l3').catch(this.error);
           await this.removeCapability('measure_power.active_power_w').catch(this.error);
         }
       }

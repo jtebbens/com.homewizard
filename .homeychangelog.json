@@ -184,5 +184,11 @@
   },
   "3.1.3": {
     "en": "Added volt support P1 dongle (3phase types) and code change Homewizard legacy preset changes (rollback to avoid undefined error)"
+  },
+  "3.1.4": {
+    "en": "Bug fix voltage. 3 decimal support for KwH P1 device"
+  },
+  "3.1.5": {
+    "en": "Remove Amp 2 and 3 from Phase 1 P1 dongle"
   }
 }
