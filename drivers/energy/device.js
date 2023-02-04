@@ -174,7 +174,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
           this.setCapabilityValue("measure_voltage.l2", data.active_voltage_l2_v).catch(this.error);
         if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
-          this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_va).catch(this.error);  
+          this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_v).catch(this.error);  
 
 
       }

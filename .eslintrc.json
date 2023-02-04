@@ -1,17 +1,13 @@
-module.exports = {
-  env: {
-    browser: true,
-    es2021: true,
-    node: true
+{
+  "extends": "eslint:recommended",
+  "env": {
+    "node":  true,
+    "es6": true,
+    "mocha": true,
+    "browser": true
   },
-  extends: 'eslint:recommended',
-  overrides: [
-  ],
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module'
-  },
-  rules: {
+  "linebreak-style": 0,
+  "rules": {
     "no-mixed-spaces-and-tabs": 0, // disable rule
     "callback-return": "off",
     "handle-callback-err": "error",
@@ -23,4 +19,5 @@ module.exports = {
     "no-await-in-loop": "error",
     "array-callback-return" : "error"
   }
+
 }

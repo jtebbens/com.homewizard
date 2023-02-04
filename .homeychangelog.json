@@ -190,5 +190,8 @@
   },
   "3.1.5": {
     "en": "Remove Amp 2 and 3 from Phase 1 P1 dongle"
+  },
+  "3.1.6": {
+    "en": "Typo fix for Phase3 Volt value being empty"
   }
 }

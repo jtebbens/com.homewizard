@@ -4,7 +4,7 @@
 //const AbortController = require('abort-controller');
 const axios = require("axios");
 //const getJson = require("axios-get-json-response");
-axios.defaults.timeout === 25000;
+axios.defaults.timeout === 18000;
 const Homey = require('homey');
 
 
@@ -44,7 +44,7 @@ homewizard.callnew = async function (device_id, uri_part, callback) {
     var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
     var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
     // Using the Request Config
-    await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: controller.signal, timeout: 25000, keepalive: false, maxRedirects: 0 })
+    await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: controller.signal, timeout: 18000, keepalive: false, maxRedirects: 0 })
     .then((response) => {
        //let parsedJson = response.data;
        return response.data; //return json
