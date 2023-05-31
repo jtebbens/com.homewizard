@@ -1,0 +1,9 @@
+{
+    "type": "node",
+    "request": "attach",
+    "name": "Attach to Homey",
+    "address": "192.168.1.115",        
+    "port": 9229,
+    "localRoot": "${workspaceFolder}",
+    "remoteRoot": "/"
+}

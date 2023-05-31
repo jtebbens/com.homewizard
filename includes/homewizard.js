@@ -28,19 +28,24 @@ module.exports = (function(){
       callback(self.devices);
    };
 
-   homewizard.getDeviceData = function(device_id, data_part, callback) {
-
-      if (typeof self.devices[device_id] === 'undefined' || typeof self.devices[device_id].polldata === 'undefined' || typeof self.devices[device_id].polldata[data_part] === 'undefined') {
-         callback([]);
-      } else {
-         callback(self.devices[device_id].polldata[data_part]);
-      }
-   };
+   homewizard.getDeviceData = function(device_id, data_part) {
+      return new Promise((resolve, reject) => {
+        if (
+          typeof self.devices[device_id] === 'undefined' ||
+          typeof self.devices[device_id].polldata === 'undefined' ||
+          typeof self.devices[device_id].polldata[data_part] === 'undefined'
+        ) {
+          resolve([]);
+        } else {
+          resolve(self.devices[device_id].polldata[data_part]);
+        }
+      });
+    };
 
 homewizard.callnew = async function (device_id, uri_part, callback) {
  let controller = new AbortController();
  try {
-  if ((typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
+  if ((typeof self.devices[device_id] !== undefined) && (typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
     var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
     var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
     // Using the Request Config
@@ -84,6 +89,12 @@ homewizard.callnew = async function (device_id, uri_part, callback) {
 controller.abort();
 }
 
+
+// Check Homey2023 platform
+const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2
+
+
+if (!Homey2023) {
     homewizard.ledring_pulse = function(device_id, colorName) {
       var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
       if (homewizard_ledring) {
@@ -101,6 +112,7 @@ controller.abort();
         );
       }
    };
+};
 
    homewizard.startpoll = function() {
          homewizard.poll();
@@ -112,7 +124,7 @@ controller.abort();
    homewizard.poll = async function() {
 
    Object.keys(self.devices).forEach(async function (device_id) {
-            if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined')) {
+            if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined') || (typeof self.devices[device_id].polldata == undefined)) {
                self.devices[device_id].polldata = [];
             }
             await homewizard.callnew(device_id, '/get-sensors', function(err, response) {

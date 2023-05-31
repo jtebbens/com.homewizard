@@ -8,7 +8,7 @@ const POLL_STATE_INTERVAL = 1000 * 5; // 5 seconds
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
-  onInit() {
+  async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     this.onPollStateInterval = setInterval(this.onPollState.bind(this), POLL_STATE_INTERVAL);
 

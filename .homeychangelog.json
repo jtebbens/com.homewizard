@@ -193,5 +193,11 @@
   },
   "3.1.6": {
     "en": "Typo fix for Phase3 Volt value being empty"
+  },
+  "3.1.7": {
+    "en": "Added custom import and export total kwh meters and triggers for better tracking energy usage"
+  },
+  "3.2.0": {
+    "en": "Improved Heatlink"
   }
 }

@@ -7,7 +7,7 @@ const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
 module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
-  onInit() {
+  async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
   }
 
@@ -23,7 +23,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     this.onPoll();
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  async onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();

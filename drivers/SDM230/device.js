@@ -7,7 +7,7 @@ const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
-  onInit() {
+  async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     if (this.getClass() == 'sensor') {
       this.setClass('socket');

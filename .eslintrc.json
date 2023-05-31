@@ -17,7 +17,8 @@
     "no-return-await": "error",
     "no-catch-shadow": "error",
     "no-await-in-loop": "error",
-    "array-callback-return" : "error"
+    "array-callback-return" : "error",
+    "no-invalid-this" : "error"
   }
 
 }

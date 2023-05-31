@@ -11,7 +11,7 @@ var devices = {};
 
 class HomeWizardWattcher extends Homey.Device {
 
-	onInit() {
+	async onInit() {
 
 		console.log('HomeWizard Wattcher '+this.getName() +' has been inited');
 
@@ -48,14 +48,17 @@ class HomeWizardWattcher extends Homey.Device {
 	}
 
 
-	getStatus() {
+	async getStatus() {
 
 		var me = this;
 
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
+		
+			try {
 
-			homewizard.getDeviceData(homewizard_id, 'energymeters', function(callback) {
+				const callback = await homewizard.getDeviceData(homewizard_id, 'energymeters');
+			
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
@@ -79,7 +82,10 @@ class HomeWizardWattcher extends Homey.Device {
 						me.setUnavailable();
 					}
 				}
-			});
+			} catch (error) {
+				console.log('Windmeter data error', error);
+				me.setUnavailable();
+			}			
 		} else {
 			console.log('Wattcher settings not found, stop polling set unavailable');
 			this.setUnavailable();

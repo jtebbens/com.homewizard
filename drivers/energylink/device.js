@@ -97,11 +97,17 @@ class HomeWizardEnergylink extends Homey.Device {
 
 	}
 
-	getStatus() {
-		var homewizard_id = this.getSetting('homewizard_id');
+	async getStatus() {
 
-		var me = this;
-		homewizard.getDeviceData(homewizard_id, 'energylinks', async function(callback){
+		const homewizard_id = this.getSetting('homewizard_id');
+		const me = this;
+
+		try {
+
+			const callback = await homewizard.getDeviceData(homewizard_id, 'energylinks');
+
+		
+		//homewizard.getDeviceData(homewizard_id, 'energylinks', async function(callback){
 
 			if (Object.keys(callback).length > 0) {
 
@@ -313,16 +319,20 @@ class HomeWizardEnergylink extends Homey.Device {
 				}
 			}
 
-		});
+	} catch (err) {
+        console.log('ERROR Energylink getStatus', err);
+        me.setUnavailable();
+      }
 
 	}
 
-	getReadings() {
+	async getReadings() {
 
-		var homewizard_id = this.getSetting('homewizard_id');
+		const homewizard_id = this.getSetting('homewizard_id');
 
 		var me = this;
-		homewizard.getDeviceData(homewizard_id, 'energylink_el', async function (callback) {
+		try {
+			const callback = homewizard.getDeviceData(homewizard_id, 'energylink_el');
 
 			if (Object.keys(callback).length > 0) {
 				try {
@@ -369,7 +379,11 @@ class HomeWizardEnergylink extends Homey.Device {
 				}
 			}
 
-		});
+		
+	} catch (err) {
+        console.log('ERROR Energylink getReading', err);
+        me.setUnavailable();
+      }
 	}
 
 	onDeleted() {

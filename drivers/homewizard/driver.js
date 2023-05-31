@@ -1,12 +1,10 @@
 'use strict';
 
 const Homey = require('homey');
-//const request = require('request');
 const fetch = require('node-fetch');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
-//var refreshIntervalId;
 
 class HomeWizardDriver extends Homey.Driver {
     onInit() {

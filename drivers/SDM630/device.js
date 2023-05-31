@@ -7,7 +7,7 @@ const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
-  onInit() {
+  async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
   }
 
@@ -44,6 +44,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         await this.addCapability('measure_power').catch(this.error);
       }
 
+      if (!this.hasCapability('measure_power.active_power_w')) {
+        await this.addCapability('measure_power.active_power_w').catch(this.error);
+      }
+      
       if (!this.hasCapability('meter_power.consumed.t1')) {
         await this.addCapability('meter_power.consumed.t1').catch(this.error);
       //  await this.addCapability('meter_power.consumed.t2').catch(this.error);

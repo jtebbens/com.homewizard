@@ -17,7 +17,7 @@ var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
-	onInit() {
+	async onInit() {
 
 		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
@@ -64,25 +64,25 @@ class HomeWizardDevice extends Homey.Device {
 
 	}
 
-	getStatus(devices) {
+	async getStatus(devices) {
 
 		var me = this;
 
 		var homey_lang = this.homey.i18n.getLanguage();
 
 		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
-
+			await homewizard.getDeviceData(devices[index].getData().id, 'preset') 
+      .then(callback =>{ // async added
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
 						if (debug) {me.log('Preset was set to ' + callback);}
 
 						devices[index].getStoreValue('preset', callback);
 					}
-
+					
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						await devices[index].setStoreValue('preset', callback).catch(me.error);
+						devices[index].setStoreValue('preset', callback).catch(me.error);
 
 						if (debug) {me.log('Flow call! -> ' + callback);}
 
@@ -99,8 +99,11 @@ class HomeWizardDevice extends Homey.Device {
 					console.log ("HomeWizard data corrupt");
 					console.log(err);
 				}
-			});
-
+			})
+      // End of getDeviceData
+      .catch(err => {
+        console.log('Error getting device data:', err);
+      });
 		}
 	}
 	
