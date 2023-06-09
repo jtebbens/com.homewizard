@@ -225,7 +225,42 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         }
       }
 
+      //Belgium 
+      if (data.montly_power_peak_w !== undefined) {
+        if (!this.hasCapability('measure_power.montly_power_peak')) {
+          await this.addCapability('measure_power.montly_power_peak').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_power.montly_power_peak') != data.montly_power_peak_w)
+								  await this.setCapabilityValue("measure_power.montly_power_peak", data.montly_power_peak_w).catch(this.error);
+      }
+      else if ((data.montly_power_peak_w == undefined) && (this.hasCapability('measure_power.montly_power_peak'))) {
+        await this.removeCapability('measure_power.montly_power_peak').catch(this.error);
+      }
 
+      //active_voltage_l1_v Some P1 meters do have voltage data
+      if (data.active_voltage_l1_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l1')) {
+          await this.addCapability('measure_voltage.l1').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
+								  await this.setCapabilityValue("measure_voltage.l1", data.active_voltage_l1_v).catch(this.error);
+      }
+      else if ((data.active_voltage_l1_v == undefined) && (this.hasCapability('measure_voltage.l1'))) {
+        await this.removeCapability('measure_voltage.l1').catch(this.error);
+      }
+
+      //active_current_l1_a Some P1 meters do have amp data
+      if (data.active_current_l1_a !== undefined) {
+        if (!this.hasCapability('measure_current.l1')) {
+          await this.addCapability('measure_current.l1').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
+								  await this.setCapabilityValue("measure_current.l1", data.active_current_l1_a).catch(this.error);
+      }
+      else if ((data.active_current_l1_a == undefined) && (this.hasCapability('measure_current.l1'))) {
+        await this.removeCapability('measure_current.l1').catch(this.error);
+      }
+      
     })
       .then(() => {
         this.setAvailable().catch(this.error);

@@ -71,47 +71,55 @@ class HomeWizardEnergylink extends Homey.Device {
 
 	startPolling() {
 
-		var me = this;
-		refreshIntervalId = setInterval(function () {
+		// Clear interval
+		if (this.refreshIntervalId) {
+				clearInterval(this.refreshIntervalId);
+		}
+
+		this.refreshIntervalId = setInterval(() => {
 
 			if (debug) {console.log("--Start Energylink Polling-- ");}
-			if (debug) {console.log(me.getSetting('homewizard_id'));}
-			if(me.getSetting('homewizard_id') !== undefined ) {
-				if (debug) {console.log('Poll for '+me.getName());}
+			if (debug) {console.log(this.getSetting('homewizard_id'));}
+			if(this.getSetting('homewizard_id') !== undefined ) {
+				if (debug) {console.log('Poll for '+this.getName());}
 
-				me.getStatus();
+				this.getStatus();
 			}
 
-		}, 1000 * 15);
+		}, 1000 * 20);
 
-		refreshIntervalIdReadings = setInterval(function () {
+		// Clear interval
+		if (this.refreshIntervalIdReadings) {
+					clearInterval(this.refreshIntervalIdReadings);
+		}
+
+		this.refreshIntervalIdReadings = setInterval(() => {
 			if (debug) {console.log("--Start Energylink Readings Polling-- ");}
 
-			if(me.getSetting('homewizard_id') !== undefined ) {
-				if (debug) {console.log('Poll for ' + me.getName());}
+			if(this.getSetting('homewizard_id') !== undefined ) {
+				if (debug) {console.log('Poll for ' + this.getName());}
 
-				me.getReadings();
+				this.getReadings();
 
 			}
 		}, 1000 * 60);
 
 	}
 
-	async getStatus() {
 
+	async getStatus() {
+		
 		const homewizard_id = this.getSetting('homewizard_id');
+
 		const me = this;
 
+//		homewizard.getDeviceData(homewizard_id, 'energylinks', async function(callback){
+		const callback = await homewizard.getDeviceData(homewizard_id, 'energylinks');
 		try {
-
-			const callback = await homewizard.getDeviceData(homewizard_id, 'energylinks');
-
-		
-		//homewizard.getDeviceData(homewizard_id, 'energylinks', async function(callback){
 
 			if (Object.keys(callback).length > 0) {
 
-				try {
+			//	try {
 
 					me.setAvailable();
 					var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
@@ -312,27 +320,24 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setStoreValue("last_meter_power_aggr",energy_daytotal_aggr);
 
 					}
+				} else {
+					this.setUnavailable('No Energylink data available');
+				}
 
-				} catch (err) {
+				} catch (error) {
 					console.log(err);
 					me.setUnavailable();
 				}
-			}
-
-	} catch (err) {
-        console.log('ERROR Energylink getStatus', err);
-        me.setUnavailable();
-      }
-
 	}
+		
 
-	async getReadings() {
 
-		const homewizard_id = this.getSetting('homewizard_id');
+	getReadings() {
+
+		var homewizard_id = this.getSetting('homewizard_id');
 
 		var me = this;
-		try {
-			const callback = homewizard.getDeviceData(homewizard_id, 'energylink_el');
+		homewizard.getDeviceData(homewizard_id, 'energylink_el', async function (callback) {
 
 			if (Object.keys(callback).length > 0) {
 				try {
@@ -379,11 +384,7 @@ class HomeWizardEnergylink extends Homey.Device {
 				}
 			}
 
-		
-	} catch (err) {
-        console.log('ERROR Energylink getReading', err);
-        me.setUnavailable();
-      }
+		});
 	}
 
 	onDeleted() {

@@ -4,8 +4,7 @@
   "description": "Homewizard app for Homey",
   "main": "app.js",
   "dependencies": {
-    "axios": "^1.2.0",
-    "axios-get-json-response": "^1.0.1",
+    "abort-controller": "^3.0.0",
     "node-fetch": "^2.6.7",
     "save": "^2.4.0"
   },

@@ -11,7 +11,7 @@ var devices = {};
 
 class HomeWizardWattcher extends Homey.Device {
 
-	async onInit() {
+	onInit() {
 
 		console.log('HomeWizard Wattcher '+this.getName() +' has been inited');
 
@@ -30,35 +30,74 @@ class HomeWizardWattcher extends Homey.Device {
 
 	startPolling() {
 
-		var me = this;
-
 		// Clear interval
-		if (refreshIntervalId) {
-			clearInterval(refreshIntervalId);
+		if (this.refreshIntervalId) {
+			clearInterval(this.refreshIntervalId);
 		}
 
 		// Start polling for thermometer
-		refreshIntervalId = setInterval(function () {
+		this.refreshIntervalId = setInterval(() => {
 			console.log("--Start Wattcher Polling-- ");
 
-			me.getStatus();
+			this.getStatus();
 
 		}, 1000 * 20 );
 
 	}
 
+	getStatus() {
+		if (this.getSetting('homewizard_id') !== undefined) {
+			const homewizard_id = this.getSetting('homewizard_id');
+			//var me = this;
+	
+			return homewizard.getDeviceData(homewizard_id, 'energymeters')
+				.then(callback => {
+					if (Object.keys(callback).length > 0) {
+						this.setAvailable();
+	
+						this.log('Start capturing data');
+	
+						const energy_current_cons = callback[0].po; // WATTS Energy used JSON $energymeters[0]['po']
+						const energy_daytotal_cons = callback[0].dayTotal; // KWH Energy used JSON $energymeters[0]['dayTotal']
+	
+						// Wattcher elec current
+						this.setCapabilityValue('measure_power', energy_current_cons);
+						// Wattcher elec total day
+						this.setCapabilityValue('meter_power', energy_daytotal_cons);
+	
+						this.log('End capturing data');
+						console.log('Wattcher usage- ' + energy_current_cons);
+						console.log('Wattcher Daytotal- ' + energy_daytotal_cons);
+					}
+				})
+				.catch(err => {
+					console.log('ERROR Wattcher getStatus ', err);
+					this.setUnavailable();
+				});
+		} else {
+			console.log('Wattcher settings not found, stop polling set unavailable');
+			this.setUnavailable();
+	
+			// Only clear interval when the unavailable device is the only device on this driver
+			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
+	
+			if (Object.keys(devices).length === 1) {
+				clearInterval(this.refreshIntervalId);
+			}
+		}
+	}
+	
 
-	async getStatus() {
+/*
+	getStatus() {
 
 		var me = this;
 
 		if(this.getSetting('homewizard_id') !== undefined ) {
 			var homewizard_id = this.getSetting('homewizard_id');
-		
-			try {
 
-				const callback = await homewizard.getDeviceData(homewizard_id, 'energymeters');
-			
+			homewizard.getDeviceData(homewizard_id, 'energymeters', function(callback) {
 				if (Object.keys(callback).length > 0) {
 					try {
 						me.setAvailable();
@@ -82,10 +121,7 @@ class HomeWizardWattcher extends Homey.Device {
 						me.setUnavailable();
 					}
 				}
-			} catch (error) {
-				console.log('Windmeter data error', error);
-				me.setUnavailable();
-			}			
+			});
 		} else {
 			console.log('Wattcher settings not found, stop polling set unavailable');
 			this.setUnavailable();
@@ -99,11 +135,12 @@ class HomeWizardWattcher extends Homey.Device {
 			}
 		}
 	}
+	*/
 
 	onDeleted() {
 
 		if (Object.keys(devices).length === 0) {
-			clearInterval(refreshIntervalId);
+			clearInterval(this.refreshIntervalId);
 			console.log("--Stopped Polling--");
 		}
 

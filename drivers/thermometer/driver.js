@@ -1,11 +1,6 @@
 'use strict';
 
 const Homey = require('homey');
-//const request = require('request');
-
-
-//const { ManagerDrivers } = require('homey');
-//const driver = ManagerDrivers.getDriver('homewizard');
 
 var devices = {};
 var homewizard = require('./../../includes/homewizard.js');
@@ -41,9 +36,9 @@ class HomeWizardThermometer extends Homey.Driver {
         await socket.setHandler('get_homewizards', async () => {
 
             //homewizard_devices = driver.getDevices();
-            homewizard_devices = await this.homey.drivers.getDriver('homewizard').getDevices();
+            homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-            await homewizard.getDevices(function ( homewizard_devices)  {
+            homewizard.getDevices(function ( homewizard_devices)  {
                 var hw_devices = {};
 
                 Object.keys(homewizard_devices).forEach(function (key) {

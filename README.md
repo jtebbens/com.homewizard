@@ -4,8 +4,14 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v3.2.0
+v3.2.3
+* Attempt to cleanup callback calls and replace them with Promise/Resolve
+* P1 fixing voltage for those that have that info
+
+v3.2.1
 * Improved Heatlink (Water pressure, Boiler temperature)
+* Fallback to node-fetch as Axios 1.4.0 giving problems (Added retry & abortcontroller code)
+* P1 - monthly peak watt (Belgium specific P1 meter value)
 
 v3.1.7
 * New icon thermometer

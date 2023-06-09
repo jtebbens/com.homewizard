@@ -1,12 +1,10 @@
 'use strict';
-//var tcpPortUsed = require('tcp-port-used');
-//const fetch = require('node-fetch');
-//const AbortController = require('abort-controller');
-const axios = require("axios");
-//const getJson = require("axios-get-json-response");
-axios.defaults.timeout === 18000;
-const Homey = require('homey');
 
+const fetch = require('node-fetch');
+const Homey = require('homey');
+const AbortController = require('abort-controller');
+
+const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 
 module.exports = (function(){
@@ -28,103 +26,154 @@ module.exports = (function(){
       callback(self.devices);
    };
 
-   homewizard.getDeviceData = function(device_id, data_part) {
-      return new Promise((resolve, reject) => {
-        if (
-          typeof self.devices[device_id] === 'undefined' ||
-          typeof self.devices[device_id].polldata === 'undefined' ||
-          typeof self.devices[device_id].polldata[data_part] === 'undefined'
-        ) {
-          resolve([]);
-        } else {
-          resolve(self.devices[device_id].polldata[data_part]);
-        }
-      });
-    };
+   /*
+   homewizard.getDeviceData = function(device_id, data_part, callback) {
 
-homewizard.callnew = async function (device_id, uri_part, callback) {
- let controller = new AbortController();
- try {
-  if ((typeof self.devices[device_id] !== undefined) && (typeof self.devices[device_id] !== 'undefined') && ("settings" in self.devices[device_id]) && ("homewizard_ip" in self.devices[device_id].settings) && ("homewizard_pass" in self.devices[device_id].settings)) {
-    var homewizard_ip = self.devices[device_id].settings.homewizard_ip;
-    var homewizard_pass = self.devices[device_id].settings.homewizard_pass;
-    // Using the Request Config
-    await axios.get('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {signal: controller.signal, timeout: 18000, keepalive: false, maxRedirects: 0 })
-    .then((response) => {
-       //let parsedJson = response.data;
-       return response.data; //return json
-     })
-     .then((jsonData) => {
-       callback(null, jsonData.response)
-     })
-     .catch((error) => {
-       // Error
-         controller.abort();
-         if (error.response) {
-         /*
-          * The request was made and the server responded with a
-          * status code that falls out of the range of 2xx
-          */
-         console.log('Error Response Data', error.response.data);
-         console.log('Error Response Status', error.response.status);
-         console.log('Error Response Headers', error.response.headers);
-     } else if (error.request) {
-         /*
-          * The request was made but no response was received, `error.request`
-          * is an instance of XMLHttpRequest in the browser and an instance
-          * of http.ClientRequest in Node.js
-          */
-         console.log('Error Homewizard Request - CONNECTION PROBLEM');
-     } else {
-         // Something happened in setting up the request and triggered an Error
-         console.log('Error', error.message);
-     }
-
-     });
-   }
-} catch (error) {
-  controller.abort();
-  console.error(error);
-}
-controller.abort();
-}
-
-
-// Check Homey2023 platform
-const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2
-
-
-if (!Homey2023) {
-    homewizard.ledring_pulse = function(device_id, colorName) {
-      var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
-      if (homewizard_ledring) {
-        Homey.manager('ledring').animate(
-            'pulse', // animation name (choose from loading, pulse, progress, solid)
-            {
-                color: colorName,
-            },
-            'INFORMATIVE', // priority
-            3000, // duration
-            function(err) { // callback
-                if(err) return Homey.error(err);
-                console.log("Ledring pulsing "+colorName);
-            }
-        );
+      if (typeof self.devices[device_id] === 'undefined' || 
+          typeof self.devices[device_id].polldata === 'undefined' || 
+          typeof self.devices[device_id].polldata[data_part] === 'undefined' ||
+          typeof self.devices[device_id] === undefined ||
+          typeof self.devices[device_id].polldata === undefined || 
+          typeof self.devices[device_id].polldata[data_part] === undefined)
+          {
+         callback([]);
+      } else {
+         callback(self.devices[device_id].polldata[data_part]);
       }
    };
+
+   */
+
+   homewizard.getDeviceData = function(device_id, data_part) {
+    return new Promise((resolve, reject) => {
+      if (
+        typeof self.devices[device_id] === 'undefined' ||
+        typeof self.devices[device_id].polldata === 'undefined' ||
+        typeof self.devices[device_id].polldata[data_part] === 'undefined' ||
+        typeof self.devices[device_id] === undefined ||
+        typeof self.devices[device_id].polldata === undefined || 
+        typeof self.devices[device_id].polldata[data_part] === undefined
+      ) {
+        resolve([]);
+      } else {
+        resolve(self.devices[device_id].polldata[data_part]);
+      }
+    });
+  };
+  
+   async function fetchWithRetry(url, options, maxRetries = 3) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, options.timeout);
+    
+      try {
+        options.signal = controller.signal;
+        options.redirect = 'manual'; //try
+        options.follow = 0; //try
+        let retries = 0;
+        while (retries < maxRetries) {
+          try {
+            const response = await fetch(url, options);
+            clearTimeout(timeout);
+            return response;
+          } catch (error) {
+            retries++;
+            console.error(`Retry attempt ${retries}: ${error}`);
+          }
+        }
+        throw new Error(`Failed to fetch after ${maxRetries} retries.`);
+      } catch (error) {
+        clearTimeout(timeout);
+        throw error;
+      }
+    }
+
+    homewizard.callnew = async function (device_id, uri_part, callback) {
+      try {
+        if (debug) {
+          console.log('Call device ' + device_id);
+        }
+        if (
+          typeof self.devices[device_id] !== 'undefined' &&
+          "settings" in self.devices[device_id] &&
+          "homewizard_ip" in self.devices[device_id].settings &&
+          "homewizard_pass" in self.devices[device_id].settings
+        ) {
+          const homewizard_ip = self.devices[device_id].settings.homewizard_ip;
+          const homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+    
+          const response = await fetchWithRetry('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
+            timeout: 18000
+          });
+    
+          if (response.status === 200) {
+            const jsonData = await response.json();
+            if (
+              jsonData.status !== undefined &&
+              jsonData.status === 'ok'
+            ) {
+              if (typeof callback === 'function') {
+                callback(null, jsonData.response);
+              } else {
+                console.log('Not typeof function');
+              }
+            } else {
+              console.log('jsonData.status not ok');
+              callback('Invalid data', []);
+            }
+          } else {
+            console.log('Error: no clue what is going on here.');
+            callback('Error', []);
+          }
+        } else {
+          console.log('Homewizard ' + device_id + ': settings not found!');
+        }
+      } catch (error) {
+        if (error.code === 'ECONNRESET') {
+          console.log('Connection was reset');
+        }
+        console.error('FETCH PROBLEM -> ' + error);
+      }
+    };
+
+  if (!Homey2023) {
+   homewizard.ledring_pulse = function(device_id, colorName) {
+     var homewizard_ledring =  self.devices[device_id].settings.homewizard_ledring;
+     if (homewizard_ledring) {
+       Homey.manager('ledring').animate(
+           'pulse', // animation name (choose from loading, pulse, progress, solid)
+           {
+               color: colorName,
+           },
+           'INFORMATIVE', // priority
+           3000, // duration
+           function(err) { // callback
+               if(err) return Homey.error(err);
+               console.log("Ledring pulsing "+colorName);
+           }
+       );
+     }
+  };
 };
 
-   homewizard.startpoll = function() {
-         homewizard.poll();
-         self.polls.device_id = setInterval(function () {
-            homewizard.poll();
-         }, 1000 * 20);
-   };
+homewizard.startpoll = function() {
+   homewizard.poll(); // Initial poll
+ 
+   self.polls.device_id = setInterval(async function() {
+     try {
+       await homewizard.poll();
+     } catch (error) {
+       console.error('Error occurred during polling:', error);
+     }
+   }, 1000 * 20);
+ };
 
-   homewizard.poll = async function() {
+/*
+ homewizard.poll = function() {
 
    Object.keys(self.devices).forEach(async function (device_id) {
-            if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined') || (typeof self.devices[device_id].polldata == undefined)) {
+      if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined') || (typeof self.devices[device_id].polldata == undefined)) {
                self.devices[device_id].polldata = [];
             }
             await homewizard.callnew(device_id, '/get-sensors', function(err, response) {
@@ -140,7 +189,7 @@ if (!Homey2023) {
 
                   if (Object.keys(response.energylinks).length !== 0) {
 
-                    homewizard.callnew(device_id, '/el/get/0/readings', async function(err, response2) {
+                     homewizard.callnew(device_id, '/el/get/0/readings', function(err, response2) {
                         if(err == null) {
                            self.devices[device_id].polldata.energylink_el = response2;
                            if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}
@@ -154,6 +203,57 @@ if (!Homey2023) {
 
 
    };
+   */
+  
+   homewizard.poll = async function() {
+      for (const device_id in self.devices) {
+        if (
+          typeof self.devices[device_id].polldata === 'undefined' ||
+          typeof self.devices[device_id].polldata == 'undefined' ||
+          typeof self.devices[device_id].polldata == undefined
+        ) {
+          self.devices[device_id].polldata = [];
+        }
+    
+        const response = await new Promise((resolve, reject) => {
+          homewizard.callnew(device_id, '/get-sensors', (err, response) => {
+            if (err === null || err == null) {
+              resolve(response);
+            } else {
+              reject(err);
+            }
+          });
+        });
+    
+        if (response) {
+          self.devices[device_id].polldata.preset = response.preset;
+          self.devices[device_id].polldata.heatlinks = response.heatlinks;
+          self.devices[device_id].polldata.energylinks = response.energylinks;
+          self.devices[device_id].polldata.energymeters = response.energymeters;
+          self.devices[device_id].polldata.thermometers = response.thermometers;
+          self.devices[device_id].polldata.rainmeters = response.rainmeters;
+          self.devices[device_id].polldata.windmeters = response.windmeters;
+          self.devices[device_id].polldata.kakusensors = response.kakusensors;
+    
+          if (Object.keys(response.energylinks).length !== 0) {
+            await new Promise((resolve, reject) => {
+              homewizard.callnew(device_id, '/el/get/0/readings', (err, response2) => {
+                if (err == null) {
+                  self.devices[device_id].polldata.energylink_el = response2;
+                  if (debug) {
+                    console.log('HW-Data polled for slimme meter: ' + device_id);
+                  }
+                  resolve();
+                } else {
+                  reject(err);
+                }
+              });
+            });
+          }
+        }
+      }
+    };
+    
 
    return homewizard;
 })();

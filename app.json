@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.1",
+  "version": "3.2.3",
   "platforms": [
     "local"
   ],
@@ -1364,6 +1364,7 @@
         "measure_voltage.l1",
         "measure_voltage.l2",
         "measure_voltage.l3",
+        "measure_power.montly_power_peak",
         "rssi",
         "tariff"
       ],
@@ -1485,6 +1486,12 @@
           "title": {
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_power.montly_power_peak": {
+          "title": {
+            "en": "Monthly Power Peak",
+            "nl": "Maandelijks piekvermogen"
           }
         }
       },

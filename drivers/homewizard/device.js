@@ -17,7 +17,7 @@ var debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
-	async onInit() {
+	onInit() {
 
 		if (debug) {console.log('HomeWizard Appliance has been inited');}
 
@@ -49,40 +49,93 @@ class HomeWizardDevice extends Homey.Device {
 
 	startPolling(devices) {
 
-		var me = this;
-
-		if (refreshIntervalId) {
-			clearInterval(refreshIntervalId);
+		if (this.refreshIntervalId) {
+			clearInterval(this.refreshIntervalId);
 		}
-		refreshIntervalId = setInterval(function () {
-			if (debug) {me.log("--Start HomeWizard Polling-- ");}
-			if (debug) {console.log("--Start HomeWizard Polling-- ");}
+		this.refreshIntervalId = setInterval(() => {
+			if (debug) {this.log("--Start HomeWizard Polling-- ");}
+			if (debug) {this.log("--Start HomeWizard Polling-- ");}
 
-				me.getStatus(devices);
+				this.getStatus(devices);
 
 		}, 1000 * 20);
 
 	}
 
-	async getStatus(devices) {
+	getStatus(devices) {
+		Promise.resolve()
+		.then(async () => {
+
+				var me = this;
+				var homey_lang = this.homey.i18n.getLanguage();
+			
+				devices.forEach(async (device) => {
+				try {
+					const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
+			
+					if (device.getStoreValue('preset') === null) {
+					if (debug) {
+						me.log('Preset was set to ' + callback);
+					}
+					device.setStoreValue('preset', callback);
+					}
+			
+					if (device.getStoreValue('preset') !== callback) {
+					await device.setStoreValue('preset', callback).catch(me.error);
+			
+					if (debug) {
+						me.log('Flow call! -> ' + callback);
+					}
+			
+					var preset_text;
+					if (homey_lang === 'nl') {
+						preset_text = preset_text_nl[callback];
+					} else {
+						preset_text = preset_text_en[callback];
+					}
+			
+					me.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text });
+			
+					if (debug) {
+						me.log('Preset was changed! ->' + preset_text);
+					}
+					}
+				} catch (err) {
+					console.log('HomeWizard data corrupt');
+					console.log(err);
+				}
+				});
+		})
+		.then(() => {
+			this.setAvailable().catch(this.error);
+		})
+		.catch(err => {
+			this.error(err);
+			this.setUnavailable(err).catch(this.error);
+		});
+	  } //end of getstatus
+	  
+
+	/*
+	getStatus(devices) {
 
 		var me = this;
 
 		var homey_lang = this.homey.i18n.getLanguage();
 
 		for (var index in devices) {
-			await homewizard.getDeviceData(devices[index].getData().id, 'preset') 
-      .then(callback =>{ // async added
+			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
+
 				try {
 					if (devices[index].getStoreValue('preset') === null) {
 						if (debug) {me.log('Preset was set to ' + callback);}
 
 						devices[index].getStoreValue('preset', callback);
 					}
-					
+
 					if (devices[index].getStoreValue('preset') != callback) {
 
-						devices[index].setStoreValue('preset', callback).catch(me.error);
+						await devices[index].setStoreValue('preset', callback).catch(me.error);
 
 						if (debug) {me.log('Flow call! -> ' + callback);}
 
@@ -98,15 +151,13 @@ class HomeWizardDevice extends Homey.Device {
 				} catch(err) {
 					console.log ("HomeWizard data corrupt");
 					console.log(err);
-				}
-			})
-      // End of getDeviceData
-      .catch(err => {
-        console.log('Error getting device data:', err);
-      });
+				};
+			});
+
 		}
-	}
-	
+	};
+*/
+
 }
 
 

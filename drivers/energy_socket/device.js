@@ -133,7 +133,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         this.setAvailable().catch(this.error);
       })
       .catch(err => {
+        if (err.code === 'ECONNRESET') {
+          // Handle the ECONNRESET error
+          console.log('Connection was reset');
+        } else {
         this.error(err);
+        }
         this.setUnavailable(err).catch(this.error);
       })
   }

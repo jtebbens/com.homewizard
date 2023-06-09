@@ -199,5 +199,14 @@
   },
   "3.2.0": {
     "en": "Improved Heatlink"
+  },
+  "3.2.1": {
+    "en": "Replaced axios with node-fetch and additional retry & abort code. Belgium P1 value added for monthly peak watt"
+  },
+  "3.2.2": {
+    "en": "Text fix for new meter as it got the default measure_power"
+  },
+  "3.2.3": {
+    "en": "Code fix for P1 voltage & amp. Attempt to get rid of callback calls"
   }
 }
