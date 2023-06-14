@@ -3,6 +3,7 @@
 const fetch = require('node-fetch');
 const Homey = require('homey');
 const AbortController = require('abort-controller');
+const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
@@ -12,7 +13,7 @@ module.exports = (function(){
    var self = {};
    self.devices = [];
    self.polls = [];
-   var debug = false;
+   const debug = false;
 
    homewizard.setDevices = function(devices){
      self.devices = devices;
@@ -61,7 +62,7 @@ module.exports = (function(){
     });
   };
   
-   async function fetchWithRetry(url, options, maxRetries = 3) {
+   async function fetchWithRetry(url, options, maxRetries = 3, delay = 1000) {
       const controller = new AbortController();
       const timeout = setTimeout(() => {
         controller.abort();
@@ -80,6 +81,7 @@ module.exports = (function(){
           } catch (error) {
             retries++;
             console.error(`Retry attempt ${retries}: ${error}`);
+            await new Promise((resolve) => setTimeout(resolve, delay)); 
           }
         }
         throw new Error(`Failed to fetch after ${maxRetries} retries.`);
@@ -90,52 +92,68 @@ module.exports = (function(){
     }
 
     homewizard.callnew = async function (device_id, uri_part, callback) {
-      try {
-        if (debug) {
-          console.log('Call device ' + device_id);
-        }
-        if (
-          typeof self.devices[device_id] !== 'undefined' &&
-          "settings" in self.devices[device_id] &&
-          "homewizard_ip" in self.devices[device_id].settings &&
-          "homewizard_pass" in self.devices[device_id].settings
-        ) {
-          const homewizard_ip = self.devices[device_id].settings.homewizard_ip;
-          const homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+      const cacheKey = `${device_id}${uri_part}`;
+      const cachedResponse = cache[cacheKey]; // Check if cached response exists
+      const currentTime = Date.now();
     
-          const response = await fetchWithRetry('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-            timeout: 18000
-          });
+      if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
+        if (debug) {console.log('Using cached response for device:', device_id, 'endpoint:', uri_part);}
+        callback(null, cachedResponse.response); // Use the cached response
+      } else {
+        try {
+          if (debug) {
+            console.log('Call device ', device_id, 'endpoint:', uri_part);
+          }
+          if (
+            typeof self.devices[device_id] !== 'undefined' &&
+            "settings" in self.devices[device_id] &&
+            "homewizard_ip" in self.devices[device_id].settings &&
+            "homewizard_pass" in self.devices[device_id].settings
+          ) {
+            const homewizard_ip = self.devices[device_id].settings.homewizard_ip;
+            const homewizard_pass = self.devices[device_id].settings.homewizard_pass;
     
-          if (response.status === 200) {
-            const jsonData = await response.json();
-            if (
-              jsonData.status !== undefined &&
-              jsonData.status === 'ok'
-            ) {
-              if (typeof callback === 'function') {
-                callback(null, jsonData.response);
+            const response = await fetchWithRetry('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
+              timeout: 18000
+            });
+    
+            if (response.status === 200) {
+              const jsonData = await response.json();
+              if (
+                jsonData.status !== undefined &&
+                jsonData.status === 'ok'
+              ) {
+                if (typeof callback === 'function') {
+                  // Cache the response with timestamp
+                  cache[cacheKey] = {
+                    response: jsonData.response,
+                    timestamp: currentTime
+                  };
+    
+                  callback(null, jsonData.response);
+                } else {
+                  console.log('Not typeof function');
+                }
               } else {
-                console.log('Not typeof function');
+                console.log('jsonData.status not ok');
+                callback('Invalid data', []);
               }
             } else {
-              console.log('jsonData.status not ok');
-              callback('Invalid data', []);
+              console.log('Error: no clue what is going on here.');
+              callback('Error', []);
             }
           } else {
-            console.log('Error: no clue what is going on here.');
-            callback('Error', []);
+            console.log('Homewizard ' + device_id + ': settings not found!');
           }
-        } else {
-          console.log('Homewizard ' + device_id + ': settings not found!');
+        } catch (error) {
+          if (error.code === 'ECONNRESET') {
+            console.log('Connection was reset');
+          }
+          console.error('FETCH PROBLEM -> ' + error);
         }
-      } catch (error) {
-        if (error.code === 'ECONNRESET') {
-          console.log('Connection was reset');
-        }
-        console.error('FETCH PROBLEM -> ' + error);
       }
     };
+    
 
   if (!Homey2023) {
    homewizard.ledring_pulse = function(device_id, colorName) {
@@ -166,7 +184,7 @@ homewizard.startpoll = function() {
      } catch (error) {
        console.error('Error occurred during polling:', error);
      }
-   }, 1000 * 20);
+   }, 1000 * 15);
  };
 
 /*
@@ -237,6 +255,7 @@ homewizard.startpoll = function() {
     
           if (Object.keys(response.energylinks).length !== 0) {
             await new Promise((resolve, reject) => {
+              new Promise((resolve) => setTimeout(resolve, 2000));
               homewizard.callnew(device_id, '/el/get/0/readings', (err, response2) => {
                 if (err == null) {
                   self.devices[device_id].polldata.energylink_el = response2;

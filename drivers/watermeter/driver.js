@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const fetch = require('node-fetch');
 
+
 module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
   async onPairListDevices() {

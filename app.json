@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.3",
+  "version": "3.2.5",
   "platforms": [
     "local"
   ],
@@ -934,18 +934,21 @@
       },
       "capabilitiesOptions": {
         "meter_power.used": {
+          "decimals": 3,
           "title": {
             "en": "Day usage",
             "nl": "Dag gebruik"
           }
         },
         "meter_power.aggr": {
+          "decimals": 3,
           "title": {
             "en": "Overall usage",
             "nl": "Netto gebruik"
           }
         },
         "meter_power.s1": {
+          "decimals": 3,
           "title": {
             "en": "Day production",
             "nl": "Dag opbrengst"
@@ -958,6 +961,7 @@
           }
         },
         "meter_power.s1other": {
+          "decimals": 3,
           "title": {
             "en": "Day usage S1",
             "nl": "Dag gebruik S1"
@@ -976,6 +980,7 @@
           }
         },
         "meter_power.s2other": {
+          "decimals": 3,
           "title": {
             "en": "Day usage S2",
             "nl": "Dag gebruik S2"
@@ -994,18 +999,21 @@
           }
         },
         "meter_gas.today": {
+          "decimals": 3,
           "title": {
             "en": "Gas",
             "nl": "Gas"
           }
         },
         "meter_gas.reading": {
+          "decimals": 3,
           "title": {
             "en": "Meter reading gas",
             "nl": "Meterstand Gas"
           }
         },
         "meter_water": {
+          "decimals": 3,
           "title": {
             "en": "Water Total",
             "nl": "Water Totaal"
@@ -1018,24 +1026,28 @@
           }
         },
         "meter_power.consumed.t1": {
+          "decimals": 3,
           "title": {
             "en": "Meter reading low",
             "nl": "Stand laag tarief"
           }
         },
         "meter_power.produced.t1": {
+          "decimals": 3,
           "title": {
             "en": "Meter reading produced low",
             "nl": "Stand terug levering laag"
           }
         },
         "meter_power.consumed.t2": {
+          "decimals": 3,
           "title": {
             "en": "Meter reading normal",
             "nl": "Stand verbruik normaal"
           }
         },
         "meter_power.produced.t2": {
+          "decimals": 3,
           "title": {
             "en": "Meter reading produced normal",
             "nl": "Stand terug levering normaal"

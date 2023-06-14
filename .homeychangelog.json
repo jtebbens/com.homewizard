@@ -208,5 +208,11 @@
   },
   "3.2.3": {
     "en": "Code fix for P1 voltage & amp. Attempt to get rid of callback calls"
+  },
+  "3.2.4": {
+    "en": "Several bug fixes, see changelog"
+  },
+  "3.2.5": {
+    "en": "Homewizard Sensor Driver fix SDK3 problem"
   }
 }

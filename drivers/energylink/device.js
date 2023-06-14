@@ -1,9 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-var homewizard = require('./../../includes/homewizard.js');
+const homewizard = require('./../../includes/homewizard.js');
 
-var debug = false;
+const debug = false;
 
 var refreshIntervalId;
 var refreshIntervalIdReadings;
@@ -12,7 +12,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 	onInit() {
 
-		if (debug) { console.log('HomeWizard Energylink '+this.getName() +' has been inited'); }
+		console.log('HomeWizard Energylink: "'+this.getName() +'" has been added'); 
 
 		this.startPolling();
 
@@ -122,16 +122,16 @@ class HomeWizardEnergylink extends Homey.Device {
 			//	try {
 
 					me.setAvailable();
-					var value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
-					var value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
+					let value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
+					let value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
 					if (debug) {console.log("t1- " + value_s1);}
 					if (debug) {console.log("t2- " + value_s2);}
 
 					// Common Energylink data
-					var energy_current_cons = ( callback[0].used.po ); // WATTS Energy used JSON $energylink[0]['used']['po']
-					var energy_daytotal_cons = ( callback[0].used.dayTotal ); // KWH Energy used JSON $energylink[0]['used']['dayTotal']
-					var energy_daytotal_aggr = ( callback[0].aggregate.dayTotal ) ; // KWH Energy aggregated is used - generated $energylink[0]['aggregate']['dayTotal']
-					var energy_current_netto = ( callback[0].aggregate.po ); // Netto power usage from aggregated value, this value can go negative
+					let energy_current_cons = ( callback[0].used.po ); // WATTS Energy used JSON $energylink[0]['used']['po']
+					let energy_daytotal_cons = ( callback[0].used.dayTotal ); // KWH Energy used JSON $energylink[0]['used']['dayTotal']
+					let energy_daytotal_aggr = ( callback[0].aggregate.dayTotal ) ; // KWH Energy aggregated is used - generated $energylink[0]['aggregate']['dayTotal']
+					let energy_current_netto = ( callback[0].aggregate.po ); // Netto power usage from aggregated value, this value can go negative
 
 					// Some Energylink do not have gas information so try to get it else fail silently
 					try {
@@ -153,16 +153,16 @@ class HomeWizardEnergylink extends Homey.Device {
 					// Consumed elec total day
 					await me.setCapabilityValue('meter_power.used', energy_daytotal_cons).catch(me.error);
 					// Consumed elec total day
-				  await me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error);
+				    await me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error);
           // Disable meter_power
 					// me.removeCapability('meter_power');
 					// Set solar used to zero before counting
-					var solar_current_prod = 0;
-					var solar_daytotal_prod = 0;
-					var energy_current_prod = 0;
-					var energy_daytotal_prod = 0;
-					var water_current_cons = 0;
-					var water_daytotal_cons = 0;
+					let solar_current_prod = 0;
+					let solar_daytotal_prod = 0;
+					let energy_current_prod = 0;
+					let energy_daytotal_prod = 0;
+					let water_current_cons = 0;
+					let water_daytotal_cons = 0;
 
 
 					if (value_s1 == 'solar' ) {
@@ -290,7 +290,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						me.setStoreValue("last_meter_power_used",energy_daytotal_cons);
 					}
 
-          if (value_s1 != 'other' || value_s1 != 'car') {
+          			if (value_s1 != 'other' || value_s1 != 'car') {
 						if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
 					    	//console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod });
@@ -325,72 +325,61 @@ class HomeWizardEnergylink extends Homey.Device {
 				}
 
 				} catch (error) {
-					console.log(err);
+					console.log(error);
 					me.setUnavailable();
 				}
 	}
 		
 
 
-	getReadings() {
-
-		var homewizard_id = this.getSetting('homewizard_id');
-
-		var me = this;
-		homewizard.getDeviceData(homewizard_id, 'energylink_el', async function (callback) {
-
-			if (Object.keys(callback).length > 0) {
-				try {
-					me.setAvailable();
-
-					var metered_gas = callback[2].consumed;
-					var metered_electricity_consumed_t1 = callback[0].consumed;
-					var metered_electricity_produced_t1 = callback[0].produced;
-					var metered_electricity_consumed_t2 = callback[1].consumed;
-					var metered_electricity_produced_t2 = callback[1].produced;
-					var aggregated_meter_power = (metered_electricity_consumed_t1+metered_electricity_consumed_t2)-(metered_electricity_produced_t1+metered_electricity_produced_t2);
-
-					// Save export data
-
-					if (!me.hasCapability('meter_power')) {
-						await me.addCapability('meter_power').catch(me.error);
-					}
-
-					await me.setCapabilityValue("meter_gas.reading", metered_gas).catch(me.error);
-					await me.setCapabilityValue("meter_power", aggregated_meter_power).catch(me.error);
-					await me.setCapabilityValue("meter_power.consumed.t1", metered_electricity_consumed_t1).catch(me.error);
-					await me.setCapabilityValue("meter_power.produced.t1", metered_electricity_produced_t1).catch(me.error);
-					await me.setCapabilityValue("meter_power.consumed.t2", metered_electricity_consumed_t2).catch(me.error);
-					await me.setCapabilityValue("meter_power.produced.t2", metered_electricity_produced_t2).catch(me.error);
-
-					if (metered_electricity_produced_t1 != me.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
-					    	me.flowTriggerMeterReturnT1(me, { meter_power_produced_t1: metered_electricity_produced_t1 });
-								me.setStoreValue("last_meter_return_t1", metered_electricity_produced_t1);
-					}
-
-					if (metered_electricity_produced_t2 != me.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
-					    	me.flowTriggerMeterReturnT2(me, { meter_power_produced_t2: metered_electricity_produced_t2 });
-								me.setStoreValue("last_meter_return_t2", metered_electricity_produced_t2);
-					}
-
-
-				} catch (err) {
-					// Error with Energylink no data in Energylink
-					console.log("No Energylink found");
-					if(Object.keys(callback).length === 1) {
-						clearInterval(refreshIntervalId);
-					}
-					me.setUnavailable();
-				}
+	async getReadings() {
+		const homewizard_id = this.getSetting('homewizard_id');
+			  
+		try {
+		  const callback = await homewizard.getDeviceData(homewizard_id, 'energylink_el');
+		  	  
+		  if (Object.keys(callback).length > 0) {
+			this.setAvailable();
+	  
+			let metered_gas = callback[2].consumed;
+			let metered_electricity_consumed_t1 = callback[0].consumed;
+			let metered_electricity_produced_t1 = callback[0].produced;
+			let metered_electricity_consumed_t2 = callback[1].consumed;
+			let metered_electricity_produced_t2 = callback[1].produced;
+			let aggregated_meter_power = (metered_electricity_consumed_t1 + metered_electricity_consumed_t2) - (metered_electricity_produced_t1 + metered_electricity_produced_t2);
+	  
+			if (!this.hasCapability('meter_power')) {
+			  await this.addCapability('meter_power').catch(this.error);
 			}
-
-		});
-	}
+	  
+			await this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error);
+			await this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error);
+			await this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error);
+			await this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error);
+			await this.setCapabilityValue('meter_power.consumed.t2', metered_electricity_consumed_t2).catch(this.error);
+			await this.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(this.error);
+	  
+			if (metered_electricity_produced_t1 != this.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
+			  this.flowTriggerMeterReturnT1(this, { meter_power_produced_t1: metered_electricity_produced_t1 });
+			  await this.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1);
+			}
+	  
+			if (metered_electricity_produced_t2 != this.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
+			  this.flowTriggerMeterReturnT2(this, { meter_power_produced_t2: metered_electricity_produced_t2 });
+			  await this.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2);
+			}
+		  }
+		} catch (err) {
+		  console.log('ERROR Energylink getStatus ', err);
+		  this.setUnavailable();
+		}
+	  }
+	  
 
 	onDeleted() {
 
-		clearInterval(refreshIntervalId);
-		clearInterval(refreshIntervalIdReadings);
+		clearInterval(this.refreshIntervalId);
+		clearInterval(this.refreshIntervalIdReadings);
 		console.log("--Stopped Polling--");
 		console.log('deleted: ' + JSON.stringify(this));
 

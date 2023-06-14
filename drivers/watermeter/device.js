@@ -23,7 +23,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     this.onPoll();
   }
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();

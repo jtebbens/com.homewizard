@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
+
 //const { ManagerDrivers } = require('homey');
 //const driver = ManagerDrivers.getDriver('thermometer');
 
@@ -46,184 +47,158 @@ class HomeWizardThermometer extends Homey.Device {
 
 	}
 
-	getStatus(devices) {
-		Promise.resolve()
-			.then(async () => {
-				var lowBattery_status = null;
-	
-				for (var index in devices) {
-					if (devices[index].settings.homewizard_id !== undefined) {
-						var homewizard_id = devices[index].settings.homewizard_id;
-						var thermometer_id = devices[index].settings.thermometer_id;
-						var result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
-	
-						if (Object.keys(result).length > 0) {
-							try {
-								for (var index2 in result) {
-									if (
-										result[index2].id == thermometer_id &&
-										result[index2].te != undefined &&
-										result[index2].hu != undefined &&
-										typeof result[index2].te != 'undefined' &&
-										typeof result[index2].hu != 'undefined'
-									) {
-										var te = (result[index2].te.toFixed(1) * 2) / 2;
-										var hu = (result[index2].hu.toFixed(1) * 2) / 2;
-	
-										// First adjust retrieved temperature with offset
-										let offset_temp = devices[index].getSetting('offset_temperature');
-										te += offset_temp;
-	
-										// Check current temperature
-										if (devices[index].getCapabilityValue('measure_temperature') != te) {
-											if (debug) { console.log("New TE - " + te); }
-											devices[index].setCapabilityValue('measure_temperature', te);
-										}
-	
-										// First adjust retrieved humidity with offset
-										let offset_hu = devices[index].getSetting('offset_humidity');
-										hu += offset_hu;
-	
-										// Check current humidity
-										if (devices[index].getCapabilityValue('measure_humidity') != hu) {
-											if (debug) { console.log("New HU - " + hu); }
-											devices[index].setCapabilityValue('measure_humidity', hu);
-										}
-	
-										try {
-											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-												if (!devices[index].hasCapability('alarm_battery')) {
-													devices[index].addCapability('alarm_battery').catch(this.error);
-												}
-	
-												var lowBattery_temp = result[index2].lowBattery;
-												if (lowBattery_temp == 'yes') {
-													lowBattery_status = true;
-												} else {
-													lowBattery_status = false;
-												}
-	
-												if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-													if (debug) { console.log("New status - " + lowBattery_status); }
-													devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
-												}
-											} else {
-												if (devices[index].hasCapability('alarm_battery')) {
-													devices[index].removeCapability('alarm_battery').catch(this.error);
-												}
-											}
-										} catch (e) {
-											console.log(e);
-										}
-									}
-								}
-							} catch (err) {
-								console.log("Thermometer data corrupt - " + err);
-							}
-						}
+
+	async getStatus(devices) {
+		try {
+		  const promises = devices.map(async (device) => {  //parallel processing using Promise.all
+			if (device.settings.homewizard_id !== undefined) {
+			  const homewizard_id = device.settings.homewizard_id;
+			  const thermometer_id = device.settings.thermometer_id;
+			  
+			  const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
+	  
+			  if (Object.keys(result).length > 0) {
+				for (const index2 in result) {
+				  if (
+					result[index2].id == thermometer_id &&
+					result[index2].te != undefined &&
+					result[index2].hu != undefined &&
+					typeof result[index2].te != 'undefined' &&
+					typeof result[index2].hu != 'undefined'
+				  ) {
+					let te = (result[index2].te.toFixed(1) * 2) / 2;
+					let hu = (result[index2].hu.toFixed(1) * 2) / 2;
+	  
+					// First adjust retrieved temperature with offset
+					let offset_temp = device.getSetting('offset_temperature');
+					te += offset_temp;
+	  
+					// Check current temperature
+					if (device.getCapabilityValue('measure_temperature') != te) {
+					  if (debug) { console.log("New TE - " + te); }
+					  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
 					}
+	  
+					// First adjust retrieved humidity with offset
+					let offset_hu = device.getSetting('offset_humidity');
+					hu += offset_hu;
+	  
+					// Check current humidity
+					if (device.getCapabilityValue('measure_humidity') != hu) {
+					  if (debug) { console.log("New HU - " + hu); }
+					  await device.setCapabilityValue('measure_humidity', hu).catch(this.error);
+					}
+	  
+					if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+					  if (!device.hasCapability('alarm_battery')) {
+						await device.addCapability('alarm_battery').catch(this.error);
+					  }
+	  
+					  let lowBattery_temp = result[index2].lowBattery;
+					  let lowBattery_status = lowBattery_temp == 'yes';
+	  
+					  if (device.getCapabilityValue('alarm_battery') != lowBattery_status) {
+						if (debug) { console.log("New status - " + lowBattery_status); }
+						await device.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
+					  }
+					} else {
+					  if (device.hasCapability('alarm_battery')) {
+						await device.removeCapability('alarm_battery').catch(this.error);
+					  }
+					}
+				  }
 				}
-				
-			})
-			.then(() => {
-				this.setAvailable().catch(this.error);
-			})
-			.catch(err => {
-				this.error(err);
-				this.setUnavailable(err).catch(this.error);
-			});
-	}
-	
+			  }
+			}
+		  });
+	  
+		  await Promise.all(promises);
+	  
+		  await this.setAvailable().catch(this.error);
+		} catch (err) {
+		  this.error(err);
+		  await this.setUnavailable(err).catch(this.error);
+		}
+	  }
+	  
 
 	/*
-	getStatus(devices) {
-		//if (debug) {console.log('Start Polling');}
-		Promise.resolve().then(async () => {
-		//var me = this;
-		var lowBattery_status = null;
-
-		for (var index in devices) {
-
-			if(devices[index].settings.homewizard_id !== undefined ) {
-				var homewizard_id = devices[index].settings.homewizard_id;
-				var thermometer_id = devices[index].settings.thermometer_id;
-				homewizard.getDeviceData(homewizard_id, 'thermometers', function(result) {
+	async getStatus(devices) {
+		try {
+			for (const index in devices) {
+				if (devices[index].settings.homewizard_id !== undefined) {
+					const homewizard_id = devices[index].settings.homewizard_id;
+					const thermometer_id = devices[index].settings.thermometer_id;
+					const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
+	
 					if (Object.keys(result).length > 0) {
 						try {
-							for (var index2 in result) {
-								//console.log("Thermometer - "+ result[index2].id);
-								if (result[index2].id == thermometer_id && result[index2].te != undefined && result[index2].hu != undefined && (typeof result[index2].te != 'undefined') && (typeof result[index2].hu != 'undefined')) {
-									var te = (result[index2].te.toFixed(1) * 2) / 2;
-									var hu = (result[index2].hu.toFixed(1) * 2) / 2;
-
-									//first adjust retrieved temperature with offset
+							for (const index2 in result) {
+								if (
+									result[index2].id == thermometer_id &&
+									result[index2].te != undefined &&
+									result[index2].hu != undefined &&
+									typeof result[index2].te != 'undefined' &&
+									typeof result[index2].hu != 'undefined'
+								) {
+									let te = (result[index2].te.toFixed(1) * 2) / 2;
+									let hu = (result[index2].hu.toFixed(1) * 2) / 2;
+	
+									// First adjust retrieved temperature with offset
 									let offset_temp = devices[index].getSetting('offset_temperature');
 									te += offset_temp;
-
-									//Check current temperature
+	
+									// Check current temperature
 									if (devices[index].getCapabilityValue('measure_temperature') != te) {
-										if (debug) {console.log("New TE - "+ te);}
-										//devices[index].setCapabilityValue('measure_temperature', te).catch(this.error);
+										if (debug) { console.log("New TE - " + te); }
 										devices[index].setCapabilityValue('measure_temperature', te);
-										// TypeError: Cannot read properties of undefined (reading 'error')
 									}
-
-									//first adjust retrieved humidity with offset
+	
+									// First adjust retrieved humidity with offset
 									let offset_hu = devices[index].getSetting('offset_humidity');
 									hu += offset_hu;
-
-									//Check current humidity
+	
+									// Check current humidity
 									if (devices[index].getCapabilityValue('measure_humidity') != hu) {
-										if (debug) {console.log("New HU - "+ hu);}
-									  devices[index].setCapabilityValue('measure_humidity', hu);
+										if (debug) { console.log("New HU - " + hu); }
+										devices[index].setCapabilityValue('measure_humidity', hu);
 									}
-									// console.log(result[index2].lowBattery);
-									try {
-										if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-												//console.log(result[index2].lowBattery);
-												if (!devices[index].hasCapability('alarm_battery')) {
-													devices[index].addCapability('alarm_battery').catch(this.error);
-												}
-												var lowBattery_temp = result[index2].lowBattery;
-												if (lowBattery_temp == 'yes') {
-														lowBattery_status = true }
-												else {
-														lowBattery_status = false;
-											 }
-											 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-													if (debug) {console.log("New status - "+ lowBattery_status);}
-													devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
-											}
+	
+									if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+										if (!devices[index].hasCapability('alarm_battery')) {
+											await devices[index].addCapability('alarm_battery').catch(this.error);
 										}
-										else {
-											if (devices[index].hasCapability('alarm_battery')) {
-												devices[index].removeCapability('alarm_battery').catch(this.error); // catch this?
-											}
+	
+										let lowBattery_temp = result[index2].lowBattery;
+										let lowBattery_status = lowBattery_temp == 'yes';
+	
+										if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
+											if (debug) { console.log("New status - " + lowBattery_status); }
+											devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
 										}
-									} catch (e) {
-										console.log(e)
+									} else {
+										if (devices[index].hasCapability('alarm_battery')) {
+											await devices[index].removeCapability('alarm_battery').catch(this.error);
+										}
 									}
 								}
 							}
 						} catch (err) {
-							//console.log(err);
 							console.log("Thermometer data corrupt - " + err);
 						}
 					}
-				});
+				}
 			}
-		}
-	})
-		.then(() => {
-			this.setAvailable().catch(this.error);
-		})
-		.catch(err => {
+			await this.setAvailable().catch(this.error);
+		} catch (err) {
 			this.error(err);
-			this.setUnavailable(err).catch(this.error);
-		})
+			await this.setUnavailable(err).catch(this.error);
+		}
 	}
-
+	
 	*/
+
+
 
 	onDeleted() {
 

@@ -2,9 +2,8 @@
 
 const Homey = require('homey');
 var homewizard = require('./../../includes/homewizard.js');
-//const { ManagerDrivers } = require('homey');
-//const driver = ManagerDrivers.getDriver('kakusensors');
-var debug = false;
+
+const debug = false;
 
 var refreshIntervalId;
 var devices = {};
@@ -16,10 +15,10 @@ onInit() {
 
 		if (debug) {console.log('HomeWizard Kakusensors '+this.getName() +' has been inited');}
 
-		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+		const devices = this.homey.drivers.getDriver('kakusensors').getDevices();
 
 		devices.forEach(function initdevice(device) {
-			if (debug) {console.log('add device: ' + JSON.stringify(device.getName()));}
+			console.log('add device: ' + JSON.stringify(device.getName()));
 
 			devices[device.getData().id] = device;
 			devices[device.getData().id].settings = device.getSettings();
@@ -56,19 +55,19 @@ startPolling(devices) {
 		  console.log('Start Polling');
 		}
 	  
-		for (var index in devices) {
+		for (const index in devices) {
 		  if (devices[index].settings.homewizard_id !== undefined) {
-			var homewizard_id = devices[index].settings.homewizard_id;
-			var kakusensor_id = devices[index].settings.kakusensor_id;
+			const homewizard_id = devices[index].settings.homewizard_id;
+			const kakusensor_id = devices[index].settings.kakusensor_id;
 	  
 			try {
 			  const result = await homewizard.getDeviceData(homewizard_id, 'kakusensors');
 			  
 			  if (Object.keys(result).length > 0) {
-				for (var index2 in result) {
+				for (const index2 in result) {
 				  if (result[index2].id == kakusensor_id) {
-					var sensor_status_temp = result[index2].status;
-					var sensor_status = (sensor_status_temp == 'yes');
+					let sensor_status_temp = result[index2].status;
+					let sensor_status = (sensor_status_temp == 'yes');
 	  
 					if (result[index2].type == "motion") {
 					  if (!devices[index].hasCapability('alarm_motion')) {
@@ -145,8 +144,8 @@ startPolling(devices) {
 						await devices[index].addCapability('alarm_battery');
 					  }
 	  
-					  var lowBattery_temp = result[index2].lowBattery;
-					  var lowBattery_status = (lowBattery_temp == 'yes');
+					  let lowBattery_temp = result[index2].lowBattery;
+					  let lowBattery_status = (lowBattery_temp == 'yes');
 	  
 					  if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
 						console.log("New status - " + lowBattery_status);
@@ -163,161 +162,6 @@ startPolling(devices) {
 		  }
 		}
 	  }
-	  
-	  
-
-/*
-getStatus(devices) {
-		if (debug) {console.log('Start Polling');}
-		var me = this;
-		var sensor_status = null;
-		var lowBattery_status = null;
-		//var lowBattery_temp = null;
-
-		for (var index in devices) {
-
-			if(devices[index].settings.homewizard_id !== undefined ) {
-				var homewizard_id = devices[index].settings.homewizard_id;
-				var kakusensor_id = devices[index].settings.kakusensor_id;
-				homewizard.getDeviceData(homewizard_id, 'kakusensors', function(result) {
-					 if (Object.keys(result).length > 0) {
-					 try {
-							for (var index2 in result) {
-								if (result[index2].id == kakusensor_id) {
-									//BEGIN
-									var sensor_status_temp = result[index2].status; // READ STATUS OF kakusensor_id
-									if (sensor_status_temp == 'yes') {
-											sensor_status = true }
-											else {sensor_status = false}
-                  if (result[index2].type == "motion" ) {
-										// MOTION SENSOR 	alarm_motion
-										//me.removeCapability('alarm_smoke');
-										if (!devices[index].hasCapability('alarm_motion')) {
-        							devices[index].addCapability('alarm_motion').catch(me.error);
-      							}
-
-										if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_motion', sensor_status).catch(me.error);
-										}
-									}
-
-									if (result[index2].type == "smoke868" ) {
-										// MOTION SENSOR 	alarm_smoke
-										if (!devices[index].hasCapability('alarm_smoke')) {
-											devices[index].addCapability('alarm_smoke').catch(me.error);
-										}
-										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
-										}
-
-										try {
-											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-													if (debug) {console.log(result[index2].lowBattery);}
-													if (!devices[index].hasCapability('alarm_battery')) {
-														devices[index].addCapability('alarm_battery').catch(me.error);
-													}
-
-													var lowBattery_temp = result[index2].lowBattery;
-													if (lowBattery_temp == 'yes') {
-															lowBattery_status = true }
-													else {
-															lowBattery_status = false
-												 }
-												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-														console.log("New status - "+ lowBattery_status);
-														devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
-												}
-											}
-										} catch (e) {
-											console.log(e)
-										}
-									}
-
-									if (result[index2].type == "leakage" ) {
-										// MOTION SENSOR 	alarm_water
-										if (!devices[index].hasCapability('alarm_water')) {
-											devices[index].addCapability('alarm_water').catch(me.error);
-										}
-										if (devices[index].getCapabilityValue('alarm_water') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_water', sensor_status).catch(me.error);
-										}
-
-										try {
-											if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-													if (debug) {console.log(result[index2].lowBattery);}
-													if (!devices[index].hasCapability('alarm_battery')) {
-														devices[index].addCapability('alarm_battery').catch(me.error);
-													}
-
-													lowBattery_temp = result[index2].lowBattery;
-													if (lowBattery_temp == 'yes') {
-															lowBattery_status = true }
-													else {
-															lowBattery_status = false
-												 }
-												 if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-														console.log("New status - "+ lowBattery_status);
-														devices[index].setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
-												}
-											}
-										} catch (e) {
-											console.log(e)
-										}
-									}
-
-									if (result[index2].type == "smoke" ) {
-										// MOTION SENSOR 	alarm_smoke
-										if (!devices[index].hasCapability('alarm_smoke')) {
-											devices[index].addCapability('alarm_smoke').catch(me.error);
-										}
-										if (devices[index].hasCapability('alarm_battery')) {
-											devices[index].removeCapability('alarm_battery').catch(me.error);
-										}
-
-										if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_smoke', sensor_status).catch(me.error);
-										}
-									}
-
-
-									if (result[index2].type == "contact" ) {
-										// MOTION SENSOR 	alarm_smoke
-										if (!devices[index].hasCapability('alarm_contact')) {
-											devices[index].addCapability('alarm_contact').catch(me.error);
-										}
-										if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_contact', sensor_status).catch(me.error);
-										}
-									}
-
-									if (result[index2].type == "doorbell" ) {
-										// MOTION SENSOR 	alarm_smoke
-										if (!devices[index].hasCapability('alarm_generic')) {
-											devices[index].addCapability('alarm_generic').catch(me.error);
-										}
-										if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
-											if (debug) {console.log("New status - "+ sensor_status);}
-											devices[index].setCapabilityValue('alarm_generic', sensor_status).catch(me.error);
-										}
-									}
-
-								}
-							}
-						} catch (err) {
-							console.log(err);
-							console.log("Kakusensors data corrupt");
-						}
-					}
-				});
-			}
-		}
-	}
-*/
 
 onDeleted() {
 

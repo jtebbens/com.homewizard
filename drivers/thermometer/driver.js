@@ -39,10 +39,10 @@ class HomeWizardThermometer extends Homey.Driver {
             homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
             homewizard.getDevices(function ( homewizard_devices)  {
-                var hw_devices = {};
+                let hw_devices = {};
 
                 Object.keys(homewizard_devices).forEach(function (key) {
-                    var thermometers = JSON.stringify(homewizard_devices[key].polldata.thermometers);
+                    const thermometers = JSON.stringify(homewizard_devices[key].polldata.thermometers);
 
                     hw_devices[key] = homewizard_devices[key];
                     hw_devices[key].polldata = {}

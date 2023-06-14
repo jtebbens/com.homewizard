@@ -13,7 +13,7 @@ var preset_text = '';
 var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
 var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
 
-var debug = false;
+const debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
@@ -66,9 +66,44 @@ class HomeWizardDevice extends Homey.Device {
 		Promise.resolve()
 		.then(async () => {
 
-				var me = this;
-				var homey_lang = this.homey.i18n.getLanguage();
+				const me = this;
+				const homey_lang = this.homey.i18n.getLanguage();
 			
+				// new
+				for (const device of devices) {
+					try {
+					  const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
+				  
+					  if (device.getStoreValue('preset') === null) {
+						if (debug) {
+						  this.log('Preset was set to ' + callback);
+						}
+						await device.setStoreValue('preset', callback);
+					  }
+				  
+					  if (device.getStoreValue('preset') !== callback) {
+						await device.setStoreValue('preset', callback);
+				  
+						if (debug) {
+						  this.log('Flow call! -> ' + callback);
+						}
+				  
+						const preset_text = (homey_lang === 'nl') ? preset_text_nl[callback] : preset_text_en[callback];
+				  
+						this.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text });
+				  
+						if (debug) {
+						  this.log('Preset was changed! ->' + preset_text);
+						}
+					  }
+					} catch (err) {
+					  console.log('HomeWizard data corrupt');
+					  console.log(err);
+					}
+				  }
+				  //end new
+
+				/*
 				devices.forEach(async (device) => {
 				try {
 					const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
@@ -77,7 +112,7 @@ class HomeWizardDevice extends Homey.Device {
 					if (debug) {
 						me.log('Preset was set to ' + callback);
 					}
-					device.setStoreValue('preset', callback);
+					await device.setStoreValue('preset', callback).catch(me.error);
 					}
 			
 					if (device.getStoreValue('preset') !== callback) {
@@ -105,6 +140,7 @@ class HomeWizardDevice extends Homey.Device {
 					console.log(err);
 				}
 				});
+				*/
 		})
 		.then(() => {
 			this.setAvailable().catch(this.error);

@@ -4,9 +4,13 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v3.2.3
+v3.2.5
 * Attempt to cleanup callback calls and replace them with Promise/Resolve
 * P1 fixing voltage for those that have that info
+* Additional Homewizard windmeter error handling
+* Energylink meters 3 decimals
+* Energylink code fix reading T1 & T2
+* SDK3 - Kakusensors fix (driver problem)
 
 v3.2.1
 * Improved Heatlink (Water pressure, Boiler temperature)

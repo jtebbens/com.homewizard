@@ -51,7 +51,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
 	}
 
-	getStatus() {
+	async getStatus() {
 		Promise.resolve()
 		.then(async () => {
 
@@ -59,14 +59,14 @@ class HomeWizardRainmeter extends Homey.Device {
 			
 				if (this.getSetting('homewizard_id') !== undefined) {
 					const homewizard_id = this.getSetting('homewizard_id');
-					const callback = homewizard.getDeviceData(homewizard_id, 'rainmeters');
+					const callback = await homewizard.getDeviceData(homewizard_id, 'rainmeters');
 			
 					if (Object.keys(callback).length > 0) {
 						try {
 							//me.setAvailable();
 			
-							var rain_daytotal = callback[0].mm; // Total Rain in mm used JSON $rainmeters[0]['mm']
-							var rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
+							let rain_daytotal = callback[0].mm; // Total Rain in mm used JSON $rainmeters[0]['mm']
+							let rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
 							
 							// Rain last 3 hours
 							me.setCapabilityValue("measure_rain.last3h", rain_last3h).catch(me.error);
@@ -77,7 +77,7 @@ class HomeWizardRainmeter extends Homey.Device {
 							// Trigger flows
 							if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
 								me.flowTriggerValueChanged(me, { rainmeter_changed: rain_daytotal });
-								me.setStoreValue("last_raintotal", rain_daytotal); // Update last_raintotal
+								await me.setStoreValue("last_raintotal", rain_daytotal).catch(me.error); // Update last_raintotal
 							}
 						} catch (err) {
 							console.log('ERROR RainMeter getStatus ', err);

@@ -1,12 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-//const request = require('request');
 
-//const { ManagerDrivers } = require('homey');
-//const driver = ManagerDrivers.getDriver('homewizard');
 var devices = {};
-var homewizard = require('./../../includes/homewizard.js');
+const homewizard = require('./../../includes/homewizard.js');
 var homewizard_devices;
 
 class HomeWizardWindmeter extends Homey.Driver {
@@ -40,7 +37,7 @@ class HomeWizardWindmeter extends Homey.Driver {
             this.homey.drivers.getDriver('homewizard').getDevices();
 
             homewizard.getDevices(function (homewizard_devices) {
-                var hw_devices = {};
+                let hw_devices = {};
 
                 Object.keys(homewizard_devices).forEach(function (key) {
                     hw_devices[key] = homewizard_devices[key];

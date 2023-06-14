@@ -9,7 +9,7 @@
   "linebreak-style": 0,
   "rules": {
     "no-mixed-spaces-and-tabs": 0, // disable rule
-    "callback-return": "off",
+    "callback-return": "warn",
     "handle-callback-err": "error",
     "no-new-require": "error",
     "no-empty-function": "error",
