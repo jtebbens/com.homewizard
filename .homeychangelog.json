@@ -220,5 +220,8 @@
   },
   "3.2.7": {
     "en": "Increased polling cycle to 20s for HW Legacy"
+  },
+  "3.2.8": {
+    "en": "30s poll and 28s timeout"
   }
 }
