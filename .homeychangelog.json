@@ -217,5 +217,8 @@
   },
   "3.2.6": {
     "en": "Removed retry code for legacy Homewizard (HW wifi chip cant handle extra connections)"
+  },
+  "3.2.7": {
+    "en": "Increased polling cycle to 20s for HW Legacy"
   }
 }
