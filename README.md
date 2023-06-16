@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.2.6
+* Removed retry code for legacy Homewizard (HW wifi chip cant handle extra connections)
+
 v3.2.5
 * Attempt to cleanup callback calls and replace them with Promise/Resolve
 * P1 fixing voltage for those that have that info

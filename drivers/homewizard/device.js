@@ -90,7 +90,7 @@ class HomeWizardDevice extends Homey.Device {
 				  
 						const preset_text = (homey_lang === 'nl') ? preset_text_nl[callback] : preset_text_en[callback];
 				  
-						this.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text });
+						this.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text }).catch( this.error );
 				  
 						if (debug) {
 						  this.log('Preset was changed! ->' + preset_text);

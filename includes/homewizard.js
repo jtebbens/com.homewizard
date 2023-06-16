@@ -62,7 +62,8 @@ module.exports = (function(){
     });
   };
   
-   async function fetchWithRetry(url, options, maxRetries = 3, delay = 1000) {
+  /*
+   async function fetchWithRetry(url, options, maxRetries = 1, delay = 2000) {
       const controller = new AbortController();
       const timeout = setTimeout(() => {
         controller.abort();
@@ -70,7 +71,7 @@ module.exports = (function(){
     
       try {
         options.signal = controller.signal;
-        options.redirect = 'manual'; //try
+        options.redirect = 'error'; //try
         options.follow = 0; //try
         let retries = 0;
         while (retries < maxRetries) {
@@ -90,69 +91,88 @@ module.exports = (function(){
         throw error;
       }
     }
+    */
 
     homewizard.callnew = async function (device_id, uri_part, callback) {
       const cacheKey = `${device_id}${uri_part}`;
       const cachedResponse = cache[cacheKey]; // Check if cached response exists
       const currentTime = Date.now();
+      const timeoutDuration = 18000; // Timeout duration in milliseconds
     
       if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
-        if (debug) {console.log('Using cached response for device:', device_id, 'endpoint:', uri_part);}
+        if (debug) { console.log('Using cached response for device:', device_id, 'endpoint:', uri_part); }
         callback(null, cachedResponse.response); // Use the cached response
-      } else {
-        try {
-          if (debug) {
-            console.log('Call device ', device_id, 'endpoint:', uri_part);
-          }
-          if (
-            typeof self.devices[device_id] !== 'undefined' &&
-            "settings" in self.devices[device_id] &&
-            "homewizard_ip" in self.devices[device_id].settings &&
-            "homewizard_pass" in self.devices[device_id].settings
-          ) {
-            const homewizard_ip = self.devices[device_id].settings.homewizard_ip;
-            const homewizard_pass = self.devices[device_id].settings.homewizard_pass;
+        return; // Return early
+      }
     
-            const response = await fetchWithRetry('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-              timeout: 18000
-            });
+      try {
+        if (debug) {
+          console.log('Call device ', device_id, 'endpoint:', uri_part);
+        }
+        if (
+          typeof self.devices[device_id] !== 'undefined' &&
+          "settings" in self.devices[device_id] &&
+          "homewizard_ip" in self.devices[device_id].settings &&
+          "homewizard_pass" in self.devices[device_id].settings
+        ) {
+          const homewizard_ip = self.devices[device_id].settings.homewizard_ip;
+          const homewizard_pass = self.devices[device_id].settings.homewizard_pass;
     
-            if (response.status === 200) {
-              const jsonData = await response.json();
-              if (
-                jsonData.status !== undefined &&
-                jsonData.status === 'ok'
-              ) {
-                if (typeof callback === 'function') {
-                  // Cache the response with timestamp
-                  cache[cacheKey] = {
-                    response: jsonData.response,
-                    timestamp: currentTime
-                  };
+          const controller = new AbortController(); // Create an AbortController
+          const signal = controller.signal; // Get the AbortSignal from the controller
     
-                  callback(null, jsonData.response);
-                } else {
-                  console.log('Not typeof function');
-                }
+          // Set a timeout to abort the fetch request
+          const timeout = setTimeout(() => {
+            controller.abort(); // Abort the fetch request
+            console.log('Fetch request timed out');
+          }, timeoutDuration);
+    
+          const response = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
+            signal, // Pass the AbortSignal to the fetch request
+          });
+    
+          clearTimeout(timeout); // Clear the timeout since the fetch request completed
+    
+          if (response.status === 200) {
+            const jsonData = await response.json();
+            if (
+              jsonData.status !== undefined &&
+              jsonData.status === 'ok'
+            ) {
+              if (typeof callback === 'function') {
+                // Cache the response with timestamp
+                cache[cacheKey] = {
+                  response: jsonData.response,
+                  timestamp: currentTime
+                };
+    
+                callback(null, jsonData.response);
               } else {
-                console.log('jsonData.status not ok');
-                callback('Invalid data', []);
+                console.log('Not typeof function');
               }
             } else {
-              console.log('Error: no clue what is going on here.');
-              callback('Error', []);
+              console.log('jsonData.status not ok');
+              callback('Invalid data', []);
             }
           } else {
-            console.log('Homewizard ' + device_id + ': settings not found!');
+            console.log('Error: no clue what is going on here.');
+            callback('Error', []);
           }
-        } catch (error) {
-          if (error.code === 'ECONNRESET') {
-            console.log('Connection was reset');
-          }
-          console.error('FETCH PROBLEM -> ' + error);
+        } else {
+          console.log('Homewizard ' + device_id + ': settings not found!');
         }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Fetch request aborted');
+          return; // Return early if fetch request was aborted
+        }
+        if (error.code === 'ECONNRESET') {
+          console.log('Connection was reset');
+        }
+        console.error('FETCH PROBLEM -> ' + error);
       }
     };
+    
     
 
   if (!Homey2023) {
