@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.8",
+  "version": "3.2.9",
   "platforms": [
     "local"
   ],
@@ -746,13 +746,14 @@
     "central_heating_pump": {
       "type": "boolean",
       "title": {
-        "en": "Central Heating pump",
-        "nl": "CV pomp"
+        "en": "Central Heating",
+        "nl": "Central Verwarming"
       },
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/central_heating.svg"
     },
     "central_heating_flame": {
       "type": "boolean",
@@ -763,7 +764,20 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/flame.svg"
+    },
+    "warm_water": {
+      "type": "boolean",
+      "title": {
+        "en": "Warm water",
+        "nl": "Warm water"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/shower.svg"
     }
   },
   "drivers": [
@@ -852,6 +866,7 @@
         "measure_temperature.boiler",
         "central_heating_pump",
         "central_heating_flame",
+        "warm_water",
         "measure_pressure"
       ],
       "capabilitiesOptions": {
@@ -1610,7 +1625,7 @@
         "large": "drivers/SDM230/assets/images/large.png",
         "small": "drivers/SDM230/assets/images/small.png"
       },
-      "class": "socket",
+      "class": "sensor",
       "discovery": "SDM230",
       "capabilities": [
         "measure_power",
