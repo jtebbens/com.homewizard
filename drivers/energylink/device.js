@@ -135,7 +135,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					// Some Energylink do not have gas information so try to get it else fail silently
 					try {
-						var gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
+						let gas_daytotal_cons = ( callback[0].gas.dayTotal ); // m3 Energy produced via S1 $energylink[0]['gas']['dayTotal']
 						// Consumed gas
 						await me.setCapabilityValue("meter_gas.today", gas_daytotal_cons).catch(me.error);
 					}
@@ -228,8 +228,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s1 == 'other' || value_s1 == 'car') {
-						var other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
-						var other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
+						let other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
+						let other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s1);
 						// Used power
 						await me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1).catch(me.error);
@@ -237,8 +237,8 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s2 == 'other' || value_s2 == 'car' ) {
-						var other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
-						var other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
+						let other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
+						let other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s2);
 						// Used power
 						await me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2).catch(me.error);

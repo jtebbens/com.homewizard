@@ -123,28 +123,55 @@ class HomeWizardHeatlink extends Homey.Device {
 	
 			  if (!this.hasCapability('measure_temperature.boiler')) {
 				this.addCapability('measure_temperature.boiler');
+			  } else {
+			  	this.setCapabilityValue('measure_temperature.boiler', wte);
 			  }
-			  this.setCapabilityValue('measure_temperature.boiler', wte);
 	
 			  if (!this.hasCapability('measure_temperature.heatlink')) {
 				this.addCapability('measure_temperature.heatlink');
+			  } else {
+			  	this.setCapabilityValue('measure_temperature.heatlink', tte);
 			  }
-			  this.setCapabilityValue('measure_temperature.heatlink', tte);
 	
 			  if (!this.hasCapability('central_heating_flame')) {
 				this.addCapability('central_heating_flame');
-			  }
-			  this.setCapabilityValue('central_heating_flame', callback[0].heating === 'on');
+			  } else {
+					if (callback[0].heating === 'on') {
+						this.setCapabilityValue('central_heating_flame', true);
+						}
+						else {
+							this.setCapabilityValue('central_heating_flame', false);
+						}
+					}
 	
 			  if (!this.hasCapability('central_heating_pump')) {
 				this.addCapability('central_heating_pump');
+			  } else {
+				if (callback[0].pump === 'on') {
+						this.setCapabilityValue('central_heating_pump', true);
+				}
+					else {
+						this.setCapabilityValue('central_heating_pump', false);
+					}
 			  }
-			  this.setCapabilityValue('central_heating_pump', callback[0].pump === 'on');
+
+			  if (!this.hasCapability('warm_water')) {
+				this.addCapability('warm_water');
+			  } else {
+				if (callback[0].dhw === 'on') {
+						this.setCapabilityValue('warm_water', true);
+				}
+					else {
+						this.setCapabilityValue('warm_water', false);
+					}
+			  }
+
 	
 			  if (!this.hasCapability('measure_pressure')) {
 				this.addCapability('measure_pressure');
+			  } else {
+			  	this.setCapabilityValue('measure_pressure', callback[0].wp);
 			  }
-			  this.setCapabilityValue('measure_pressure', callback[0].wp);
 			}
 		  } catch (error) {
 			console.log('Heatlink data error', error);
@@ -158,77 +185,6 @@ class HomeWizardHeatlink extends Homey.Device {
 		}
 	  }
 	  
-
-/*
-	getStatus() {
-
-		var me = this;
-
-		if(this.getSetting('homewizard_id') !== undefined ) {
-			var homewizard_id = this.getSetting('homewizard_id');
-
-			//me.log('Gather data');
-
-			homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
-
-				if (Object.keys(callback).length > 0) {
-
-					try {
-						me.setAvailable();
-						if (callback[0].rte != null) {
-						var rte = (callback[0].rte.toFixed(1) * 2) / 2;
-                		var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
-                		var tte = (callback[0].tte.toFixed(1) * 2) / 2;
-						}
-						//Check current temperature
-						if (me.getStoreValue('temperature') != rte) {
-							if (debug) {console.log("New RTE - "+ rte);}
-							me.setCapabilityValue('measure_temperature', rte ).catch(me.error);
-							me.setStoreValue('temperature',rte).catch(me.error);
-						} else {
-							if (debug) {console.log("RTE: no change");}
-						}
-
-						//Check thermostat temperature
-						if (me.getStoreValue('thermTemperature') != rsp) {
-							if (debug) {console.log("New RSP - "+ rsp);}
-						  if (me.getStoreValue('setTemperature') === 0) {
-							me.setCapabilityValue('target_temperature', rsp).catch(me.error);
-						  }
-							me.setStoreValue('thermTemperature',rsp).catch(me.error);
-						} else {
-							if (debug) {console.log("RSP: no change");}
-						}
-
-						//Check heatlink set temperature
-						if (me.getStoreValue('setTemperature') != tte) {
-							if (debug) {console.log("New TTE - "+ tte);}
-						  if (tte > 0) {
-							 me.setCapabilityValue('target_temperature', tte).catch(me.error);
-						  } else {
-							 me.setCapabilityValue('target_temperature',me.getStoreValue('thermTemperature')).catch(me.error);
-						  }
-							 me.setStoreValue('setTemperature',tte).catch(me.error);
-						} else {
-							if (debug) {console.log("TTE: no change");}
-						}
-					} catch (err) {
-						console.log ("Heatlink data corrupt", err);
-						me.setUnavailable();
-					}
-				} else {
-					me.log('No data');
-				}
-			});
-		} else {
-			console.log('HW ID not found');
-			if(Object.keys(devices).length === 1) {
-				clearInterval(refreshIntervalId);
-			}
-		}
-	}
-
-	*/
 
 onDeleted() {
 

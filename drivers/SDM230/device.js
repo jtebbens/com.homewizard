@@ -43,9 +43,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       const data = await res.json();
 
-      if (this.getClass() == 'sensor') {
-        this.setClass('socket');
-        console.log('Changed sensor to socket.');
+      if (((data.active_power_w < 0) || (data.active_power_l1_w < 0)) && (this.getClass() == 'sensor')) {
+        if (this.getClass() != 'solarpanel') {
+          await this.setClass('solarpanel').catch(this.error);
+        }
       }
 
       // Save export data check if capabilities are present first

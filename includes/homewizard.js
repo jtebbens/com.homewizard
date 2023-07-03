@@ -97,9 +97,9 @@ module.exports = (function(){
       const cacheKey = `${device_id}${uri_part}`;
       const cachedResponse = cache[cacheKey]; // Check if cached response exists
       const currentTime = Date.now();
-      const timeoutDuration = 18000; // Timeout duration in milliseconds
+      const timeoutDuration = 13000; // Timeout duration in milliseconds
     
-      if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
+      if (cachedResponse && currentTime - cachedResponse.timestamp < 15000) {
         if (debug) { console.log('Using cached response for device:', device_id, 'endpoint:', uri_part); }
         callback(null, cachedResponse.response); // Use the cached response
         return; // Return early
@@ -274,20 +274,20 @@ homewizard.startpoll = function() {
           self.devices[device_id].polldata.kakusensors = response.kakusensors;
     
           if (Object.keys(response.energylinks).length !== 0) {
-            await new Promise((resolve, reject) => {
+            const response2 = await new Promise((resolve, reject) => {
               new Promise((resolve) => setTimeout(resolve, 2000));
-              homewizard.callnew(device_id, '/el/get/0/readings', (err, response2) => {
-                if (err == null) {
-                  self.devices[device_id].polldata.energylink_el = response2;
-                  if (debug) {
-                    console.log('HW-Data polled for slimme meter: ' + device_id);
-                  }
-                  resolve();
+              homewizard.callnew(device_id, '/el/get/0/readings', (err2, response2) => {
+                if (err2 === null || err2 == null) {
+                  //self.devices[device_id].polldata.energylink_el = response2;
+                  resolve(response2);
                 } else {
-                  reject(err);
+                  reject(err2);
                 }
               });
             });
+            if (response2) {
+              self.devices[device_id].polldata.energylink_el = response2;
+            }
           }
         }
       }
