@@ -229,5 +229,8 @@
   },
   "3.2.10": {
     "en": "Modifications to mDNS. Unhandled rejection code for Heatlink. Drivername changes."
+  },
+  "3.2.11": {
+    "en": "mDNS bugfix on regex and product_type to find devices."
   }
 }
