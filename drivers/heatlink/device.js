@@ -93,7 +93,7 @@ class HomeWizardHeatlink extends Homey.Device {
 	
 			  if (this.getStoreValue('temperature') != rte) {
 				if (debug) {console.log('New RTE - ' + rte);}
-				this.setCapabilityValue('measure_temperature', rte);
+				this.setCapabilityValue('measure_temperature', rte).catch(this.error);
 				this.setStoreValue('temperature', rte);
 			  } else {
 				if (debug) {console.log('RTE: no change');}
@@ -102,7 +102,7 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (this.getStoreValue('thermTemperature') != rsp) {
 				if (debug){console.log('New RSP - ' + rsp);}
 				if (this.getStoreValue('setTemperature') === 0) {
-				  this.setCapabilityValue('target_temperature', rsp);
+				  this.setCapabilityValue('target_temperature', rsp).catch(this.error);
 				}
 				this.setStoreValue('thermTemperature', rsp);
 			  } else {
@@ -112,9 +112,9 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (this.getStoreValue('setTemperature') != tte) {
 				if (debug){console.log('New TTE - ' + tte);}
 				if (tte > 0) {
-				  this.setCapabilityValue('target_temperature', tte);
+				  this.setCapabilityValue('target_temperature', tte).catch(this.error);
 				} else {
-				  this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature'));
+				  this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error);
 				}
 				this.setStoreValue('setTemperature', tte);
 			  } else {
@@ -124,23 +124,23 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (!this.hasCapability('measure_temperature.boiler')) {
 				this.addCapability('measure_temperature.boiler');
 			  } else {
-			  	this.setCapabilityValue('measure_temperature.boiler', wte);
+			  	this.setCapabilityValue('measure_temperature.boiler', wte).catch(this.error);
 			  }
 	
 			  if (!this.hasCapability('measure_temperature.heatlink')) {
 				this.addCapability('measure_temperature.heatlink');
 			  } else {
-			  	this.setCapabilityValue('measure_temperature.heatlink', tte);
+			  	this.setCapabilityValue('measure_temperature.heatlink', tte).catch(this.error);
 			  }
 	
 			  if (!this.hasCapability('central_heating_flame')) {
 				this.addCapability('central_heating_flame');
 			  } else {
 					if (callback[0].heating === 'on') {
-						this.setCapabilityValue('central_heating_flame', true);
+						this.setCapabilityValue('central_heating_flame', true).catch(this.error);
 						}
 						else {
-							this.setCapabilityValue('central_heating_flame', false);
+							this.setCapabilityValue('central_heating_flame', false).catch(this.error);
 						}
 					}
 	
@@ -148,10 +148,10 @@ class HomeWizardHeatlink extends Homey.Device {
 				this.addCapability('central_heating_pump');
 			  } else {
 				if (callback[0].pump === 'on') {
-						this.setCapabilityValue('central_heating_pump', true);
+						this.setCapabilityValue('central_heating_pump', true).catch(this.error);
 				}
 					else {
-						this.setCapabilityValue('central_heating_pump', false);
+						this.setCapabilityValue('central_heating_pump', false).catch(this.error);
 					}
 			  }
 
@@ -159,10 +159,10 @@ class HomeWizardHeatlink extends Homey.Device {
 				this.addCapability('warm_water');
 			  } else {
 				if (callback[0].dhw === 'on') {
-						this.setCapabilityValue('warm_water', true);
+						this.setCapabilityValue('warm_water', true).catch(this.error);
 				}
 					else {
-						this.setCapabilityValue('warm_water', false);
+						this.setCapabilityValue('warm_water', false).catch(this.error);
 					}
 			  }
 
@@ -170,7 +170,7 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (!this.hasCapability('measure_pressure')) {
 				this.addCapability('measure_pressure');
 			  } else {
-			  	this.setCapabilityValue('measure_pressure', callback[0].wp);
+			  	this.setCapabilityValue('measure_pressure', callback[0].wp).catch(this.error);
 			  }
 			}
 		  } catch (error) {

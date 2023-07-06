@@ -50,8 +50,18 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
+    this.log('onDiscoveryAddressChanged');
     this.onPoll();
   }
+
+  async onDiscoveryLastSeenChanged(discoveryResult) {
+    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this.log(`URL: ${this.url}`);
+    this.onPoll();
+    await this.setAvailable();
+  }
+
+
 
   async onRequest(body) {
     if( !this.url ) return;

@@ -5,7 +5,7 @@ const fetch = require('node-fetch');
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
-module.exports = class HomeWizardEnergyDevice extends Homey.Device {
+module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
@@ -30,6 +30,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
+    this.log('onDiscoveryAddressChanged');
+    this.onPoll();
+  }
+
+  async onDiscoveryLastSeenChanged(discoveryResult) {
+    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this.log(`URL: ${this.url}`);
+    await this.setAvailable();
     this.onPoll();
   }
 
