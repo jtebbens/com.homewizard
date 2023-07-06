@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.9",
+  "version": "3.2.10",
   "platforms": [
     "local"
   ],
@@ -1845,17 +1845,17 @@
       "conditions": [
         [
           {
-            "field": "host",
+            "field": "txt.product_type",
             "match": {
-              "type": "regex",
-              "value": "^p1meter-"
+              "type": "string",
+              "value": "HWE-P1"
             }
           },
           {
-            "field": "host",
+            "field": "txt.api_enabled",
             "match": {
-              "type": "regex",
-              "value": "^p1meter-"
+              "type": "string",
+              "value": "1"
             }
           }
         ]
@@ -1871,17 +1871,17 @@
       "conditions": [
         [
           {
-            "field": "host",
+            "field": "txt.product_type",
             "match": {
-              "type": "regex",
-              "value": "^energysocket-"
+              "type": "string",
+              "value": "HWE-SKT"
             }
           },
           {
-            "field": "host",
+            "field": "txt.api_enabled",
             "match": {
-              "type": "regex",
-              "value": "^energysocket-"
+              "type": "string",
+              "value": "1"
             }
           }
         ]
@@ -1904,10 +1904,10 @@
             }
           },
           {
-            "field": "txt.product_type",
+            "field": "txt.api_enabled",
             "match": {
               "type": "string",
-              "value": "SDM630-wifi"
+              "value": "1"
             }
           }
         ]
@@ -1930,10 +1930,10 @@
             }
           },
           {
-            "field": "host",
+            "field": "txt.api_enabled",
             "match": {
-              "type": "regex",
-              "value": "^kwhmeter-"
+              "type": "string",
+              "value": "1"
             }
           }
         ]
@@ -1956,10 +1956,10 @@
             }
           },
           {
-            "field": "host",
+            "field": "txt.api_enabled",
             "match": {
-              "type": "regex",
-              "value": "^watermeter-"
+              "type": "string",
+              "value": "1"
             }
           }
         ]
