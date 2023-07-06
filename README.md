@@ -4,11 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v3.2.10
+v3.2.11
 * Additional mDNS LastSeen check added
 * Changed mDNS host regex to product_type, workaround for HomeyPro2023
 * Changed driver names for Phase 1 and 3 SDM230 * SDM630
 * Unhandled rejection Heatlink catch
+* Bugfix mDNS regex match
 
 v3.2.9
 * Removed retry code for legacy Homewizard (HW wifi chip cant handle extra connections)
