@@ -232,5 +232,8 @@
   },
   "3.2.11": {
     "en": "mDNS bugfix on regex and product_type to find devices."
+  },
+  "3.2.12": {
+    "en": "Energylink bug fix s2 for \"other\" or \"car\" type sources."
   }
 }
