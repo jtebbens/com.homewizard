@@ -235,5 +235,8 @@
   },
   "3.2.12": {
     "en": "Energylink bug fix s2 for \"other\" or \"car\" type sources."
+  },
+  "3.2.13": {
+    "en": "Windmeter fix (device not found)"
   }
 }
