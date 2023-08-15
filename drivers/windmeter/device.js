@@ -8,6 +8,7 @@ var homewizard = require('./../../includes/homewizard.js');
 
 var refreshIntervalId;
 var devices = {};
+const debug = false;
 //var temperature;
 
 
@@ -26,11 +27,15 @@ class HomeWizardWindmeter extends Homey.Device {
 			devices[device.getData().id].settings = device.getSettings();
 		});
 
-		this.startPolling();
+		//this.startPolling(devices);
+
+		if (Object.keys(devices).length > 0) {
+			this.startPolling();
+		  }
 
 	}
 
-
+/*
 	startPolling() {
 		// Clear interval
 		if (this.refreshIntervalId) {
@@ -50,9 +55,28 @@ class HomeWizardWindmeter extends Homey.Device {
 		  // Handle error appropriately
 		}
 	  }
+	  */
+
+	  startPolling() {
+
+		// Clear interval
+		if (this.refreshIntervalId) {
+			clearInterval(this.refreshIntervalId);
+		}
+
+		// Start polling for thermometer
+		this.refreshIntervalId = setInterval(() => {
+			if (debug) {console.log("--Start Windmeter Polling-- ");}
+
+			//this.getStatus(devices);
+			this.getStatus();
+
+		}, 1000 * 20 );
+
+	}
 
 
-	  async getStatus() {
+	  async getStatus(devices) {
 		if (this.getSetting('homewizard_id') !== undefined) {
 		  const homewizard_id = this.getSetting('homewizard_id');
 

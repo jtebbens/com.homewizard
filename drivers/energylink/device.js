@@ -266,6 +266,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						}
 					}
 					if (value_s1 == 'other' || value_s1 == 'car') {
+						let other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
 						if (other_current_cons_s1 != me.getStoreValue('last_measure_power_s1') && other_current_cons_s1 != undefined && other_current_cons_s1 != null) {
 									//console.log("Current S1 - "+ other_current_cons_s1);
 						me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 });
@@ -275,6 +276,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s2 == 'other' || value_s2 == 'car') {
+						let other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
 						if (other_current_cons_s2 != me.getStoreValue('last_measure_power_s2') && other_current_cons_s2 != undefined && other_current_cons_s2 != null) {
 									//console.log("Current S2 - "+ other_current_cons_s2);
 						me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 });
@@ -299,6 +301,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s1 == 'other' || value_s1 == 'car') {
+						let other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
 					    	//console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
 								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 });
@@ -307,6 +310,7 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					if (value_s2 == 'other' || value_s2 == 'car') {
+						let other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
 					    	//console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
 								me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 });

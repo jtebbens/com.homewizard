@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.2.13
+* Energylink bug fix for s2 for “other” or “car” type sources.
+* Windmeter fix (device not found message on Homey version 8.1.6)
+
 v3.2.11
 * Additional mDNS LastSeen check added
 * Changed mDNS host regex to product_type, workaround for HomeyPro2023
