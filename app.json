@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.13",
+  "version": "3.2.14",
   "platforms": [
     "local"
   ],
@@ -778,6 +778,90 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/shower.svg"
+    },
+    "long_power_fail_count": {
+      "type": "number",
+      "title": {
+        "en": "Power failures",
+        "nl": "Stroomstoringen"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_sag_l1": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L1",
+        "nl": "Net dip L1"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_sag_l2": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L2",
+        "nl": "Net dip L2"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_sag_l3": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L3",
+        "nl": "Net dip L3"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l1": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L1",
+        "nl": "Net piek L1"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l2": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L2",
+        "nl": "Net piek L2"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l3": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L3",
+        "nl": "Net piek L3"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
     }
   },
   "drivers": [
@@ -1393,7 +1477,14 @@
         "measure_voltage.l3",
         "measure_power.montly_power_peak",
         "rssi",
-        "tariff"
+        "tariff",
+        "long_power_fail_count",
+        "voltage_sag_l1",
+        "voltage_sag_l2",
+        "voltage_sag_l3",
+        "voltage_swell_l1",
+        "voltage_swell_l2",
+        "voltage_swell_l3"
       ],
       "energy": {
         "cumulative": true

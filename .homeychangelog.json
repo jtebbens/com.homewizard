@@ -238,5 +238,8 @@
   },
   "3.2.13": {
     "en": "Windmeter fix (device not found)"
+  },
+  "3.2.14": {
+    "en": "P1 added Power failures, voltage sags & swell counts"
   }
 }
