@@ -54,7 +54,7 @@ class HomeWizardWattcher extends Homey.Device {
 			return homewizard.getDeviceData(homewizard_id, 'energymeters')
 				.then(callback => {
 					if (Object.keys(callback).length > 0) {
-						this.setAvailable();
+						this.setAvailable().catch(this.error);
 	
 						this.log('Start capturing data');
 	

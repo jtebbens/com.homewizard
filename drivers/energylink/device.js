@@ -122,6 +122,9 @@ class HomeWizardEnergylink extends Homey.Device {
 			//	try {
 
 					me.setAvailable();
+
+					const promises = []; 
+
 					let value_s1 = ( callback[0].t1 ) ; // Read t1 from energylink (solar/water/null)
 					let value_s2 = ( callback[0].t2 ) ; // Read t2 from energylink (solar/water/null)
 					if (debug) {console.log("t1- " + value_s1);}
@@ -145,16 +148,18 @@ class HomeWizardEnergylink extends Homey.Device {
 					}
 
 					// Consumed elec current
-					await me.setCapabilityValue('measure_power.used', energy_current_cons).catch(me.error);
+					promises.push(me.setCapabilityValue('measure_power.used', energy_current_cons).catch(me.error));
 					// Consumed elec current
-					await me.setCapabilityValue('measure_power', energy_current_netto).catch(me.error);
+					promises.push(me.setCapabilityValue('measure_power', energy_current_netto).catch(me.error));
 					// Consumed elec current Netto
-					await me.setCapabilityValue('measure_power.netto', energy_current_netto).catch(me.error);
+					promises.push(me.setCapabilityValue('measure_power.netto', energy_current_netto).catch(me.error));
 					// Consumed elec total day
-					await me.setCapabilityValue('meter_power.used', energy_daytotal_cons).catch(me.error);
+					promises.push(me.setCapabilityValue('meter_power.used', energy_daytotal_cons).catch(me.error));
 					// Consumed elec total day
-				    await me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error);
-          // Disable meter_power
+				    promises.push(me.setCapabilityValue('meter_power.aggr', energy_daytotal_aggr).catch(me.error));
+
+
+         			 // Disable meter_power
 					// me.removeCapability('meter_power');
 					// Set solar used to zero before counting
 					let solar_current_prod = 0;
@@ -173,8 +178,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 
 						if (me.hasCapability('meter_power.s1other')) {
-							await me.removeCapability('meter_power.s1other').catch(me.error);
-							await me.removeCapability('measure_power.s1other').catch(me.error);
+							promises.push(me.removeCapability('meter_power.s1other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s1other').catch(me.error));
 						}
 					}
 
@@ -185,17 +190,17 @@ class HomeWizardEnergylink extends Homey.Device {
 						solar_current_prod = solar_current_prod + energy_current_prod;
 						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
 						if (me.hasCapability('meter_power.s2other')) {
-							await me.removeCapability('meter_power.s2other').catch(me.error);
-							await me.removeCapability('measure_power.s2other').catch(me.error);
+							promises.push(me.removeCapability('meter_power.s2other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s2other').catch(me.error));
 						}
 					}
 
 					if(value_s1 == 'solar' || value_s2 == 'solar') {
-						me.setCapabilityValue("measure_power.s1", solar_current_prod ).catch(me.error);
-						me.setCapabilityValue("meter_power.s1", solar_daytotal_prod ).catch(me.error);
+						promises.push(me.setCapabilityValue("measure_power.s1", solar_current_prod ).catch(me.error));
+						promises.push(me.setCapabilityValue("meter_power.s1", solar_daytotal_prod ).catch(me.error));
 						if (me.hasCapability('meter_power.s1other')) {
-							await me.removeCapability('meter_power.s1other').catch(me.error);
-							await me.removeCapability('measure_power.s1other').catch(me.error);
+							promises.push(me.removeCapability('meter_power.s1other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s1other').catch(me.error));
 						}
 					}
 
@@ -204,12 +209,12 @@ class HomeWizardEnergylink extends Homey.Device {
 						water_daytotal_cons = ( callback[0].s1.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
-						await me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
-						await me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
+						promises.push(me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error));
+						promises.push(me.setCapabilityValue("measure_water", water_current_cons).catch(me.error));
 
 						if (me.hasCapability('meter_power.s1other')) {
-							await me.removeCapability('meter_power.s1other').catch(me.error);
-							await me.removeCapability('measure_power.s1other').catch(me.error);
+							promises.push(me.removeCapability('meter_power.s1other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s1other').catch(me.error));
 						}
 					}
 
@@ -218,12 +223,12 @@ class HomeWizardEnergylink extends Homey.Device {
 						water_daytotal_cons = ( callback[0].s2.dayTotal / 1000 ); // Water used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Water- " + water_daytotal_cons);
 						// Used water m3
-						await me.setCapabilityOptions("meter_water", {"decimals":3}).catch(me.error);
-						await me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error);
-						await me.setCapabilityValue("measure_water", water_current_cons).catch(me.error);
+						promises.push(me.setCapabilityOptions("meter_water", {"decimals":3}).catch(me.error));
+						promises.push(me.setCapabilityValue("meter_water", water_daytotal_cons).catch(me.error));
+						promises.push(me.setCapabilityValue("measure_water", water_current_cons).catch(me.error));
 						if (me.hasCapability('meter_power.s2other')) {
-							await me.removeCapability('meter_power.s2other').catch(me.error);
-							await me.removeCapability('measure_power.s2other').catch(me.error);
+							promises.push(me.removeCapability('meter_power.s2other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s2other').catch(me.error));
 						}
 					}
 
@@ -232,8 +237,8 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s1);
 						// Used power
-						await me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1).catch(me.error);
-						await me.setCapabilityValue("measure_power.s1other", other_current_cons_s1).catch(me.error);
+						promises.push(me.setCapabilityValue("meter_power.s1other", other_daytotal_cons_s1).catch(me.error));
+						promises.push(me.setCapabilityValue("measure_power.s1other", other_current_cons_s1).catch(me.error));
 					}
 
 					if (value_s2 == 'other' || value_s2 == 'car' ) {
@@ -241,26 +246,26 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						//console.log("Other- " + other_daytotal_cons_s2);
 						// Used power
-						await me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2).catch(me.error);
-						await me.setCapabilityValue("measure_power.s2other", other_current_cons_s2).catch(me.error);
+						promises.push(me.setCapabilityValue("meter_power.s2other", other_daytotal_cons_s2).catch(me.error));
+						promises.push(me.setCapabilityValue("measure_power.s2other", other_current_cons_s2).catch(me.error));
 					}
 
 					// Trigger flows
 					if (energy_current_cons != me.getStoreValue("last_measure_power_used") && energy_current_cons != undefined && energy_current_cons != null) {
 						//console.log("Current Power - "+ energy_current_cons);
-						me.flowTriggerPowerUsed(me, { power_used: energy_current_cons });
+						promises.push(me.flowTriggerPowerUsed(me, { power_used: energy_current_cons }));
 						me.setStoreValue("last_measure_power_used",energy_current_cons);
 					}
 					if (energy_current_netto != me.getStoreValue('last_measure_power_netto') && energy_current_netto != undefined && energy_current_netto != null) {
 					    //console.log("Current Netto Power - "+ energy_current_netto);
-						me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto });
+						promises.push(me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto }));
 						me.setStoreValue("last_measure_power_netto",energy_current_netto);
 					}
 
 					if (value_s1 != 'other' || value_s1 != 'car') {
 						if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
 					        //console.log("Current S1 Solar- "+ solar_current_prod);
-						me.flowTriggerPowerS1(me, { power_s1: solar_current_prod });
+						promises.push(me.flowTriggerPowerS1(me, { power_s1: solar_current_prod }));
 						me.setStoreValue("last_measure_power_s1",solar_current_prod);
 
 						}
@@ -269,7 +274,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_current_cons_s1 = ( callback[0].s1.po ); // Other used via S1 $energylink[0]['s1']['po']
 						if (other_current_cons_s1 != me.getStoreValue('last_measure_power_s1') && other_current_cons_s1 != undefined && other_current_cons_s1 != null) {
 									//console.log("Current S1 - "+ other_current_cons_s1);
-						me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 });
+						promises.push(me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 }));
 						me.setStoreValue("last_measure_power_s1",other_current_cons_s1);
 
 						}
@@ -279,7 +284,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_current_cons_s2 = ( callback[0].s2.po ); // Other used via S2 $energylink[0]['s1']['po']
 						if (other_current_cons_s2 != me.getStoreValue('last_measure_power_s2') && other_current_cons_s2 != undefined && other_current_cons_s2 != null) {
 									//console.log("Current S2 - "+ other_current_cons_s2);
-						me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 });
+						promises.push(me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 }));
 						me.setStoreValue("last_measure_power_s2",other_current_cons_s2);
 
 						}
@@ -288,14 +293,14 @@ class HomeWizardEnergylink extends Homey.Device {
 
 					if (energy_daytotal_cons != me.getStoreValue('last_meter_power_used') && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
 					    //console.log("Used Daytotal- "+ energy_daytotal_cons);
-						me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod });
+						promises.push(me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod }));
 						me.setStoreValue("last_meter_power_used",energy_daytotal_cons);
 					}
 
           			if (value_s1 != 'other' || value_s1 != 'car') {
 						if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
 					    	//console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
-								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod });
+							promises.push(me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod }));
 								me.setStoreValue("last_meter_power_s1",solar_daytotal_prod);
 								}
 					}
@@ -304,7 +309,7 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_daytotal_cons_s1 = ( callback[0].s1.dayTotal ); // Other used via S1 $energylink[0]['s1']['dayTotal']
 						if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
 					    	//console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
-								me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 });
+							promises.push(me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 }));
 								me.setStoreValue("last_meter_power_s1",other_daytotal_cons_s1);
 								}
 					}
@@ -313,17 +318,20 @@ class HomeWizardEnergylink extends Homey.Device {
 						let other_daytotal_cons_s2 = ( callback[0].s2.dayTotal ); // Other used via S1 $energylink[0]['s2']['dayTotal']
 						if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
 					    	//console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
-								me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 });
+							promises.push(me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 }));
 								me.setStoreValue("last_meter_power_s2",other_daytotal_cons_s2);
 								}
 					}
 
 					if (energy_daytotal_aggr != me.getStoreValue('last_meter_power_aggr') && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
 					    //console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
-						me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr });
+						promises.push(me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr }));
 						me.setStoreValue("last_meter_power_aggr",energy_daytotal_aggr);
 
 					}
+					// Execute all promises concurrently using Promise.all()
+					await Promise.all(promises);
+
 				} else {
 					this.setUnavailable('No Energylink data available');
 				}
@@ -343,7 +351,9 @@ class HomeWizardEnergylink extends Homey.Device {
 		  const callback = await homewizard.getDeviceData(homewizard_id, 'energylink_el');
 		  	  
 		  if (Object.keys(callback).length > 0) {
-			this.setAvailable();
+			this.setAvailable().catch(this.error);
+
+			const promises = [];
 	  
 			let metered_gas = callback[2].consumed;
 			let metered_electricity_consumed_t1 = callback[0].consumed;
@@ -356,26 +366,29 @@ class HomeWizardEnergylink extends Homey.Device {
 			  await this.addCapability('meter_power').catch(this.error);
 			}
 	  
-			await this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error);
-			await this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error);
-			await this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error);
-			await this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error);
-			await this.setCapabilityValue('meter_power.consumed.t2', metered_electricity_consumed_t2).catch(this.error);
-			await this.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(this.error);
+			promises.push(this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error));
+			promises.push(this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error));
+			promises.push(this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error));
+			promises.push(this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error));
+			promises.push(this.setCapabilityValue('meter_power.consumed.t2', metered_electricity_consumed_t2).catch(this.error));
+			promises.push(this.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(this.error));
 	  
 			if (metered_electricity_produced_t1 != this.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
 			  this.flowTriggerMeterReturnT1(this, { meter_power_produced_t1: metered_electricity_produced_t1 });
-			  await this.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1);
+			  promises.push(this.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1));
 			}
 	  
 			if (metered_electricity_produced_t2 != this.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
 			  this.flowTriggerMeterReturnT2(this, { meter_power_produced_t2: metered_electricity_produced_t2 });
-			  await this.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2);
+			  promises.push(this.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2));
 			}
+			// Execute all promises concurrently using Promise.all()
+			await Promise.all(promises);
+
 		  }
 		} catch (err) {
 		  console.log('ERROR Energylink getStatus ', err);
-		  this.setUnavailable();
+		  this.setUnavailable().catch(this.error);
 		}
 	  }
 	  

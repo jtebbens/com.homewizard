@@ -69,10 +69,10 @@ class HomeWizardRainmeter extends Homey.Device {
 							let rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
 							
 							// Rain last 3 hours
-							me.setCapabilityValue("measure_rain.last3h", rain_last3h).catch(me.error);
+							await me.setCapabilityValue("measure_rain.last3h", rain_last3h).catch(me.error);
 							
 							// Rain total day
-							me.setCapabilityValue("measure_rain.total", rain_daytotal).catch(me.error);
+							await me.setCapabilityValue("measure_rain.total", rain_daytotal).catch(me.error);
 							
 							// Trigger flows
 							if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {

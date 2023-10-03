@@ -1,11 +1,12 @@
 {
-    "configurations": [{
+"version": "0.2.0",
+"configurations": [{
         "name": "Launch app",
         "type": "node",
         "request": "launch",
         "cwd": "${workspaceFolder}",
         "runtimeExecutable": "homey",
-        "args": ["app", "run"],
+        "args": ["app", "run", "--remote"],
         "outputCapture": "std",
         "serverReadyAction": {
             "pattern": "Debugger listening on",
@@ -17,10 +18,10 @@
         "name": "Attach to Homey",
         "type": "node",
         "request": "attach",
-        "address": "192.168.1.115",
+        "address": "192.168.1.12",
         "port": 9222,
         "localRoot": "${workspaceFolder}",
-        "remoteRoot": "/"
+        "remoteRoot": "/app/"
     }
 ]
 }

@@ -1,9 +1,10 @@
 {
     "type": "node",
     "request": "attach",
-    "name": "Attach to Homey",
-    "address": "192.168.1.115",        
-    "port": 9229,
+    "restart": true,
+    "name": "Attach HA to Homey Pro LAN",
+    "address": "192.168.1.12",
+    "port": 9225,
     "localRoot": "${workspaceFolder}",
-    "remoteRoot": "/"
+    "remoteRoot": "/app/"
 }

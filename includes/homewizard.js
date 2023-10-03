@@ -27,24 +27,6 @@ module.exports = (function(){
       callback(self.devices);
    };
 
-   /*
-   homewizard.getDeviceData = function(device_id, data_part, callback) {
-
-      if (typeof self.devices[device_id] === 'undefined' || 
-          typeof self.devices[device_id].polldata === 'undefined' || 
-          typeof self.devices[device_id].polldata[data_part] === 'undefined' ||
-          typeof self.devices[device_id] === undefined ||
-          typeof self.devices[device_id].polldata === undefined || 
-          typeof self.devices[device_id].polldata[data_part] === undefined)
-          {
-         callback([]);
-      } else {
-         callback(self.devices[device_id].polldata[data_part]);
-      }
-   };
-
-   */
-
    homewizard.getDeviceData = function(device_id, data_part) {
     return new Promise((resolve, reject) => {
       if (
@@ -62,36 +44,7 @@ module.exports = (function(){
     });
   };
   
-  /*
-   async function fetchWithRetry(url, options, maxRetries = 1, delay = 2000) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, options.timeout);
-    
-      try {
-        options.signal = controller.signal;
-        options.redirect = 'error'; //try
-        options.follow = 0; //try
-        let retries = 0;
-        while (retries < maxRetries) {
-          try {
-            const response = await fetch(url, options);
-            clearTimeout(timeout);
-            return response;
-          } catch (error) {
-            retries++;
-            console.error(`Retry attempt ${retries}: ${error}`);
-            await new Promise((resolve) => setTimeout(resolve, delay)); 
-          }
-        }
-        throw new Error(`Failed to fetch after ${maxRetries} retries.`);
-      } catch (error) {
-        clearTimeout(timeout);
-        throw error;
-      }
-    }
-    */
+
 
     homewizard.callnew = async function (device_id, uri_part, callback) {
       const cacheKey = `${device_id}${uri_part}`;
@@ -275,7 +228,7 @@ homewizard.startpoll = function() {
     
           if (Object.keys(response.energylinks).length !== 0) {
             const response2 = await new Promise((resolve, reject) => {
-              new Promise((resolve) => setTimeout(resolve, 2000));
+              //new Promise((resolve) => setTimeout(resolve, 2000));
               homewizard.callnew(device_id, '/el/get/0/readings', (err2, response2) => {
                 if (err2 === null || err2 == null) {
                   //self.devices[device_id].polldata.energylink_el = response2;

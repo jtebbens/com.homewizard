@@ -101,46 +101,6 @@ class HomeWizardDevice extends Homey.Device {
 					  console.log(err);
 					}
 				  }
-				  //end new
-
-				/*
-				devices.forEach(async (device) => {
-				try {
-					const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
-			
-					if (device.getStoreValue('preset') === null) {
-					if (debug) {
-						me.log('Preset was set to ' + callback);
-					}
-					await device.setStoreValue('preset', callback).catch(me.error);
-					}
-			
-					if (device.getStoreValue('preset') !== callback) {
-					await device.setStoreValue('preset', callback).catch(me.error);
-			
-					if (debug) {
-						me.log('Flow call! -> ' + callback);
-					}
-			
-					var preset_text;
-					if (homey_lang === 'nl') {
-						preset_text = preset_text_nl[callback];
-					} else {
-						preset_text = preset_text_en[callback];
-					}
-			
-					me.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text });
-			
-					if (debug) {
-						me.log('Preset was changed! ->' + preset_text);
-					}
-					}
-				} catch (err) {
-					console.log('HomeWizard data corrupt');
-					console.log(err);
-				}
-				});
-				*/
 		})
 		.then(() => {
 			this.setAvailable().catch(this.error);

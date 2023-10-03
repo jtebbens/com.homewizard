@@ -42,16 +42,18 @@ class HomeWizardHeatlink extends Homey.Device {
 			}
 			temperature = Math.round(temperature.toFixed(1) * 2) / 2;
 
-			return new Promise((resolve) => {
+			return new Promise(async (resolve) => { //async 
 					var url = '/hl/0/settarget/'+temperature;
 					console.log(url); // Console log url
 					var homewizard_id = this.getSetting('homewizard_id');
-			    homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err) {
+			    	await homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err) { //await, maybe a timestamp for log?
 						if (err) {
-							console.log('ERR settarget target_temperature -> returned false');
+							//console.log('ERR settarget target_temperature -> returned false');
+							this.log ('ERR settarget target_temperature -> returned false');
 							return resolve(false);
 						}
-						console.log('settarget target_temperature - returned true');
+						//console.log('settarget target_temperature - returned true');
+						this.log('settarget target_temperature - returned true');
 						return resolve(true);
 				});
 			});
@@ -84,7 +86,9 @@ class HomeWizardHeatlink extends Homey.Device {
 			const callback = await homewizard.getDeviceData(homewizard_id, 'heatlinks');
 	
 			if (Object.keys(callback).length > 0) {
-			  this.setAvailable();
+			  this.setAvailable().catch(this.error);
+
+			  const promises = []; // Capture all await promises
 	
 			  const rte = (callback[0].rte.toFixed(1) * 2) / 2;
 			  const rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
@@ -93,8 +97,8 @@ class HomeWizardHeatlink extends Homey.Device {
 	
 			  if (this.getStoreValue('temperature') != rte) {
 				if (debug) {console.log('New RTE - ' + rte);}
-				this.setCapabilityValue('measure_temperature', rte).catch(this.error);
-				this.setStoreValue('temperature', rte);
+				promises.push(this.setCapabilityValue('measure_temperature', rte).catch(this.error));
+				this.setStoreValue('temperature', rte).catch(this.error);
 			  } else {
 				if (debug) {console.log('RTE: no change');}
 			  }
@@ -102,9 +106,9 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (this.getStoreValue('thermTemperature') != rsp) {
 				if (debug){console.log('New RSP - ' + rsp);}
 				if (this.getStoreValue('setTemperature') === 0) {
-				  this.setCapabilityValue('target_temperature', rsp).catch(this.error);
+					promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
 				}
-				this.setStoreValue('thermTemperature', rsp);
+				this.setStoreValue('thermTemperature', rsp).catch(this.error);
 			  } else {
 				if (debug){console.log('RSP: no change');}
 			  }
@@ -112,70 +116,74 @@ class HomeWizardHeatlink extends Homey.Device {
 			  if (this.getStoreValue('setTemperature') != tte) {
 				if (debug){console.log('New TTE - ' + tte);}
 				if (tte > 0) {
-				  this.setCapabilityValue('target_temperature', tte).catch(this.error);
+					promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
 				} else {
-				  this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error);
+					promises.push(this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error));
 				}
-				this.setStoreValue('setTemperature', tte);
+				this.setStoreValue('setTemperature', tte).catch(this.error);
 			  } else {
 				if (debug){console.log('TTE: no change');}
 			  }
 	
 			  if (!this.hasCapability('measure_temperature.boiler')) {
-				this.addCapability('measure_temperature.boiler');
+				promises.push(this.addCapability('measure_temperature.boiler').catch(this.error));
 			  } else {
-			  	this.setCapabilityValue('measure_temperature.boiler', wte).catch(this.error);
+				promises.push(this.setCapabilityValue('measure_temperature.boiler', wte).catch(this.error));
 			  }
 	
 			  if (!this.hasCapability('measure_temperature.heatlink')) {
-				this.addCapability('measure_temperature.heatlink');
+				promises.push(this.addCapability('measure_temperature.heatlink').catch(this.error));
 			  } else {
-			  	this.setCapabilityValue('measure_temperature.heatlink', tte).catch(this.error);
+				promises.push(this.setCapabilityValue('measure_temperature.heatlink', tte).catch(this.error));
 			  }
 	
 			  if (!this.hasCapability('central_heating_flame')) {
-				this.addCapability('central_heating_flame');
+				promises.push(this.addCapability('central_heating_flame').catch(this.error));
 			  } else {
 					if (callback[0].heating === 'on') {
-						this.setCapabilityValue('central_heating_flame', true).catch(this.error);
+						promises.push(this.setCapabilityValue('central_heating_flame', true).catch(this.error));
 						}
 						else {
-							this.setCapabilityValue('central_heating_flame', false).catch(this.error);
+							promises.push(this.setCapabilityValue('central_heating_flame', false).catch(this.error));
 						}
 					}
 	
 			  if (!this.hasCapability('central_heating_pump')) {
-				this.addCapability('central_heating_pump');
+				promises.push(this.addCapability('central_heating_pump').catch(this.error));
 			  } else {
 				if (callback[0].pump === 'on') {
-						this.setCapabilityValue('central_heating_pump', true).catch(this.error);
+					promises.push(this.setCapabilityValue('central_heating_pump', true).catch(this.error));
 				}
 					else {
-						this.setCapabilityValue('central_heating_pump', false).catch(this.error);
+						promises.push(this.setCapabilityValue('central_heating_pump', false).catch(this.error));
 					}
 			  }
 
 			  if (!this.hasCapability('warm_water')) {
-				this.addCapability('warm_water');
+				promises.push(this.addCapability('warm_water').catch(this.error));
 			  } else {
 				if (callback[0].dhw === 'on') {
-						this.setCapabilityValue('warm_water', true).catch(this.error);
+					promises.push(this.setCapabilityValue('warm_water', true).catch(this.error));
 				}
 					else {
-						this.setCapabilityValue('warm_water', false).catch(this.error);
+						promises.push(this.setCapabilityValue('warm_water', false).catch(this.error));
 					}
 			  }
 
 	
 			  if (!this.hasCapability('measure_pressure')) {
-				this.addCapability('measure_pressure');
+				promises.push(this.addCapability('measure_pressure').catch(this.error));
 			  } else {
-			  	this.setCapabilityValue('measure_pressure', callback[0].wp).catch(this.error);
+				promises.push(this.setCapabilityValue('measure_pressure', callback[0].wp).catch(this.error));
 			  }
+
+			// Execute all promises concurrently using Promise.all()
+			await Promise.all(promises);
+
 			}
 		  } catch (error) {
 			console.log('Heatlink data error', error);
-			this.setUnavailable();
+			this.setUnavailable().catch(this.error);
 		  }
 		} else {
 		  console.log('HW ID not found');
