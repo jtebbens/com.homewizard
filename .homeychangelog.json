@@ -241,5 +241,8 @@
   },
   "3.2.14": {
     "en": "P1 added Power failures, voltage sags & swell counts"
+  },
+  "3.2.15": {
+    "en": "Bug fix socket class for KWH3"
   }
 }
