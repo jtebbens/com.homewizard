@@ -247,5 +247,8 @@
   },
   "3.2.16": {
     "en": "Added optional energy socket Watt compensation"
+  },
+  "3.2.17": {
+    "en": "Controller error bug fix"
   }
 }
