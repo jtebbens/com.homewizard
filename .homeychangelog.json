@@ -244,5 +244,8 @@
   },
   "3.2.15": {
     "en": "Bug fix socket class for KWH3"
+  },
+  "3.2.16": {
+    "en": "Added optional energy socket Watt compensation"
   }
 }

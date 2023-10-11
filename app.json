@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.15",
+  "version": "3.2.16",
   "platforms": [
     "local"
   ],
@@ -1830,6 +1830,26 @@
           }
         }
       },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Socket Watt offset",
+            "nl": "Socket Watt compensatie"
+          },
+          "children": [
+            {
+              "id": "offset_socket",
+              "type": "number",
+              "label": {
+                "en": "Offset socket Watt",
+                "nl": "Compensatie socket Watt"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
       "pair": [
         {
           "id": "list_devices",
