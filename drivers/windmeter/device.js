@@ -85,7 +85,7 @@ class HomeWizardWindmeter extends Homey.Device {
 			const callback = await homewizard.getDeviceData(homewizard_id, 'windmeters');
 				  
 			if (Object.keys(callback).length > 0) {
-			  this.setAvailable().catch(this.error);
+			  this.setAvailable().catch(this.error); // maybe this can be removed
 	  
 			  let wind_angle_tmp = callback[0].dir;
 			  let wind_angle_int = wind_angle_tmp.split(' ');

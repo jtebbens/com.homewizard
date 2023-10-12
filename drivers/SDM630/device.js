@@ -10,6 +10,10 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+    if (this.getClass() == 'sensor') {
+      this.setClass('socket');
+      console.log('Changed sensor to socket.');
+    }
   }
 
   onDeleted() {

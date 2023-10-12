@@ -49,11 +49,11 @@ class HomeWizardHeatlink extends Homey.Device {
 			    	await homewizard.callnew(homewizard_id, '/hl/0/settarget/'+temperature, function(err) { //await, maybe a timestamp for log?
 						if (err) {
 							//console.log('ERR settarget target_temperature -> returned false');
-							this.log ('ERR settarget target_temperature -> returned false');
+							console.log ('ERR settarget target_temperature -> returned false');
 							return resolve(false);
 						}
 						//console.log('settarget target_temperature - returned true');
-						this.log('settarget target_temperature - returned true');
+						console.log('settarget target_temperature - returned true');
 						return resolve(true);
 				});
 			});

@@ -86,6 +86,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       const data = await res.json();
 
+      let offset_socket = this.getSetting('offset_socket');
+
+      let temp_socket_watt = data.active_power_w + offset_socket;
+
+
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {
         await this.addCapability('measure_power').catch(this.error);
@@ -108,8 +113,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       }
 
       // Update values
-      if (this.getCapabilityValue('measure_power') != data.active_power_w)
-        await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
+      //if (this.getCapabilityValue('measure_power') != data.active_power_w)
+      // await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
+
+      // Use temp_socket_watt with the compensated value
+      if (this.getCapabilityValue('measure_power') != temp_socket_watt)
+       await this.setCapabilityValue('measure_power', temp_socket_watt).catch(this.error);
+
+
       if (this.getCapabilityValue('meter_power.consumed.t1') != data.total_power_import_t1_kwh)
         await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
       if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
@@ -163,6 +174,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       const data = await res.json();
 
+      let offset_socket = this.getSetting('offset_socket');
+
       if (!this.hasCapability('onoff')) {
         await this.addCapability('onoff').catch(this.error);
       }
@@ -186,6 +199,37 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     .catch(err => {
       this.error(err);
     })
+  }
+
+  // Catch offset updates
+  onSettings(oldSettings, newSettings, changedKeys) {
+    this.log('Settings updated')
+    // Update display values if offset has changed
+    for (let k in changedKeys) {
+      let key = changedKeys[k]
+      if (key.slice(0, 7) === 'offset_') {
+        let cap = 'measure_' + key.slice(7)
+        let value = this.getCapabilityValue(cap)
+        let delta = newSettings[key] - oldSettings[key]
+        this.log('Updating value of', cap, 'from', value, 'to', value + delta)
+        this.setCapabilityValue(cap, value + delta)
+          .catch(err => this.error(err))
+      }
+    }
+    //return true;
+  }
+
+  updateValue(cap, value) {
+    // add offset if defined
+    this.log('Updating value of', this.id, 'with capability', cap, 'to', value)
+    let cap_offset = cap.replace('measure', 'offset')
+    let offset = this.getSetting(cap_offset)
+    this.log(cap_offset, offset)
+    if (offset != null) {
+      value += offset
+    }
+    this.setCapabilityValue(cap, value)
+      .catch(err => this.error(err))
   }
 
 }

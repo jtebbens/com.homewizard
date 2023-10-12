@@ -53,8 +53,8 @@ class HomeWizardDevice extends Homey.Device {
 			clearInterval(this.refreshIntervalId);
 		}
 		this.refreshIntervalId = setInterval(() => {
-			if (debug) {this.log("--Start HomeWizard Polling-- ");}
-			if (debug) {this.log("--Start HomeWizard Polling-- ");}
+			if (debug) {console.log("--Start HomeWizard Polling-- ");}
+			if (debug) {console.log("--Start HomeWizard Polling-- ");}
 
 				this.getStatus(devices);
 
