@@ -253,5 +253,8 @@
   },
   "3.2.18": {
     "en": "Wattcher bug fix and windmeter battery support"
+  },
+  "3.2.19": {
+    "en": "Doorcontact 868 fix for Homewizard Legacy"
   }
 }
