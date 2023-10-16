@@ -4,6 +4,13 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.2.18
+* Homewizard Wattcher (legacy) bug fix
+* Windmeter battery support
+
+v3.2.17
+* Optional Energy socket watt compensation (User request)
+
 v3.2.14
 * P1 added Power failures, voltage sags & swell counts
 

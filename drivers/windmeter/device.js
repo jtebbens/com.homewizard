@@ -85,48 +85,76 @@ class HomeWizardWindmeter extends Homey.Device {
 			const callback = await homewizard.getDeviceData(homewizard_id, 'windmeters');
 				  
 			if (Object.keys(callback).length > 0) {
-			  this.setAvailable().catch(this.error); // maybe this can be removed
-	  
-			  let wind_angle_tmp = callback[0].dir;
-			  let wind_angle_int = wind_angle_tmp.split(' ');
-			  let wind_strength_current = callback[0].ws;
-			  let wind_strength_min = callback[0]['ws-'];
-			  let wind_strength_max = callback[0]['ws+'];
-			  let gust_strength = callback[0].gu;
-			  let temp_real = callback[0].te;
-			  let temp_windchill = callback[0].wc;
-	  
-			  let wind_angle_str = wind_angle_int[1];
-			  let wind_angle = parseInt(wind_angle_str);
-	  
-			  // Wind angle
-			  if (this.getCapabilityValue('measure_wind_angle') !== wind_angle && wind_angle !== undefined) {
-				await this.setCapabilityValue('measure_wind_angle', wind_angle);
-			  }
-			  // Wind speed current
-			  if (this.getCapabilityValue('measure_wind_strength.cur') !== wind_strength_current && wind_strength_current !== undefined) {
-				await this.setCapabilityValue('measure_wind_strength.cur', wind_strength_current);
-			  }
-			  // Wind speed min
-			  if (this.getCapabilityValue('measure_wind_strength.min') !== wind_strength_min && wind_strength_min !== undefined) {
-				await this.setCapabilityValue('measure_wind_strength.min', wind_strength_min);
-			  }
-			  // Wind speed max
-			  if (this.getCapabilityValue('measure_wind_strength.max') !== wind_strength_max && wind_strength_max !== undefined) {
-				await this.setCapabilityValue('measure_wind_strength.max', wind_strength_max);
-			  }
-			  // Wind speed
-			  if (this.getCapabilityValue('measure_gust_strength') !== gust_strength && gust_strength !== undefined) {
-				await this.setCapabilityValue('measure_gust_strength', gust_strength);
-			  }
-			  // Temp real
-			  if (this.getCapabilityValue('measure_temperature.real') !== temp_real && temp_real !== undefined) {
-				await this.setCapabilityValue('measure_temperature.real', temp_real);
-			  }
-			  // Temp Windchill
-			  if (this.getCapabilityValue('measure_temperature.windchill') !== temp_windchill && temp_windchill !== undefined) {
-				await this.setCapabilityValue('measure_temperature.windchill', temp_windchill);
-			  }
+
+				if (callback[0].lowBattery != "yes")
+				{
+			
+						this.setAvailable().catch(this.error); // maybe this can be removed
+				
+						let wind_angle_tmp = callback[0].dir;
+						let wind_angle_int = wind_angle_tmp.split(' ');
+						let wind_strength_current = callback[0].ws;
+						let wind_strength_min = callback[0]['ws-'];
+						let wind_strength_max = callback[0]['ws+'];
+						let gust_strength = callback[0].gu;
+						let temp_real = callback[0].te;
+						let temp_windchill = callback[0].wc;
+				
+						let wind_angle_str = wind_angle_int[1];
+						let wind_angle = parseInt(wind_angle_str);
+				
+						// Wind angle
+						if (this.getCapabilityValue('measure_wind_angle') !== wind_angle && wind_angle !== undefined) {
+							await this.setCapabilityValue('measure_wind_angle', wind_angle);
+						}
+						// Wind speed current
+						if (this.getCapabilityValue('measure_wind_strength.cur') !== wind_strength_current && wind_strength_current !== undefined) {
+							await this.setCapabilityValue('measure_wind_strength.cur', wind_strength_current);
+						}
+						// Wind speed min
+						if (this.getCapabilityValue('measure_wind_strength.min') !== wind_strength_min && wind_strength_min !== undefined) {
+							await this.setCapabilityValue('measure_wind_strength.min', wind_strength_min);
+						}
+						// Wind speed max
+						if (this.getCapabilityValue('measure_wind_strength.max') !== wind_strength_max && wind_strength_max !== undefined) {
+							await this.setCapabilityValue('measure_wind_strength.max', wind_strength_max);
+						}
+						// Wind speed
+						if (this.getCapabilityValue('measure_gust_strength') !== gust_strength && gust_strength !== undefined) {
+							await this.setCapabilityValue('measure_gust_strength', gust_strength);
+						}
+						// Temp real
+						if (this.getCapabilityValue('measure_temperature.real') !== temp_real && temp_real !== undefined) {
+							await this.setCapabilityValue('measure_temperature.real', temp_real);
+						}
+						// Temp Windchill
+						if (this.getCapabilityValue('measure_temperature.windchill') !== temp_windchill && temp_windchill !== undefined) {
+							await this.setCapabilityValue('measure_temperature.windchill', temp_windchill);
+						}
+
+
+				}
+				else {
+
+					if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
+						if (!this.hasCapability('alarm_battery')) {
+						  await this.addCapability('alarm_battery').catch(this.error);
+						}
+		
+						let lowBattery_temp = callback[0].lowBattery;
+						let lowBattery_status = lowBattery_temp == 'yes';
+		
+						if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
+						  if (debug) { console.log("New status - " + lowBattery_status); }
+						  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
+						}
+					  } else {
+						if (this.hasCapability('alarm_battery')) {
+						  await this.removeCapability('alarm_battery').catch(this.error);
+						}
+					  }
+				}
+
 			}
 		  } catch (err) {
 			console.log('ERROR WindMeter getStatus', err);

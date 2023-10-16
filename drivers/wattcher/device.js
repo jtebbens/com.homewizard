@@ -46,97 +46,54 @@ class HomeWizardWattcher extends Homey.Device {
 
 	}
 
-	getStatus() {
-		if (this.getSetting('homewizard_id') !== undefined) {
-			const homewizard_id = this.getSetting('homewizard_id');
-			//var me = this;
-	
-			return homewizard.getDeviceData(homewizard_id, 'energymeters')
-				.then(callback => {
+	async getStatus() {
+		Promise.resolve()
+		.then(async () => {
+
+				if (this.getSetting('homewizard_id') !== undefined) {
+					const homewizard_id = this.getSetting('homewizard_id');
+					const callback = await homewizard.getDeviceData(homewizard_id, 'energymeters');
+			
 					if (Object.keys(callback).length > 0) {
-						this.setAvailable().catch(this.error);
+						try {
+							// console.log('Start capturing data');
 	
-						this.log('Start capturing data');
+							const energy_current_cons = callback[0].po; // WATTS Energy used JSON $energymeters[0]['po']
+							const energy_daytotal_cons = callback[0].dayTotal; // KWH Energy used JSON $energymeters[0]['dayTotal']
 	
-						const energy_current_cons = callback[0].po; // WATTS Energy used JSON $energymeters[0]['po']
-						const energy_daytotal_cons = callback[0].dayTotal; // KWH Energy used JSON $energymeters[0]['dayTotal']
+							// Wattcher elec current
+							this.setCapabilityValue('measure_power', energy_current_cons).catch(this.error);
+							// Wattcher elec total day
+							this.setCapabilityValue('meter_power', energy_daytotal_cons).catch(this.error);
 	
-						// Wattcher elec current
-						this.setCapabilityValue('measure_power', energy_current_cons).catch(me.error);
-						// Wattcher elec total day
-						this.setCapabilityValue('meter_power', energy_daytotal_cons).catch(me.error);
-	
-						this.log('End capturing data');
-						console.log('Wattcher usage- ' + energy_current_cons);
-						console.log('Wattcher Daytotal- ' + energy_daytotal_cons);
+							//this.log('End capturing data');
+							//console.log('Wattcher usage- ' + energy_current_cons);
+							//console.log('Wattcher Daytotal- ' + energy_daytotal_cons);
+						} catch (err) {
+							console.log('ERROR Wattcher getStatus ', err);
+							this.setUnavailable();
+						}
 					}
-				})
-				.catch(err => {
-					console.log('ERROR Wattcher getStatus ', err);
+				} else {
+					console.log('Wattcher settings not found, stop polling set unavailable');
 					this.setUnavailable();
-				});
-		} else {
-			console.log('Wattcher settings not found, stop polling set unavailable');
-			this.setUnavailable();
-	
-			// Only clear interval when the unavailable device is the only device on this driver
-			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
-			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
-	
-			if (Object.keys(devices).length === 1) {
-				clearInterval(this.refreshIntervalId);
-			}
-		}
-	}
-	
-
-/*
-	getStatus() {
-
-		var me = this;
-
-		if(this.getSetting('homewizard_id') !== undefined ) {
-			var homewizard_id = this.getSetting('homewizard_id');
-
-			homewizard.getDeviceData(homewizard_id, 'energymeters', function(callback) {
-				if (Object.keys(callback).length > 0) {
-					try {
-						me.setAvailable();
-
-						me.log('Start capturing data')
-
-						var energy_current_cons = ( callback[0].po ); // WATTS Energy used JSON $energymeters[0]['po']
-						var energy_daytotal_cons = ( callback[0].dayTotal ); // KWH Energy used JSON $energymeters[0]['dayTotal']
-
-						 // Wattcher elec current
-						 me.setCapabilityValue("measure_power", energy_current_cons ).catch(me.error);
-						 // Wattcher elec total day
-						 me.setCapabilityValue("meter_power", energy_daytotal_cons ).catch(me.error);
-
-						 me.log('End capturing data');
-						 console.log("Wattcher usage- "+ energy_current_cons);
-						 console.log("Wattcher Daytotal- "+ energy_daytotal_cons);
-
-					} catch (err) {
-						console.log('ERROR Wattcher getStatus ', err);
-						me.setUnavailable();
-					}
+					clearInterval(this.refreshIntervalId);
+			
+					// Only clear interval when the unavailable device is the only device on this driver
+					// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+					// In the event that a user has multiple devices with old settings, this function will get called every 10 seconds, but that should not be a problem
 				}
-			});
-		} else {
-			console.log('Wattcher settings not found, stop polling set unavailable');
-			this.setUnavailable();
-
-			// Only clear interval when the unavailable device is the only device on this driver
-			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
-			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
-
-			if(Object.keys(devices).length === 1) {
-				clearInterval(refreshIntervalId);
-			}
-		}
+		})
+		.then(() => {
+			this.setAvailable().catch(this.error);
+		})
+		.catch(err => {
+			this.error(err);
+			this.setUnavailable(err).catch(this.error);
+			clearInterval(this.refreshIntervalId);
+		});
 	}
-	*/
+
 
 	onDeleted() {
 
