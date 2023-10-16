@@ -250,5 +250,8 @@
   },
   "3.2.17": {
     "en": "Controller error bug fix"
+  },
+  "3.2.18": {
+    "en": "Wattcher bug fix and windmeter battery support"
   }
 }
