@@ -86,6 +86,26 @@ class HomeWizardWindmeter extends Homey.Device {
 				  
 			if (Object.keys(callback).length > 0) {
 
+				//Check Battery
+				if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
+					if (!this.hasCapability('alarm_battery')) {
+					  await this.addCapability('alarm_battery').catch(this.error);
+					}
+	
+					let lowBattery_temp = callback[0].lowBattery;
+					let lowBattery_status = lowBattery_temp == 'yes';
+	
+					if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
+					  if (debug) { console.log("New status - " + lowBattery_status); }
+					  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
+					}
+				  } else {
+					if (this.hasCapability('alarm_battery')) {
+					  await this.removeCapability('alarm_battery').catch(this.error);
+					}
+				}
+
+				// If battery OK then proceed else skip code to avoid "split" error
 				if (callback[0].lowBattery != "yes")
 				{
 			
@@ -134,27 +154,6 @@ class HomeWizardWindmeter extends Homey.Device {
 
 
 				}
-				else {
-
-					if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
-						if (!this.hasCapability('alarm_battery')) {
-						  await this.addCapability('alarm_battery').catch(this.error);
-						}
-		
-						let lowBattery_temp = callback[0].lowBattery;
-						let lowBattery_status = lowBattery_temp == 'yes';
-		
-						if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
-						  if (debug) { console.log("New status - " + lowBattery_status); }
-						  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
-						}
-					  } else {
-						if (this.hasCapability('alarm_battery')) {
-						  await this.removeCapability('alarm_battery').catch(this.error);
-						}
-					  }
-				}
-
 			}
 		  } catch (err) {
 			console.log('ERROR WindMeter getStatus', err);

@@ -111,7 +111,7 @@ startPolling(devices) {
 					  }
 					}
 	  
-					if (result[index2].type == "contact") {
+					if (result[index2].type == "contact" || result[index2].type == "contact868") {
 					  if (!devices[index].hasCapability('alarm_contact')) {
 						await devices[index].addCapability('alarm_contact');
 					  }
