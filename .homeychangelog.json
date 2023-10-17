@@ -256,5 +256,8 @@
   },
   "3.2.19": {
     "en": "Doorcontact 868 fix for Homewizard Legacy"
+  },
+  "3.2.20": {
+    "en": "Windmeter battery code fix (when battery it needs to update it)"
   }
 }
