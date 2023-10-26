@@ -259,5 +259,8 @@
   },
   "3.2.20": {
     "en": "Windmeter battery code fix (when battery it needs to update it)"
+  },
+  "3.2.21": {
+    "en": "Windmeter conditional fix (battery empty but shows still data)"
   }
 }
