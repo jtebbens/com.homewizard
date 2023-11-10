@@ -262,5 +262,8 @@
   },
   "3.2.21": {
     "en": "Windmeter conditional fix (battery empty but shows still data)"
+  },
+  "3.2.22": {
+    "en": "Rainmeter battery alarm added (Homewizard Legacy)"
   }
 }
