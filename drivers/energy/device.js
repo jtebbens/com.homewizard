@@ -71,9 +71,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         promises.push(this.addCapability('measure_power').catch(this.error));
       }
 
-      if (!this.hasCapability('measure_current.l1')) {
-        promises.push(this.addCapability('measure_current.l1').catch(this.error));
-      }
+//      if (!this.hasCapability('measure_current.l1') && (data.active_current_l1_a !== undefined)) {
+//        promises.push(this.addCapability('measure_current.l1').catch(this.error));
+//      }
 
 
       if (this.hasCapability('measure_power.active_power_w')) {
@@ -100,8 +100,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       // Update values
       if (this.getCapabilityValue('measure_power') != data.active_power_w)
       promises.push(this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error));
-      if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
-      promises.push(this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error));
+      //if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
+      //promises.push(this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error));
       if (this.getCapabilityValue('meter_power.consumed.t1') != data.total_power_import_t1_kwh)
       promises.push(this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error));
       if (this.getCapabilityValue('meter_power.consumed.t2') != data.total_power_import_t2_kwh)
@@ -117,6 +117,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       if (data.active_tariff != this.getStoreValue("last_active_tariff")) {
         this.flowTriggerTariff(this, { tariff_changed: data.active_tariff });
         this.setStoreValue("last_active_tariff",data.active_tariff).catch(this.error);
+      }
+
+      if (data.active_current_l1_a !== undefined) {
+        if (!this.hasCapability('measure_current.l1')) {
+          promises.push(this.addCapability('measure_current.l1').catch(this.error));
+        }
+        if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
+        promises.push(this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error));
+      }
+      else if (data.active_current_l1_a == null) {
+        // delete measure_current.l1 -> some meters dont have this property
+        promises.push(this.removeCapability('measure_current.l1').catch(this.error));
       }
 
 

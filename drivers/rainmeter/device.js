@@ -64,6 +64,26 @@ class HomeWizardRainmeter extends Homey.Device {
 					if (Object.keys(callback).length > 0) {
 						try {
 							//me.setAvailable();
+
+							//Check Battery
+							if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
+								if (!this.hasCapability('alarm_battery')) {
+								await this.addCapability('alarm_battery').catch(me.error);
+								}
+				
+								let lowBattery_temp = callback[0].lowBattery;
+								let lowBattery_status = lowBattery_temp == 'yes';
+				
+								if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
+								//if (debug) { console.log("New status - " + lowBattery_status); }
+								await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
+								}
+							} else {
+								if (this.hasCapability('alarm_battery')) {
+								await this.removeCapability('alarm_battery').catch(me.error);
+								}
+							}
+
 			
 							let rain_daytotal = callback[0].mm; // Total Rain in mm used JSON $rainmeters[0]['mm']
 							let rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']

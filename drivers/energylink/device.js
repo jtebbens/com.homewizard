@@ -86,7 +86,7 @@ class HomeWizardEnergylink extends Homey.Device {
 				this.getStatus();
 			}
 
-		}, 1000 * 20);
+		}, 1000 * 15);
 
 		// Clear interval
 		if (this.refreshIntervalIdReadings) {

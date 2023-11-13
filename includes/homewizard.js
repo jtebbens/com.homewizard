@@ -80,9 +80,7 @@ module.exports = (function(){
             console.log('Fetch request timed out');
           }, timeoutDuration);
     
-          const response = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, {
-            signal, // Pass the AbortSignal to the fetch request
-          });
+          const response = await fetch('http://' + homewizard_ip + '/' + homewizard_pass + uri_part, { signal, follow : 0, redirect: 'error' });
     
           clearTimeout(timeout); // Clear the timeout since the fetch request completed
     
@@ -125,8 +123,8 @@ module.exports = (function(){
         console.error('FETCH PROBLEM -> ' + error);
       }
     };
-    
-    
+
+
 
   if (!Homey2023) {
    homewizard.ledring_pulse = function(device_id, colorName) {
@@ -160,41 +158,6 @@ homewizard.startpoll = function() {
    }, 1000 * 15);
  };
 
-/*
- homewizard.poll = function() {
-
-   Object.keys(self.devices).forEach(async function (device_id) {
-      if ((typeof self.devices[device_id].polldata === 'undefined') || (typeof self.devices[device_id].polldata == 'undefined') || (typeof self.devices[device_id].polldata == undefined)) {
-               self.devices[device_id].polldata = [];
-            }
-            await homewizard.callnew(device_id, '/get-sensors', function(err, response) {
-               if ((err === null) || (err == null)) {
-                  self.devices[device_id].polldata.preset = response.preset;
-                  self.devices[device_id].polldata.heatlinks = response.heatlinks;
-                  self.devices[device_id].polldata.energylinks = response.energylinks;
-                  self.devices[device_id].polldata.energymeters = response.energymeters;
-                  self.devices[device_id].polldata.thermometers = response.thermometers;
-                  self.devices[device_id].polldata.rainmeters = response.rainmeters;
-                  self.devices[device_id].polldata.windmeters = response.windmeters;
-                  self.devices[device_id].polldata.kakusensors = response.kakusensors;
-
-                  if (Object.keys(response.energylinks).length !== 0) {
-
-                     homewizard.callnew(device_id, '/el/get/0/readings', function(err, response2) {
-                        if(err == null) {
-                           self.devices[device_id].polldata.energylink_el = response2;
-                           if (debug) {console.log('HW-Data polled for slimme meter: '+device_id);}
-                        }
-                     });
-                  }
-               }
-            });
-
-         });
-
-
-   };
-   */
   
    homewizard.poll = async function() {
       for (const device_id in self.devices) {
@@ -228,7 +191,7 @@ homewizard.startpoll = function() {
     
           if (Object.keys(response.energylinks).length !== 0) {
             const response2 = await new Promise((resolve, reject) => {
-              //new Promise((resolve) => setTimeout(resolve, 2000));
+              new Promise((resolve) => setTimeout(resolve, 1000));
               homewizard.callnew(device_id, '/el/get/0/readings', (err2, response2) => {
                 if (err2 === null || err2 == null) {
                   //self.devices[device_id].polldata.energylink_el = response2;

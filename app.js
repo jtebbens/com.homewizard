@@ -2,11 +2,12 @@
 
 const Homey = require('homey');
 
+const Testing = true;
 
 class HomeWizardApp extends Homey.App {
 	onInit() {
 		console.log("HomeWizard app ready!");
-		if (process.env.DEBUG === '1') {
+		if (process.env.DEBUG === '1' && Testing) {
 			try{ 
 				require('inspector').waitForDebugger();
 			}

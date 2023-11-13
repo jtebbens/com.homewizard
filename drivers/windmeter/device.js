@@ -105,8 +105,8 @@ class HomeWizardWindmeter extends Homey.Device {
 					}
 				}
 
-				// If battery OK then proceed else skip code to avoid "split" error
-				if (callback[0].lowBattery != "yes")
+				// Skip update if JSON.ws is not null
+				if ((callback[0].ws != null))
 				{
 			
 						this.setAvailable().catch(this.error); // maybe this can be removed
