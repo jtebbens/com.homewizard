@@ -265,5 +265,8 @@
   },
   "3.2.22": {
     "en": "Rainmeter battery alarm added (Homewizard Legacy)"
+  },
+  "3.2.24": {
+    "en": "P1 adjustment for Phase3 circuit. Offset watermeter import from Homewizard Energy when set."
   }
 }

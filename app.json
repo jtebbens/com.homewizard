@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.22",
+  "version": "3.2.24",
   "platforms": [
     "local"
   ],
@@ -14,8 +14,8 @@
     "en": "Combine the Smarthome power"
   },
   "category": [
-    "appliances",
     "energy",
+    "appliances",
     "climate"
   ],
   "images": {
