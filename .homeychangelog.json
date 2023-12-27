@@ -268,5 +268,8 @@
   },
   "3.2.24": {
     "en": "P1 adjustment for Phase3 circuit. Offset watermeter import from Homewizard Energy when set."
+  },
+  "3.2.25": {
+    "en": "Bugfix watermeter offset"
   }
 }
