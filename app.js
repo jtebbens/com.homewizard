@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 
-const Testing = true;
+const Testing = false;
 
 class HomeWizardApp extends Homey.App {
 	onInit() {

@@ -196,7 +196,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
 
-     if (data.active_power_l2_w !== undefined) {
+     if ((data.active_power_l2_w !== undefined) || (data.active_power_l3_w !== undefined)) {
          if ((!this.hasCapability('measure_power.l2')) || (!this.hasCapability('measure_voltage.l3'))) {
           promises.push(this.addCapability('measure_power.l1').catch(this.error));
           promises.push(this.addCapability('measure_power.l2').catch(this.error));
@@ -232,7 +232,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 
       }
-      else if (data.active_power_l2_w === undefined) {
+      else if ((data.active_power_l2_w === undefined) || (data.active_power_l3_w === undefined)) {
         if ((this.hasCapability('measure_power.l2')) || (this.hasCapability('measure_current.l3')) || (this.hasCapability('measure_voltage.l3'))) {
           promises.push(this.removeCapability('measure_power.l1').catch(this.error));
           promises.push(this.removeCapability('measure_power.l2').catch(this.error));

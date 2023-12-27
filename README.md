@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.2.25
+* P1 Phase3 circuit adjustment code (some values are not updated in rare setups)
+* Watermeter offset taken from Homewizard Energy app when set, else it takes the offset in Homey Homewizard setting
+
 v3.2.22
 * Contact sensors 868Mhz Homewizard Legacy fix
 * Windmeter bug fix, battery can be empty but there is still ws (windspeed) available

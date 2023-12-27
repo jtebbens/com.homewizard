@@ -47,7 +47,15 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
       const data = await res.json();
 
-      let offset_water_m3 = this.getSetting('offset_water');
+      var offset_water_m3;
+
+      // if watermeter offset is set in Homewizard Energy app take that value else use the configured value in Homey Homewizard water offset
+      if (data.total_liter_offset_m3 = '0') {
+        offset_water_m3 = this.getSetting('offset_water');
+      }
+      else if (data.total_liter_offset_m3 != '0') {
+        offset_water_m3 = data.total_liter_offset_m3;
+      }
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_water')) {
