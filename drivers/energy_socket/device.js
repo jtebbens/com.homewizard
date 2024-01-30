@@ -41,7 +41,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -54,11 +54,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
-    await this.setAvailable();
+    this.setAvailable();
   }
 
 

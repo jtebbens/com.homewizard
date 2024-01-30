@@ -21,7 +21,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -34,10 +34,10 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.setAvailable();
+    this.setAvailable();
     this.onPoll();
   }
 
@@ -124,6 +124,32 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       }
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
       await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh)).catch(this.error);
+
+      //active_voltage_l1_v
+      if (data.active_voltage_v !== undefined) {
+        if (!this.hasCapability('measure_voltage')) {
+          await this.addCapability('measure_voltage').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage') != data.active_voltage_v)
+        await this.setCapabilityValue("measure_voltage", data.active_voltage_v).catch(this.error);
+      }
+      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
+        await this.removeCapability('measure_voltage').catch(this.error);
+      }
+
+      //active_current_a  Amp's 
+      if (data.active_current_a !== undefined) {
+        if (!this.hasCapability('measure_current')) {
+          await this.addCapability('measure_current').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current') != data.active_current_a)
+          await this.setCapabilityValue("measure_current", data.active_current_a).catch(this.error);
+      }
+      else if ((data.active_current_a == undefined) && (this.hasCapability('measure_current'))) {
+          await this.removeCapability('measure_current').catch(this.error);
+      }
+
+
     })
       .then(() => {
         this.setAvailable().catch(this.error);

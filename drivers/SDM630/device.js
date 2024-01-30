@@ -22,7 +22,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -35,10 +35,10 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.setAvailable();
+    this.setAvailable();
     this.onPoll();
   }
 
@@ -125,6 +125,78 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
           await this.removeCapability('measure_power.l3').catch(this.error);
           await this.removeCapability('measure_power.active_power_w').catch(this.error);
         }
+      }
+
+      //active_voltage_l1_v
+      if (data.active_voltage_l1_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l1')) {
+          await this.addCapability('measure_voltage.l1').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
+        await this.setCapabilityValue("measure_voltage.l1", data.active_voltage_l1_v).catch(this.error);
+      }
+      else if ((data.active_voltage_l1_v == undefined) && (this.hasCapability('measure_voltage.l1'))) {
+        await this.removeCapability('measure_voltage.l1').catch(this.error);
+      }
+
+      //active_voltage_l2_v
+      if (data.active_voltage_l2_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l2')) {
+          await this.addCapability('measure_voltage.l2').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
+      await this.setCapabilityValue("measure_voltage.l2", data.active_voltage_l2_v).catch(this.error);
+      }
+      else if ((data.active_voltage_l2_v == undefined) && (this.hasCapability('measure_voltage.l2'))) {
+        await this.removeCapability('measure_voltage.l2').catch(this.error);
+      }
+
+      //active_voltage_l3_v
+      if (data.active_voltage_l3_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l3')) {
+          await this.addCapability('measure_voltage.l3').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
+      await this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_v).catch(this.error);
+      }
+      else if ((data.active_voltage_l3_v == undefined) && (this.hasCapability('measure_voltage.l3'))) {
+        await this.removeCapability('measure_voltage.l3').catch(this.error);
+      }
+
+      //active_current_a  Amp's L1
+      if (data.data.active_current_l1_a !== undefined) {
+        if (!this.hasCapability('measure_current.l1')) {
+          await this.addCapability('measure_current.l1').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
+          await this.setCapabilityValue("measure_current.l1", data.active_current_l1_a).catch(this.error);
+      }
+      else if ((data.active_current_l1_a == undefined) && (this.hasCapability('measure_current.l1'))) {
+          await this.removeCapability('measure_current.l1').catch(this.error);
+      }
+
+      //active_current_a  Amp's L2
+      if (data.data.active_current_l2_a !== undefined) {
+        if (!this.hasCapability('measure_current.l2')) {
+          await this.addCapability('measure_current.l2').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
+          await this.setCapabilityValue("measure_current.l2", data.active_current_l2_a).catch(this.error);
+      }
+      else if ((data.active_current_l2_a == undefined) && (this.hasCapability('measure_current.l2'))) {
+          await this.removeCapability('measure_current.l2').catch(this.error);
+      }
+
+      //active_current_a  Amp's L3
+      if (data.data.active_current_l3_a !== undefined) {
+        if (!this.hasCapability('measure_current.l3')) {
+          await this.addCapability('measure_current.l3').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
+          await this.setCapabilityValue("measure_current.l3", data.active_current_l3_a).catch(this.error);
+      }
+      else if ((data.active_current_l3_a == undefined) && (this.hasCapability('measure_current.l3'))) {
+          await this.removeCapability('measure_current.l3').catch(this.error);
       }
 
     })
