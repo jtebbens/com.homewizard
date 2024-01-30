@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.2.25",
+  "version": "3.3.0",
   "platforms": [
     "local"
   ],
@@ -1644,6 +1644,12 @@
         "measure_power.l1",
         "measure_power.l2",
         "measure_power.l3",
+        "measure_current.l1",
+        "measure_current.l2",
+        "measure_current.l3",
+        "measure_voltage.l1",
+        "measure_voltage.l2",
+        "measure_voltage.l3",
         "rssi"
       ],
       "capabilitiesOptions": {
@@ -1691,6 +1697,42 @@
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
           }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current Amp phase 1",
+            "nl": "Huidig Amp fase 1"
+          }
+        },
+        "measure_current.l2": {
+          "title": {
+            "en": "Current Amp phase 2",
+            "nl": "Huidig Amp fase 2"
+          }
+        },
+        "measure_current.l3": {
+          "title": {
+            "en": "Current Amp phase 3",
+            "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        },
+        "measure_voltage.l2": {
+          "title": {
+            "en": "Current Voltage phase 2",
+            "nl": "Huidig Voltage fase 2"
+          }
+        },
+        "measure_voltage.l3": {
+          "title": {
+            "en": "Current Voltage phase 3",
+            "nl": "Huidig Voltage fase 3"
+          }
         }
       },
       "pair": [
@@ -1721,7 +1763,9 @@
       "capabilities": [
         "measure_power",
         "meter_power",
+        "measure_current",
         "measure_power.l1",
+        "measure_voltage",
         "rssi"
       ],
       "capabilitiesOptions": {
@@ -1756,6 +1800,18 @@
           "title": {
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_voltage": {
+          "title": {
+            "en": "Current Voltage",
+            "nl": "Huidig Voltage"
+          }
+        },
+        "measure_current": {
+          "title": {
+            "en": "Current Amp",
+            "nl": "Huidig Amp"
           }
         }
       },
@@ -1827,6 +1883,12 @@
           "title": {
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
           }
         }
       },
