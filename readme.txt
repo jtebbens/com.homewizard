@@ -11,11 +11,9 @@ After connecting your HomeWizard Base Station, you can add the following devices
 - Smoke sensor
 
 These products can be connected without the HomeWizard Base Station:
-- Energy (P1 Dongle)
-- kwh meter 1 and 3 phase type (SDM230 and SDM630)
+- P1 Meter
+- kWh Meter 1 and 3 phase type (SDM230 and SDM630)
 - Energy Socket
-- Watermeter (Lauch mid august 2022)
+- Watermeter
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET, WATERMETER FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
-- kwh meter 1 and 3 phase type (SDM230 and SDM630)
-- Energy Socket

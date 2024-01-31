@@ -4,27 +4,29 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
-v3.3.0
-* KWH Meters SDM230 & SDM630 added support for Voltage & Amp
+v3.3.2
+* kWh Meters SDM230 & SDM630 added support for Voltage & Amp
+* Bug fix SDM630
+* Updated product brandnames and internal mDNS discovery matching
 
 v3.2.25
 * P1 Phase3 circuit adjustment code (some values are not updated in rare setups)
 * Watermeter offset taken from Homewizard Energy app when set, else it takes the offset in Homey Homewizard setting
 
 v3.2.22
-* Contact sensors 868Mhz Homewizard Legacy fix
+* Contact sensors 868Mhz HomeWizard Legacy fix
 * Windmeter bug fix, battery can be empty but there is still ws (windspeed) available
-* Rainmeter battery alarm added (Homewizard Legacy)
+* Rainmeter battery alarm added (HomeWizard Legacy)
 
 v3.2.18
-* Homewizard Wattcher (legacy) bug fix
+* HomeWizard Wattcher (legacy) bug fix
 * Windmeter battery support
 
 v3.2.17
 * Optional Energy socket watt compensation (User request)
 
 v3.2.14
-* P1 added Power failures, voltage sags & swell counts
+* P1 Meter added Power failures, voltage sags & swell counts
 
 v3.2.13
 * Energylink bug fix for s2 for “other” or “car” type sources.

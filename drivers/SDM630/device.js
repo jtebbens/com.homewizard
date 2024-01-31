@@ -164,7 +164,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
       }
 
       //active_current_a  Amp's L1
-      if (data.data.active_current_l1_a !== undefined) {
+      if (data.active_current_l1_a !== undefined) {
         if (!this.hasCapability('measure_current.l1')) {
           await this.addCapability('measure_current.l1').catch(this.error);
       }
@@ -176,7 +176,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
       }
 
       //active_current_a  Amp's L2
-      if (data.data.active_current_l2_a !== undefined) {
+      if (data.active_current_l2_a !== undefined) {
         if (!this.hasCapability('measure_current.l2')) {
           await this.addCapability('measure_current.l2').catch(this.error);
       }
@@ -188,7 +188,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
       }
 
       //active_current_a  Amp's L3
-      if (data.data.active_current_l3_a !== undefined) {
+      if (data.active_current_l3_a !== undefined) {
         if (!this.hasCapability('measure_current.l3')) {
           await this.addCapability('measure_current.l3').catch(this.error);
       }
