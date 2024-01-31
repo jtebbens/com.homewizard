@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.1",
+  "version": "3.3.2",
   "platforms": [
     "local"
   ],
@@ -2076,6 +2076,15 @@
               "value": "SDM630-wifi"
             }
           }
+        ],
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-KWH3"
+            }
+          }
         ]
       ]
     },
@@ -2093,6 +2102,15 @@
             "match": {
               "type": "string",
               "value": "SDM230-wifi"
+            }
+          }
+        ],
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-KWH1"
             }
           }
         ]
