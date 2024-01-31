@@ -274,5 +274,8 @@
   },
   "3.3.0": {
     "en": "KWH Meters SDM230 & SDM630 added support for Voltage & Amp"
+  },
+  "3.3.1": {
+    "en": "Bug fix SDM630 active_current_l1_a undefined"
   }
 }

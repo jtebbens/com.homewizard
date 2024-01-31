@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.0",
+  "version": "3.3.1",
   "platforms": [
     "local"
   ],
@@ -1448,7 +1448,7 @@
     {
       "id": "energy",
       "name": {
-        "en": "Energy (P1 Dongle)"
+        "en": "P1 Meter"
       },
       "images": {
         "large": "drivers/energy/assets/images/large.png",
@@ -1630,7 +1630,7 @@
     {
       "id": "SDM630",
       "name": {
-        "en": "kwh meter (3 phase)"
+        "en": "kWh Meter (3 phase)"
       },
       "images": {
         "large": "drivers/SDM630/assets/images/large.png",
@@ -1752,7 +1752,7 @@
     {
       "id": "SDM230",
       "name": {
-        "en": "kwh meter (1 phase)"
+        "en": "kWh Meter (1 phase)"
       },
       "images": {
         "large": "drivers/SDM230/assets/images/large.png",
