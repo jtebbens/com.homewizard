@@ -280,5 +280,8 @@
   },
   "3.3.2": {
     "en": "Additional mDNS matching for kWh meters"
+  },
+  "3.3.3": {
+    "en": "mDNS timing problem (async onDiscoveryAvailable)"
   }
 }
