@@ -286,5 +286,8 @@
   },
   "3.3.4": {
     "en": "Attempt to improve mDNS functions with async calls"
+  },
+  "3.3.5": {
+    "en": "Lowered CPU footprint (polling energy sockets to 10s)"
   }
 }
