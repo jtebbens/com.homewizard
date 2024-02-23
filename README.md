@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.3.5
+* Finetuning
+* Lowered CPU footprint (polling Energy sockets set to 10s and not 2s)
+
 v3.3.2
 * kWh Meters SDM230 & SDM630 added support for Voltage & Amp
 * Bug fix SDM630
