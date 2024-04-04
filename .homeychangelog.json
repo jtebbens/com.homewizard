@@ -292,5 +292,8 @@
   },
   "3.3.6": {
     "en": "Attempt to get correct gasmeter from P1 when replaced unit, Voltage & Amp support for Norway"
+  },
+  "3.3.7": {
+    "en": "Bugfix Capability remove (P1). "
   }
 }
