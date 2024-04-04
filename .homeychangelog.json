@@ -289,5 +289,8 @@
   },
   "3.3.5": {
     "en": "Lowered CPU footprint (polling energy sockets to 10s)"
+  },
+  "3.3.6": {
+    "en": "Attempt to get correct gasmeter from P1 when replaced unit, Voltage & Amp support for Norway"
   }
 }

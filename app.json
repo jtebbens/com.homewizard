@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.5",
+  "version": "3.3.6",
   "platforms": [
     "local"
   ],
@@ -1908,6 +1908,15 @@
                 "nl": "Compensatie socket Watt"
               },
               "value": 0
+            },
+            {
+              "id": "offset_polling",
+              "type": "number",
+              "label": {
+                "en": "Polling in seconds",
+                "nl": "Interval in seconden"
+              },
+              "value": 10
             }
           ]
         }
