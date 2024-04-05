@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.7",
+  "version": "3.3.8",
   "platforms": [
     "local"
   ],
@@ -1037,53 +1037,61 @@
           "title": {
             "en": "Day usage",
             "nl": "Dag gebruik"
-          }
+          },
+          "insights": true
         },
         "meter_power.aggr": {
           "decimals": 3,
           "title": {
             "en": "Overall usage",
             "nl": "Netto gebruik"
-          }
+          },
+          "insights": true
         },
         "meter_power.s1": {
           "decimals": 3,
           "title": {
             "en": "Day production",
             "nl": "Dag opbrengst"
-          }
+          },
+          "insights": true
         },
         "measure_power.s1other": {
           "title": {
             "en": "Power current S1",
             "nl": "Huidig vermogen S1"
-          }
+          },
+          "insights": true
         },
         "meter_power.s1other": {
           "decimals": 3,
           "title": {
             "en": "Day usage S1",
             "nl": "Dag gebruik S1"
-          }
+          },
+          "insights": true
         },
         "measure_power.used": {
           "title": {
             "en": "Power current",
             "nl": "Huidig vermogen"
-          }
+          },
+          "insights": true
         },
         "measure_power.s2other": {
           "title": {
             "en": "Power current S2",
             "nl": "Huidig vermogen S2"
-          }
+          },
+          "insights": true
         },
         "meter_power.s2other": {
           "decimals": 3,
           "title": {
             "en": "Day usage S2",
             "nl": "Dag gebruik S2"
-          }
+          },
+          "insights": true
         },
         "measure_power.netto": {
           "title": {
@@ -1095,68 +1103,78 @@
           "title": {
             "en": "Solar current",
             "nl": "Huidige opbrengst"
-          }
+          },
+          "insights": true
         },
         "meter_gas.today": {
           "decimals": 3,
           "title": {
             "en": "Gas",
             "nl": "Gas"
-          }
+          },
+          "insights": true
         },
         "meter_gas.reading": {
           "decimals": 3,
           "title": {
             "en": "Meter reading gas",
             "nl": "Meterstand Gas"
-          }
+          },
+          "insights": true
         },
         "meter_water": {
           "decimals": 3,
           "title": {
             "en": "Water Total",
             "nl": "Water Totaal"
-          }
+          },
+          "insights": true
         },
         "measure_water": {
           "title": {
             "en": "Water l./m",
             "nl": "Water l./m"
-          }
+          },
+          "insights": true
         },
         "meter_power.consumed.t1": {
           "decimals": 3,
           "title": {
             "en": "Meter reading low",
             "nl": "Stand laag tarief"
-          }
+          },
+          "insights": true
         },
         "meter_power.produced.t1": {
           "decimals": 3,
           "title": {
             "en": "Meter reading produced low",
             "nl": "Stand terug levering laag"
-          }
+          },
+          "insights": true
         },
         "meter_power.consumed.t2": {
           "decimals": 3,
           "title": {
             "en": "Meter reading normal",
             "nl": "Stand verbruik normaal"
-          }
+          },
+          "insights": true
         },
         "meter_power.produced.t2": {
           "decimals": 3,
           "title": {
             "en": "Meter reading produced normal",
             "nl": "Stand terug levering normaal"
-          }
+          },
+          "insights": true
         },
         "meter_power": {
           "title": {
             "en": "Aggregated meter",
             "nl": "Geaggregeerde meterstand"
-          }
+          },
+          "insights": true
         }
       },
       "pair": [
