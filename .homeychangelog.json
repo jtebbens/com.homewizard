@@ -295,5 +295,8 @@
   },
   "3.3.7": {
     "en": "Bugfix Capability remove (P1). "
+  },
+  "3.3.8": {
+    "en": "Energylink Insight support (user request)"
   }
 }
