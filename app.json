@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.8",
+  "version": "3.3.9",
   "platforms": [
     "local"
   ],
@@ -1011,10 +1011,12 @@
         "meter_power.used",
         "meter_power.aggr",
         "meter_power.s1",
+        "meter_power.s2",
         "meter_power",
         "measure_power.used",
         "measure_power.netto",
         "measure_power.s1",
+        "measure_power.s2",
         "measure_power.s1other",
         "meter_power.s1other",
         "measure_power.s2other",
@@ -1051,23 +1053,23 @@
         "meter_power.s1": {
           "decimals": 3,
           "title": {
-            "en": "Day production",
-            "nl": "Dag opbrengst"
+            "en": "Day production S1",
+            "nl": "Dag opbrengst S1"
           },
           "insights": true
         },
         "measure_power.s1other": {
           "title": {
-            "en": "Power current S1",
-            "nl": "Huidig vermogen S1"
+            "en": "Power current S1 other",
+            "nl": "Huidig vermogen S1 other"
           },
           "insights": true
         },
         "meter_power.s1other": {
           "decimals": 3,
           "title": {
-            "en": "Day usage S1",
-            "nl": "Dag gebruik S1"
+            "en": "Day usage S1 other",
+            "nl": "Dag gebruik S1 other"
           },
           "insights": true
         },
@@ -1080,16 +1082,16 @@
         },
         "measure_power.s2other": {
           "title": {
-            "en": "Power current S2",
-            "nl": "Huidig vermogen S2"
+            "en": "Power current S2 other",
+            "nl": "Huidig vermogen S2 other"
           },
           "insights": true
         },
         "meter_power.s2other": {
           "decimals": 3,
           "title": {
-            "en": "Day usage S2",
-            "nl": "Dag gebruik S2"
+            "en": "Day usage S2 other",
+            "nl": "Dag gebruik S2 other"
           },
           "insights": true
         },
@@ -1101,8 +1103,8 @@
         },
         "measure_power.s1": {
           "title": {
-            "en": "Solar current",
-            "nl": "Huidige opbrengst"
+            "en": "Solar current S1",
+            "nl": "Huidige opbrengst S1"
           },
           "insights": true
         },
