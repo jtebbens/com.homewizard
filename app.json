@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.9",
+  "version": "3.3.10",
   "platforms": [
     "local"
   ],
@@ -1058,6 +1058,14 @@
           },
           "insights": true
         },
+        "meter_power.s2": {
+          "decimals": 3,
+          "title": {
+            "en": "Day production S2",
+            "nl": "Dag opbrengst S2"
+          },
+          "insights": true
+        },
         "measure_power.s1other": {
           "title": {
             "en": "Power current S1 other",
@@ -1105,6 +1113,13 @@
           "title": {
             "en": "Solar current S1",
             "nl": "Huidige opbrengst S1"
+          },
+          "insights": true
+        },
+        "measure_power.s2": {
+          "title": {
+            "en": "Solar current S2",
+            "nl": "Huidige opbrengst S2"
           },
           "insights": true
         },
