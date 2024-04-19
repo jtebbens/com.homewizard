@@ -64,6 +64,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       const data = await res.json();
 
+      // Accessing external data
+      const externalData = data.external;
+
       const promises = []; // Capture all await promises
 
       // Save export data check if capabilities are present first
@@ -133,6 +136,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 
       // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
+      /*
       if (data.total_gas_m3 !== undefined) {
       								if (!this.hasCapability('meter_gas')) {
       									promises.push(this.addCapability('meter_gas').catch(this.error));
@@ -143,6 +147,41 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       							else if (data.total_gas_m3 == null) {
                       // delete gas meter
       								promises.push(this.removeCapability('meter_gas').catch(this.error));
+      }
+      */
+
+      // New attempt gas meter using external source
+      let latestGasData = null;
+      if (externalData && externalData.length > 0) {
+        if (!this.hasCapability('meter_gas')) {
+          promises.push(this.addCapability('meter_gas').catch(this.error));
+        }
+
+          // Find the gas data with the latest timestamp
+          latestGasData = externalData.reduce((prev, current) => {
+              if (current.type === 'gas_meter') {
+                  if (!prev || current.timestamp > prev.timestamp) {
+                      return current;
+                  }
+              }
+              return prev;
+          }, null);
+      }
+
+      if (latestGasData) {
+          // Access gas data
+          const gasValue = latestGasData.value;
+          //const gasUnit = latestGasData.unit;
+          if (this.getCapabilityValue('meter_gas') != gasValue)
+                      promises.push(this.setCapabilityValue('meter_gas', gasValue).catch(this.error));
+
+          // Do something with gas data
+          //console.log(`Latest Gas Data - Timestamp: ${latestGasData.timestamp}, Value: ${gasValue}, Unit: ${gasUnit}`);
+      } else {
+          if (this.hasCapability('meter_gas')) {
+                promises.push(this.removeCapability('meter_gas').catch(this.error));
+                console.log('Removed meter as there is no gas meter in P1.');
+          }
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
@@ -193,59 +232,6 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this.flowTriggerExport(this, { export_changed: data.total_power_export_kwh });
         this.setStoreValue("last_total_export_kwh",data.total_power_export_kwh).catch(this.error);
      }
-
-      // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
-
-     if ((data.active_power_l2_w) || (data.active_power_l3_w) || (data.active_power_l2_w !== undefined) || (data.active_power_l3_w !== undefined)) {
-         if ((!this.hasCapability('measure_power.l2')) || (!this.hasCapability('measure_voltage.l3'))) {
-          promises.push(this.addCapability('measure_power.l1').catch(this.error));
-          promises.push(this.addCapability('measure_power.l2').catch(this.error));
-          promises.push(this.addCapability('measure_power.l3').catch(this.error));
-          promises.push(this.addCapability('measure_current.l1').catch(this.error));
-          promises.push(this.addCapability('measure_current.l2').catch(this.error));
-          promises.push(this.addCapability('measure_current.l3').catch(this.error));
-          promises.push(this.addCapability('measure_voltage.l1').catch(this.error));
-          promises.push(this.addCapability('measure_voltage.l2').catch(this.error));
-          promises.push(this.addCapability('measure_voltage.l3').catch(this.error));
-           
-        }
-        if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
-        promises.push(this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error));
-        if (this.getCapabilityValue('measure_power.l2') != data.active_power_l2_w)
-        promises.push(this.setCapabilityValue("measure_power.l2", data.active_power_l2_w).catch(this.error));
-        if (this.getCapabilityValue('measure_power.l3') != data.active_power_l3_w)
-        promises.push(this.setCapabilityValue("measure_power.l3", data.active_power_l3_w).catch(this.error));
-        //Amphere 3 fase
-        if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
-        promises.push(this.setCapabilityValue("measure_current.l1", data.active_current_l1_a).catch(this.error));
-        if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
-        promises.push(this.setCapabilityValue("measure_current.l2", data.active_current_l2_a).catch(this.error));
-        if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
-        promises.push(this.setCapabilityValue("measure_current.l3", data.active_current_l3_a).catch(this.error));
-        //Voltage 3 fase
-        if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
-        promises.push(this.setCapabilityValue("measure_voltage.l1", data.active_voltage_l1_v).catch(this.error));
-        if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
-        promises.push(this.setCapabilityValue("measure_voltage.l2", data.active_voltage_l2_v).catch(this.error));
-        if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
-        promises.push(this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_v).catch(this.error));  
-
-
-      }
-      else if (!(data.active_power_l2_w) || !(data.active_power_l3_w) || (data.active_power_l2_w === undefined) || (data.active_power_l3_w === undefined)) {
-        if ((this.hasCapability('measure_power.l2')) || (this.hasCapability('measure_current.l3')) || (this.hasCapability('measure_voltage.l3'))) {
-          promises.push(this.removeCapability('measure_power.l1').catch(this.error));
-          promises.push(this.removeCapability('measure_power.l2').catch(this.error));
-          promises.push(this.removeCapability('measure_power.l3').catch(this.error));
-          promises.push(this.removeCapability('measure_current.l1').catch(this.error));
-          promises.push(this.removeCapability('measure_current.l2').catch(this.error));
-          promises.push(this.removeCapability('measure_current.l3').catch(this.error));
-          promises.push(this.removeCapability('measure_voltage.l1').catch(this.error));
-          promises.push(this.removeCapability('measure_voltage.l2').catch(this.error));
-          promises.push(this.removeCapability('measure_voltage.l3').catch(this.error));
-          promises.push(this.removeCapability('measure_power.active_power_w').catch(this.error));
-        }
-      }
 
       //Belgium 
       if (data.montly_power_peak_w !== undefined) {
@@ -366,6 +352,110 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       else if ((data.voltage_swell_l3_count == undefined) && (this.hasCapability('voltage_swell_l3'))) {
         promises.push(this.removeCapability('voltage_swell_l3').catch(this.error));
       }
+
+      //Rewrite of L1/L2/L3 Voltage/Amp
+      if (data.active_power_l1_w !== undefined) {
+        if (!this.hasCapability('measure_power.l1')) {
+          promises.push(this.addCapability('measure_power.l1').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
+          promises.push(this.setCapabilityValue("measure_power.l1", data.active_power_l1_w).catch(this.error));
+      }
+      else if ((data.active_power_l1_w == undefined) && (this.hasCapability('measure_power.l1'))) {
+        promises.push(this.removeCapability('measure_power.l1').catch(this.error));
+      }
+	  
+      if (data.active_power_l2_w !== undefined) {
+        if (!this.hasCapability('measure_power.l2')) {
+          promises.push(this.addCapability('measure_power.l2').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_power.l2') != data.active_power_l2_w)
+      promises.push(this.setCapabilityValue("measure_power.l2", data.active_power_l2_w).catch(this.error));
+      }
+      else if ((data.active_power_l2_w == undefined) && (this.hasCapability('measure_power.l2'))) {
+        promises.push(this.removeCapability('measure_power.l2').catch(this.error));
+      }
+	  
+      if (data.active_power_l3_w !== undefined) {
+        if (!this.hasCapability('measure_power.l3')) {
+          promises.push(this.addCapability('measure_power.l3').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_power.l3') != data.active_power_l3_w)
+      promises.push(this.setCapabilityValue("measure_power.l3", data.active_power_l3_w).catch(this.error));
+      }
+      else if ((data.active_power_l3_w == undefined) && (this.hasCapability('measure_power.l3'))) {
+        promises.push(this.removeCapability('measure_power.l3').catch(this.error));
+      }
+	  
+      if (data.active_voltage_l1_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l1')) {
+          promises.push(this.addCapability('measure_voltage.l1').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
+      promises.push(this.setCapabilityValue("measure_voltage.l1", data.active_voltage_l1_v).catch(this.error));
+      }
+      else if ((data.active_voltage_l1_v == undefined) && (this.hasCapability('measure_voltage.l1'))) {
+        promises.push(this.removeCapability('measure_voltage.l1').catch(this.error));
+      }
+	  
+      if (data.active_voltage_l2_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l2')) {
+          promises.push(this.addCapability('measure_voltage.l2').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
+      promises.push(this.setCapabilityValue("measure_voltage.l2", data.active_voltage_l2_v).catch(this.error));
+      }
+      else if ((data.active_voltage_l2_v == undefined) && (this.hasCapability('measure_voltage.l2'))) {
+        promises.push(this.removeCapability('measure_voltage.l2').catch(this.error));
+      }
+
+      if (data.active_voltage_l3_v !== undefined) {
+        if (!this.hasCapability('measure_voltage.l3')) {
+          promises.push(this.addCapability('measure_voltage.l3').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
+      promises.push(this.setCapabilityValue("measure_voltage.l3", data.active_voltage_l3_v).catch(this.error));
+      }
+      else if ((data.active_voltage_l3_v == undefined) && (this.hasCapability('measure_voltage.l3'))) {
+        promises.push(this.removeCapability('measure_voltage.l3').catch(this.error));
+      }
+	  
+      if (data.active_current_l1_a !== undefined) {
+        if (!this.hasCapability('measure_current.l1')) {
+          promises.push(this.addCapability('measure_current.l1').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
+      promises.push(this.setCapabilityValue("measure_current.l1", data.active_current_l1_a).catch(this.error));
+      }
+      else if ((data.active_current_l1_a == undefined) && (this.hasCapability('measure_current.l1'))) {
+        promises.push(this.removeCapability('measure_current.l1').catch(this.error));
+      }
+	  
+      if (data.active_current_l2_a !== undefined) {
+        if (!this.hasCapability('measure_current.l2')) {
+          promises.push(this.addCapability('measure_current.l2').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
+      promises.push(this.setCapabilityValue("measure_current.l2", data.active_current_l2_a).catch(this.error));
+      }
+      else if ((data.active_current_l2_a == undefined) && (this.hasCapability('measure_current.l2'))) {
+        promises.push(this.removeCapability('measure_current.l2').catch(this.error));
+      }
+	  
+      if (data.active_current_l3_a !== undefined) {
+        if (!this.hasCapability('measure_current.l3')) {
+          promises.push(this.addCapability('measure_current.l3').catch(this.error));
+      }
+      if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
+      promises.push(this.setCapabilityValue("measure_current.l3", data.active_current_l3_a).catch(this.error));
+      }
+      else if ((data.active_current_l3_a == undefined) && (this.hasCapability('measure_current.l3'))) {
+        promises.push(this.removeCapability('measure_current.l3').catch(this.error));
+      }
+	  
+	  
+	  
+	  
 
       // Execute all promises concurrently using Promise.all()
 			await Promise.all(promises);

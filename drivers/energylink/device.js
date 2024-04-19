@@ -183,24 +183,33 @@ class HomeWizardEnergylink extends Homey.Device {
 						}
 					}
 
-					if (value_s2 == 'solar' ) {
-						energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
-						energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
-
-						solar_current_prod = solar_current_prod + energy_current_prod;
-						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
-						if (me.hasCapability('meter_power.s2other')) {
-							promises.push(me.removeCapability('meter_power.s2other').catch(me.error));
-							promises.push(me.removeCapability('measure_power.s2other').catch(me.error));
-						}
-					}
-
 					if(value_s1 == 'solar' || value_s2 == 'solar') {
 						promises.push(me.setCapabilityValue("measure_power.s1", solar_current_prod ).catch(me.error));
 						promises.push(me.setCapabilityValue("meter_power.s1", solar_daytotal_prod ).catch(me.error));
 						if (me.hasCapability('meter_power.s1other')) {
 							promises.push(me.removeCapability('meter_power.s1other').catch(me.error));
 							promises.push(me.removeCapability('measure_power.s1other').catch(me.error));
+						}
+					}
+
+					if (value_s2 == 'solar' ) {
+						energy_current_prod = ( callback[0].s2.po ); // WATTS Energy produced via S1 $energylink[0]['s2']['po']
+						energy_daytotal_prod = ( callback[0].s2.dayTotal ); // KWH Energy produced via S1 $energylink[0]['s2']['dayTotal']
+
+						if (!me.hasCapability('measure_power.s2')) {
+							me.addCapability('measure_power.s2').catch(me.error);
+							me.addCapability('meter_power.s2').catch(me.error);
+						}
+						else {
+							promises.push(me.setCapabilityValue('measure_power.s2', callback[0].s2.po ).catch(me.error));
+							promises.push(me.setCapabilityValue('meter_power.s2', callback[0].s2.dayTotal ).catch(me.error));
+						}
+
+						solar_current_prod = solar_current_prod + energy_current_prod;
+						solar_daytotal_prod = solar_daytotal_prod + energy_daytotal_prod;
+						if (me.hasCapability('meter_power.s2other')) {
+							promises.push(me.removeCapability('meter_power.s2other').catch(me.error));
+							promises.push(me.removeCapability('measure_power.s2other').catch(me.error));
 						}
 					}
 
