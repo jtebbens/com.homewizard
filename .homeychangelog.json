@@ -304,5 +304,8 @@
   },
   "3.3.10": {
     "en": "Energylink name tags S2 (solar) added"
+  },
+  "3.3.11": {
+    "en": "Rollback gasmeter code (old P1 firmware fails check)"
   }
 }
