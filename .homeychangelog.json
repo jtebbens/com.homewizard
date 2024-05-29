@@ -307,5 +307,8 @@
   },
   "3.3.11": {
     "en": "Rollback gasmeter code (old P1 firmware fails check)"
+  },
+  "3.3.12": {
+    "en": "Energylink user request fix to force positive solar values from unit"
   }
 }
