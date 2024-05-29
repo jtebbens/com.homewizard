@@ -310,5 +310,8 @@
   },
   "3.3.12": {
     "en": "Energylink user request fix to force positive solar values from unit"
+  },
+  "3.3.13": {
+    "en": "Other means of making a negative value positive from the Energylink T2"
   }
 }
