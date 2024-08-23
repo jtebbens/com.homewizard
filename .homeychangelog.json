@@ -319,5 +319,8 @@
   },
   "3.3.15": {
     "en": "Added T3 meter to P1 (User request)"
+  },
+  "3.3.16": {
+    "en": "Bugfix T3 meter, added to app.json file"
   }
 }
