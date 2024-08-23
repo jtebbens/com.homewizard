@@ -316,5 +316,8 @@
   },
   "3.3.14": {
     "en": "Removed delayed push code for Energylink"
+  },
+  "3.3.15": {
+    "en": "Added T3 meter to P1 (User request)"
   }
 }
