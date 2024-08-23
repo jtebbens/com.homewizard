@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.15",
+  "version": "3.3.16",
   "platforms": [
     "local"
   ],
@@ -1499,6 +1499,8 @@
         "meter_power.produced.t1",
         "meter_power.consumed.t2",
         "meter_power.produced.t2",
+        "meter_power.consumed.t3",
+        "meter_power.produced.t3",
         "meter_power.consumed",
         "meter_power.returned",
         "measure_power.l1",
@@ -1618,6 +1620,20 @@
           "title": {
             "en": "Total t2 deliver",
             "nl": "Totaal t2 teruglevering"
+          }
+        },
+        "meter_power.consumed.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 usage",
+            "nl": "Totaal t3 gebruik"
+          }
+        },
+        "meter_power.produced.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 deliver",
+            "nl": "Totaal t3 teruglevering"
           }
         },
         "meter_power.consumed": {
