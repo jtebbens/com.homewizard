@@ -4,6 +4,11 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.3.16
+* Rollback gasmeter (old firmware P1 fails check and removes)
+* User bug fix Energylink where solar production values from unit ended negative
+* Added T3 import and export meter (user request)
+
 v3.3.10
 * Support for gasmeter details when replaced and old unit not correctly set in P1 (external data)
 * Support for Norway Voltage and Amp readings

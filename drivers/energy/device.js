@@ -136,7 +136,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 
       // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
-      /*
+      
       if (data.total_gas_m3 !== undefined) {
       								if (!this.hasCapability('meter_gas')) {
       									promises.push(this.addCapability('meter_gas').catch(this.error));
@@ -147,41 +147,6 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       							else if (data.total_gas_m3 == null) {
                       // delete gas meter
       								promises.push(this.removeCapability('meter_gas').catch(this.error));
-      }
-      */
-
-      // New attempt gas meter using external source
-      let latestGasData = null;
-      if (externalData && externalData.length > 0) {
-        if (!this.hasCapability('meter_gas')) {
-          promises.push(this.addCapability('meter_gas').catch(this.error));
-        }
-
-          // Find the gas data with the latest timestamp
-          latestGasData = externalData.reduce((prev, current) => {
-              if (current.type === 'gas_meter') {
-                  if (!prev || current.timestamp > prev.timestamp) {
-                      return current;
-                  }
-              }
-              return prev;
-          }, null);
-      }
-
-      if (latestGasData) {
-          // Access gas data
-          const gasValue = latestGasData.value;
-          //const gasUnit = latestGasData.unit;
-          if (this.getCapabilityValue('meter_gas') != gasValue)
-                      promises.push(this.setCapabilityValue('meter_gas', gasValue).catch(this.error));
-
-          // Do something with gas data
-          //console.log(`Latest Gas Data - Timestamp: ${latestGasData.timestamp}, Value: ${gasValue}, Unit: ${gasUnit}`);
-      } else {
-          if (this.hasCapability('meter_gas')) {
-                promises.push(this.removeCapability('meter_gas').catch(this.error));
-                console.log('Removed meter as there is no gas meter in P1.');
-          }
       }
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
@@ -453,6 +418,29 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         promises.push(this.removeCapability('measure_current.l3').catch(this.error));
       }
 	  
+      //T3 meter request import and export
+      if (data.total_power_import_t3_kwh !== undefined) {
+        if (!this.hasCapability('meter_power.consumed.t3')) {
+          promises.push(this.addCapability('meter_power.consumed.t3').catch(this.error));
+      }
+      if (this.getCapabilityValue('meter_power.consumed.t3') != data.total_power_import_t3_kwh)
+      promises.push(this.setCapabilityValue("meter_power.consumed.t3", data.total_power_import_t3_kwh).catch(this.error));
+      }
+      else if ((data.total_power_import_t3_kwh == undefined) && (this.hasCapability('meter_power.consumed.t3'))) {
+        promises.push(this.removeCapability('meter_power.consumed.t3').catch(this.error));
+      }
+
+      if (data.total_power_export_t3_kwh !== undefined) {
+        if (!this.hasCapability('meter_power.produced.t3')) {
+          promises.push(this.addCapability('meter_power.produced.t3').catch(this.error));
+      }
+      if (this.getCapabilityValue('meter_power.produced.t3') != data.total_power_export_t3_kwh)
+      promises.push(this.setCapabilityValue("meter_power.produced.t3", data.total_power_export_t3_kwh).catch(this.error));
+      }
+      else if ((data.total_power_export_t3_kwh == undefined) && (this.hasCapability('meter_power.produced.t3'))) {
+        promises.push(this.removeCapability('meter_power.produced.t3').catch(this.error));
+      }
+
 	  
 	  
 	  
