@@ -362,37 +362,38 @@ class HomeWizardEnergylink extends Homey.Device {
 		  if (Object.keys(callback).length > 0) {
 			this.setAvailable().catch(this.error);
 
-			const promises = [];
-	  
+			 
 			let metered_gas = callback[2].consumed;
 			let metered_electricity_consumed_t1 = callback[0].consumed;
 			let metered_electricity_produced_t1 = callback[0].produced;
 			let metered_electricity_consumed_t2 = callback[1].consumed;
 			let metered_electricity_produced_t2 = callback[1].produced;
+
+			if (metered_electricity_produced_t2 < 0) {metered_electricity_produced_t2 = metered_electricity_produced_t2 * -1};
+
 			let aggregated_meter_power = (metered_electricity_consumed_t1 + metered_electricity_consumed_t2) - (metered_electricity_produced_t1 + metered_electricity_produced_t2);
 	  
 			if (!this.hasCapability('meter_power')) {
 			  await this.addCapability('meter_power').catch(this.error);
 			}
 	  
-			promises.push(this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error));
-			promises.push(this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error));
-			promises.push(this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error));
-			promises.push(this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error));
-			promises.push(this.setCapabilityValue('meter_power.consumed.t2', metered_electricity_consumed_t2).catch(this.error));
-			promises.push(this.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(this.error));
+			this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error);
+			this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error);
+			this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error);
+			this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error);
+			this.setCapabilityValue('meter_power.consumed.t2', metered_electricity_consumed_t2).catch(this.error);
+			this.setCapabilityValue('meter_power.produced.t2', metered_electricity_produced_t2).catch(this.error);
 	  
 			if (metered_electricity_produced_t1 != this.getStoreValue('last_meter_return_t1') && metered_electricity_produced_t1 != undefined && metered_electricity_produced_t1 != null) {
 			  this.flowTriggerMeterReturnT1(this, { meter_power_produced_t1: metered_electricity_produced_t1 });
-			  promises.push(this.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1));
+			  this.setStoreValue('last_meter_return_t1', metered_electricity_produced_t1);
 			}
 	  
 			if (metered_electricity_produced_t2 != this.getStoreValue('last_meter_return_t2') && metered_electricity_produced_t2 != undefined && metered_electricity_produced_t2 != null) {
 			  this.flowTriggerMeterReturnT2(this, { meter_power_produced_t2: metered_electricity_produced_t2 });
-			  promises.push(this.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2));
+			  this.setStoreValue('last_meter_return_t2', metered_electricity_produced_t2);
 			}
-			// Execute all promises concurrently using Promise.all()
-			await Promise.all(promises);
+			
 
 		  }
 		} catch (err) {
