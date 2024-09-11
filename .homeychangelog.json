@@ -322,5 +322,8 @@
   },
   "3.3.16": {
     "en": "Bugfix T3 meter, added to app.json file"
+  },
+  "3.3.17": {
+    "en": "Added 60s timeout for Homewizard wifi devices due to bad user wifi coverage"
   }
 }
