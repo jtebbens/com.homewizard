@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR ENERGY SOCKET FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP
 
+v3.3.17
+* Added a 60s timeout for P1 and Energy sockets for users with bad wifi connection to related devices
+
 v3.3.16
 * Rollback gasmeter (old firmware P1 fails check and removes)
 * User bug fix Energylink where solar production values from unit ended negative

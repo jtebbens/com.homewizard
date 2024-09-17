@@ -58,15 +58,17 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if( !this.url ) return;
 
     Promise.resolve().then(async () => {
-      const res = await fetch(`${this.url}/data`);
-      if( !res.ok )
-        throw new Error(res.statusText);
+      let res = await fetch(`${this.url}/data`);
+      
+      if( !res || !res.ok ) {
+        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users 
+        // try again
+        res = await fetch(`${this.url}/data`);
+        if( !res || !res.ok )
+          throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
 
       const data = await res.json();
-
-      // Accessing external data
-      const externalData = data.external;
-
       const promises = []; // Capture all await promises
 
       // Save export data check if capabilities are present first
@@ -446,7 +448,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 	  
 
       // Execute all promises concurrently using Promise.all()
-			await Promise.all(promises);
+			Promise.all(promises);
 
     })
       .then(() => {
