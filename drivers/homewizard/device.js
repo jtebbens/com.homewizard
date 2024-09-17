@@ -66,7 +66,7 @@ class HomeWizardDevice extends Homey.Device {
 		Promise.resolve()
 		.then(async () => {
 
-				const me = this;
+				//const me = this;
 				const homey_lang = this.homey.i18n.getLanguage();
 			
 				// new
