@@ -325,5 +325,8 @@
   },
   "3.3.17": {
     "en": "Added 60s timeout for Homewizard wifi devices due to bad user wifi coverage"
+  },
+  "3.3.18": {
+    "en": "Added support to the Energy usage for Homey (Homey SDK)"
   }
 }

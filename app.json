@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.17",
+  "version": "3.3.18",
   "platforms": [
     "local"
   ],
@@ -1524,7 +1524,9 @@
         "voltage_swell_l3"
       ],
       "energy": {
-        "cumulative": true
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.consumed",
+        "cumulativeExportedCapability": "meter_power.returned"
       },
       "capabilitiesOptions": {
         "measure_power": {
