@@ -6,7 +6,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "node-fetch": "^2.6.7",
-    "save": "^2.4.0"
+    "npm": "^10.8.3"
   },
   "scripts": {
     "test": "athom app run"
@@ -22,8 +22,6 @@
   },
   "homepage": "https://github.com/jtebbens/com.homewizard#readme",
   "devDependencies": {
-    "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.3",
-    "eslint": "^7.32.0",
-    "eslint-config-athom": "^3.1.1"
+    "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.3"
   }
 }
