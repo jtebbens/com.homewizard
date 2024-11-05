@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.18",
+  "version": "3.3.19",
   "platforms": [
     "local"
   ],
@@ -62,7 +62,7 @@
     }
   },
   "bugs": {
-    "url": "https://github.com/jtebbens/com.homewizard/issues"
+    "url": "https://community.homey.app/t/app-pro-homewizard/19267"
   },
   "source": "https://github.com/jtebbens/com.homewizard",
   "homeyCommunityTopicId": 19267,
