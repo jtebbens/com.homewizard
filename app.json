@@ -2004,6 +2004,9 @@
         "meter_water",
         "rssi"
       ],
+      "energy": {
+        "cumulative": true
+      },
       "capabilitiesOptions": {
         "measure_water": {
           "type": "number",
