@@ -5,7 +5,6 @@
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
-    "node-fetch": "^2.6.7",
     "npm": "^10.8.3"
   },
   "scripts": {
