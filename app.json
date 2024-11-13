@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.20",
+  "version": "3.3.21",
   "platforms": [
     "local"
   ],
@@ -720,7 +720,7 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false,
+      "insights": true,
       "icon": "assets/rssi.svg",
       "units": {
         "en": "RSSI",
