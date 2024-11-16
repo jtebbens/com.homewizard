@@ -337,5 +337,8 @@
   },
   "3.3.21": {
     "en": "Enabled Wifi RSSI (Insights)"
+  },
+  "3.3.22": {
+    "en": "Pairing prompt to enable LOCAL API and warning for watermeter that needs USB power"
   }
 }
