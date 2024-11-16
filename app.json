@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.21",
+  "version": "3.3.22",
   "platforms": [
     "local"
   ],
@@ -1668,6 +1668,12 @@
       },
       "pair": [
         {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
           "id": "list_devices",
           "template": "list_devices",
           "navigation": {
@@ -1790,6 +1796,12 @@
       },
       "pair": [
         {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
           "id": "list_devices",
           "template": "list_devices",
           "navigation": {
@@ -1869,6 +1881,12 @@
         }
       },
       "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
         {
           "id": "list_devices",
           "template": "list_devices",
@@ -1976,6 +1994,12 @@
       ],
       "pair": [
         {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
           "id": "list_devices",
           "template": "list_devices",
           "navigation": {
@@ -2055,6 +2079,12 @@
         }
       ],
       "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
         {
           "id": "list_devices",
           "template": "list_devices",
