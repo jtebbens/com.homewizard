@@ -4,8 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.3.20
+v3.3.22
+* Added pairing prompt (Enable LOCAL API confirmation, warning watermeter need USB power)
+
+v3.3.21
 * Watermeter cumulative energy support
+* Enabled Wifi RSSI strength (Insights)
 
 v3.3.18
 * Added support to the Energy usage for Homey (Homey SDK)

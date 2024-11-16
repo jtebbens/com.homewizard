@@ -50,9 +50,9 @@ module.exports = (function(){
       const cacheKey = `${device_id}${uri_part}`;
       const cachedResponse = cache[cacheKey]; // Check if cached response exists
       const currentTime = Date.now();
-      const timeoutDuration = 13000; // Timeout duration in milliseconds
+      const timeoutDuration = 18000; // Timeout duration in milliseconds
     
-      if (cachedResponse && currentTime - cachedResponse.timestamp < 15000) {
+      if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
         if (debug) { console.log('Using cached response for device:', device_id, 'endpoint:', uri_part); }
         callback(null, cachedResponse.response); // Use the cached response
         return; // Return early
@@ -155,7 +155,7 @@ homewizard.startpoll = function() {
      } catch (error) {
        console.error('Error occurred during polling:', error);
      }
-   }, 1000 * 15);
+   }, 1000 * 20);
  };
 
   
