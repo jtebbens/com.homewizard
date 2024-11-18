@@ -8,7 +8,7 @@
     "local"
   ],
   "sdk": 3,
-  "brandColor": "#75E595",
+  "brandColor": "#71E199",
   "compatibility": ">=8.0.0",
   "description": {
     "en": "Helps you understand and save"
@@ -19,9 +19,9 @@
     "climate"
   ],
   "images": {
-    "xlarge": "assets/images/xlarge.jpg",
-    "large": "assets/images/large.jpg",
-    "small": "assets/images/small.jpg"
+    "xlarge": "assets/images/xlarge.png",
+    "large": "assets/images/large.png",
+    "small": "assets/images/small.png"
   },
   "author": {
     "name": "Jeroen Tebbens",
