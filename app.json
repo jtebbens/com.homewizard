@@ -19,6 +19,7 @@
     "climate"
   ],
   "images": {
+    "xlarge": "assets/images/xlarge.jpg",
     "large": "assets/images/large.jpg",
     "small": "assets/images/small.jpg"
   },
