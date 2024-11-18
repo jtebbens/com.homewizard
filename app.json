@@ -8,7 +8,7 @@
     "local"
   ],
   "sdk": 3,
-  "brandColor": "#000000",
+  "brandColor": "#75E595",
   "compatibility": ">=8.0.0",
   "description": {
     "en": "Combine the Smarthome power"
