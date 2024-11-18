@@ -343,5 +343,8 @@
   },
   "3.3.23": {
     "en": "Update images and manifest to match HomeWizard branding"
+  },
+  "3.3.24": {
+    "en": "Icon color adjustment"
   }
 }
