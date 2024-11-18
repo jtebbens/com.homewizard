@@ -340,5 +340,8 @@
   },
   "3.3.22": {
     "en": "Pairing prompt to enable LOCAL API and warning for watermeter that needs USB power"
+  },
+  "3.3.23": {
+    "en": "Update images and manifest to match HomeWizard branding"
   }
 }
