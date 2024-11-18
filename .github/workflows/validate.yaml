@@ -25,7 +25,8 @@ jobs:
           cache: 'npm'
 
       - name: Install Homey CLI
-        run: npm install --no-optional homey
+        run: npm install --no-optional homey 
+      - run: npm install --include=optional sharp
 
       - name: Validate Homey App
         run: npx homey app validate --level=publish
