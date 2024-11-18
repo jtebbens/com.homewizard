@@ -8,10 +8,10 @@
     "local"
   ],
   "sdk": 3,
-  "brandColor": "#000000",
+  "brandColor": "#75E595",
   "compatibility": ">=8.0.0",
   "description": {
-    "en": "Combine the Smarthome power"
+    "en": "Helps you understand and save"
   },
   "category": [
     "energy",
@@ -19,6 +19,7 @@
     "climate"
   ],
   "images": {
+    "xlarge": "assets/images/xlarge.jpg",
     "large": "assets/images/large.jpg",
     "small": "assets/images/small.jpg"
   },
