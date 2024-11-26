@@ -346,5 +346,8 @@
   },
   "3.3.24": {
     "en": "Icon color adjustment"
+  },
+  "3.3.25": {
+    "en": "BUGFIX SD230 device set as solar showing negative values"
   }
 }
