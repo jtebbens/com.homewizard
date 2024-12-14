@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.3.25",
+  "version": "3.3.26",
   "platforms": [
     "local"
   ],
@@ -1032,7 +1032,9 @@
         "meter_power.produced.t2"
       ],
       "energy": {
-        "cumulative": true
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.used",
+        "cumulativeExportedCapability": "meter_power.s1"
       },
       "capabilitiesOptions": {
         "meter_power.used": {
@@ -1495,6 +1497,7 @@
       "capabilities": [
         "measure_power",
         "meter_gas",
+        "meter_water",
         "meter_power",
         "meter_power.consumed.t1",
         "meter_power.produced.t1",
@@ -1541,6 +1544,13 @@
           "title": {
             "en": "Gasmeter",
             "nl": "Gasmeter"
+          }
+        },
+        "meter_water": {
+          "decimals": 3,
+          "title": {
+            "en": "Watermeter",
+            "nl": "Watermeter"
           }
         },
         "measure_power.l1": {

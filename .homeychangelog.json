@@ -349,5 +349,8 @@
   },
   "3.3.25": {
     "en": "BUGFIX SD230 device set as solar showing negative values"
+  },
+  "3.3.26": {
+    "en": "Watermeter support for Belgium"
   }
 }
