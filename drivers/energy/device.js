@@ -443,8 +443,43 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         promises.push(this.removeCapability('meter_power.produced.t3').catch(this.error));
       }
 
-	  
-	  
+      // Accessing external data
+      const externalData = data.external;
+
+      // Belgium water meter using external source (P1)
+      let latestWaterData = null;
+      if (externalData && externalData.length > 0) {
+
+          // Find the water data with the latest timestamp
+          latestWaterData = externalData.reduce((prev, current) => {
+              if (current.type === 'water_meter') {
+                  if (!prev || current.timestamp > prev.timestamp) {
+                      return current;
+                  }
+              }
+              return prev;
+          }, null);
+      }
+
+      if (latestWaterData) {
+          // Access water data
+          const waterValue = latestWaterData.value;
+
+          if (!this.hasCapability('meter_water')) {
+            promises.push(this.addCapability('meter_water').catch(this.error));
+          }
+          
+          if (this.getCapabilityValue('meter_water') != waterValue)
+                      promises.push(this.setCapabilityValue('meter_water', waterValue).catch(this.error));
+
+          
+      } else {
+          if (this.hasCapability('meter_water')) {
+                promises.push(this.removeCapability('meter_water').catch(this.error));
+                console.log('Removed meter as there is no water meter in P1.');
+          }
+      }
+
 	  
 
       // Execute all promises concurrently using Promise.all()

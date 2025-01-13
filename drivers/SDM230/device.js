@@ -58,11 +58,12 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
       const data = await res.json();
 
-      if (((data.active_power_w < 0) || (data.active_power_l1_w < 0)) && (this.getClass() == 'sensor')) {
-        if (this.getClass() != 'solarpanel') {
-          await this.setClass('solarpanel').catch(this.error);
-        }
-      }
+    // OLD CODE / REPLACED BY SOCKET METHOD
+     // if (((data.active_power_w < 0) || (data.active_power_l1_w < 0)) && (this.getClass() == 'sensor')) {
+     //   if (this.getClass() != 'solarpanel') {
+     //     await this.setClass('solarpanel').catch(this.error);
+     //   }
+     // }
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {
@@ -106,10 +107,24 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 //        }
 //      }
 
-      await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
+
+      // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
+      if (this.getClass() == 'solarpanel') {
+              await this.setCapabilityValue('measure_power', data.active_power_w * -1).catch(this.error);
+      } else {
+        await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
+      }
+
+
       //await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
       await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
-      await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
+
+      //There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
+      if (this.getClass() == 'solarpanel') {
+          await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w *-1).catch(this.error);
+      } else {
+          await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
+      }
       //await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
 
       // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid

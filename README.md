@@ -4,6 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.3.26
+* Watermeter via P1 (Belgium)
+
+v3.3.25
+* BUG FIX SDM230 device, some users have solar panels but class was not changed to socket and show negative solar (BUGFIX request Athom)
+
 v3.3.24
 * Added pairing prompt (Enable LOCAL API confirmation, warning watermeter need USB power)
 * Update images and manifest to match HomeWizard branding
