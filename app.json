@@ -9,7 +9,7 @@
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
-  "compatibility": ">=8.0.0",
+  "compatibility": ">=12.3.0",
   "description": {
     "en": "Helps you understand and save"
   },
@@ -2108,6 +2108,92 @@
           "template": "add_devices"
         }
       ]
+    },
+    {
+      "id": "plugin_battery",
+      "name": {
+        "en": "Plugin Battery"
+      },
+      "images": {
+        "large": "drivers/plugin_battery/assets/images/large.png",
+        "small": "drivers/plugin_battery/assets/images/small.png"
+      },
+      "class": "battery",
+      "discovery": "plugin_battery",
+      "capabilities": [
+        "meter_power.import",
+        "meter_power.export",
+        "measure_battery",
+        "battery_charging_state",
+        "measure_power",
+        "measure_current",
+        "measure_voltage"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "meter_power.import": {
+          "decimals": 3,
+          "title": {
+            "en": "Total battery import",
+            "nl": "Totaal batterij import"
+          }
+        },
+        "meter_power.export": {
+          "decimals": 3,
+          "title": {
+            "en": "Total Battery Export",
+            "nl": "Totaal Batterij export"
+          }
+        },
+        "measure_voltage": {
+          "title": {
+            "en": "Current Voltage",
+            "nl": "Huidig Voltage"
+          }
+        },
+        "measure_current": {
+          "title": {
+            "en": "Current Amp",
+            "nl": "Huidig Amp"
+          }
+        },
+        "measure_battery": {
+          "title": {
+            "en": "Battery Level",
+            "nl": "Batterij niveau"
+          }
+        },
+        "battery_charging_state": {
+          "title": {
+            "en": "Battery Charging",
+            "nl": "Batterij opladen"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ]
     }
   ],
   "permissions": [
@@ -2243,6 +2329,32 @@
             "match": {
               "type": "string",
               "value": "HWE-WTR"
+            }
+          }
+        ]
+      ]
+    },
+    "plugin_battery": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "homewizard",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^battery-" 
+            }
+          },
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-BAT"
             }
           }
         ]
