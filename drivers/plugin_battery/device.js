@@ -1,0 +1,148 @@
+'use strict';
+
+const Homey = require('homey');
+const fetch = require('node-fetch');
+const https = require('https');
+
+const POLL_INTERVAL = 1000 * 10; // 10 seconds
+
+module.exports = class HomeWizardPluginBattery extends Homey.Device {
+
+  async onInit() {
+    this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+  }
+
+  onDeleted() {
+    if( this.onPollInterval ) {
+      clearInterval(this.onPollInterval);
+    }
+  }
+
+  onDiscoveryAvailable(discoveryResult) {
+    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.log(`URL: ${this.url}`);
+    this.onPoll();
+  }
+
+  onDiscoveryAddressChanged(discoveryResult) {
+    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.log(`URL: ${this.url}`);
+    this.log('onDiscoveryAddressChanged');
+    this.onPoll();
+  }
+
+  onDiscoveryLastSeenChanged(discoveryResult) {
+    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.log(`URL: ${this.url}`);
+    this.setAvailable();
+    this.onPoll();
+  }
+
+  onPoll() {
+
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+    });
+
+    if( !this.url ) return;
+
+    Promise.resolve().then(async () => {
+      
+      let res = await fetch(`${this.url}/api/measurement`, { headers: {Authorization: 'Bearer {${discoveryResult.token}'}, dispatcher: { agent: httpsAgent } }); // ignore ssl errors
+      
+      if( !res || !res.ok ) {
+        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users 
+        // try again
+        res = await fetch(`${this.url}/data`);
+        if( !res || !res.ok )
+          throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+
+      const data = await res.json();
+
+      //energy_import_kwh	Number	The energy usage meter reading in kWh.
+      //energy_export_kwh	Number	The energy feed-in meter reading in kWh.
+      //power_w	Number	The total active usage in watt.
+      //voltage_l1_v	Number	The active voltage in volt.
+      //current_a	Number	The active current in ampere.
+      //frequency_hz	Number	Line frequency in hertz.
+      //state_of_charge_pct	Number	The current state of charge in percent.
+      //cycles	Number	Number of battery cycles.
+
+      // Save export data check if capabilities are present first
+      
+      //energy_import_kwh
+      if (data.energy_import_kwh !== undefined) {
+        if (!this.hasCapability('meter_power.import')) {
+          await this.addCapability('meter_power.import').catch(this.error);
+      }
+      if (this.getCapabilityValue('meter_power.import') != data.energy_import_kwh)
+          await this.setCapabilityValue("meter_power.import", data.energy_import_kwh).catch(this.error);
+      }
+      else if ((data.data.energy_import_kwh == undefined) && (this.hasCapability('meter_power.import'))) {
+          await this.removeCapability('meter_power.import').catch(this.error);
+      }
+
+      //energy_export_kwh
+      if (data.energy_export_kwh !== undefined) {
+        if (!this.hasCapability('meter_power.export')) {
+          await this.addCapability('meter_power.export').catch(this.error);
+      }
+      if (this.getCapabilityValue('meter_power.export') != data.energy_export_kwh)
+          await this.setCapabilityValue("meter_power.export", data.energy_export_kwh).catch(this.error);
+      }
+      else if ((data.energy_export_kwh == undefined) && (this.hasCapability('meter_power.export'))) {
+          await this.removeCapability('meter_power.export').catch(this.error);
+      }
+
+      //power_w
+      if (data.power_w !== undefined) {
+        if (!this.hasCapability('measure_power')) {
+          await this.addCapability('measure_power').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_power') != data.power_w)
+          await this.setCapabilityValue("measure_power", data.power_w).catch(this.error);
+      }
+      else if ((data.data.power_w == undefined) && (this.hasCapability('measure_power'))) {
+          await this.removeCapability('measure_power').catch(this.error);
+      }
+
+      //voltage_l1_v
+      if (data.voltage_l1_v !== undefined) {
+        if (!this.hasCapability('measure_voltage')) {
+          await this.addCapability('measure_voltage').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage') != data.voltage_l1_v)
+        await this.setCapabilityValue("measure_voltage", data.voltage_l1_v).catch(this.error);
+      }
+      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
+        await this.removeCapability('measure_voltage').catch(this.error);
+      }
+
+      //current_a  Amp's 
+      if (data.current_a !== undefined) {
+        if (!this.hasCapability('measure_current')) {
+          await this.addCapability('measure_current').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_current') != data.current_a)
+          await this.setCapabilityValue("measure_current", data.current_a).catch(this.error);
+      }
+      else if ((data.current_a == undefined) && (this.hasCapability('measure_current'))) {
+          await this.removeCapability('measure_current').catch(this.error);
+      }
+
+      //measure_battery
+      //battery_charging_state
+
+
+    })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch(err => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      })
+  }
+
+}
