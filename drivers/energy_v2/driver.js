@@ -4,11 +4,11 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const https = require('https');
 
-module.exports = class HomeWizardPluginBattery extends Homey.Driver {
+module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
   async onPairListDevices() {
 
-const httpsAgent = new https.Agent({
+    const httpsAgent = new https.Agent({
       rejectUnauthorized: false, //ignore SSL errors
     });
 
