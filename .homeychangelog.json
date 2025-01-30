@@ -355,5 +355,8 @@
   },
   "3.4.0": {
     "en": "First attempt plugin battery Homewizard APIv2"
+  },
+  "3.4.1": {
+    "en": "Images update, temp svg icon for battery"
   }
 }
