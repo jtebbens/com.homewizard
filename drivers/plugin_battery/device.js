@@ -19,20 +19,20 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   }
 
   onDiscoveryAvailable(discoveryResult) {
-    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
-    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
     this.onPoll();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
-    this.url = `https://${discoveryResult.address}:${discoveryResult.port}`;
+    this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.setAvailable();
     this.onPoll();
@@ -46,17 +46,23 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     if( !this.url ) return;
 
+    const token = this.getData().token
+    const token2 = this.getStoreValue(token)
+
+    //console.log('Token: ', token);
+    //console.log('Token2: ', token2);
+
     Promise.resolve().then(async () => {
       
-      let res = await fetch(`${this.url}/api/measurement`, { headers: {Authorization: 'Bearer {${discoveryResult.token}'}, dispatcher: { agent: httpsAgent } }); // ignore ssl errors
+      let res = await fetch(`${this.url}/api/measurement`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              },
+              agent: new (require('https').Agent)({ rejectUnauthorized: false }) // Ignore SSL errors
+            });
       
-      if( !res || !res.ok ) {
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users 
-        // try again
-        res = await fetch(`${this.url}/data`);
-        if( !res || !res.ok )
-          throw new Error(res ? res.statusText : 'Unknown error during fetch');
-      }
+       if( !res || !res.ok )
+                 throw new Error(res ? res.statusText : 'Unknown error during fetch');
 
       const data = await res.json();
 
@@ -132,7 +138,22 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       }
 
       //measure_battery
-      //battery_charging_state
+      if (data.state_of_charge_pct !== undefined) {
+        if (!this.hasCapability('measure_battery')) {
+          await this.addCapability('measure_battery').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_battery') != data.state_of_charge_pct)
+          await this.setCapabilityValue("measure_battery", data.state_of_charge_pct).catch(this.error);
+      }
+      else if ((data.state_of_charge_pct == undefined) && (this.hasCapability('measure_battery'))) {
+          await this.removeCapability('measure_battery').catch(this.error);
+      }
+
+      //Round Trup Efficiency energy_export_kwh / energy_import_kwh * 100
+
+      //battery_charging_state - not support by HW battery
+
+      // battery Cycles - custom metric needs to be added
 
 
     })
