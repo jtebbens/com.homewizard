@@ -8,7 +8,28 @@ module.exports = class HomeWizardPluginBattery extends Homey.Driver {
 
   async onPairListDevices() {
 
-const httpsAgent = new https.Agent({
+    async function fetchWithRetry(url, options, maxRetries = 30, delay = 1000) {
+      let attempts = 0;
+  
+      while (attempts < maxRetries) {
+          const response = await fetch(url, options);
+          const result = await response.json();
+  
+          if (response.ok) {
+              return result; // Return the successful response
+          } else if (response.status === 403 && result.error === "user:creation-not-enabled") {
+              attempts++;
+              console.log(`Attempt ${attempts} failed with error: ${result.error}. Retrying in ${delay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+              throw new Error(`Error: ${response.statusText}`);
+          }
+      }
+  
+      throw new Error('Max retries reached. Request failed.');
+  }
+
+    const httpsAgent = new https.Agent({
       rejectUnauthorized: false, //ignore SSL errors
     });
 
@@ -23,7 +44,7 @@ const httpsAgent = new https.Agent({
           name: 'local/homey_user'
         };
         
-        const response  = await fetch(`https://${discoveryResult.address}/api/user`, {
+        const response  = await fetchWithRetry(`https://${discoveryResult.address}/api/user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -63,7 +84,6 @@ const httpsAgent = new https.Agent({
           name: data.meter_model,
           data: {
             id: discoveryResult.id,
-            token: bearer_token, // store the token for later use? 
           },
           store: {
             token: bearer_token,

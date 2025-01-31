@@ -64,13 +64,11 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     if( !this.url ) return;
 
-    const token = this.getData().token
-    const token2 = this.getStoreValue(token)
-
-    //console.log('Token: ', token);
-    //console.log('Token2: ', token2);
-  
     Promise.resolve().then(async () => {
+
+      let token = this.getStoreValue("token")
+      
+
       let res = await fetch(`${this.url}/api/measurement`, {
         headers: {
           'Authorization': `Bearer ${token}`

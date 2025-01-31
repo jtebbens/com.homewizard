@@ -63,7 +63,6 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
           name: data.meter_model,
           data: {
             id: discoveryResult.id,
-            token: bearer_token, // store the token for later use? 
           },
           store: {
             token: bearer_token,
