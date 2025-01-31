@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.4.1",
+  "version": "3.4.2",
   "platforms": [
     "local"
   ],
@@ -712,6 +712,22 @@
     ]
   },
   "capabilities": {
+    "cycles": {
+      "type": "number",
+      "title": {
+        "en": "Number of battery cycles",
+        "nl": "Aantal battery laadcycli"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "cycles",
+        "nl": "cycli"
+      }
+    },
     "rssi": {
       "type": "number",
       "title": {
@@ -877,6 +893,9 @@
         "small": "drivers/homewizard/assets/images/small.jpg"
       },
       "class": "other",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [],
       "pair": [
         {
@@ -1494,6 +1513,9 @@
       },
       "class": "sensor",
       "discovery": "energy",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_gas",
@@ -1708,6 +1730,9 @@
       },
       "class": "sensor",
       "discovery": "energy",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_gas",
@@ -1921,6 +1946,9 @@
       },
       "class": "socket",
       "discovery": "SDM630",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power",
@@ -2049,6 +2077,9 @@
       },
       "class": "socket",
       "discovery": "SDM230",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power",
@@ -2135,6 +2166,9 @@
       },
       "class": "socket",
       "discovery": "energy_socket",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "onoff",
         "dim",
@@ -2247,6 +2281,9 @@
       },
       "class": "sensor",
       "discovery": "watermeter",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_water",
         "meter_water",
@@ -2333,6 +2370,9 @@
       },
       "class": "battery",
       "discovery": "plugin_battery",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "meter_power.import",
         "meter_power.export",
@@ -2340,7 +2380,8 @@
         "battery_charging_state",
         "measure_power",
         "measure_current",
-        "measure_voltage"
+        "measure_voltage",
+        "cycles"
       ],
       "energy": {
         "homeBattery": true
