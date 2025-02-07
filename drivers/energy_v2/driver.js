@@ -6,41 +6,68 @@ const https = require('https');
 
 module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
-  async onPairListDevices() {
+ 
+  async onPair(session) {
 
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false, //ignore SSL errors
-    });
-
-    const discoveryStrategy = this.getDiscoveryStrategy();
-    const discoveryResults = discoveryStrategy.getDiscoveryResults();
-    const devices = [];
-    await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
+    session.setHandler('list_devices', async (data) => {
       try {
-
-        // start.html -> Confirmation pressing button on device
-        const payload = {
-          name: 'local/homey_user'
-        };
-        
-        const response  = await fetch(`https://${discoveryResult.address}/api/user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Api-Version': '2'
-          },
-          body: JSON.stringify(payload),
-          agent: new (require('https').Agent)({ rejectUnauthorized: false }),
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false, //ignore SSL errors
+      });
+  
+      const discoveryStrategy = this.getDiscoveryStrategy();
+      const discoveryResults = discoveryStrategy.getDiscoveryResults();
+      const devices = [];
+      await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
+        try {
+  
+          // start.html -> Confirmation pressing button on device
+          const payload = {
+            name: 'local/homey_user'
+          };
           
-        });
-
-        if (!response.ok) {
-          throw new Error(`Error: ${response.statusText}`);
+          const response  = await fetch(`https://${discoveryResult.address}/api/user`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Api-Version': '2'
+            },
+            body: JSON.stringify(payload),
+            agent: new (require('https').Agent)({ rejectUnauthorized: false }),
+            
+          });
+  
+          if (!response.ok) {
+            //throw new Error(`Error: ${response.statusText}`);
+            console.log(response.statusText);
+          }
+        } catch( err ) {
+          this.error(discoveryResult.id, err);
         }
+      }));
+      return devices;
 
+      }
+      catch (error) {
+        this.homey.app.log(`[Driver] - error`, error);
+        throw new Error(this.homey.__('pair.error'));
+      }
+      })
+      
+      session.setHandler('add_device', async (data) => {
 
-        const result = await response.json();
-        console.log("Result received: ", result);
+        const httpsAgent = new https.Agent({
+          rejectUnauthorized: false, //ignore SSL errors
+        });
+    
+        const discoveryStrategy = this.getDiscoveryStrategy();
+        const discoveryResults = discoveryStrategy.getDiscoveryResults();
+        const devices = [];
+        await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
+        try {
+
+        //const result = await response.json();
+        //console.log("Result received: ", result);
 
         //const responseData = await result.json();
         const bearer_token = result.token;
@@ -74,6 +101,6 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
     }));
     return devices;
 
+});
 }
-
 }
