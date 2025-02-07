@@ -129,6 +129,6 @@ v3.0.2
 
 
 
-**If you like this app, then consider to buy me a beer :)**
+**You can sponsor my work by donating via paypal.**
 
 [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme2/jtebbens)
