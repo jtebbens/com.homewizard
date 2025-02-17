@@ -4,10 +4,14 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.4.2
+v3.4.3
 WARNING: Initial testing as this is the new APIv2 from Homewizard and not tested fully
 * Support for P1 with (Homewizard APIv2)
-* Support for Plugin Battery (To pair you must press the button on the plugin battery before adding)
+* Support for Plugin Battery (Still pairing problem)
+  TEMPORARY WORKAROUND 
+    - Add Battery (this will fail, not found)
+    - Press button on battery
+    - Add Battery again (now it can be added)
 
 v3.3.26
 * Watermeter via P1 (Belgium)
