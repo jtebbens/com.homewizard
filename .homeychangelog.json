@@ -361,5 +361,8 @@
   },
   "3.4.2": {
     "en": "Bug fixes and addition of extra metrics that were missed for plugin battery."
+  },
+  "3.4.3": {
+    "en": "Icon update, pair text in readme as workaround"
   }
 }
