@@ -3,7 +3,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.4.2",
+  "version": "3.4.3",
   "platforms": [
     "local"
   ],
@@ -1920,9 +1920,13 @@
           "id": "list_devices",
           "template": "list_devices",
           "navigation": {
-            "next": "add_devices"
+            "next": "loading"
           }
-        },      
+        },
+        {
+          "id": "loading",
+          "template": "loading"
+        },
         {
           "id": "add_devices",
           "template": "add_devices"
