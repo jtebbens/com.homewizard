@@ -12,6 +12,7 @@
     "local"
   ],
   "capabilities": [
+    "identify",
     "measure_water",
     "meter_water",
     "rssi"

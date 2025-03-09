@@ -14,6 +14,7 @@
   "capabilities": [
     "onoff",
     "dim",
+    "identify",
     "locked",
     "measure_power",
     "meter_power",

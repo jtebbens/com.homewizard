@@ -14,6 +14,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
     this._flowTriggerExport = this.homey.flow.getDeviceTriggerCard('export_changed');
 
+    this.registerCapabilityListener('identify', async (value) => {
+      await this.onIdentify();
+    });
   }
 
   flowTriggerTariff(device, tokens) {
@@ -52,6 +55,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.log(`URL: ${this.url}`);
     this.setAvailable();
     this.onPoll();
+  }
+
+  async onRequest(body) {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/state`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(this.error);
+
+    if (!res.ok)
+    { throw new Error(res.statusText); }
   }
 
   onPoll() {
@@ -99,6 +115,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       if (!this.hasCapability('tariff')) {
         promises.push(this.addCapability('tariff').catch(this.error));
+      }
+
+      if (!this.hasCapability('identify')) {
+        await this.addCapability('identify').catch(this.error);
       }
 
       // Update values
