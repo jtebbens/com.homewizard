@@ -1,0 +1,12 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Identify",
+    "nl": "Identificeren"
+  },
+  "getable": false,
+  "setable": true,
+  "uiComponent": "button",
+  "insights": false,
+  "icon": "assets/magnify.svg"
+}

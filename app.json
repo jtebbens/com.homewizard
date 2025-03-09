@@ -894,6 +894,7 @@
         "local"
       ],
       "capabilities": [
+        "identify",
         "measure_power",
         "meter_gas",
         "meter_water",
@@ -1113,6 +1114,7 @@
       "capabilities": [
         "onoff",
         "dim",
+        "identify",
         "locked",
         "measure_power",
         "meter_power",
@@ -1226,6 +1228,7 @@
         "local"
       ],
       "capabilities": [
+        "identify",
         "measure_power",
         "meter_gas",
         "meter_water",
@@ -1820,6 +1823,7 @@
         "local"
       ],
       "capabilities": [
+        "identify",
         "meter_power.import",
         "meter_power.export",
         "measure_battery",
@@ -2026,6 +2030,7 @@
         "local"
       ],
       "capabilities": [
+        "identify",
         "measure_water",
         "meter_water",
         "rssi"
@@ -2269,6 +2274,18 @@
         "en": "cycles",
         "nl": "cycli"
       }
+    },
+    "identify": {
+      "type": "boolean",
+      "title": {
+        "en": "Identify",
+        "nl": "Identificeren"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "insights": false,
+      "icon": "assets/magnify.svg"
     },
     "long_power_fail_count": {
       "type": "number",
