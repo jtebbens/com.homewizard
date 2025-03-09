@@ -1942,7 +1942,7 @@
         "large": "drivers/SDM630/assets/images/large.png",
         "small": "drivers/SDM630/assets/images/small.png"
       },
-      "class": "socket",
+      "class": "sensor",
       "discovery": "SDM630",
       "platforms": [
         "local"
@@ -2073,7 +2073,7 @@
         "large": "drivers/SDM230/assets/images/large.png",
         "small": "drivers/SDM230/assets/images/small.png"
       },
-      "class": "socket",
+      "class": "sensor",
       "discovery": "SDM230",
       "platforms": [
         "local"
