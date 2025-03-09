@@ -1,5 +1,5 @@
 ---
-name: Validate Homey App
+name: CI
 
 on:
   pull_request:
@@ -13,22 +13,34 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  homey-validate:
     runs-on: ubuntu-latest
+    name: Validate Homey App
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
         with:
           node-version: 20.9.0
-          cache: "npm"
+          cache: 'npm'
 
       - name: Install Homey CLI
-        run: npm install --no-optional homey
-      - run: npm install --include=optional sharp
+        run: npm ci --no-optional homey
+      - run: npm ci --include=optional sharp
 
       - name: Validate Homey App
         run: npx homey app validate --level=publish
+
+  lint-eslint:
+    name: eslint
+    runs-on: ubuntu-latest
+
+    steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-node@v4
+          with:
+              node-version: 20.9.0
+              cache: 'npm'
+
+        - run: npm ci
+        - run: npm run lint-check
