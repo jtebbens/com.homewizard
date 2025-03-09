@@ -10,14 +10,14 @@ module.exports = class HomeWizardEnergyDriver extends Homey.Driver {
     const discoveryStrategy = this.getDiscoveryStrategy();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
-    await new Promise((resolve) => setTimeout(resolve, 1000)); 
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     const devices = [];
-    await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
+    await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
       try {
         const url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}/data`;
         const res = await fetch(url);
-        if( !res.ok )
-          throw new Error(res.statusText);
+        if (!res.ok)
+        { throw new Error(res.statusText); }
 
         const data = await res.json();
         devices.push({
@@ -25,13 +25,13 @@ module.exports = class HomeWizardEnergyDriver extends Homey.Driver {
           data: {
             id: discoveryResult.id,
           },
-        })
-      } catch( err ) {
+        });
+      } catch (err) {
         this.error(discoveryResult.id, err);
       }
     }));
     return devices;
 
-}
+  }
 
-}
+};
