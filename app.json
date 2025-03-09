@@ -2176,6 +2176,7 @@
         "meter_power.consumed.t1",
         "meter_power.produced.t1",
         "measure_power.l1",
+        "measure_voltage",
         "rssi"
       ],
       "capabilitiesOptions": {
@@ -2212,10 +2213,10 @@
             "nl": "Totaal verbruik KWh"
           }
         },
-        "measure_voltage.l1": {
+        "measure_voltage": {
           "title": {
-            "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
+            "en": "Current Voltage",
+            "nl": "Huidig Voltage"
           }
         }
       },

@@ -156,6 +156,20 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
       if (this.getCapabilityValue('meter_power') != (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh))
         await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh-data.total_power_export_t1_kwh)).catch(this.error);
+
+      //active_voltage_l1_v
+      if (data.active_voltage_v !== undefined) {
+        if (!this.hasCapability('measure_voltage')) {
+          await this.addCapability('measure_voltage').catch(this.error);
+      }
+      if (this.getCapabilityValue('measure_voltage') != data.active_voltage_v)
+        await this.setCapabilityValue("measure_voltage", data.active_voltage_v).catch(this.error);
+      }
+      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
+        await this.removeCapability('measure_voltage').catch(this.error);
+      }
+      
+
     })
       .then(() => {
         this.setAvailable().catch(this.error);
