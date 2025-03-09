@@ -367,5 +367,8 @@
   },
   "3.4.4": {
     "en": "Energy socket naming improved (serial added), voltage support added."
+  },
+  "3.5.0": {
+    "en": "Conversion to homey-compose"
   }
 }
