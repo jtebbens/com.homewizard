@@ -21,6 +21,7 @@ class HomeWizardWindmeter extends Homey.Driver {
     // Show the next view
     socket.nextView();
 
+
     // Show the previous view
     socket.prevView();
 
