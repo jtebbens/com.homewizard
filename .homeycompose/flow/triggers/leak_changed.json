@@ -1,0 +1,29 @@
+{
+  "id": "leak_changed",
+  "title": {
+    "en": "Water leakage",
+    "nl": "Water lekkage"
+  },
+  "args": [
+    {
+      "name": "Kakusensor",
+      "type": "device",
+      "filter": "driver_id=kakusensor",
+      "placeholder": {
+        "en": "Which Sensor",
+        "nl": "Welke Sensor"
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "name": "leak_changed",
+      "type": "number",
+      "title": {
+        "en": "mm",
+        "nl": "mm"
+      },
+      "example": 15
+    }
+  ]
+}

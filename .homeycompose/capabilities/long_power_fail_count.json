@@ -1,0 +1,12 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Power failures",
+    "nl": "Stroomstoringen"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/power_fail.svg"
+}

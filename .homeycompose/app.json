@@ -1,0 +1,74 @@
+{
+  "id": "com.homewizard",
+  "name": {
+    "en": "HomeWizard"
+  },
+  "version": "3.4.3",
+  "platforms": [
+    "local"
+  ],
+  "sdk": 3,
+  "brandColor": "#2fc052",
+  "compatibility": ">=12.3.0",
+  "description": {
+    "en": "Helps you understand and save"
+  },
+  "category": [
+    "energy",
+    "appliances",
+    "climate"
+  ],
+  "images": {
+    "xlarge": "assets/images/xlarge.png",
+    "large": "assets/images/large.png",
+    "small": "assets/images/small.png"
+  },
+  "author": {
+    "name": "Jeroen Tebbens",
+    "email": "jeroen@tebbens.net"
+  },
+  "contributors": {
+    "developers": [
+      {
+        "name": "Jeroen Bos",
+        "email": "jeroenbos22@gmail.com"
+      },
+      {
+        "name": "Nick Bockmeulen",
+        "email": "git@bockmeulen.nl"
+      },
+      {
+        "name": "Jeroen Tebbens",
+        "email": "jeroen@tebbens.net"
+      },
+      {
+        "name": "Freddie Welvering",
+        "email": "freddie@welvering.eu"
+      },
+      {
+        "name": "Emile Nijssen",
+        "email": "emile@emilenijssen.nl"
+      },
+      {
+        "name": "Dennie de Groot",
+        "email": "mail@denniedegroot.nl"
+      }
+    ]
+  },
+  "contributing": {
+    "donate": {
+      "paypal": {
+        "username": "jtebbens"
+      }
+    }
+  },
+  "bugs": {
+    "url": "https://community.homey.app/t/app-pro-homewizard/19267"
+  },
+  "source": "https://github.com/jtebbens/com.homewizard",
+  "homeyCommunityTopicId": 19267,
+  "support": "https://community.homey.app/t/app-pro-homewizard/19267",
+  "permissions": [
+    "homey:manager:ledring"
+  ]
+}

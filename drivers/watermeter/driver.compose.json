@@ -1,0 +1,88 @@
+{
+  "name": {
+    "en": "Watermeter"
+  },
+  "images": {
+    "large": "drivers/watermeter/assets/images/large.png",
+    "small": "drivers/watermeter/assets/images/small.png"
+  },
+  "class": "sensor",
+  "discovery": "watermeter",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [
+    "measure_water",
+    "meter_water",
+    "rssi"
+  ],
+  "energy": {
+    "cumulative": true
+  },
+  "capabilitiesOptions": {
+    "measure_water": {
+      "type": "number",
+      "title": {
+        "en": "Water L/min",
+        "nl": "Water L/min"
+      },
+      "units": {
+        "en": "L/min"
+      },
+      "desc": {
+        "en": "Water flow in Liters per minute (L/min)",
+        "nl": "Waterdoorstroming in Liters per minuut (L/min)"
+      },
+      "chartType": "stepLine",
+      "decimals": 1,
+      "getable": true,
+      "setable": false
+    },
+    "meter_water": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage",
+        "nl": "Totaal verbruik"
+      }
+    }
+  },
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Watermeter offset",
+        "nl": "Watermeter compensatie"
+      },
+      "children": [
+        {
+          "id": "offset_water",
+          "type": "number",
+          "label": {
+            "en": "Offset watermeter m3",
+            "nl": "compensatie watermeter m3"
+          },
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "pair": [
+    {
+      "id": "start",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}

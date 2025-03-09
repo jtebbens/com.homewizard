@@ -1,0 +1,45 @@
+{
+  "name": {
+    "en": "Rainmeter",
+    "nl": "Regen meter"
+  },
+  "images": {
+    "large": "drivers/rainmeter/assets/images/large.jpg",
+    "small": "drivers/rainmeter/assets/images/small.jpg"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_rain.last3h",
+    "measure_rain.total"
+  ],
+  "capabilitiesOptions": {
+    "measure_rain.last3h": {
+      "title": {
+        "en": "Last 3 hours rain",
+        "nl": "Laatste 3 uur regen"
+      }
+    },
+    "measure_rain.total": {
+      "title": {
+        "en": "Rainfall today",
+        "nl": "Regenval vandaag"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

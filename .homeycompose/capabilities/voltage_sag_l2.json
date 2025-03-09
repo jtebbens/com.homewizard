@@ -1,0 +1,12 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Net dip L2",
+    "nl": "Net dip L2"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/power_fail.svg"
+}

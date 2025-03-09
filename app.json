@@ -1,9 +1,10 @@
 {
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.homewizard",
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.4.4",
+  "version": "3.4.3",
   "platforms": [
     "local"
   ],
@@ -68,361 +69,11 @@
   "source": "https://github.com/jtebbens/com.homewizard",
   "homeyCommunityTopicId": 19267,
   "support": "https://community.homey.app/t/app-pro-homewizard/19267",
+  "permissions": [
+    "homey:manager:ledring"
+  ],
   "flow": {
     "triggers": [
-      {
-        "id": "preset_changed",
-        "title": {
-          "en": "Preset has changed",
-          "nl": "Preset is veranderd"
-        },
-        "args": [
-          {
-            "name": "Homewizard",
-            "type": "device",
-            "filter": "driver_id=homewizard"
-          }
-        ],
-        "tokens": [
-          {
-            "name": "preset",
-            "type": "number",
-            "title": {
-              "en": "Preset",
-              "nl": "Preset"
-            },
-            "example": 1
-          },
-          {
-            "name": "preset_text",
-            "type": "string",
-            "title": {
-              "en": "Text",
-              "nl": "Tekst"
-            },
-            "example": "Home"
-          }
-        ]
-      },
-      {
-        "id": "power_used_changed",
-        "title": {
-          "en": "Power used changed",
-          "nl": "Huidig vermogen veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_used",
-            "type": "number",
-            "title": {
-              "en": "Watt",
-              "nl": "Watt"
-            },
-            "example": 15
-          }
-        ]
-      },
-      {
-        "id": "power_s1_changed",
-        "title": {
-          "en": "Power production changed",
-          "nl": "Huidige productie veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_s1",
-            "type": "number",
-            "title": {
-              "en": "Watt",
-              "nl": "Watt"
-            },
-            "example": 15
-          }
-        ]
-      },
-      {
-        "id": "power_s2_changed",
-        "title": {
-          "en": "Power usage S2 changed",
-          "nl": "Huidige gebruik S2 veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_s2",
-            "type": "number",
-            "title": {
-              "en": "Watt",
-              "nl": "Watt"
-            },
-            "example": 15
-          }
-        ]
-      },
-      {
-        "id": "power_netto_changed",
-        "title": {
-          "en": "Daily netto usage changed",
-          "nl": "Dag netto verbruik veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "netto_power_used",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_power_used_changed",
-        "title": {
-          "en": "Daily usage changed",
-          "nl": "Dag verbruik veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_daytotal_used",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_power_aggregated_changed",
-        "title": {
-          "en": "Overall usage changed",
-          "nl": "Netto verbruik veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_daytotal_aggr",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_power_s1_changed",
-        "title": {
-          "en": "Daily production changed",
-          "nl": "Dag productie veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_daytotal_s1",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_power_s2_changed",
-        "title": {
-          "en": "Daily usage S2 changed",
-          "nl": "Dag gebruik S2 veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "power_daytotal_s2",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_return_t1_changed",
-        "title": {
-          "en": "Meter return t1 changed",
-          "nl": "Meter teruglevering t1 veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "meter_power_produced_t1",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "meter_return_t2_changed",
-        "title": {
-          "en": "Meter return t2 changed",
-          "nl": "Meter teruglevering t2 veranderd"
-        },
-        "args": [
-          {
-            "name": "Energylink",
-            "type": "device",
-            "filter": "driver_id=energylink",
-            "placeholder": {
-              "en": "Which energylink",
-              "nl": "Welke energylink"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "meter_power_produced_t2",
-            "type": "number",
-            "title": {
-              "en": "kWh",
-              "nl": "kWh"
-            },
-            "example": 1
-          }
-        ]
-      },
-      {
-        "id": "rainmeter_value_changed",
-        "title": {
-          "en": "Rainmeter value changed",
-          "nl": "Regenmeter waarde veranderd"
-        },
-        "args": [
-          {
-            "name": "Rainmeter",
-            "type": "device",
-            "filter": "driver_id=rainmeter",
-            "placeholder": {
-              "en": "Which Rainmeter",
-              "nl": "Welke Regenmeter"
-            }
-          }
-        ],
-        "tokens": [
-          {
-            "name": "rainmeter_changed",
-            "type": "number",
-            "title": {
-              "en": "mm",
-              "nl": "mm"
-            },
-            "example": 15
-          }
-        ]
-      },
       {
         "id": "leak_changed",
         "title": {
@@ -460,13 +111,9 @@
         },
         "args": [
           {
-            "name": "energy",
             "type": "device",
-            "filter": "driver_id=energy",
-            "placeholder": {
-              "en": "Which meter",
-              "nl": "Welke meter"
-            }
+            "name": "device",
+            "filter": "driver_id=energy"
           }
         ],
         "tokens": [
@@ -489,13 +136,9 @@
         },
         "args": [
           {
-            "name": "energy",
             "type": "device",
-            "filter": "driver_id=energy",
-            "placeholder": {
-              "en": "Which meter",
-              "nl": "Welke meter"
-            }
+            "name": "device",
+            "filter": "driver_id=energy"
           }
         ],
         "tokens": [
@@ -518,13 +161,9 @@
         },
         "args": [
           {
-            "name": "energy",
             "type": "device",
-            "filter": "driver_id=energy",
-            "placeholder": {
-              "en": "Which meter",
-              "nl": "Welke meter"
-            }
+            "name": "device",
+            "filter": "driver_id=energy"
           }
         ],
         "tokens": [
@@ -536,6 +175,315 @@
               "nl": "export"
             },
             "example": 1
+          }
+        ]
+      },
+      {
+        "id": "power_used_changed",
+        "title": {
+          "en": "Power used changed",
+          "nl": "Huidig vermogen veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_used",
+            "type": "number",
+            "title": {
+              "en": "Watt",
+              "nl": "Watt"
+            },
+            "example": 15
+          }
+        ]
+      },
+      {
+        "id": "power_s1_changed",
+        "title": {
+          "en": "Power production changed",
+          "nl": "Huidige productie veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_s1",
+            "type": "number",
+            "title": {
+              "en": "Watt",
+              "nl": "Watt"
+            },
+            "example": 15
+          }
+        ]
+      },
+      {
+        "id": "power_s2_changed",
+        "title": {
+          "en": "Power usage S2 changed",
+          "nl": "Huidige gebruik S2 veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_s2",
+            "type": "number",
+            "title": {
+              "en": "Watt",
+              "nl": "Watt"
+            },
+            "example": 15
+          }
+        ]
+      },
+      {
+        "id": "power_netto_changed",
+        "title": {
+          "en": "Daily netto usage changed",
+          "nl": "Dag netto verbruik veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "netto_power_used",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_power_used_changed",
+        "title": {
+          "en": "Daily usage changed",
+          "nl": "Dag verbruik veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_daytotal_used",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_power_aggregated_changed",
+        "title": {
+          "en": "Overall usage changed",
+          "nl": "Netto verbruik veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_daytotal_aggr",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_power_s1_changed",
+        "title": {
+          "en": "Daily production changed",
+          "nl": "Dag productie veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_daytotal_s1",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_power_s2_changed",
+        "title": {
+          "en": "Daily usage S2 changed",
+          "nl": "Dag gebruik S2 veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "power_daytotal_s2",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_return_t1_changed",
+        "title": {
+          "en": "Meter return t1 changed",
+          "nl": "Meter teruglevering t1 veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "meter_power_produced_t1",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "meter_return_t2_changed",
+        "title": {
+          "en": "Meter return t2 changed",
+          "nl": "Meter teruglevering t2 veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energylink"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "meter_power_produced_t2",
+            "type": "number",
+            "title": {
+              "en": "kWh",
+              "nl": "kWh"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "preset_changed",
+        "title": {
+          "en": "Preset has changed",
+          "nl": "Preset is veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=homewizard"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "preset",
+            "type": "number",
+            "title": {
+              "en": "Preset",
+              "nl": "Preset"
+            },
+            "example": 1
+          },
+          {
+            "name": "preset_text",
+            "type": "string",
+            "title": {
+              "en": "Text",
+              "nl": "Tekst"
+            },
+            "example": "Home"
+          }
+        ]
+      },
+      {
+        "id": "rainmeter_value_changed",
+        "title": {
+          "en": "Rainmeter value changed",
+          "nl": "Regenmeter waarde veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=rainmeter"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "rainmeter_changed",
+            "type": "number",
+            "title": {
+              "en": "mm",
+              "nl": "mm"
+            },
+            "example": 15
           }
         ]
       }
@@ -553,6 +501,11 @@
         },
         "args": [
           {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=homewizard"
+          },
+          {
             "name": "preset",
             "type": "dropdown",
             "values": [
@@ -585,11 +538,6 @@
                 }
               }
             ]
-          },
-          {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=homewizard"
           }
         ]
       }
@@ -607,6 +555,11 @@
         },
         "args": [
           {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=homewizard"
+          },
+          {
             "name": "preset",
             "type": "dropdown",
             "values": [
@@ -639,11 +592,6 @@
                 }
               }
             ]
-          },
-          {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=homewizard"
           }
         ]
       },
@@ -659,13 +607,13 @@
         },
         "args": [
           {
-            "name": "scene",
-            "type": "autocomplete"
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=homewizard"
           },
           {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=homewizard"
+            "name": "scene",
+            "type": "autocomplete"
           }
         ]
       },
@@ -681,13 +629,13 @@
         },
         "args": [
           {
-            "name": "scene",
-            "type": "autocomplete"
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=homewizard"
           },
           {
-            "name": "device",
-            "type": "device",
-            "filter": "driver_id=homewizard"
+            "name": "scene",
+            "type": "autocomplete"
           }
         ]
       },
@@ -703,320 +651,782 @@
         },
         "args": [
           {
-            "name": "device",
             "type": "device",
+            "name": "device",
             "filter": "driver_id=homewizard"
           }
         ]
       }
     ]
   },
-  "capabilities": {
-    "cycles": {
-      "type": "number",
-      "title": {
-        "en": "Number of battery cycles",
-        "nl": "Aantal battery laadcycli"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": true,
-      "icon": "assets/rssi.svg",
-      "units": {
-        "en": "cycles",
-        "nl": "cycli"
-      }
-    },
-    "rssi": {
-      "type": "number",
-      "title": {
-        "en": "WiFi Signal",
-        "nl": "WiFi signaal"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": true,
-      "icon": "assets/rssi.svg",
-      "units": {
-        "en": "RSSI",
-        "nl": "RSSI"
-      }
-    },
-    "tariff": {
-      "type": "number",
-      "title": {
-        "en": "Active tariff",
-        "nl": "Tarief actief"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/tariff.svg",
-      "units": {
-        "en": "Tariff",
-        "nl": "Tarief"
-      }
-    },
-    "central_heating_pump": {
-      "type": "boolean",
-      "title": {
-        "en": "Central Heating",
-        "nl": "Central Verwarming"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/central_heating.svg"
-    },
-    "central_heating_flame": {
-      "type": "boolean",
-      "title": {
-        "en": "Central Heating Burner",
-        "nl": "CV brander"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/flame.svg"
-    },
-    "warm_water": {
-      "type": "boolean",
-      "title": {
-        "en": "Warm water",
-        "nl": "Warm water"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/shower.svg"
-    },
-    "long_power_fail_count": {
-      "type": "number",
-      "title": {
-        "en": "Power failures",
-        "nl": "Stroomstoringen"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_sag_l1": {
-      "type": "number",
-      "title": {
-        "en": "Net dip L1",
-        "nl": "Net dip L1"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_sag_l2": {
-      "type": "number",
-      "title": {
-        "en": "Net dip L2",
-        "nl": "Net dip L2"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_sag_l3": {
-      "type": "number",
-      "title": {
-        "en": "Net dip L3",
-        "nl": "Net dip L3"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_swell_l1": {
-      "type": "number",
-      "title": {
-        "en": "Net peak L1",
-        "nl": "Net piek L1"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_swell_l2": {
-      "type": "number",
-      "title": {
-        "en": "Net peak L2",
-        "nl": "Net piek L2"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    },
-    "voltage_swell_l3": {
-      "type": "number",
-      "title": {
-        "en": "Net peak L3",
-        "nl": "Net piek L3"
-      },
-      "getable": true,
-      "setable": false,
-      "uiComponent": "sensor",
-      "insights": false,
-      "icon": "assets/power_fail.svg"
-    }
-  },
   "drivers": [
     {
-      "id": "homewizard",
       "name": {
-        "en": "HomeWizard Base Station",
-        "nl": "HomeWizard Base Station"
+        "en": "kWh Meter (1 phase)"
       },
       "images": {
-        "large": "drivers/homewizard/assets/images/large.jpg",
-        "small": "drivers/homewizard/assets/images/small.jpg"
+        "large": "drivers/SDM230/assets/images/large.png",
+        "small": "drivers/SDM230/assets/images/small.png"
       },
-      "class": "other",
+      "class": "socket",
+      "discovery": "SDM230",
       "platforms": [
         "local"
       ],
-      "capabilities": [],
+      "capabilities": [
+        "measure_power",
+        "meter_power",
+        "measure_current",
+        "measure_power.l1",
+        "measure_voltage",
+        "rssi"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_voltage": {
+          "title": {
+            "en": "Current Voltage",
+            "nl": "Huidig Voltage"
+          }
+        },
+        "measure_current": {
+          "title": {
+            "en": "Current Amp",
+            "nl": "Huidig Amp"
+          }
+        }
+      },
       "pair": [
         {
-          "id": "start"
-        },
-        {
-          "id": "list_my_devices",
-          "template": "list_devices",
+          "id": "start",
           "navigation": {
-            "next": "add_my_devices"
+            "next": "list_devices"
           }
         },
         {
-          "id": "add_my_devices",
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
           "template": "add_devices"
         }
       ],
+      "id": "SDM230"
+    },
+    {
+      "name": {
+        "en": "kWh Meter (3 phase)"
+      },
+      "images": {
+        "large": "drivers/SDM630/assets/images/large.png",
+        "small": "drivers/SDM630/assets/images/small.png"
+      },
+      "class": "socket",
+      "discovery": "SDM630",
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [
+        "measure_power",
+        "meter_power",
+        "measure_power.l1",
+        "measure_power.l2",
+        "measure_power.l3",
+        "measure_current.l1",
+        "measure_current.l2",
+        "measure_current.l3",
+        "measure_voltage.l1",
+        "measure_voltage.l2",
+        "measure_voltage.l3",
+        "rssi"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "measure_power.l2": {
+          "title": {
+            "en": "Current usage phase 2",
+            "nl": "Huidig gebruik fase 2"
+          }
+        },
+        "measure_power.l3": {
+          "title": {
+            "en": "Current usage phase 3",
+            "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current Amp phase 1",
+            "nl": "Huidig Amp fase 1"
+          }
+        },
+        "measure_current.l2": {
+          "title": {
+            "en": "Current Amp phase 2",
+            "nl": "Huidig Amp fase 2"
+          }
+        },
+        "measure_current.l3": {
+          "title": {
+            "en": "Current Amp phase 3",
+            "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        },
+        "measure_voltage.l2": {
+          "title": {
+            "en": "Current Voltage phase 2",
+            "nl": "Huidig Voltage fase 2"
+          }
+        },
+        "measure_voltage.l3": {
+          "title": {
+            "en": "Current Voltage phase 3",
+            "nl": "Huidig Voltage fase 3"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "SDM630"
+    },
+    {
+      "name": {
+        "en": "P1 Meter"
+      },
+      "images": {
+        "large": "drivers/energy/assets/images/large.png",
+        "small": "drivers/energy/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "energy",
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [
+        "measure_power",
+        "meter_gas",
+        "meter_water",
+        "meter_power",
+        "meter_power.consumed.t1",
+        "meter_power.produced.t1",
+        "meter_power.consumed.t2",
+        "meter_power.produced.t2",
+        "meter_power.consumed.t3",
+        "meter_power.produced.t3",
+        "meter_power.consumed",
+        "meter_power.returned",
+        "measure_power.l1",
+        "measure_power.l2",
+        "measure_power.l3",
+        "measure_current.l1",
+        "measure_current.l2",
+        "measure_current.l3",
+        "measure_voltage.l1",
+        "measure_voltage.l2",
+        "measure_voltage.l3",
+        "measure_power.montly_power_peak",
+        "rssi",
+        "tariff",
+        "long_power_fail_count",
+        "voltage_sag_l1",
+        "voltage_sag_l2",
+        "voltage_sag_l3",
+        "voltage_swell_l1",
+        "voltage_swell_l2",
+        "voltage_swell_l3"
+      ],
+      "energy": {
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.consumed",
+        "cumulativeExportedCapability": "meter_power.returned"
+      },
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "meter_gas": {
+          "decimals": 3,
+          "title": {
+            "en": "Gasmeter",
+            "nl": "Gasmeter"
+          }
+        },
+        "meter_water": {
+          "decimals": 3,
+          "title": {
+            "en": "Watermeter",
+            "nl": "Watermeter"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "measure_power.l2": {
+          "title": {
+            "en": "Current usage phase 2",
+            "nl": "Huidig gebruik fase 2"
+          }
+        },
+        "measure_power.l3": {
+          "title": {
+            "en": "Current usage phase 3",
+            "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current Amp phase 1",
+            "nl": "Huidig Amp fase 1"
+          }
+        },
+        "measure_current.l2": {
+          "title": {
+            "en": "Current Amp phase 2",
+            "nl": "Huidig Amp fase 2"
+          }
+        },
+        "measure_current.l3": {
+          "title": {
+            "en": "Current Amp phase 3",
+            "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        },
+        "measure_voltage.l2": {
+          "title": {
+            "en": "Current Voltage phase 2",
+            "nl": "Huidig Voltage fase 2"
+          }
+        },
+        "measure_voltage.l3": {
+          "title": {
+            "en": "Current Voltage phase 3",
+            "nl": "Huidig Voltage fase 3"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power.consumed.t2": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t2 usage",
+            "nl": "Totaal t2 gebruik"
+          }
+        },
+        "meter_power.produced.t2": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t2 deliver",
+            "nl": "Totaal t2 teruglevering"
+          }
+        },
+        "meter_power.consumed.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 usage",
+            "nl": "Totaal t3 gebruik"
+          }
+        },
+        "meter_power.produced.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 deliver",
+            "nl": "Totaal t3 teruglevering"
+          }
+        },
+        "meter_power.consumed": {
+          "decimals": 3,
+          "title": {
+            "en": "Sum Consumed",
+            "nl": "Som gebruik"
+          }
+        },
+        "meter_power.returned": {
+          "decimals": 3,
+          "title": {
+            "en": "Sum returned",
+            "nl": "Som teruglevering"
+          }
+        },
+        "meter_power": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_power.montly_power_peak": {
+          "title": {
+            "en": "Monthly Power Peak",
+            "nl": "Maandelijks piekvermogen"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "energy"
+    },
+    {
+      "name": {
+        "en": "Energy Socket"
+      },
+      "images": {
+        "large": "drivers/energy_socket/assets/images/large.png",
+        "small": "drivers/energy_socket/assets/images/small.png"
+      },
+      "class": "socket",
+      "discovery": "energy_socket",
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [
+        "onoff",
+        "dim",
+        "locked",
+        "measure_power",
+        "meter_power",
+        "meter_power.consumed.t1",
+        "meter_power.produced.t1",
+        "measure_power.l1",
+        "rssi"
+      ],
+      "capabilitiesOptions": {
+        "measure_power": {
+          "title": {
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        }
+      },
       "settings": [
         {
           "type": "group",
           "label": {
-            "en": "HomeWizard settings",
-            "nl": "HomeWizard instellingen"
+            "en": "Socket Watt offset",
+            "nl": "Socket Watt compensatie"
           },
           "children": [
             {
-              "id": "homewizard_ip",
-              "type": "text",
+              "id": "offset_socket",
+              "type": "number",
               "label": {
-                "en": "IP address",
-                "nl": "IP adres"
+                "en": "Offset socket Watt",
+                "nl": "Compensatie socket Watt"
               },
-              "value": ""
+              "value": 0
             },
             {
-              "id": "homewizard_pass",
-              "type": "text",
+              "id": "offset_polling",
+              "type": "number",
               "label": {
-                "en": "Password",
-                "nl": "Wachtwoord"
+                "en": "Polling in seconds",
+                "nl": "Interval in seconden"
               },
-              "value": ""
-            },
-            {
-              "id": "homewizard_ledring",
-              "type": "checkbox",
-              "label": {
-                "en": "Use ledring",
-                "nl": "Gebruik ledring"
-              },
-              "value": false
+              "value": 10
             }
           ]
         }
-      ]
+      ],
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "energy_socket"
     },
     {
-      "id": "heatlink",
       "name": {
-        "en": "Heatlink",
-        "nl": "Heatlink"
+        "en": "P1 Meter V2"
       },
       "images": {
-        "large": "drivers/heatlink/assets/images/large.jpg",
-        "small": "drivers/heatlink/assets/images/small.jpg"
+        "large": "drivers/energy_v2/assets/images/large.png",
+        "small": "drivers/energy_v2/assets/images/small.png"
       },
-      "class": "thermostat",
-      "capabilities": [
-        "measure_temperature",
-        "target_temperature",
-        "measure_temperature.heatlink",
-        "measure_temperature.boiler",
-        "central_heating_pump",
-        "central_heating_flame",
-        "warm_water",
-        "measure_pressure"
+      "class": "sensor",
+      "discovery": "energy",
+      "platforms": [
+        "local"
       ],
+      "capabilities": [
+        "measure_power",
+        "meter_gas",
+        "meter_water",
+        "meter_power",
+        "meter_power.consumed.t1",
+        "meter_power.produced.t1",
+        "meter_power.consumed.t2",
+        "meter_power.produced.t2",
+        "meter_power.consumed.t3",
+        "meter_power.produced.t3",
+        "meter_power.consumed",
+        "meter_power.returned",
+        "measure_power.l1",
+        "measure_power.l2",
+        "measure_power.l3",
+        "measure_current.l1",
+        "measure_current.l2",
+        "measure_current.l3",
+        "measure_voltage.l1",
+        "measure_voltage.l2",
+        "measure_voltage.l3",
+        "measure_power.montly_power_peak",
+        "tariff",
+        "long_power_fail_count",
+        "voltage_sag_l1",
+        "voltage_sag_l2",
+        "voltage_sag_l3",
+        "voltage_swell_l1",
+        "voltage_swell_l2",
+        "voltage_swell_l3"
+      ],
+      "energy": {
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power.consumed",
+        "cumulativeExportedCapability": "meter_power.returned"
+      },
       "capabilitiesOptions": {
-        "measure_temperature.heatlink": {
+        "measure_power": {
           "title": {
-            "en": "Heatlink target temperature",
-            "nl": "Heatlink doel temperatuur"
+            "en": "Current usage",
+            "nl": "Huidig vermogen"
           }
         },
-        "measure_temperature.boiler": {
+        "meter_gas": {
+          "decimals": 3,
           "title": {
-            "en": "Boiler temperature",
-            "nl": "Ketel temperatuur"
+            "en": "Gasmeter",
+            "nl": "Gasmeter"
           }
         },
-        "measure_pressure": {
-          "decimals": 1,
+        "meter_water": {
+          "decimals": 3,
           "title": {
-            "en": "Water pressure",
-            "nl": "Waterdruk"
-          },
-          "units": {
-            "en": "Bar",
-            "nl": "Bar"
+            "en": "Watermeter",
+            "nl": "Watermeter"
+          }
+        },
+        "measure_power.l1": {
+          "title": {
+            "en": "Current usage phase 1",
+            "nl": "Huidig gebruik fase 1"
+          }
+        },
+        "measure_power.l2": {
+          "title": {
+            "en": "Current usage phase 2",
+            "nl": "Huidig gebruik fase 2"
+          }
+        },
+        "measure_power.l3": {
+          "title": {
+            "en": "Current usage phase 3",
+            "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current Amp phase 1",
+            "nl": "Huidig Amp fase 1"
+          }
+        },
+        "measure_current.l2": {
+          "title": {
+            "en": "Current Amp phase 2",
+            "nl": "Huidig Amp fase 2"
+          }
+        },
+        "measure_current.l3": {
+          "title": {
+            "en": "Current Amp phase 3",
+            "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Current Voltage phase 1",
+            "nl": "Huidig Voltage fase 1"
+          }
+        },
+        "measure_voltage.l2": {
+          "title": {
+            "en": "Current Voltage phase 2",
+            "nl": "Huidig Voltage fase 2"
+          }
+        },
+        "measure_voltage.l3": {
+          "title": {
+            "en": "Current Voltage phase 3",
+            "nl": "Huidig Voltage fase 3"
+          }
+        },
+        "meter_power.consumed.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 usage",
+            "nl": "Totaal t1 gebruik"
+          }
+        },
+        "meter_power.produced.t1": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t1 deliver",
+            "nl": "Totaal t1 teruglevering"
+          }
+        },
+        "meter_power.consumed.t2": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t2 usage",
+            "nl": "Totaal t2 gebruik"
+          }
+        },
+        "meter_power.produced.t2": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t2 deliver",
+            "nl": "Totaal t2 teruglevering"
+          }
+        },
+        "meter_power.consumed.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 usage",
+            "nl": "Totaal t3 gebruik"
+          }
+        },
+        "meter_power.produced.t3": {
+          "decimals": 3,
+          "title": {
+            "en": "Total t3 deliver",
+            "nl": "Totaal t3 teruglevering"
+          }
+        },
+        "meter_power.consumed": {
+          "decimals": 3,
+          "title": {
+            "en": "Sum Consumed",
+            "nl": "Som gebruik"
+          }
+        },
+        "meter_power.returned": {
+          "decimals": 3,
+          "title": {
+            "en": "Sum returned",
+            "nl": "Som teruglevering"
+          }
+        },
+        "meter_power": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage KWh",
+            "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_power.montly_power_peak": {
+          "title": {
+            "en": "Monthly Power Peak",
+            "nl": "Maandelijks piekvermogen"
           }
         }
       },
       "pair": [
         {
-          "id": "start"
-        },
-        {
-          "id": "list_my_devices",
+          "id": "list_devices",
           "template": "list_devices",
           "navigation": {
-            "next": "add_my_devices"
+            "next": "loading"
           }
         },
         {
-          "id": "add_my_devices",
+          "id": "loading",
+          "template": "loading"
+        },
+        {
+          "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "energy_v2"
     },
     {
-      "id": "energylink",
       "name": {
         "en": "Energylink",
         "nl": "Energylink"
@@ -1231,58 +1641,54 @@
           "id": "add_my_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "energylink"
     },
     {
-      "id": "thermometer",
       "name": {
-        "en": "Thermometer",
-        "nl": "Thermometer"
+        "en": "Heatlink",
+        "nl": "Heatlink"
       },
       "images": {
-        "large": "drivers/thermometer/assets/images/large.jpg",
-        "small": "drivers/thermometer/assets/images/small.jpg"
+        "large": "drivers/heatlink/assets/images/large.jpg",
+        "small": "drivers/heatlink/assets/images/small.jpg"
       },
-      "class": "sensor",
+      "class": "thermostat",
       "capabilities": [
         "measure_temperature",
-        "measure_humidity"
+        "target_temperature",
+        "measure_temperature.heatlink",
+        "measure_temperature.boiler",
+        "central_heating_pump",
+        "central_heating_flame",
+        "warm_water",
+        "measure_pressure"
       ],
-      "energy": {
-        "batteries": [
-          "AA",
-          "AA"
-        ]
-      },
-      "settings": [
-        {
-          "type": "group",
-          "label": {
-            "en": "Sensor offset",
-            "nl": "Sensor compensatie"
+      "capabilitiesOptions": {
+        "measure_temperature.heatlink": {
+          "title": {
+            "en": "Heatlink target temperature",
+            "nl": "Heatlink doel temperatuur"
+          }
+        },
+        "measure_temperature.boiler": {
+          "title": {
+            "en": "Boiler temperature",
+            "nl": "Ketel temperatuur"
+          }
+        },
+        "measure_pressure": {
+          "decimals": 1,
+          "title": {
+            "en": "Water pressure",
+            "nl": "Waterdruk"
           },
-          "children": [
-            {
-              "id": "offset_temperature",
-              "type": "number",
-              "label": {
-                "en": "Temperature",
-                "nl": "Temperatuur"
-              },
-              "value": 0
-            },
-            {
-              "id": "offset_humidity",
-              "type": "number",
-              "label": {
-                "en": "Humidity",
-                "nl": "Vochtigheid"
-              },
-              "value": 0
-            }
-          ]
+          "units": {
+            "en": "Bar",
+            "nl": "Bar"
+          }
         }
-      ],
+      },
       "pair": [
         {
           "id": "start"
@@ -1298,10 +1704,80 @@
           "id": "add_my_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "heatlink"
     },
     {
-      "id": "kakusensors",
+      "name": {
+        "en": "HomeWizard Base Station",
+        "nl": "HomeWizard Base Station"
+      },
+      "images": {
+        "large": "drivers/homewizard/assets/images/large.jpg",
+        "small": "drivers/homewizard/assets/images/small.jpg"
+      },
+      "class": "other",
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [],
+      "pair": [
+        {
+          "id": "start"
+        },
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "HomeWizard settings",
+            "nl": "HomeWizard instellingen"
+          },
+          "children": [
+            {
+              "id": "homewizard_ip",
+              "type": "text",
+              "label": {
+                "en": "IP address",
+                "nl": "IP adres"
+              },
+              "value": ""
+            },
+            {
+              "id": "homewizard_pass",
+              "type": "text",
+              "label": {
+                "en": "Password",
+                "nl": "Wachtwoord"
+              },
+              "value": ""
+            },
+            {
+              "id": "homewizard_ledring",
+              "type": "checkbox",
+              "label": {
+                "en": "Use ledring",
+                "nl": "Gebruik ledring"
+              },
+              "value": false
+            }
+          ]
+        }
+      ],
+      "id": "homewizard"
+    },
+    {
       "name": {
         "en": "Smoke, Motion and door senors",
         "nl": "Rook, beweging en deur sensors"
@@ -1327,1039 +1803,10 @@
           "id": "add_my_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "kakusensors"
     },
     {
-      "id": "windmeter",
-      "name": {
-        "en": "Windmeter",
-        "nl": "Windmeter"
-      },
-      "images": {
-        "large": "drivers/windmeter/assets/images/large.jpg",
-        "small": "drivers/windmeter/assets/images/small.jpg"
-      },
-      "class": "sensor",
-      "capabilities": [
-        "measure_wind_angle",
-        "measure_wind_strength.cur",
-        "measure_wind_strength.min",
-        "measure_wind_strength.max",
-        "measure_gust_strength",
-        "measure_temperature.real",
-        "measure_temperature.windchill"
-      ],
-      "capabilitiesOptions": {
-        "measure_wind_angle": {
-          "title": {
-            "en": "Wind Angle",
-            "nl": "Wind richting"
-          }
-        },
-        "measure_wind_strength.cur": {
-          "title": {
-            "en": "Wind Strength current",
-            "nl": "Wind sterkte huidige"
-          }
-        },
-        "measure_wind_strength.min": {
-          "title": {
-            "en": "Wind Strength lowest",
-            "nl": "Wind Sterkte laagste"
-          }
-        },
-        "measure_wind_strength.max": {
-          "title": {
-            "en": "Wind Strength highest",
-            "nl": "Wind Sterkte hoogste"
-          }
-        },
-        "measure_gust_strength": {
-          "title": {
-            "en": "Wind Gusts",
-            "nl": "Ruk wind sterkte"
-          }
-        },
-        "measure_temperature.real": {
-          "title": {
-            "en": "Temperature Real",
-            "nl": "Temperatuur Echt"
-          }
-        },
-        "measure_temperature.windchill": {
-          "title": {
-            "en": "Temperature windchill",
-            "nl": "Gevoelstemperatuur"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start"
-        },
-        {
-          "id": "list_my_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_my_devices"
-          }
-        },
-        {
-          "id": "add_my_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "wattcher",
-      "name": {
-        "en": "Wattcher",
-        "nl": "Wattcher"
-      },
-      "images": {
-        "large": "drivers/wattcher/assets/images/large.jpg",
-        "small": "drivers/wattcher/assets/images/small.jpg"
-      },
-      "class": "sensor",
-      "capabilities": [
-        "measure_power",
-        "meter_power"
-      ],
-      "capabilitiesOptions": {
-        "meter_power": {
-          "title": {
-            "en": "Day usage",
-            "nl": "Dag totaal"
-          }
-        },
-        "measure_power": {
-          "title": {
-            "en": "Power current",
-            "nl": "Huidig vermogen"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start"
-        },
-        {
-          "id": "list_my_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_my_devices"
-          }
-        },
-        {
-          "id": "add_my_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "rainmeter",
-      "name": {
-        "en": "Rainmeter",
-        "nl": "Regen meter"
-      },
-      "images": {
-        "large": "drivers/rainmeter/assets/images/large.jpg",
-        "small": "drivers/rainmeter/assets/images/small.jpg"
-      },
-      "class": "sensor",
-      "capabilities": [
-        "measure_rain.last3h",
-        "measure_rain.total"
-      ],
-      "capabilitiesOptions": {
-        "measure_rain.last3h": {
-          "title": {
-            "en": "Last 3 hours rain",
-            "nl": "Laatste 3 uur regen"
-          }
-        },
-        "measure_rain.total": {
-          "title": {
-            "en": "Rainfall today",
-            "nl": "Regenval vandaag"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start"
-        },
-        {
-          "id": "list_my_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_my_devices"
-          }
-        },
-        {
-          "id": "add_my_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "energy",
-      "name": {
-        "en": "P1 Meter"
-      },
-      "images": {
-        "large": "drivers/energy/assets/images/large.png",
-        "small": "drivers/energy/assets/images/small.png"
-      },
-      "class": "sensor",
-      "discovery": "energy",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_power",
-        "meter_gas",
-        "meter_water",
-        "meter_power",
-        "meter_power.consumed.t1",
-        "meter_power.produced.t1",
-        "meter_power.consumed.t2",
-        "meter_power.produced.t2",
-        "meter_power.consumed.t3",
-        "meter_power.produced.t3",
-        "meter_power.consumed",
-        "meter_power.returned",
-        "measure_power.l1",
-        "measure_power.l2",
-        "measure_power.l3",
-        "measure_current.l1",
-        "measure_current.l2",
-        "measure_current.l3",
-        "measure_voltage.l1",
-        "measure_voltage.l2",
-        "measure_voltage.l3",
-        "measure_power.montly_power_peak",
-        "rssi",
-        "tariff",
-        "long_power_fail_count",
-        "voltage_sag_l1",
-        "voltage_sag_l2",
-        "voltage_sag_l3",
-        "voltage_swell_l1",
-        "voltage_swell_l2",
-        "voltage_swell_l3"
-      ],
-      "energy": {
-        "cumulative": true,
-        "cumulativeImportedCapability": "meter_power.consumed",
-        "cumulativeExportedCapability": "meter_power.returned"
-      },
-      "capabilitiesOptions": {
-        "measure_power": {
-          "title": {
-            "en": "Current usage",
-            "nl": "Huidig vermogen"
-          }
-        },
-        "meter_gas": {
-          "decimals": 3,
-          "title": {
-            "en": "Gasmeter",
-            "nl": "Gasmeter"
-          }
-        },
-        "meter_water": {
-          "decimals": 3,
-          "title": {
-            "en": "Watermeter",
-            "nl": "Watermeter"
-          }
-        },
-        "measure_power.l1": {
-          "title": {
-            "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
-          }
-        },
-        "measure_power.l2": {
-          "title": {
-            "en": "Current usage phase 2",
-            "nl": "Huidig gebruik fase 2"
-          }
-        },
-        "measure_power.l3": {
-          "title": {
-            "en": "Current usage phase 3",
-            "nl": "Huidig gebruik fase 3"
-          }
-        },
-        "measure_current.l1": {
-          "title": {
-            "en": "Current Amp phase 1",
-            "nl": "Huidig Amp fase 1"
-          }
-        },
-        "measure_current.l2": {
-          "title": {
-            "en": "Current Amp phase 2",
-            "nl": "Huidig Amp fase 2"
-          }
-        },
-        "measure_current.l3": {
-          "title": {
-            "en": "Current Amp phase 3",
-            "nl": "Huidig Amp fase 3"
-          }
-        },
-        "measure_voltage.l1": {
-          "title": {
-            "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
-          }
-        },
-        "measure_voltage.l2": {
-          "title": {
-            "en": "Current Voltage phase 2",
-            "nl": "Huidig Voltage fase 2"
-          }
-        },
-        "measure_voltage.l3": {
-          "title": {
-            "en": "Current Voltage phase 3",
-            "nl": "Huidig Voltage fase 3"
-          }
-        },
-        "meter_power.consumed.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
-          }
-        },
-        "meter_power.produced.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
-          }
-        },
-        "meter_power.consumed.t2": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t2 usage",
-            "nl": "Totaal t2 gebruik"
-          }
-        },
-        "meter_power.produced.t2": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t2 deliver",
-            "nl": "Totaal t2 teruglevering"
-          }
-        },
-        "meter_power.consumed.t3": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t3 usage",
-            "nl": "Totaal t3 gebruik"
-          }
-        },
-        "meter_power.produced.t3": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t3 deliver",
-            "nl": "Totaal t3 teruglevering"
-          }
-        },
-        "meter_power.consumed": {
-          "decimals": 3,
-          "title": {
-            "en": "Sum Consumed",
-            "nl": "Som gebruik"
-          }
-        },
-        "meter_power.returned": {
-          "decimals": 3,
-          "title": {
-            "en": "Sum returned",
-            "nl": "Som teruglevering"
-          }
-        },
-        "meter_power": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
-          }
-        },
-        "measure_power.montly_power_peak": {
-          "title": {
-            "en": "Monthly Power Peak",
-            "nl": "Maandelijks piekvermogen"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start",
-          "navigation": {
-            "next": "list_devices"
-          }
-        },
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "energy_v2",
-      "name": {
-        "en": "P1 Meter V2"
-      },
-      "images": {
-        "large": "drivers/energy_v2/assets/images/large.png",
-        "small": "drivers/energy_v2/assets/images/small.png"
-      },
-      "class": "sensor",
-      "discovery": "energy",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_power",
-        "meter_gas",
-        "meter_water",
-        "meter_power",
-        "meter_power.consumed.t1",
-        "meter_power.produced.t1",
-        "meter_power.consumed.t2",
-        "meter_power.produced.t2",
-        "meter_power.consumed.t3",
-        "meter_power.produced.t3",
-        "meter_power.consumed",
-        "meter_power.returned",
-        "measure_power.l1",
-        "measure_power.l2",
-        "measure_power.l3",
-        "measure_current.l1",
-        "measure_current.l2",
-        "measure_current.l3",
-        "measure_voltage.l1",
-        "measure_voltage.l2",
-        "measure_voltage.l3",
-        "measure_power.montly_power_peak",
-        "tariff",
-        "long_power_fail_count",
-        "voltage_sag_l1",
-        "voltage_sag_l2",
-        "voltage_sag_l3",
-        "voltage_swell_l1",
-        "voltage_swell_l2",
-        "voltage_swell_l3"
-      ],
-      "energy": {
-        "cumulative": true,
-        "cumulativeImportedCapability": "meter_power.consumed",
-        "cumulativeExportedCapability": "meter_power.returned"
-      },
-      "capabilitiesOptions": {
-        "measure_power": {
-          "title": {
-            "en": "Current usage",
-            "nl": "Huidig vermogen"
-          }
-        },
-        "meter_gas": {
-          "decimals": 3,
-          "title": {
-            "en": "Gasmeter",
-            "nl": "Gasmeter"
-          }
-        },
-        "meter_water": {
-          "decimals": 3,
-          "title": {
-            "en": "Watermeter",
-            "nl": "Watermeter"
-          }
-        },
-        "measure_power.l1": {
-          "title": {
-            "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
-          }
-        },
-        "measure_power.l2": {
-          "title": {
-            "en": "Current usage phase 2",
-            "nl": "Huidig gebruik fase 2"
-          }
-        },
-        "measure_power.l3": {
-          "title": {
-            "en": "Current usage phase 3",
-            "nl": "Huidig gebruik fase 3"
-          }
-        },
-        "measure_current.l1": {
-          "title": {
-            "en": "Current Amp phase 1",
-            "nl": "Huidig Amp fase 1"
-          }
-        },
-        "measure_current.l2": {
-          "title": {
-            "en": "Current Amp phase 2",
-            "nl": "Huidig Amp fase 2"
-          }
-        },
-        "measure_current.l3": {
-          "title": {
-            "en": "Current Amp phase 3",
-            "nl": "Huidig Amp fase 3"
-          }
-        },
-        "measure_voltage.l1": {
-          "title": {
-            "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
-          }
-        },
-        "measure_voltage.l2": {
-          "title": {
-            "en": "Current Voltage phase 2",
-            "nl": "Huidig Voltage fase 2"
-          }
-        },
-        "measure_voltage.l3": {
-          "title": {
-            "en": "Current Voltage phase 3",
-            "nl": "Huidig Voltage fase 3"
-          }
-        },
-        "meter_power.consumed.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
-          }
-        },
-        "meter_power.produced.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
-          }
-        },
-        "meter_power.consumed.t2": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t2 usage",
-            "nl": "Totaal t2 gebruik"
-          }
-        },
-        "meter_power.produced.t2": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t2 deliver",
-            "nl": "Totaal t2 teruglevering"
-          }
-        },
-        "meter_power.consumed.t3": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t3 usage",
-            "nl": "Totaal t3 gebruik"
-          }
-        },
-        "meter_power.produced.t3": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t3 deliver",
-            "nl": "Totaal t3 teruglevering"
-          }
-        },
-        "meter_power.consumed": {
-          "decimals": 3,
-          "title": {
-            "en": "Sum Consumed",
-            "nl": "Som gebruik"
-          }
-        },
-        "meter_power.returned": {
-          "decimals": 3,
-          "title": {
-            "en": "Sum returned",
-            "nl": "Som teruglevering"
-          }
-        },
-        "meter_power": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
-          }
-        },
-        "measure_power.montly_power_peak": {
-          "title": {
-            "en": "Monthly Power Peak",
-            "nl": "Maandelijks piekvermogen"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "loading"
-          }
-        },
-        {
-          "id": "loading",
-          "template": "loading"
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "SDM630",
-      "name": {
-        "en": "kWh Meter (3 phase)"
-      },
-      "images": {
-        "large": "drivers/SDM630/assets/images/large.png",
-        "small": "drivers/SDM630/assets/images/small.png"
-      },
-      "class": "socket",
-      "discovery": "SDM630",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_power",
-        "meter_power",
-        "measure_power.l1",
-        "measure_power.l2",
-        "measure_power.l3",
-        "measure_current.l1",
-        "measure_current.l2",
-        "measure_current.l3",
-        "measure_voltage.l1",
-        "measure_voltage.l2",
-        "measure_voltage.l3",
-        "rssi"
-      ],
-      "capabilitiesOptions": {
-        "measure_power": {
-          "title": {
-            "en": "Current usage",
-            "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.l1": {
-          "title": {
-            "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
-          }
-        },
-        "measure_power.l2": {
-          "title": {
-            "en": "Current usage phase 2",
-            "nl": "Huidig gebruik fase 2"
-          }
-        },
-        "measure_power.l3": {
-          "title": {
-            "en": "Current usage phase 3",
-            "nl": "Huidig gebruik fase 3"
-          }
-        },
-        "meter_power.consumed.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
-          }
-        },
-        "meter_power.produced.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
-          }
-        },
-        "meter_power": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
-          }
-        },
-        "measure_current.l1": {
-          "title": {
-            "en": "Current Amp phase 1",
-            "nl": "Huidig Amp fase 1"
-          }
-        },
-        "measure_current.l2": {
-          "title": {
-            "en": "Current Amp phase 2",
-            "nl": "Huidig Amp fase 2"
-          }
-        },
-        "measure_current.l3": {
-          "title": {
-            "en": "Current Amp phase 3",
-            "nl": "Huidig Amp fase 3"
-          }
-        },
-        "measure_voltage.l1": {
-          "title": {
-            "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
-          }
-        },
-        "measure_voltage.l2": {
-          "title": {
-            "en": "Current Voltage phase 2",
-            "nl": "Huidig Voltage fase 2"
-          }
-        },
-        "measure_voltage.l3": {
-          "title": {
-            "en": "Current Voltage phase 3",
-            "nl": "Huidig Voltage fase 3"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start",
-          "navigation": {
-            "next": "list_devices"
-          }
-        },
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "SDM230",
-      "name": {
-        "en": "kWh Meter (1 phase)"
-      },
-      "images": {
-        "large": "drivers/SDM230/assets/images/large.png",
-        "small": "drivers/SDM230/assets/images/small.png"
-      },
-      "class": "socket",
-      "discovery": "SDM230",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_power",
-        "meter_power",
-        "measure_current",
-        "measure_power.l1",
-        "measure_voltage",
-        "rssi"
-      ],
-      "capabilitiesOptions": {
-        "measure_power": {
-          "title": {
-            "en": "Current usage",
-            "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.l1": {
-          "title": {
-            "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
-          }
-        },
-        "meter_power.consumed.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
-          }
-        },
-        "meter_power.produced.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
-          }
-        },
-        "meter_power": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
-          }
-        },
-        "measure_voltage": {
-          "title": {
-            "en": "Current Voltage",
-            "nl": "Huidig Voltage"
-          }
-        },
-        "measure_current": {
-          "title": {
-            "en": "Current Amp",
-            "nl": "Huidig Amp"
-          }
-        }
-      },
-      "pair": [
-        {
-          "id": "start",
-          "navigation": {
-            "next": "list_devices"
-          }
-        },
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "energy_socket",
-      "name": {
-        "en": "Energy Socket"
-      },
-      "images": {
-        "large": "drivers/energy_socket/assets/images/large.png",
-        "small": "drivers/energy_socket/assets/images/small.png"
-      },
-      "class": "socket",
-      "discovery": "energy_socket",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "onoff",
-        "dim",
-        "locked",
-        "measure_power",
-        "meter_power",
-        "meter_power.consumed.t1",
-        "meter_power.produced.t1",
-        "measure_power.l1",
-        "measure_voltage",
-        "rssi"
-      ],
-      "capabilitiesOptions": {
-        "measure_power": {
-          "title": {
-            "en": "Current usage",
-            "nl": "Huidig vermogen"
-          }
-        },
-        "measure_power.l1": {
-          "title": {
-            "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
-          }
-        },
-        "meter_power.consumed.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
-          }
-        },
-        "meter_power.produced.t1": {
-          "decimals": 3,
-          "title": {
-            "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
-          }
-        },
-        "meter_power": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
-          }
-        },
-        "measure_voltage": {
-          "title": {
-            "en": "Current Voltage",
-            "nl": "Huidig Voltage"
-          }
-        }
-      },
-      "settings": [
-        {
-          "type": "group",
-          "label": {
-            "en": "Socket Watt offset",
-            "nl": "Socket Watt compensatie"
-          },
-          "children": [
-            {
-              "id": "offset_socket",
-              "type": "number",
-              "label": {
-                "en": "Offset socket Watt",
-                "nl": "Compensatie socket Watt"
-              },
-              "value": 0
-            },
-            {
-              "id": "offset_polling",
-              "type": "number",
-              "label": {
-                "en": "Polling in seconds",
-                "nl": "Interval in seconden"
-              },
-              "value": 10
-            }
-          ]
-        }
-      ],
-      "pair": [
-        {
-          "id": "start",
-          "navigation": {
-            "next": "list_devices"
-          }
-        },
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "watermeter",
-      "name": {
-        "en": "Watermeter"
-      },
-      "images": {
-        "large": "drivers/watermeter/assets/images/large.png",
-        "small": "drivers/watermeter/assets/images/small.png"
-      },
-      "class": "sensor",
-      "discovery": "watermeter",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_water",
-        "meter_water",
-        "rssi"
-      ],
-      "energy": {
-        "cumulative": true
-      },
-      "capabilitiesOptions": {
-        "measure_water": {
-          "type": "number",
-          "title": {
-            "en": "Water L/min",
-            "nl": "Water L/min"
-          },
-          "units": {
-            "en": "L/min"
-          },
-          "desc": {
-            "en": "Water flow in Liters per minute (L/min)",
-            "nl": "Waterdoorstroming in Liters per minuut (L/min)"
-          },
-          "chartType": "stepLine",
-          "decimals": 1,
-          "getable": true,
-          "setable": false
-        },
-        "meter_water": {
-          "decimals": 3,
-          "title": {
-            "en": "Total usage",
-            "nl": "Totaal verbruik"
-          }
-        }
-      },
-      "settings": [
-        {
-          "type": "group",
-          "label": {
-            "en": "Watermeter offset",
-            "nl": "Watermeter compensatie"
-          },
-          "children": [
-            {
-              "id": "offset_water",
-              "type": "number",
-              "label": {
-                "en": "Offset watermeter m3",
-                "nl": "compensatie watermeter m3"
-              },
-              "value": 0
-            }
-          ]
-        }
-      ],
-      "pair": [
-        {
-          "id": "start",
-          "navigation": {
-            "next": "list_devices"
-          }
-        },
-        {
-          "id": "list_devices",
-          "template": "list_devices",
-          "navigation": {
-            "next": "add_devices"
-          }
-        },
-        {
-          "id": "add_devices",
-          "template": "add_devices"
-        }
-      ]
-    },
-    {
-      "id": "plugin_battery",
       "name": {
         "en": "Plugin Battery"
       },
@@ -2449,12 +1896,509 @@
           "id": "add_devices",
           "template": "add_devices"
         }
-      ]
+      ],
+      "id": "plugin_battery"
+    },
+    {
+      "name": {
+        "en": "Rainmeter",
+        "nl": "Regen meter"
+      },
+      "images": {
+        "large": "drivers/rainmeter/assets/images/large.jpg",
+        "small": "drivers/rainmeter/assets/images/small.jpg"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_rain.last3h",
+        "measure_rain.total"
+      ],
+      "capabilitiesOptions": {
+        "measure_rain.last3h": {
+          "title": {
+            "en": "Last 3 hours rain",
+            "nl": "Laatste 3 uur regen"
+          }
+        },
+        "measure_rain.total": {
+          "title": {
+            "en": "Rainfall today",
+            "nl": "Regenval vandaag"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start"
+        },
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "rainmeter"
+    },
+    {
+      "name": {
+        "en": "Thermometer",
+        "nl": "Thermometer"
+      },
+      "images": {
+        "large": "drivers/thermometer/assets/images/large.jpg",
+        "small": "drivers/thermometer/assets/images/small.jpg"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_temperature",
+        "measure_humidity"
+      ],
+      "energy": {
+        "batteries": [
+          "AA",
+          "AA"
+        ]
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Sensor offset",
+            "nl": "Sensor compensatie"
+          },
+          "children": [
+            {
+              "id": "offset_temperature",
+              "type": "number",
+              "label": {
+                "en": "Temperature",
+                "nl": "Temperatuur"
+              },
+              "value": 0
+            },
+            {
+              "id": "offset_humidity",
+              "type": "number",
+              "label": {
+                "en": "Humidity",
+                "nl": "Vochtigheid"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "start"
+        },
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "thermometer"
+    },
+    {
+      "name": {
+        "en": "Watermeter"
+      },
+      "images": {
+        "large": "drivers/watermeter/assets/images/large.png",
+        "small": "drivers/watermeter/assets/images/small.png"
+      },
+      "class": "sensor",
+      "discovery": "watermeter",
+      "platforms": [
+        "local"
+      ],
+      "capabilities": [
+        "measure_water",
+        "meter_water",
+        "rssi"
+      ],
+      "energy": {
+        "cumulative": true
+      },
+      "capabilitiesOptions": {
+        "measure_water": {
+          "type": "number",
+          "title": {
+            "en": "Water L/min",
+            "nl": "Water L/min"
+          },
+          "units": {
+            "en": "L/min"
+          },
+          "desc": {
+            "en": "Water flow in Liters per minute (L/min)",
+            "nl": "Waterdoorstroming in Liters per minuut (L/min)"
+          },
+          "chartType": "stepLine",
+          "decimals": 1,
+          "getable": true,
+          "setable": false
+        },
+        "meter_water": {
+          "decimals": 3,
+          "title": {
+            "en": "Total usage",
+            "nl": "Totaal verbruik"
+          }
+        }
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Watermeter offset",
+            "nl": "Watermeter compensatie"
+          },
+          "children": [
+            {
+              "id": "offset_water",
+              "type": "number",
+              "label": {
+                "en": "Offset watermeter m3",
+                "nl": "compensatie watermeter m3"
+              },
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "pair": [
+        {
+          "id": "start",
+          "navigation": {
+            "next": "list_devices"
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "watermeter"
+    },
+    {
+      "name": {
+        "en": "Wattcher",
+        "nl": "Wattcher"
+      },
+      "images": {
+        "large": "drivers/wattcher/assets/images/large.jpg",
+        "small": "drivers/wattcher/assets/images/small.jpg"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_power",
+        "meter_power"
+      ],
+      "capabilitiesOptions": {
+        "meter_power": {
+          "title": {
+            "en": "Day usage",
+            "nl": "Dag totaal"
+          }
+        },
+        "measure_power": {
+          "title": {
+            "en": "Power current",
+            "nl": "Huidig vermogen"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start"
+        },
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "wattcher"
+    },
+    {
+      "name": {
+        "en": "Windmeter",
+        "nl": "Windmeter"
+      },
+      "images": {
+        "large": "drivers/windmeter/assets/images/large.jpg",
+        "small": "drivers/windmeter/assets/images/small.jpg"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_wind_angle",
+        "measure_wind_strength.cur",
+        "measure_wind_strength.min",
+        "measure_wind_strength.max",
+        "measure_gust_strength",
+        "measure_temperature.real",
+        "measure_temperature.windchill"
+      ],
+      "capabilitiesOptions": {
+        "measure_wind_angle": {
+          "title": {
+            "en": "Wind Angle",
+            "nl": "Wind richting"
+          }
+        },
+        "measure_wind_strength.cur": {
+          "title": {
+            "en": "Wind Strength current",
+            "nl": "Wind sterkte huidige"
+          }
+        },
+        "measure_wind_strength.min": {
+          "title": {
+            "en": "Wind Strength lowest",
+            "nl": "Wind Sterkte laagste"
+          }
+        },
+        "measure_wind_strength.max": {
+          "title": {
+            "en": "Wind Strength highest",
+            "nl": "Wind Sterkte hoogste"
+          }
+        },
+        "measure_gust_strength": {
+          "title": {
+            "en": "Wind Gusts",
+            "nl": "Ruk wind sterkte"
+          }
+        },
+        "measure_temperature.real": {
+          "title": {
+            "en": "Temperature Real",
+            "nl": "Temperatuur Echt"
+          }
+        },
+        "measure_temperature.windchill": {
+          "title": {
+            "en": "Temperature windchill",
+            "nl": "Gevoelstemperatuur"
+          }
+        }
+      },
+      "pair": [
+        {
+          "id": "start"
+        },
+        {
+          "id": "list_my_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_my_devices"
+          }
+        },
+        {
+          "id": "add_my_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "windmeter"
     }
   ],
-  "permissions": [
-    "homey:manager:ledring"
-  ],
+  "capabilities": {
+    "central_heating_flame": {
+      "type": "boolean",
+      "title": {
+        "en": "Central Heating Burner",
+        "nl": "CV brander"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/flame.svg"
+    },
+    "central_heating_pump": {
+      "type": "boolean",
+      "title": {
+        "en": "Central Heating",
+        "nl": "Central Verwarming"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/central_heating.svg"
+    },
+    "cycles": {
+      "type": "number",
+      "title": {
+        "en": "Number of battery cycles",
+        "nl": "Aantal battery laadcycli"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "cycles",
+        "nl": "cycli"
+      }
+    },
+    "long_power_fail_count": {
+      "type": "number",
+      "title": {
+        "en": "Power failures",
+        "nl": "Stroomstoringen"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "rssi": {
+      "type": "number",
+      "title": {
+        "en": "WiFi Signal",
+        "nl": "WiFi signaal"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "RSSI",
+        "nl": "RSSI"
+      }
+    },
+    "tariff": {
+      "type": "number",
+      "title": {
+        "en": "Active tariff",
+        "nl": "Tarief actief"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/tariff.svg",
+      "units": {
+        "en": "Tariff",
+        "nl": "Tarief"
+      }
+    },
+    "voltage_sag_l1": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L1",
+        "nl": "Net dip L1"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_sag_l2": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L2",
+        "nl": "Net dip L2"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_sag_l3": {
+      "type": "number",
+      "title": {
+        "en": "Net dip L3",
+        "nl": "Net dip L3"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l1": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L1",
+        "nl": "Net piek L1"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l2": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L2",
+        "nl": "Net piek L2"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "voltage_swell_l3": {
+      "type": "number",
+      "title": {
+        "en": "Net peak L3",
+        "nl": "Net piek L3"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
+    },
+    "warm_water": {
+      "type": "boolean",
+      "title": {
+        "en": "Warm water",
+        "nl": "Warm water"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/shower.svg"
+    }
+  },
   "discovery": {
     "energy": {
       "type": "mdns-sd",
@@ -2508,29 +2452,53 @@
         ]
       ]
     },
-    "SDM630": {
+    "energy_v2": {
       "type": "mdns-sd",
       "mdns-sd": {
-        "name": "hwenergy",
+        "name": "homewizard",
         "protocol": "tcp"
       },
       "id": "{{txt.serial}}",
       "conditions": [
         [
           {
-            "field": "txt.product_type",
+            "field": "host",
             "match": {
-              "type": "string",
-              "value": "SDM630-wifi"
+              "type": "regex",
+              "value": "^p1meter-"
             }
-          }
-        ],
-        [
+          },
           {
             "field": "txt.product_type",
             "match": {
               "type": "string",
-              "value": "HWE-KWH3"
+              "value": "HWE-P1"
+            }
+          }
+        ]
+      ]
+    },
+    "plugin_battery": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "homewizard",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "host",
+            "match": {
+              "type": "regex",
+              "value": "^battery-"
+            }
+          },
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-BAT"
             }
           }
         ]
@@ -2564,6 +2532,34 @@
         ]
       ]
     },
+    "SDM630": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "SDM630-wifi"
+            }
+          }
+        ],
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-KWH3"
+            }
+          }
+        ]
+      ]
+    },
     "watermeter": {
       "type": "mdns-sd",
       "mdns-sd": {
@@ -2585,58 +2581,6 @@
             "match": {
               "type": "string",
               "value": "HWE-WTR"
-            }
-          }
-        ]
-      ]
-    },
-    "plugin_battery": {
-      "type": "mdns-sd",
-      "mdns-sd": {
-        "name": "homewizard",
-        "protocol": "tcp"
-      },
-      "id": "{{txt.serial}}",
-      "conditions": [
-        [
-          {
-            "field": "host",
-            "match": {
-              "type": "regex",
-              "value": "^battery-"
-            }
-          },
-          {
-            "field": "txt.product_type",
-            "match": {
-              "type": "string",
-              "value": "HWE-BAT"
-            }
-          }
-        ]
-      ]
-    },
-    "energy_v2": {
-      "type": "mdns-sd",
-      "mdns-sd": {
-        "name": "homewizard",
-        "protocol": "tcp"
-      },
-      "id": "{{txt.serial}}",
-      "conditions": [
-        [
-          {
-            "field": "host",
-            "match": {
-              "type": "regex",
-              "value": "^p1meter-"
-            }
-          },
-          {
-            "field": "txt.product_type",
-            "match": {
-              "type": "string",
-              "value": "HWE-P1"
             }
           }
         ]
