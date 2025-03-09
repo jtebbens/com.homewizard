@@ -10,7 +10,8 @@
   },
   "scripts": {
     "test": "athom app run",
-    "lint": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0 --fix"
+    "lint": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
+    "lint-check": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "repository": {
     "type": "git",
