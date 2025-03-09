@@ -1,51 +1,60 @@
 <script>
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-    if ($('#homewizard_ledring').is(":checked")) {
-        var homewizard_ledring = true;   
-    } else {
-        var homewizard_ledring = false;   
-    }
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW'+Math.floor(Date.now() / 1000)
-	    },
-	    settings: {
-		    'homewizard_ip': $('#homewizard_ip').val(),
-		    'homewizard_pass': $('#homewizard_pass').val(),
-            'homewizard_ledring': homewizard_ledring
-	    },
-	    name: 'HomeWizard',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
-    
-    Homey.on('success', function(device){
-		$('#error').html('Connected, saving...');
+    function saveSettings() {
+        $('#error').html('');
         $('#save').prop('disabled', true);
-        Homey.createDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: 'HW'+Math.floor(Date.now() / 1000)
+        if ($('#homewizard_ledring').is(':checked')) {
+            var homewizard_ledring = true;
+        } else {
+            var homewizard_ledring = false;
+        }
+        Homey.emit(
+            'manual_add',
+            {
+                data: {
+                    // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+                    id: 'HW' + Math.floor(Date.now() / 1000)
+                },
+                settings: {
+                    homewizard_ip: $('#homewizard_ip').val(),
+                    homewizard_pass: $('#homewizard_pass').val(),
+                    homewizard_ledring: homewizard_ledring
+                },
+                name: 'HomeWizard'
             },
-            settings: {
-                'homewizard_ip': device.settings.homewizard_ip,
-                'homewizard_pass': device.settings.homewizard_pass,
-                'homewizard_ledring': device.settings.homewizard_ledring,
-            },
-            name: device.name,
-            capabilities: []
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
+            function (err, result) {
+                if (err) return console.error(err);
+            }
+        );
+
+        Homey.on('success', function (device) {
+            $('#error').html('Connected, saving...');
+            $('#save').prop('disabled', true);
+            Homey.createDevice(
+                {
+                    data: {
+                        // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+                        id: 'HW' + Math.floor(Date.now() / 1000)
+                    },
+                    settings: {
+                        homewizard_ip: device.settings.homewizard_ip,
+                        homewizard_pass: device.settings.homewizard_pass,
+                        homewizard_ledring: device.settings.homewizard_ledring
+                    },
+                    name: device.name,
+                    capabilities: []
+                },
+                function (err, result) {
+                    if (err) return console.error(err);
+                    Homey.done();
+                }
+            );
         });
-    });
-    
-    Homey.on('error', function(message){
-        $('#error').html('Error: '+message);
-        $('#save').prop('disabled', false);
-    });
-}
+
+        Homey.on('error', function (message) {
+            $('#error').html('Error: ' + message);
+            $('#save').prop('disabled', false);
+        });
+    }
 </script>
 <!doctype html>
 <html>
@@ -53,7 +62,7 @@ function saveSettings () {
         <style>
             label {
                 width: 150px;
-                display:inline-block !important;   
+                display: inline-block !important;
             }
             input {
                 border: 1px solid #ccc;
@@ -71,21 +80,21 @@ function saveSettings () {
     </head>
     <body>
         <p data-i18n="settings.intro"></p>
-            <div class="field row">
-                <label for="homewizard_ip">HomeWizard's IP</label>
-                <input id="homewizard_ip" type="text" value="" />
-            </div>
-            <div class="field row">
-                <label for="homewizard_pass" data-i18n="settings.password"></label>
-                <input id="homewizard_pass" type="password" value="" />
-            </div>
-            <br>
-            <div class="field row">
-                <label for="homewizard_ledring" data-i18n="settings.use_ledring"></label>
-                <input type="checkbox" id="homewizard_ledring" /><br><br><em data-i18n="settings.use_ledring_explain"></em>
-            </div>
-            <br>
-            <p id="error"></p>
+        <div class="field row">
+            <label for="homewizard_ip">HomeWizard's IP</label>
+            <input id="homewizard_ip" type="text" value="" />
+        </div>
+        <div class="field row">
+            <label for="homewizard_pass" data-i18n="settings.password"></label>
+            <input id="homewizard_pass" type="password" value="" />
+        </div>
+        <br />
+        <div class="field row">
+            <label for="homewizard_ledring" data-i18n="settings.use_ledring"></label>
+            <input type="checkbox" id="homewizard_ledring" /><br /><br /><em data-i18n="settings.use_ledring_explain"></em>
+        </div>
+        <br />
+        <p id="error"></p>
         <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>

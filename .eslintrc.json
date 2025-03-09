@@ -1,24 +1,27 @@
 {
-  "extends": "eslint:recommended",
-  "env": {
-    "node":  true,
-    "es6": true,
-    "mocha": true,
-    "browser": true
-  },
-  "linebreak-style": 0,
+  "extends": "athom",
   "rules": {
-    "no-mixed-spaces-and-tabs": 0, // disable rule
-    "callback-return": "warn",
-    "handle-callback-err": "error",
-    "no-new-require": "error",
-    "no-empty-function": "error",
-    "global-require": "error",
-    "no-return-await": "error",
-    "no-catch-shadow": "error",
-    "no-await-in-loop": "error",
-    "array-callback-return" : "error",
-    "no-invalid-this" : "error"
+    "no-console": "off",
+    "no-tabs": "off",
+    "camelcase": "off",
+    "radix": "off",
+    "func-names": "off",
+    "valid-typeof": "off",
+    "consistent-return": "off",
+    "no-restricted-syntax": "off",
+    "guard-for-in": "off",
+    "no-new": "off",
+    "no-unused-vars": "off",
+    "eqeqeq": "off",
+    "import/extensions": "off",
+    "no-cond-assign": "off",
+    "global-require": "off",
+    "no-const-assignt": "off",
+    "no-undef": "off",
+    "no-async-promise-executor": "off",
+    "brace-style": "off",
+    "node/no-unsupported-features/node-builtins": "off",
+    "no-constant-condition": "off",
+    "no-const-assign": "off"
   }
-
 }

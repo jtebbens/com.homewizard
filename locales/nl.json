@@ -1,14 +1,14 @@
 {
-    "settings": {
-        "title": "HomeWizard instellingen",
-        "intro": "Om verbinding te kunnen maken met uw HomeWizard zijn onderstaande gegevens benodigd.",
-        "heatlink_intro": "Om verbinding te kunnen maken met uw Heatlink dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "energylink_intro": "Om verbinding te kunnen maken met uw Energylink dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "wattcher_intro": "Om verbinding te kunnen maken met uw Wattcher dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "thermometer_intro": "Om verbinding te kunnen maken met uw thermometer dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "password": "Wachtwoord",
-        "use_ledring": "Gebruik ledring",
-        "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
-        "save": "Opslaan"
-    }
+  "settings": {
+    "title": "HomeWizard instellingen",
+    "intro": "Om verbinding te kunnen maken met uw HomeWizard zijn onderstaande gegevens benodigd.",
+    "heatlink_intro": "Om verbinding te kunnen maken met uw Heatlink dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "energylink_intro": "Om verbinding te kunnen maken met uw Energylink dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "wattcher_intro": "Om verbinding te kunnen maken met uw Wattcher dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "thermometer_intro": "Om verbinding te kunnen maken met uw thermometer dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "password": "Wachtwoord",
+    "use_ledring": "Gebruik ledring",
+    "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
+    "save": "Opslaan"
+  }
 }

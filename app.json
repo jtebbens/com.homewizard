@@ -4,20 +4,14 @@
     "en": "HomeWizard"
   },
   "version": "3.4.3",
-  "platforms": [
-    "local"
-  ],
+  "platforms": ["local"],
   "sdk": 3,
   "brandColor": "#2fc052",
   "compatibility": ">=12.3.0",
   "description": {
     "en": "Helps you understand and save"
   },
-  "category": [
-    "energy",
-    "appliances",
-    "climate"
-  ],
+  "category": ["energy", "appliances", "climate"],
   "images": {
     "xlarge": "assets/images/xlarge.png",
     "large": "assets/images/large.png",
@@ -893,9 +887,7 @@
         "small": "drivers/homewizard/assets/images/small.jpg"
       },
       "class": "other",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [],
       "pair": [
         {
@@ -1244,15 +1236,9 @@
         "small": "drivers/thermometer/assets/images/small.jpg"
       },
       "class": "sensor",
-      "capabilities": [
-        "measure_temperature",
-        "measure_humidity"
-      ],
+      "capabilities": ["measure_temperature", "measure_humidity"],
       "energy": {
-        "batteries": [
-          "AA",
-          "AA"
-        ]
+        "batteries": ["AA", "AA"]
       },
       "settings": [
         {
@@ -1421,10 +1407,7 @@
         "small": "drivers/wattcher/assets/images/small.jpg"
       },
       "class": "sensor",
-      "capabilities": [
-        "measure_power",
-        "meter_power"
-      ],
+      "capabilities": ["measure_power", "meter_power"],
       "capabilitiesOptions": {
         "meter_power": {
           "title": {
@@ -1467,10 +1450,7 @@
         "small": "drivers/rainmeter/assets/images/small.jpg"
       },
       "class": "sensor",
-      "capabilities": [
-        "measure_rain.last3h",
-        "measure_rain.total"
-      ],
+      "capabilities": ["measure_rain.last3h", "measure_rain.total"],
       "capabilitiesOptions": {
         "measure_rain.last3h": {
           "title": {
@@ -1513,9 +1493,7 @@
       },
       "class": "sensor",
       "discovery": "energy",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "measure_power",
         "meter_gas",
@@ -1730,9 +1708,7 @@
       },
       "class": "sensor",
       "discovery": "energy",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "measure_power",
         "meter_gas",
@@ -1944,9 +1920,7 @@
       },
       "class": "socket",
       "discovery": "SDM630",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "measure_power",
         "meter_power",
@@ -2075,9 +2049,7 @@
       },
       "class": "socket",
       "discovery": "SDM230",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "measure_power",
         "meter_power",
@@ -2164,9 +2136,7 @@
       },
       "class": "socket",
       "discovery": "energy_socket",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "onoff",
         "dim",
@@ -2279,14 +2249,8 @@
       },
       "class": "sensor",
       "discovery": "watermeter",
-      "platforms": [
-        "local"
-      ],
-      "capabilities": [
-        "measure_water",
-        "meter_water",
-        "rssi"
-      ],
+      "platforms": ["local"],
+      "capabilities": ["measure_water", "meter_water", "rssi"],
       "energy": {
         "cumulative": true
       },
@@ -2368,9 +2332,7 @@
       },
       "class": "battery",
       "discovery": "plugin_battery",
-      "platforms": [
-        "local"
-      ],
+      "platforms": ["local"],
       "capabilities": [
         "meter_power.import",
         "meter_power.export",
@@ -2451,9 +2413,7 @@
       ]
     }
   ],
-  "permissions": [
-    "homey:manager:ledring"
-  ],
+  "permissions": ["homey:manager:ledring"],
   "discovery": {
     "energy": {
       "type": "mdns-sd",

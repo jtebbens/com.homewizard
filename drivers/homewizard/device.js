@@ -1,118 +1,117 @@
 'use strict';
 
 const Homey = require('homey');
-//const { ManagerDrivers } = require('homey');
-//const drivers = ManagerDrivers.getDriver('homewizard');
-//const { ManagerI18n } = require('homey');
+// const { ManagerDrivers } = require('homey');
+// const drivers = ManagerDrivers.getDriver('homewizard');
+// const { ManagerI18n } = require('homey');
 
-var homewizard = require('./../../includes/homewizard.js');
-var refreshIntervalId;
-var homeWizard_devices = {};
+const homewizard = require('../../includes/homewizard.js');
 
-var preset_text = '';
-var preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
-var preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
+let refreshIntervalId;
+const homeWizard_devices = {};
+
+const preset_text = '';
+const preset_text_nl = ['Thuis', 'Afwezig', 'Slapen', 'Vakantie'];
+const preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
 
 const debug = false;
 
 class HomeWizardDevice extends Homey.Device {
+  onInit() {
+    if (debug) {
+      console.log('HomeWizard Appliance has been inited');
+    }
 
-	onInit() {
+    const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-		if (debug) {console.log('HomeWizard Appliance has been inited');}
+    devices.forEach((device) => {
+      console.log(`add device: ${JSON.stringify(device.getName())}`);
 
-		const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+      homeWizard_devices[device.getData().id] = {};
+      homeWizard_devices[device.getData().id].name = device.getName();
+      homeWizard_devices[device.getData().id].settings = device.getSettings();
+    });
 
-		devices.forEach(function initdevice(device) {
-			console.log('add device: ' + JSON.stringify(device.getName()));
+    homewizard.setDevices(homeWizard_devices);
+    homewizard.startpoll();
 
-			homeWizard_devices[device.getData().id] = {};
-			homeWizard_devices[device.getData().id].name = device.getName();
-			homeWizard_devices[device.getData().id].settings = device.getSettings();
-		});
+    if (Object.keys(homeWizard_devices).length > 0) {
+      this.startPolling(devices);
+    }
 
-		homewizard.setDevices(homeWizard_devices);
-		homewizard.startpoll();
+    // Init flow triggers
+    this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed');
+  }
 
-		if (Object.keys(homeWizard_devices).length > 0) {
-		  this.startPolling(devices);
-		}
+  flowTriggerPresetChanged(device, tokens) {
+    this._flowTriggerPresetChanged.trigger(device, tokens).catch(this.error);
+  }
 
-		// Init flow triggers
-		this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed');
+  startPolling(devices) {
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
+    this.refreshIntervalId = setInterval(() => {
+      if (debug) {
+        console.log('--Start HomeWizard Polling-- ');
+      }
+      if (debug) {
+        console.log('--Start HomeWizard Polling-- ');
+      }
 
-	}
+      this.getStatus(devices);
+    }, 1000 * 20);
+  }
 
-	flowTriggerPresetChanged( device, tokens ) {
-		this._flowTriggerPresetChanged.trigger( device, tokens ).catch( this.error )
-	}
+  getStatus(devices) {
+    Promise.resolve()
+      .then(async () => {
+        // const me = this;
+        const homey_lang = this.homey.i18n.getLanguage();
 
-	startPolling(devices) {
+        // new
+        for (const device of devices) {
+          try {
+            const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
 
-		if (this.refreshIntervalId) {
-			clearInterval(this.refreshIntervalId);
-		}
-		this.refreshIntervalId = setInterval(() => {
-			if (debug) {console.log("--Start HomeWizard Polling-- ");}
-			if (debug) {console.log("--Start HomeWizard Polling-- ");}
+            if (device.getStoreValue('preset') === null) {
+              if (debug) {
+                this.log(`Preset was set to ${callback}`);
+              }
+              await device.setStoreValue('preset', callback);
+            }
 
-				this.getStatus(devices);
+            if (device.getStoreValue('preset') !== callback) {
+              await device.setStoreValue('preset', callback);
 
-		}, 1000 * 20);
+              if (debug) {
+                this.log(`Flow call! -> ${callback}`);
+              }
 
-	}
+              const preset_text = homey_lang === 'nl' ? preset_text_nl[callback] : preset_text_en[callback];
 
-	getStatus(devices) {
-		Promise.resolve()
-		.then(async () => {
+              this.flowTriggerPresetChanged(device, { preset: callback, preset_text });
 
-				//const me = this;
-				const homey_lang = this.homey.i18n.getLanguage();
-			
-				// new
-				for (const device of devices) {
-					try {
-					  const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
-				  
-					  if (device.getStoreValue('preset') === null) {
-						if (debug) {
-						  this.log('Preset was set to ' + callback);
-						}
-						await device.setStoreValue('preset', callback);
-					  }
-				  
-					  if (device.getStoreValue('preset') !== callback) {
-						await device.setStoreValue('preset', callback);
-				  
-						if (debug) {
-						  this.log('Flow call! -> ' + callback);
-						}
-				  
-						const preset_text = (homey_lang === 'nl') ? preset_text_nl[callback] : preset_text_en[callback];
-				  
-						this.flowTriggerPresetChanged(device, { preset: callback, preset_text: preset_text });
-				  
-						if (debug) {
-						  this.log('Preset was changed! ->' + preset_text);
-						}
-					  }
-					} catch (err) {
-					  console.log('HomeWizard data corrupt');
-					  console.log(err);
-					}
-				  }
-		})
-		.then(() => {
-			this.setAvailable().catch(this.error);
-		})
-		.catch(err => {
-			this.error(err);
-			this.setUnavailable(err).catch(this.error);
-		});
-	  } //end of getstatus
-	  
+              if (debug) {
+                this.log(`Preset was changed! ->${preset_text}`);
+              }
+            }
+          } catch (err) {
+            console.log('HomeWizard data corrupt');
+            console.log(err);
+          }
+        }
+      })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch((err) => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      });
+  } // end of getstatus
 
-	/*
+  /*
 	getStatus(devices) {
 
 		var me = this;
@@ -153,9 +152,6 @@ class HomeWizardDevice extends Homey.Device {
 		}
 	};
 */
-
 }
-
-
 
 module.exports = HomeWizardDevice;

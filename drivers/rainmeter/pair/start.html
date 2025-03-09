@@ -1,55 +1,64 @@
 <script>
-$( document ).ready(function() {
-    Homey.emit('get_homewizards');
+    $(document).ready(function () {
+        Homey.emit('get_homewizards');
 
-    Homey.on('hw_devices', function(hw_devices){
-        hw_device_list = hw_devices;
-        $('#homewizard_select').find('option').remove();
-        $('#homewizard_select').append('<option>Select HomeWizard</option>');
-        $.each(hw_devices, function( index, value ) {
-            $('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
+        Homey.on('hw_devices', function (hw_devices) {
+            hw_device_list = hw_devices;
+            $('#homewizard_select').find('option').remove();
+            $('#homewizard_select').append('<option>Select HomeWizard</option>');
+            $.each(hw_devices, function (index, value) {
+                $('#homewizard_select').append($('<option>').attr('value', index).text(value.settings.homewizard_ip));
+            });
         });
     });
-});
 
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-	console.log('MA');
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW_WA'+Math.floor(Date.now() / 1000)
-	    },
-		settings: {
-		    'homewizard_id': $('#homewizard_select').val(),
-	    },
-	    name: 'Rainmeter',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
-    
-    Homey.on('success', function(device){
-		$('#error').html('Saving...');
+    function saveSettings() {
+        $('#error').html('');
         $('#save').prop('disabled', true);
-        Homey.addDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: device.data.id
+        console.log('MA');
+        Homey.emit(
+            'manual_add',
+            {
+                data: {
+                    // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+                    id: 'HW_WA' + Math.floor(Date.now() / 1000)
+                },
+                settings: {
+                    homewizard_id: $('#homewizard_select').val()
+                },
+                name: 'Rainmeter'
             },
-			settings: {
-                'homewizard_id': device.settings.homewizard_id,
-            },
-            name: device.name
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
+            function (err, result) {
+                if (err) return console.error(err);
+            }
+        );
+
+        Homey.on('success', function (device) {
+            $('#error').html('Saving...');
+            $('#save').prop('disabled', true);
+            Homey.addDevice(
+                {
+                    data: {
+                        // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
+                        id: device.data.id
+                    },
+                    settings: {
+                        homewizard_id: device.settings.homewizard_id
+                    },
+                    name: device.name
+                },
+                function (err, result) {
+                    if (err) return console.error(err);
+                    Homey.done();
+                }
+            );
         });
-    });
-    
-    Homey.on('error', function(message){
-        $('#error').html('Error: '+message);
-        $('#save').prop('disabled', false);
-    });
-}
+
+        Homey.on('error', function (message) {
+            $('#error').html('Error: ' + message);
+            $('#save').prop('disabled', false);
+        });
+    }
 </script>
 <!doctype html>
 <html>
@@ -57,7 +66,7 @@ function saveSettings () {
         <style>
             label {
                 width: 150px;
-                display:inline-block !important;   
+                display: inline-block !important;
             }
             input {
                 border: 1px solid #ccc;
@@ -75,13 +84,13 @@ function saveSettings () {
     </head>
     <body>
         <p data-i18n="settings.rainmeter_intro"></p>
-            <div class="field row">
-				<select id="homewizard_select">
-					<option>Select HomeWizard</option>
-				</select>
-            </div>
-            <br>
-            <p id="error"></p>
+        <div class="field row">
+            <select id="homewizard_select">
+                <option>Select HomeWizard</option>
+            </select>
+        </div>
+        <br />
+        <p id="error"></p>
         <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>

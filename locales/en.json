@@ -1,14 +1,14 @@
 {
-    "settings": {
-        "title": "HomeWizard settings",
-        "intro": "To connect to your HomeWizard we need the settings below.",
-        "heatlink_intro": "To connect to your Heatlink we need to know to wich HomeWizard it belongs.",
-        "energylink_intro": "To connect to your Energylink we need to know to wich HomeWizard it belongs.",
-        "wattcher_intro": "To connect to your Wattcher we need to know to wich HomeWizard it belongs.",
-        "thermometer_intro": "To connect to your thermometer we need to know to wich HomeWizard it belongs.",
-        "password": "Password",
-        "use_ledring": "Use ledring",
-        "use_ledring_explain": "Ledring lights up green when preset switched successful, red when not successful",
-        "save": "Save"
-    }
+  "settings": {
+    "title": "HomeWizard settings",
+    "intro": "To connect to your HomeWizard we need the settings below.",
+    "heatlink_intro": "To connect to your Heatlink we need to know to wich HomeWizard it belongs.",
+    "energylink_intro": "To connect to your Energylink we need to know to wich HomeWizard it belongs.",
+    "wattcher_intro": "To connect to your Wattcher we need to know to wich HomeWizard it belongs.",
+    "thermometer_intro": "To connect to your thermometer we need to know to wich HomeWizard it belongs.",
+    "password": "Password",
+    "use_ledring": "Use ledring",
+    "use_ledring_explain": "Ledring lights up green when preset switched successful, red when not successful",
+    "save": "Save"
+  }
 }
