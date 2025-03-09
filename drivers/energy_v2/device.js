@@ -15,6 +15,9 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
     this._flowTriggerExport = this.homey.flow.getDeviceTriggerCard('export_changed');
 
+    this.registerCapabilityListener('identify', async (value) => {
+      await this.onIdentify();
+    });
   }
 
   flowTriggerTariff(device, tokens) {
@@ -55,6 +58,18 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this.onPoll();
   }
 
+  async onIdentify() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/system/identify`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(this.error);
+
+    if (!res.ok)
+    { throw new Error(res.statusText); }
+  }
+
   onPoll() {
 
     const httpsAgent = new https.Agent({
@@ -82,6 +97,10 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       //      console.log('Data: ', data);
 
       const promises = []; // Capture all await promises
+
+      if (!this.hasCapability('identify')) {
+        await this.addCapability('identify').catch(this.error);
+      }
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {
