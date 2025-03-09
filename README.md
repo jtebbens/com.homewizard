@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.5.0
+* Coversion to homey-compose
+
 v3.4.4
 * Voltage addition sockets
 * Serial number addition to socket names (DCSBL)
