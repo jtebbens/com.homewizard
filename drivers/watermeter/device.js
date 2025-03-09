@@ -9,6 +9,10 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+
+    this.registerCapabilityListener('identify', async (value) => {
+      await this.onIdentify();
+    });
   }
 
   onDeleted() {
@@ -35,6 +39,18 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     this.log(`URL: ${this.url}`);
     this.setAvailable();
     this.onPoll();
+  }
+
+  async onIdentify() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/identify`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(this.error);
+
+    if (!res.ok)
+    { throw new Error(res.statusText); }
   }
 
   onPoll() {
@@ -70,6 +86,10 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
       if (!this.hasCapability('meter_water')) {
         await this.addCapability('meter_water').catch(this.error);
+      }
+
+      if (!this.hasCapability('identify')) {
+        await this.addCapability('identify').catch(this.error);
       }
 
       if (!this.hasCapability('rssi')) {

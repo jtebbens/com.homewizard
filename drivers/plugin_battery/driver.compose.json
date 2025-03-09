@@ -12,6 +12,7 @@
     "local"
   ],
   "capabilities": [
+    "identify",
     "meter_power.import",
     "meter_power.export",
     "measure_battery",

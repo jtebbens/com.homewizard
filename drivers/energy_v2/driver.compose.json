@@ -12,6 +12,7 @@
     "local"
   ],
   "capabilities": [
+    "identify",
     "measure_power",
     "meter_gas",
     "meter_water",
