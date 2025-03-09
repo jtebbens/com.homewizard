@@ -364,5 +364,8 @@
   },
   "3.4.3": {
     "en": "Icon update, pair text in readme as workaround"
+  },
+  "3.4.4": {
+    "en": "Energy socket naming improved (serial added), voltage support added."
   }
 }
