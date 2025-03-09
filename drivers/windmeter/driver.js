@@ -26,9 +26,6 @@ class HomeWizardWindmeter extends Homey.Driver {
 
     // Close the pair session
     socket.done();
-    
-    
-    
 
     // Received when a view has changed
     socket.setHandler('showView', (viewId) => {
