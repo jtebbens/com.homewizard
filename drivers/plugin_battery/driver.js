@@ -16,6 +16,8 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         
             const discoveryStrategy = this.getDiscoveryStrategy();
             const discoveryResults = discoveryStrategy.getDiscoveryResults();
+            const numberOfDiscoveryResults = Object.keys(discoveryResults).length;
+            
             const devices = [];
             await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
               try {
@@ -49,7 +51,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         
                 console.log("Bearer token: ", result.token);
                 
-                const res = await fetch(`https://${discoveryResult.address}/api/measurement`, {
+                const res = await fetch(`https://${discoveryResult.address}/api`, {
                   headers: {
                     'Authorization': `Bearer ${bearer_token}`
                   },
@@ -60,9 +62,14 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
                   throw new Error(res.statusText);
         
                 const data = await res.json();
+                
+                let name = data.product_name
+                if (numberOfDiscoveryResults > 1) {
+                  name = `${data.product_name} (${data.serial})`
+                }
         
                 devices.push({
-                  name: data.meter_model,
+                  name: name,
                   data: {
                     id: discoveryResult.id,
                   },
