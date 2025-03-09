@@ -98,6 +98,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       const promises = []; // Capture all await promises
 
+      // identify
       if (!this.hasCapability('identify')) {
         await this.addCapability('identify').catch(this.error);
       }
