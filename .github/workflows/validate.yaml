@@ -1,5 +1,5 @@
 ---
-name: Validate Homey App
+name: CI
 
 on:
   pull_request:
@@ -15,6 +15,7 @@ permissions:
 jobs:
   homey-validate:
     runs-on: ubuntu-latest
+    name: Validate Homey App
 
     steps:
       - uses: actions/checkout@v2
