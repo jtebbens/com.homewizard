@@ -21,12 +21,14 @@ class HomeWizardWindmeter extends Homey.Driver {
     // Show the next view
     socket.nextView();
 
-
     // Show the previous view
     socket.prevView();
 
     // Close the pair session
     socket.done();
+    
+    
+    
 
     // Received when a view has changed
     socket.setHandler('showView', (viewId) => {
