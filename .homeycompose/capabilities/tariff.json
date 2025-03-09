@@ -1,0 +1,16 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Active tariff",
+    "nl": "Tarief actief"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/tariff.svg",
+  "units": {
+    "en": "Tariff",
+    "nl": "Tarief"
+  }
+}

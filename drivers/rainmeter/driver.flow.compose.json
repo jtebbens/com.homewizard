@@ -1,0 +1,23 @@
+{
+  "triggers": [
+    {
+      "id": "rainmeter_value_changed",
+      "title": {
+        "en": "Rainmeter value changed",
+        "nl": "Regenmeter waarde veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "rainmeter_changed",
+          "type": "number",
+          "title": {
+            "en": "mm",
+            "nl": "mm"
+          },
+          "example": 15
+        }
+      ]
+    }
+  ]
+}

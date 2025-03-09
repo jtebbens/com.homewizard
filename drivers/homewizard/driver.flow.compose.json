@@ -1,0 +1,176 @@
+{
+  "triggers": [
+    {
+      "id": "preset_changed",
+      "title": {
+        "en": "Preset has changed",
+        "nl": "Preset is veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "preset",
+          "type": "number",
+          "title": {
+            "en": "Preset",
+            "nl": "Preset"
+          },
+          "example": 1
+        },
+        {
+          "name": "preset_text",
+          "type": "string",
+          "title": {
+            "en": "Text",
+            "nl": "Tekst"
+          },
+          "example": "Home"
+        }
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "id": "check_preset",
+      "title": {
+        "en": "Preset !{{is|isn't}}",
+        "nl": "Preset !{{is|is niet}}"
+      },
+      "titleFormatted": {
+        "en": "Check !{{is|isn't}} [[preset]]",
+        "nl": "Controleer !{{is|isn't}} [[preset]]"
+      },
+      "args": [
+        {
+          "name": "preset",
+          "type": "dropdown",
+          "values": [
+            {
+              "id": "0",
+              "label": {
+                "en": "Home",
+                "nl": "Thuis"
+              }
+            },
+            {
+              "id": "1",
+              "label": {
+                "en": "Away",
+                "nl": "Afwezig"
+              }
+            },
+            {
+              "id": "2",
+              "label": {
+                "en": "Sleep",
+                "nl": "Slapen"
+              }
+            },
+            {
+              "id": "3",
+              "label": {
+                "en": "Holiday",
+                "nl": "Vakantie"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "set_preset",
+      "title": {
+        "en": "Activate preset",
+        "nl": "Activeer preset"
+      },
+      "titleFormatted": {
+        "en": "Active preset [[preset]]",
+        "nl": "Activeer preset [[preset]]"
+      },
+      "args": [
+        {
+          "name": "preset",
+          "type": "dropdown",
+          "values": [
+            {
+              "id": "0",
+              "label": {
+                "en": "Home",
+                "nl": "Thuis"
+              }
+            },
+            {
+              "id": "1",
+              "label": {
+                "en": "Away",
+                "nl": "Afwezig"
+              }
+            },
+            {
+              "id": "2",
+              "label": {
+                "en": "Sleep",
+                "nl": "Slapen"
+              }
+            },
+            {
+              "id": "3",
+              "label": {
+                "en": "Holiday",
+                "nl": "Vakantie"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "switch_scene_on",
+      "title": {
+        "en": "Switch scene on",
+        "nl": "Zet scene aan"
+      },
+      "titleFormatted": {
+        "en": "Active scene [[scene]]",
+        "nl": "Activeer scene [[scene]]"
+      },
+      "args": [
+        {
+          "name": "scene",
+          "type": "autocomplete"
+        }
+      ]
+    },
+    {
+      "id": "switch_scene_off",
+      "title": {
+        "en": "Switch scene off",
+        "nl": "Zet scene uit"
+      },
+      "titleFormatted": {
+        "en": "Deactive scene [[scene]]",
+        "nl": "Deactiveer scene [[scene]]"
+      },
+      "args": [
+        {
+          "name": "scene",
+          "type": "autocomplete"
+        }
+      ]
+    },
+    {
+      "id": "heatlink_off",
+      "title": {
+        "en": "Heatlink off",
+        "nl": "Zet heatlink uit"
+      },
+      "titleFormatted": {
+        "en": "Deactive heatlink [[device]]",
+        "nl": "Deactiveer heatlink [[device]]"
+      },
+      "args": []
+    }
+  ]
+}

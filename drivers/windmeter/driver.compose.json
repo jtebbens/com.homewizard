@@ -1,0 +1,80 @@
+{
+  "name": {
+    "en": "Windmeter",
+    "nl": "Windmeter"
+  },
+  "images": {
+    "large": "drivers/windmeter/assets/images/large.jpg",
+    "small": "drivers/windmeter/assets/images/small.jpg"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_wind_angle",
+    "measure_wind_strength.cur",
+    "measure_wind_strength.min",
+    "measure_wind_strength.max",
+    "measure_gust_strength",
+    "measure_temperature.real",
+    "measure_temperature.windchill"
+  ],
+  "capabilitiesOptions": {
+    "measure_wind_angle": {
+      "title": {
+        "en": "Wind Angle",
+        "nl": "Wind richting"
+      }
+    },
+    "measure_wind_strength.cur": {
+      "title": {
+        "en": "Wind Strength current",
+        "nl": "Wind sterkte huidige"
+      }
+    },
+    "measure_wind_strength.min": {
+      "title": {
+        "en": "Wind Strength lowest",
+        "nl": "Wind Sterkte laagste"
+      }
+    },
+    "measure_wind_strength.max": {
+      "title": {
+        "en": "Wind Strength highest",
+        "nl": "Wind Sterkte hoogste"
+      }
+    },
+    "measure_gust_strength": {
+      "title": {
+        "en": "Wind Gusts",
+        "nl": "Ruk wind sterkte"
+      }
+    },
+    "measure_temperature.real": {
+      "title": {
+        "en": "Temperature Real",
+        "nl": "Temperatuur Echt"
+      }
+    },
+    "measure_temperature.windchill": {
+      "title": {
+        "en": "Temperature windchill",
+        "nl": "Gevoelstemperatuur"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

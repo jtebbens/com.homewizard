@@ -1,0 +1,69 @@
+{
+  "name": {
+    "en": "HomeWizard Base Station",
+    "nl": "HomeWizard Base Station"
+  },
+  "images": {
+    "large": "drivers/homewizard/assets/images/large.jpg",
+    "small": "drivers/homewizard/assets/images/small.jpg"
+  },
+  "class": "other",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [],
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "HomeWizard settings",
+        "nl": "HomeWizard instellingen"
+      },
+      "children": [
+        {
+          "id": "homewizard_ip",
+          "type": "text",
+          "label": {
+            "en": "IP address",
+            "nl": "IP adres"
+          },
+          "value": ""
+        },
+        {
+          "id": "homewizard_pass",
+          "type": "text",
+          "label": {
+            "en": "Password",
+            "nl": "Wachtwoord"
+          },
+          "value": ""
+        },
+        {
+          "id": "homewizard_ledring",
+          "type": "checkbox",
+          "label": {
+            "en": "Use ledring",
+            "nl": "Gebruik ledring"
+          },
+          "value": false
+        }
+      ]
+    }
+  ]
+}

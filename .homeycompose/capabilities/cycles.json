@@ -1,0 +1,16 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Number of battery cycles",
+    "nl": "Aantal battery laadcycli"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "assets/rssi.svg",
+  "units": {
+    "en": "cycles",
+    "nl": "cycli"
+  }
+}

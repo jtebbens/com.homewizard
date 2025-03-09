@@ -1,0 +1,194 @@
+{
+  "triggers": [
+    {
+      "id": "power_used_changed",
+      "title": {
+        "en": "Power used changed",
+        "nl": "Huidig vermogen veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_used",
+          "type": "number",
+          "title": {
+            "en": "Watt",
+            "nl": "Watt"
+          },
+          "example": 15
+        }
+      ]
+    },
+    {
+      "id": "power_s1_changed",
+      "title": {
+        "en": "Power production changed",
+        "nl": "Huidige productie veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_s1",
+          "type": "number",
+          "title": {
+            "en": "Watt",
+            "nl": "Watt"
+          },
+          "example": 15
+        }
+      ]
+    },
+    {
+      "id": "power_s2_changed",
+      "title": {
+        "en": "Power usage S2 changed",
+        "nl": "Huidige gebruik S2 veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_s2",
+          "type": "number",
+          "title": {
+            "en": "Watt",
+            "nl": "Watt"
+          },
+          "example": 15
+        }
+      ]
+    },
+    {
+      "id": "power_netto_changed",
+      "title": {
+        "en": "Daily netto usage changed",
+        "nl": "Dag netto verbruik veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "netto_power_used",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_power_used_changed",
+      "title": {
+        "en": "Daily usage changed",
+        "nl": "Dag verbruik veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_daytotal_used",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_power_aggregated_changed",
+      "title": {
+        "en": "Overall usage changed",
+        "nl": "Netto verbruik veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_daytotal_aggr",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_power_s1_changed",
+      "title": {
+        "en": "Daily production changed",
+        "nl": "Dag productie veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_daytotal_s1",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_power_s2_changed",
+      "title": {
+        "en": "Daily usage S2 changed",
+        "nl": "Dag gebruik S2 veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "power_daytotal_s2",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_return_t1_changed",
+      "title": {
+        "en": "Meter return t1 changed",
+        "nl": "Meter teruglevering t1 veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "meter_power_produced_t1",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "meter_return_t2_changed",
+      "title": {
+        "en": "Meter return t2 changed",
+        "nl": "Meter teruglevering t2 veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "meter_power_produced_t2",
+          "type": "number",
+          "title": {
+            "en": "kWh",
+            "nl": "kWh"
+          },
+          "example": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "name": {
+    "en": "kWh Meter (1 phase)"
+  },
+  "images": {
+    "large": "drivers/SDM230/assets/images/large.png",
+    "small": "drivers/SDM230/assets/images/small.png"
+  },
+  "class": "socket",
+  "discovery": "SDM230",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [
+    "measure_power",
+    "meter_power",
+    "measure_current",
+    "measure_power.l1",
+    "measure_voltage",
+    "rssi"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": {
+      "title": {
+        "en": "Current usage",
+        "nl": "Huidig vermogen"
+      }
+    },
+    "measure_power.l1": {
+      "title": {
+        "en": "Current usage phase 1",
+        "nl": "Huidig gebruik fase 1"
+      }
+    },
+    "meter_power.consumed.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 usage",
+        "nl": "Totaal t1 gebruik"
+      }
+    },
+    "meter_power.produced.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 deliver",
+        "nl": "Totaal t1 teruglevering"
+      }
+    },
+    "meter_power": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh",
+        "nl": "Totaal verbruik KWh"
+      }
+    },
+    "measure_voltage": {
+      "title": {
+        "en": "Current Voltage",
+        "nl": "Huidig Voltage"
+      }
+    },
+    "measure_current": {
+      "title": {
+        "en": "Current Amp",
+        "nl": "Huidig Amp"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}
