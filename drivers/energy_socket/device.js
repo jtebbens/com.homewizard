@@ -23,6 +23,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       await this.onRequest({ power_on: value });
     });
 
+    this.registerCapabilityListener('identify', async (value) => {
+      await this.onIdentify();
+    });
+
     this.registerCapabilityListener('dim', async (value) => {
       await this.onRequest({ brightness: (255 * value) });
     });
@@ -67,6 +71,18 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     const res = await fetch(`${this.url}/state`, {
       method: 'PUT',
       body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(this.error);
+
+    if (!res.ok)
+    { throw new Error(res.statusText); }
+  }
+
+  async onIdentify() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/identify`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
     }).catch(this.error);
 
@@ -198,6 +214,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       if (!this.hasCapability('dim')) {
         await this.addCapability('dim').catch(this.error);
+      }
+
+      if (!this.hasCapability('identify')) {
+        await this.addCapability('identify').catch(this.error);
       }
 
       if (!this.hasCapability('locked')) {

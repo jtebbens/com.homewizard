@@ -1113,6 +1113,7 @@
       "capabilities": [
         "onoff",
         "dim",
+        "identify",
         "locked",
         "measure_power",
         "meter_power",
@@ -2269,6 +2270,18 @@
         "en": "cycles",
         "nl": "cycli"
       }
+    },
+    "identify": {
+      "type": "boolean",
+      "title": {
+        "en": "Identify",
+        "nl": "Identificeren"
+      },
+      "getable": false,
+      "setable": true,
+      "uiComponent": "button",
+      "insights": false,
+      "icon": "assets/magnify.svg"
     },
     "long_power_fail_count": {
       "type": "number",
