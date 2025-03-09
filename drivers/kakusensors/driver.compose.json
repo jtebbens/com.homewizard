@@ -1,0 +1,28 @@
+{
+  "name": {
+    "en": "Smoke, Motion and door senors",
+    "nl": "Rook, beweging en deur sensors"
+  },
+  "images": {
+    "large": "drivers/kakusensors/assets/images/large.jpg",
+    "small": "drivers/kakusensors/assets/images/small.jpg"
+  },
+  "class": "sensor",
+  "capabilities": [],
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

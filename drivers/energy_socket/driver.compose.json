@@ -1,0 +1,114 @@
+{
+  "name": {
+    "en": "Energy Socket"
+  },
+  "images": {
+    "large": "drivers/energy_socket/assets/images/large.png",
+    "small": "drivers/energy_socket/assets/images/small.png"
+  },
+  "class": "socket",
+  "discovery": "energy_socket",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [
+    "onoff",
+    "dim",
+    "locked",
+    "measure_power",
+    "meter_power",
+    "meter_power.consumed.t1",
+    "meter_power.produced.t1",
+    "measure_power.l1",
+    "rssi"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": {
+      "title": {
+        "en": "Current usage",
+        "nl": "Huidig vermogen"
+      }
+    },
+    "measure_power.l1": {
+      "title": {
+        "en": "Current usage phase 1",
+        "nl": "Huidig gebruik fase 1"
+      }
+    },
+    "meter_power.consumed.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 usage",
+        "nl": "Totaal t1 gebruik"
+      }
+    },
+    "meter_power.produced.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 deliver",
+        "nl": "Totaal t1 teruglevering"
+      }
+    },
+    "meter_power": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh",
+        "nl": "Totaal verbruik KWh"
+      }
+    },
+    "measure_voltage.l1": {
+      "title": {
+        "en": "Current Voltage phase 1",
+        "nl": "Huidig Voltage fase 1"
+      }
+    }
+  },
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Socket Watt offset",
+        "nl": "Socket Watt compensatie"
+      },
+      "children": [
+        {
+          "id": "offset_socket",
+          "type": "number",
+          "label": {
+            "en": "Offset socket Watt",
+            "nl": "Compensatie socket Watt"
+          },
+          "value": 0
+        },
+        {
+          "id": "offset_polling",
+          "type": "number",
+          "label": {
+            "en": "Polling in seconds",
+            "nl": "Interval in seconden"
+          },
+          "value": 10
+        }
+      ]
+    }
+  ],
+  "pair": [
+    {
+      "id": "start",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}

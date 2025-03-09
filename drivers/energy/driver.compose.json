@@ -1,0 +1,216 @@
+{
+  "name": {
+    "en": "P1 Meter"
+  },
+  "images": {
+    "large": "drivers/energy/assets/images/large.png",
+    "small": "drivers/energy/assets/images/small.png"
+  },
+  "class": "sensor",
+  "discovery": "energy",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [
+    "measure_power",
+    "meter_gas",
+    "meter_water",
+    "meter_power",
+    "meter_power.consumed.t1",
+    "meter_power.produced.t1",
+    "meter_power.consumed.t2",
+    "meter_power.produced.t2",
+    "meter_power.consumed.t3",
+    "meter_power.produced.t3",
+    "meter_power.consumed",
+    "meter_power.returned",
+    "measure_power.l1",
+    "measure_power.l2",
+    "measure_power.l3",
+    "measure_current.l1",
+    "measure_current.l2",
+    "measure_current.l3",
+    "measure_voltage.l1",
+    "measure_voltage.l2",
+    "measure_voltage.l3",
+    "measure_power.montly_power_peak",
+    "rssi",
+    "tariff",
+    "long_power_fail_count",
+    "voltage_sag_l1",
+    "voltage_sag_l2",
+    "voltage_sag_l3",
+    "voltage_swell_l1",
+    "voltage_swell_l2",
+    "voltage_swell_l3"
+  ],
+  "energy": {
+    "cumulative": true,
+    "cumulativeImportedCapability": "meter_power.consumed",
+    "cumulativeExportedCapability": "meter_power.returned"
+  },
+  "capabilitiesOptions": {
+    "measure_power": {
+      "title": {
+        "en": "Current usage",
+        "nl": "Huidig vermogen"
+      }
+    },
+    "meter_gas": {
+      "decimals": 3,
+      "title": {
+        "en": "Gasmeter",
+        "nl": "Gasmeter"
+      }
+    },
+    "meter_water": {
+      "decimals": 3,
+      "title": {
+        "en": "Watermeter",
+        "nl": "Watermeter"
+      }
+    },
+    "measure_power.l1": {
+      "title": {
+        "en": "Current usage phase 1",
+        "nl": "Huidig gebruik fase 1"
+      }
+    },
+    "measure_power.l2": {
+      "title": {
+        "en": "Current usage phase 2",
+        "nl": "Huidig gebruik fase 2"
+      }
+    },
+    "measure_power.l3": {
+      "title": {
+        "en": "Current usage phase 3",
+        "nl": "Huidig gebruik fase 3"
+      }
+    },
+    "measure_current.l1": {
+      "title": {
+        "en": "Current Amp phase 1",
+        "nl": "Huidig Amp fase 1"
+      }
+    },
+    "measure_current.l2": {
+      "title": {
+        "en": "Current Amp phase 2",
+        "nl": "Huidig Amp fase 2"
+      }
+    },
+    "measure_current.l3": {
+      "title": {
+        "en": "Current Amp phase 3",
+        "nl": "Huidig Amp fase 3"
+      }
+    },
+    "measure_voltage.l1": {
+      "title": {
+        "en": "Current Voltage phase 1",
+        "nl": "Huidig Voltage fase 1"
+      }
+    },
+    "measure_voltage.l2": {
+      "title": {
+        "en": "Current Voltage phase 2",
+        "nl": "Huidig Voltage fase 2"
+      }
+    },
+    "measure_voltage.l3": {
+      "title": {
+        "en": "Current Voltage phase 3",
+        "nl": "Huidig Voltage fase 3"
+      }
+    },
+    "meter_power.consumed.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 usage",
+        "nl": "Totaal t1 gebruik"
+      }
+    },
+    "meter_power.produced.t1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t1 deliver",
+        "nl": "Totaal t1 teruglevering"
+      }
+    },
+    "meter_power.consumed.t2": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t2 usage",
+        "nl": "Totaal t2 gebruik"
+      }
+    },
+    "meter_power.produced.t2": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t2 deliver",
+        "nl": "Totaal t2 teruglevering"
+      }
+    },
+    "meter_power.consumed.t3": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t3 usage",
+        "nl": "Totaal t3 gebruik"
+      }
+    },
+    "meter_power.produced.t3": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t3 deliver",
+        "nl": "Totaal t3 teruglevering"
+      }
+    },
+    "meter_power.consumed": {
+      "decimals": 3,
+      "title": {
+        "en": "Sum Consumed",
+        "nl": "Som gebruik"
+      }
+    },
+    "meter_power.returned": {
+      "decimals": 3,
+      "title": {
+        "en": "Sum returned",
+        "nl": "Som teruglevering"
+      }
+    },
+    "meter_power": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh",
+        "nl": "Totaal verbruik KWh"
+      }
+    },
+    "measure_power.montly_power_peak": {
+      "title": {
+        "en": "Monthly Power Peak",
+        "nl": "Maandelijks piekvermogen"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ]
+}

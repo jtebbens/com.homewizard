@@ -1,0 +1,62 @@
+{
+  "name": {
+    "en": "Heatlink",
+    "nl": "Heatlink"
+  },
+  "images": {
+    "large": "drivers/heatlink/assets/images/large.jpg",
+    "small": "drivers/heatlink/assets/images/small.jpg"
+  },
+  "class": "thermostat",
+  "capabilities": [
+    "measure_temperature",
+    "target_temperature",
+    "measure_temperature.heatlink",
+    "measure_temperature.boiler",
+    "central_heating_pump",
+    "central_heating_flame",
+    "warm_water",
+    "measure_pressure"
+  ],
+  "capabilitiesOptions": {
+    "measure_temperature.heatlink": {
+      "title": {
+        "en": "Heatlink target temperature",
+        "nl": "Heatlink doel temperatuur"
+      }
+    },
+    "measure_temperature.boiler": {
+      "title": {
+        "en": "Boiler temperature",
+        "nl": "Ketel temperatuur"
+      }
+    },
+    "measure_pressure": {
+      "decimals": 1,
+      "title": {
+        "en": "Water pressure",
+        "nl": "Waterdruk"
+      },
+      "units": {
+        "en": "Bar",
+        "nl": "Bar"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

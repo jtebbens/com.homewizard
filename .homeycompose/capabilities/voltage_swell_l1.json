@@ -1,0 +1,12 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Net peak L1",
+    "nl": "Net piek L1"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/power_fail.svg"
+}
