@@ -61,9 +61,15 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
   async onIdentify() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/system/identify`, {
+    const token = this.getStoreValue('token');
+
+    const res = await fetch(`${this.url}/api/system/identify`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
     }).catch(this.error);
 
     if (!res.ok)
