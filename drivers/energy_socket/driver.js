@@ -14,14 +14,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Driver {
       const devices = [];
       await Promise.all(Object.values(discoveryResults).map(async discoveryResult => {
         try {
-          const url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}/data`;
+          const url = `http://${discoveryResult.address}:${discoveryResult.port}/api`;
           const res = await fetch(url);
           if( !res.ok )
             throw new Error(res.statusText);
 
           const data = await res.json();
           devices.push({
-            name: data.meter_model,
+            name: `${data.product_name} (${data.serial})`,
             data: {
               id: discoveryResult.id,
             },
