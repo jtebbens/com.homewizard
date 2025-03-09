@@ -1,0 +1,26 @@
+{
+  "type": "mdns-sd",
+  "mdns-sd": {
+    "name": "homewizard",
+    "protocol": "tcp"
+  },
+  "id": "{{txt.serial}}",
+  "conditions": [
+    [
+      {
+        "field": "host",
+        "match": {
+          "type": "regex",
+          "value": "^battery-"
+        }
+      },
+      {
+        "field": "txt.product_type",
+        "match": {
+          "type": "string",
+          "value": "HWE-BAT"
+        }
+      }
+    ]
+  ]
+}

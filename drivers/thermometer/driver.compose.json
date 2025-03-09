@@ -1,0 +1,66 @@
+{
+  "name": {
+    "en": "Thermometer",
+    "nl": "Thermometer"
+  },
+  "images": {
+    "large": "drivers/thermometer/assets/images/large.jpg",
+    "small": "drivers/thermometer/assets/images/small.jpg"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_temperature",
+    "measure_humidity"
+  ],
+  "energy": {
+    "batteries": [
+      "AA",
+      "AA"
+    ]
+  },
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Sensor offset",
+        "nl": "Sensor compensatie"
+      },
+      "children": [
+        {
+          "id": "offset_temperature",
+          "type": "number",
+          "label": {
+            "en": "Temperature",
+            "nl": "Temperatuur"
+          },
+          "value": 0
+        },
+        {
+          "id": "offset_humidity",
+          "type": "number",
+          "label": {
+            "en": "Humidity",
+            "nl": "Vochtigheid"
+          },
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

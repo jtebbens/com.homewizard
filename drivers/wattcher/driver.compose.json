@@ -1,0 +1,45 @@
+{
+  "name": {
+    "en": "Wattcher",
+    "nl": "Wattcher"
+  },
+  "images": {
+    "large": "drivers/wattcher/assets/images/large.jpg",
+    "small": "drivers/wattcher/assets/images/small.jpg"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_power",
+    "meter_power"
+  ],
+  "capabilitiesOptions": {
+    "meter_power": {
+      "title": {
+        "en": "Day usage",
+        "nl": "Dag totaal"
+      }
+    },
+    "measure_power": {
+      "title": {
+        "en": "Power current",
+        "nl": "Huidig vermogen"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start"
+    },
+    {
+      "id": "list_my_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_my_devices"
+      }
+    },
+    {
+      "id": "add_my_devices",
+      "template": "add_devices"
+    }
+  ]
+}

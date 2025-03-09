@@ -1,0 +1,61 @@
+{
+  "triggers": [
+    {
+      "id": "tariff_changed",
+      "title": {
+        "en": "Peak / Normal Tariff changed",
+        "nl": "Dal / Normaal Tarief veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "tariff_changed",
+          "type": "number",
+          "title": {
+            "en": "tariff",
+            "nl": "tarief"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "import_changed",
+      "title": {
+        "en": "Total used changed",
+        "nl": "Som gebruik veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "import_changed",
+          "type": "number",
+          "title": {
+            "en": "import",
+            "nl": "import"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "export_changed",
+      "title": {
+        "en": "Total delivered changed",
+        "nl": "Som teruglevering veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "export_changed",
+          "type": "number",
+          "title": {
+            "en": "export",
+            "nl": "export"
+          },
+          "example": 1
+        }
+      ]
+    }
+  ]
+}
