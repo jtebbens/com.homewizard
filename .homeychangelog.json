@@ -373,5 +373,8 @@
   },
   "3.5.1": {
     "en": "Socket identification (push button, led blink)"
+  },
+  "3.5.2": {
+    "en": "SDM630 clone to allow P1-like tracking with SDM630."
   }
 }
