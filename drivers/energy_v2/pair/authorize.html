@@ -1,0 +1,38 @@
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="settings.energy_v2.title">
+  </h1>
+  <p class="homey-subtitle" data-i18n="settings.energy_v2.subtitle">
+  </p>
+  <button id="authorize-button" class="homey-button-primary-full is-loading is-disabled" data-i18n="settings.energy_v2.button"></button>
+</header>
+
+<script type="application/javascript">
+  Homey.emit("try_authorize");
+
+  document.getElementById('authorize-button').addEventListener('click', async () => {
+    Homey.emit("try_authorize");
+
+    // Add is-loading class
+    document.getElementById('authorize-button').classList.add('is-loading');
+
+    // Add is-disabled class
+    document.getElementById('authorize-button').classList.add('is-disabled');
+
+  });
+
+  Homey.on("authorize_timeout", function (message) {
+    Homey.alert("Mislukt");
+
+    // Remove is-disabled class
+    document.getElementById('authorize-button').classList.remove('is-disabled');
+
+    // Remove is-loading class
+    document.getElementById('authorize-button').classList.remove('is-loading');
+  });
+
+  Homey.on("create", function (device) {
+    Homey.createDevice(device);
+    Homey.done();
+  });
+
+</script>

@@ -5,8 +5,10 @@
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
+    "homey": "^3.7.15",
     "node-fetch": "^2.7.0",
-    "npm": "^10.8.3"
+    "npm": "^10.8.3",
+    "sharp": "^0.33.5"
   },
   "scripts": {
     "test": "athom app run",

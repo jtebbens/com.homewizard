@@ -4,85 +4,107 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const https = require('https');
 
+
+async function requestToken(address) {
+  const payload = {
+    name: 'local/homey_user',
+  };
+
+  console.log("Trying...")
+
+  const response = await fetch(`https:/${address}/api/user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Version': '2',
+    },
+    body: JSON.stringify(payload),
+    agent: new (require('https').Agent)({ rejectUnauthorized: false }),
+  });
+
+  if (response.status == 403) {
+    return null;
+  }
+
+  console.log("Succes!")
+
+  const result = await response.json();
+  return result.token;
+}
+
 module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
   async onPair(session) {
 
-    session.setHandler('list_devices', async () => {
+    this.interval = null;
+    this.timeout = null;
+    this.devices = [];
 
-      const httpsAgent = new https.Agent({
-        rejectUnauthorized: false, // ignore SSL errors
-      });
+    session.setHandler('list_devices', async () => {
 
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
+
       const devices = [];
-      await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
-        try {
+      for (const discoveryResult of Object.values(discoveryResults)) {
 
-          // start.html -> Confirmation pressing button on device
-          const payload = {
-            name: 'local/homey_user',
-          };
+        devices.push({
+          name: `${discoveryResult.txt.product_name} (${discoveryResult.txt.serial.substr(6)})`,
+          data: {
+            id: discoveryResult.txt.serial,
+          },
+          store: {
+            address: discoveryResult.address,
+          },
+        });
+      }
 
-          const response = await fetch(`https://${discoveryResult.address}/api/user`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Api-Version': '2',
-            },
-            body: JSON.stringify(payload),
-            agent: new (require('https').Agent)({ rejectUnauthorized: false }),
+      this.devices = devices;
 
-          });
-
-          // if (!response.ok) {
-          //  throw new Error(`Error: ${response.statusText}`);
-          // }
-
-          const result = await response.json();
-          console.log('Result received: ', result);
-
-          // const responseData = await result.json();
-          const bearer_token = result.token;
-
-          console.log('Bearer token: ', result.token);
-
-          const res = await fetch(`https://${discoveryResult.address}/api/measurement`, {
-            headers: {
-              Authorization: `Bearer ${bearer_token}`,
-            },
-            agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
-          });
-
-          if (!res.ok)
-          { throw new Error(res.statusText); }
-
-          const data = await res.json();
-
-          devices.push({
-            name: data.meter_model,
-            data: {
-              id: discoveryResult.id,
-            },
-            store: {
-              token: bearer_token,
-            },
-          });
-        } catch (err) {
-          this.error(discoveryResult.id, err);
-        }
-      }));
       return devices;
     });
 
     session.setHandler('showView', async (view) => {
-      if (view === 'loading') {
-
-        await session.nextView();
-      }
+      console.log("View: ", view);
     });
 
+    session.setHandler('list_devices_selection', async (data) => {
+      console.log("List devices selection: ", data);
+      this.selectedDevices = data;
+    });
+
+    // This event is triggered when the authorize screen is shown or when the user presses retry action
+    session.setHandler('try_authorize', async (view) => {
+
+      if (this.interval !== null) {
+        clearInterval(this.interval);
+        clearInterval(this.timeout);
+      }
+
+      this.interval = setInterval(async () => {
+        console.log("Checking for button press...");
+        let token = await requestToken(this.selectedDevices[0].store.address);
+        if (token) {
+
+          // We are done trying, stop timers
+          clearInterval(this.interval);
+          clearInterval(this.timeout);
+
+          this.selectedDevices[0].store.token = token;
+          session.emit("create", this.selectedDevices[0]);
+          // console.log("Button pressed!");
+          // await session.showView("done");
+        }
+      }, 2000);
+
+      this.timeout = setInterval(async () => {
+        clearInterval(this.interval);
+        clearInterval(this.timeout);
+        console.log("Timeout!");
+        session.emit("authorize_timeout");
+      }, 10000);
+
+    });
   }
 
 };
