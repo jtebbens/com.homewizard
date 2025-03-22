@@ -207,12 +207,8 @@
       "id": "authorize",
       "navigation":
       {
-        "prev": "done"
+        "prev": "list_devices"
       }
-    },
-    {
-      "id": "done",
-      "template": "done"
     }
   ]
 }

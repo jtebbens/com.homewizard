@@ -9,11 +9,17 @@
         "password": "Wachtwoord",
         "use_ledring": "Gebruik ledring",
         "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
-        "save": "Opslaan",
+        "save": "Opslaan"  
+    },
+    "pair": {
+        "authorize_title": "Authorizeren",
+        "autorize_instruction": "Druk op de knop van het apparaat om de koppeling te voltooien",
+        "button_label_waiting": "Wachten op indrukken knop...",
+        "button_label_retry": "Opnieuw probberen",
+        "authorize_failed_no_button_pressed": "Koppeling mislukt, de knop is niet ingedrukt. Zorg er voor dat de knop binnen 30 seconden wordt ingedrukt.",
+        "something_went_wrong": "Er is iets misgegaan, probeer het opnieuw: ",
         "energy_v2": {
-            "title": "Authorizeren",
-            "subtitle": "Druk op de knop van het apparaat om de koppeling te voltooien",
-            "button": "OK"
+            "autorize_instruction": "Druk op de knop van het de P1 Meter om de koppeling te voltooien"
         }
     }
 }
