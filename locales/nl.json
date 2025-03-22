@@ -9,6 +9,11 @@
         "password": "Wachtwoord",
         "use_ledring": "Gebruik ledring",
         "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
-        "save": "Opslaan"
+        "save": "Opslaan",
+        "energy_v2": {
+            "title": "Authorizeren",
+            "subtitle": "Druk op de knop van het apparaat om de koppeling te voltooien",
+            "button": "OK"
+        }
     }
 }
