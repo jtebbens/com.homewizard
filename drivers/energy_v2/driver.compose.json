@@ -7,7 +7,7 @@
     "small": "drivers/energy_v2/assets/images/small.png"
   },
   "class": "sensor",
-  "discovery": "energy",
+  "discovery": "energy_v2",
   "platforms": [
     "local"
   ],
@@ -199,16 +199,16 @@
       "id": "list_devices",
       "template": "list_devices",
       "navigation": {
-        "next": "loading"
+        "next": "authorize"
+      },
+      "options": { "singular": true }
+    },
+    {
+      "id": "authorize",
+      "navigation":
+      {
+        "prev": "list_devices"
       }
-    },
-    {
-      "id": "loading",
-      "template": "loading"
-    },
-    {
-      "id": "add_devices",
-      "template": "add_devices"
     }
   ]
 }

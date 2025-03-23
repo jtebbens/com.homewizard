@@ -1,0 +1,48 @@
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.authorize_title">
+  </h1>
+  <p class="homey-subtitle" data-i18n="pair.energy_v2.autorize_instruction">
+  </p>
+  <button id="authorize-button" class="homey-button-primary-full is-loading is-disabled"
+    data-i18n="pair.button_label_waiting"></button>
+</header>
+
+<script type="application/javascript">
+
+  // Start the authorization process
+  Homey.emit("try_authorize", 60000);
+
+  document.getElementById('authorize-button').addEventListener('click', async () => {
+    Homey.emit("try_authorize", 60000);
+
+    // Add is-loading and is-disabled classes, set button text to 'Waiting'
+    document.getElementById('authorize-button').classList.add('is-loading');
+    document.getElementById('authorize-button').classList.add('is-disabled');
+    document.getElementById('authorize-button').innerHTML = Homey.__("pair.button_label_waiting");
+
+  });
+
+  Homey.on("authorize_timeout", function (message) {
+    Homey.alert(Homey.__("pair.authorize_failed_no_button_pressed"));
+
+    // Remove is-loading and is-disabled classes, set button text to 'Retry'
+    document.getElementById('authorize-button').classList.remove('is-loading');
+    document.getElementById('authorize-button').classList.remove('is-disabled');
+    document.getElementById('authorize-button').innerHTML = Homey.__("pair.button_label_retry");
+  });
+
+  Homey.on("error", function (message) {
+    Homey.alert(Homey.__("pair.something_went_wrong") + message);
+
+    // Remove is-loading and is-disabled classes, set button text to 'Retry'
+    document.getElementById('authorize-button').classList.remove('is-loading');
+    document.getElementById('authorize-button').classList.remove('is-disabled');
+    document.getElementById('authorize-button').innerHTML = Homey.__("pair.button_label_retry");
+  });
+
+  Homey.on("create", function (device) {
+    Homey.createDevice(device);
+    Homey.done();
+  });
+
+</script>
