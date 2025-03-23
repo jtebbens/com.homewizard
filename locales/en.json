@@ -10,5 +10,16 @@
         "use_ledring": "Use ledring",
         "use_ledring_explain": "Ledring lights up green when preset switched successful, red when not successful",
         "save": "Save"
+    },
+    "pair": {
+        "authorize_title": "Authorize",
+        "authorize_instruction": "Press the button on the device to complete the pairing",
+        "button_label_waiting": "Waiting for button press...",
+        "button_label_retry": "Try again",
+        "authorize_failed_no_button_pressed": "Pairing failed, the button was not pressed. Make sure the button is pressed within 60 seconds.",
+        "something_went_wrong": "Something went wrong, please try again: ",
+        "energy_v2": {
+            "authorize_instruction": "Press the button on the P1 Meter to complete the pairing"
+        }
     }
 }
