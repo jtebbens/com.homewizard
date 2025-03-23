@@ -376,5 +376,8 @@
   },
   "3.5.2": {
     "en": "SDM630 clone to allow P1-like tracking with SDM630."
+  },
+  "3.5.3": {
+    "en": "Improved pairing process P1 APIv2 (DCSBL)"
   }
 }
