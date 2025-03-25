@@ -379,5 +379,8 @@
   },
   "3.5.3": {
     "en": "Improved pairing process P1 APIv2 (DCSBL)"
+  },
+  "3.5.4": {
+    "en": "APIv2 pairing process P1 and Plugin Battery aligned"
   }
 }
