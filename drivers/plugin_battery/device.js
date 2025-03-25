@@ -180,7 +180,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         await this.removeCapability('measure_battery').catch(this.error);
       }
 
-      // Round Trup Efficiency energy_export_kwh / energy_import_kwh * 100
+      // Round Trip Efficiency energy_export_kwh / energy_import_kwh * 100
 
       // battery_charging_state - not support by HW battery
       if (data.power_w > 0) {

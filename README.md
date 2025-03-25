@@ -4,8 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.5.3
+v3.5.4
 * Recode P1 APIv2, improved pairing process (DCSBL)
+* Pairing process P1 and Plugin Battery aligned
 
 v3.5.2
 * SDM630 clone added to allow P1 like use of kwh meter as a replacement for P1 dongle (users request)
