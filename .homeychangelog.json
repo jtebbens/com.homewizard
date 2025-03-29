@@ -382,5 +382,8 @@
   },
   "3.5.4": {
     "en": "APIv2 pairing process P1 and Plugin Battery aligned"
+  },
+  "3.5.5": {
+    "en": "Text fix during plugin battery pairing process"
   }
 }
