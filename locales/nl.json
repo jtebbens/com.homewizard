@@ -20,6 +20,9 @@
         "something_went_wrong": "Er is iets misgegaan, probeer het opnieuw: ",
         "energy_v2": {
             "autorize_instruction": "Druk op de knop van het de P1 Meter om de koppeling te voltooien"
+        },
+        "plugin_battery": {
+            "autorize_instruction": "Druk op de knop van de plugin batterij om de koppeling te voltooien"
         }
     }
 }
