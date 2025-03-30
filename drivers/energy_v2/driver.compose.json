@@ -23,6 +23,8 @@
     "meter_power.produced.t2",
     "meter_power.consumed.t3",
     "meter_power.produced.t3",
+    "meter_power.consumed.t4",
+    "meter_power.produced.t4",
     "meter_power.consumed",
     "meter_power.returned",
     "measure_power.l1",
@@ -164,6 +166,20 @@
       "title": {
         "en": "Total t3 deliver",
         "nl": "Totaal t3 teruglevering"
+      }
+    },
+    "meter_power.consumed.t4": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t4 usage",
+        "nl": "Totaal t4 gebruik"
+      }
+    },
+    "meter_power.produced.t4": {
+      "decimals": 3,
+      "title": {
+        "en": "Total t4 deliver",
+        "nl": "Totaal t4 teruglevering"
       }
     },
     "meter_power.consumed": {
