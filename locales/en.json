@@ -20,6 +20,9 @@
         "something_went_wrong": "Something went wrong, please try again: ",
         "energy_v2": {
             "authorize_instruction": "Press the button on the P1 Meter to complete the pairing"
+        },
+        "plugin_battery": {
+            "autorize_instruction": "Press the button on the Plugin Battery to complete the pairing"
         }
     }
 }
