@@ -4,6 +4,8 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const https = require('https');
 
+const { onIdentify } = require('../../common/v2/identifyRequest');
+
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
@@ -11,8 +13,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   async onInit() {
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
 
+    this.token = this.getStoreValue('token');
+
     this.registerCapabilityListener('identify', async (value) => {
-      await this.onIdentify();
+      await onIdentify(this.url, this.token);
     });
   }
 
@@ -42,24 +46,6 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.onPoll();
   }
 
-  async onIdentify() {
-    if (!this.url) return;
-
-    const token = this.getStoreValue('token');
-
-    const res = await fetch(`${this.url}/api/system/identify`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
-    }).catch(this.error);
-
-    if (!res.ok)
-    { throw new Error(res.statusText); }
-  }
-
   onPoll() {
 
     const httpsAgent = new https.Agent({
@@ -67,16 +53,6 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     });
 
     if (!this.url) return;
-
-    const token2 = this.getData().token;
-    const token = this.getStoreValue('token');
-
-    if (!token) {
-      token = token2;
-    }
-
-    // console.log('Token: ', token);
-    // console.log('Token2: ', token2);
 
     Promise.resolve().then(async () => {
 
