@@ -5,7 +5,7 @@ const Homey = require('homey');
 // const drivers = ManagerDrivers.getDriver('homewizard');
 // const { ManagerI18n } = require('homey');
 
-const homewizard = require('../../includes/homewizard.js');
+const homewizard = require('../../includes/legacy/homewizard.js');
 
 let refreshIntervalId;
 const homeWizard_devices = {};
