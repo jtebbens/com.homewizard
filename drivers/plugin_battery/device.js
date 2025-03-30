@@ -4,7 +4,7 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const https = require('https');
 
-const { onIdentify } = require('../../common/v2/identifyRequest');
+const api = require('../../common/v2/Api');
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
@@ -16,7 +16,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.token = this.getStoreValue('token');
 
     this.registerCapabilityListener('identify', async (value) => {
-      await onIdentify(this.url, this.token);
+      await api.identify(this.url, this.token);
     });
   }
 
@@ -48,25 +48,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
   onPoll() {
 
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
-    });
-
+    // URL may be undefined if the device is not available
     if (!this.url) return;
 
     Promise.resolve().then(async () => {
 
-      const res = await fetch(`${this.url}/api/measurement`, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-        },
-        agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
-      });
-
-      if (!res || !res.ok)
-      { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
-
-      const data = await res.json();
+      const data = await api.getMeasurement(this.url, this.token);
 
       // energy_import_kwh	Number	The energy usage meter reading in kWh.
       // energy_export_kwh	Number	The energy feed-in meter reading in kWh.
@@ -89,8 +76,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('meter_power.import')) {
           await this.addCapability('meter_power.import').catch(this.error);
         }
-        if (this.getCapabilityValue('meter_power.import') != data.energy_import_kwh)
-        { await this.setCapabilityValue('meter_power.import', data.energy_import_kwh).catch(this.error); }
+        if (this.getCapabilityValue('meter_power.import') != data.energy_import_kwh) { await this.setCapabilityValue('meter_power.import', data.energy_import_kwh).catch(this.error); }
       }
       else if ((data.energy_import_kwh == undefined) && (this.hasCapability('meter_power.import'))) {
         await this.removeCapability('meter_power.import').catch(this.error);
@@ -101,8 +87,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('meter_power.export')) {
           await this.addCapability('meter_power.export').catch(this.error);
         }
-        if (this.getCapabilityValue('meter_power.export') != data.energy_export_kwh)
-        { await this.setCapabilityValue('meter_power.export', data.energy_export_kwh).catch(this.error); }
+        if (this.getCapabilityValue('meter_power.export') != data.energy_export_kwh) { await this.setCapabilityValue('meter_power.export', data.energy_export_kwh).catch(this.error); }
       }
       else if ((data.energy_export_kwh == undefined) && (this.hasCapability('meter_power.export'))) {
         await this.removeCapability('meter_power.export').catch(this.error);
@@ -113,8 +98,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('measure_power')) {
           await this.addCapability('measure_power').catch(this.error);
         }
-        if (this.getCapabilityValue('measure_power') != data.power_w)
-        { await this.setCapabilityValue('measure_power', data.power_w).catch(this.error); }
+        if (this.getCapabilityValue('measure_power') != data.power_w) { await this.setCapabilityValue('measure_power', data.power_w).catch(this.error); }
       }
       else if ((data.power_w == undefined) && (this.hasCapability('measure_power'))) {
         await this.removeCapability('measure_power').catch(this.error);
@@ -125,8 +109,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('measure_voltage')) {
           await this.addCapability('measure_voltage').catch(this.error);
         }
-        if (this.getCapabilityValue('measure_voltage') != data.voltage_l1_v)
-        { await this.setCapabilityValue('measure_voltage', data.voltage_l1_v).catch(this.error); }
+        if (this.getCapabilityValue('measure_voltage') != data.voltage_l1_v) { await this.setCapabilityValue('measure_voltage', data.voltage_l1_v).catch(this.error); }
       }
       else if ((data.voltage_l1_v == undefined) && (this.hasCapability('measure_voltage'))) {
         await this.removeCapability('measure_voltage').catch(this.error);
@@ -137,8 +120,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('measure_current')) {
           await this.addCapability('measure_current').catch(this.error);
         }
-        if (this.getCapabilityValue('measure_current') != data.current_a)
-        { await this.setCapabilityValue('measure_current', data.current_a).catch(this.error); }
+        if (this.getCapabilityValue('measure_current') != data.current_a) { await this.setCapabilityValue('measure_current', data.current_a).catch(this.error); }
       }
       else if ((data.current_a == undefined) && (this.hasCapability('measure_current'))) {
         await this.removeCapability('measure_current').catch(this.error);
@@ -149,8 +131,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('measure_battery')) {
           await this.addCapability('measure_battery').catch(this.error);
         }
-        if (this.getCapabilityValue('measure_battery') != data.state_of_charge_pct)
-        { await this.setCapabilityValue('measure_battery', data.state_of_charge_pct).catch(this.error); }
+        if (this.getCapabilityValue('measure_battery') != data.state_of_charge_pct) { await this.setCapabilityValue('measure_battery', data.state_of_charge_pct).catch(this.error); }
       }
       else if ((data.state_of_charge_pct == undefined) && (this.hasCapability('measure_battery'))) {
         await this.removeCapability('measure_battery').catch(this.error);
@@ -175,8 +156,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.hasCapability('cycles')) {
           await this.addCapability('cycles').catch(this.error);
         }
-        if (this.getCapabilityValue('cycles') != data.cycles)
-        { await this.setCapabilityValue('cycles', data.cycles).catch(this.error); }
+        if (this.getCapabilityValue('cycles') != data.cycles) { await this.setCapabilityValue('cycles', data.cycles).catch(this.error); }
       }
 
     })
