@@ -1,6 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
+const fetch = require('node-fetch');
+const https = require('https');
 
 /**
  * Helper method to request a token from the HomeWizard Energy device
