@@ -1,10 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
-const https = require('https');
-
-const { onIdentify } = require('../../common/v2/identifyRequest');
+const api = require('../../common/v2/Api');
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
@@ -20,7 +17,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this.token = this.getStoreValue('token');
 
     this.registerCapabilityListener('identify', async (value) => {
-      await onIdentify(this.url, this.token);
+      await api.identify(this.url, this.token);
     });
   }
 
@@ -64,29 +61,15 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   onPoll() {
 
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false,
-    });
-
+    // URL may be undefined if the device is not available
     if (!this.url) return;
 
     Promise.resolve().then(async () => {
 
-      const res = await fetch(`${this.url}/api/measurement`, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-        },
-        agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
-      });
+      const data = await api.getMeasurement(this.url, this.token);
 
-      if (!res || !res.ok)
-      { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
-
-      const data = await res.json();
-
-      //      console.log('Data: ', data);
-
-      const promises = []; // Capture all await promises
+      // Capture all await promises
+      const promises = [];
 
       // identify
       if (!this.hasCapability('identify')) {
