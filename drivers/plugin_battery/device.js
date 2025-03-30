@@ -58,7 +58,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       const res = await fetch(`${this.url}/api/measurement`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${this.token}`,
         },
         agent: new (require('https').Agent)({ rejectUnauthorized: false }), // Ignore SSL errors
       });
