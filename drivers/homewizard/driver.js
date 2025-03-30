@@ -5,7 +5,7 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 
 const devices = {};
-const homewizard = require('../../includes/homewizard.js');
+const homewizard = require('../../includes/legacy/homewizard.js');
 
 let refreshIntervalId;
 

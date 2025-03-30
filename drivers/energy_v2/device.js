@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const api = require('../../common/v2/Api');
+const api = require('../../includes/v2/Api');
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 

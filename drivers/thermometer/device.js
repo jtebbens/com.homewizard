@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const homewizard = require('../../includes/homewizard.js');
+const homewizard = require('../../includes/legacy/homewizard.js');
 
 // const { ManagerDrivers } = require('homey');
 // const driver = ManagerDrivers.getDriver('thermometer');
