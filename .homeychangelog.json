@@ -385,5 +385,8 @@
   },
   "3.5.5": {
     "en": "Text fix during plugin battery pairing process"
+  },
+  "3.6.0": {
+    "en": "Massive code rework (credits to DCSBL for time and effort)"
   }
 }
