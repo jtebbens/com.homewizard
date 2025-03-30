@@ -1,10 +1,6 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
-const https = require('https');
-
-// const { onIdentify } = require('../../common/v2/identifyRequest');
 const api = require('../../common/v2/Api');
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
