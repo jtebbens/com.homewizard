@@ -163,7 +163,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_power.l3', data.power_l3_w).catch(this.error));
 
       /// / Tariff
-      setCapabilityPromises.push(this._setCapabilityValue('tariff', data.tariff).catch(this.error));
+      setCapabilityPromises.push(this._setCapabilityValue('tariff', data.active_tariff).catch(this.error));
 
       /// / Total consumption
       setCapabilityPromises.push(this._setCapabilityValue('meter_power.consumed', data.energy_import_kwh).catch(this.error));
@@ -209,7 +209,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_power.montly_power_peak', data.montly_power_peak_w).catch(this.error));
 
       // Trigger flows
-      triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.tariff).catch(this.error));
+      triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.active_tariff).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('import_changed', data.energy_import_kwh).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('export_changed', data.energy_export_kwh).catch(this.error));
 
