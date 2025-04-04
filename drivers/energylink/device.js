@@ -371,7 +371,13 @@ class HomeWizardEnergylink extends Homey.Device {
 			  await this.addCapability('meter_power').catch(this.error);
         }
 
+        // Support for Energy dashboard as meter_gas.reading isnt supported so add duplicate meter_gas to match
+        if (!this.hasCapability('meter_gas')) {
+          await this.addCapability('meter_gas').catch(this.error);
+        }
+
         this.setCapabilityValue('meter_gas.reading', metered_gas).catch(this.error);
+        this.setCapabilityValue('meter_gas', metered_gas).catch(this.error);
         this.setCapabilityValue('meter_power', aggregated_meter_power).catch(this.error);
         this.setCapabilityValue('meter_power.consumed.t1', metered_electricity_consumed_t1).catch(this.error);
         this.setCapabilityValue('meter_power.produced.t1', metered_electricity_produced_t1).catch(this.error);
