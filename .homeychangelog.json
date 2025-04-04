@@ -388,5 +388,8 @@
   },
   "3.6.0": {
     "en": "Massive code rework (credits to DCSBL for time and effort)"
+  },
+  "3.6.1": {
+    "en": "Homey Energy dashhboard: Energylink meter_gas capability added"
   }
 }
