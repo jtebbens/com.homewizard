@@ -109,7 +109,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         }
         catch (error) {
           console.error('Error while trying to get token: ', error);
-          session.emit('error', error.message);
+          await session.emit('error', error.message); //timer - timeout issue  at Timeout._onTimeout (/app/includes/v2/Driver.js:112:19)
 
           // Stop trying
           clearInterval(this.interval);
@@ -125,7 +125,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
           clearInterval(this.timeout);
 
           this.selectedDevice.store.token = token;
-          session.emit('create', this.selectedDevice);
+          await session.emit('create', this.selectedDevice);
         }
       }, 2000);
 
@@ -136,7 +136,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         clearInterval(this.interval);
         clearInterval(this.timeout);
         console.log('Timeout!');
-        session.emit('authorize_timeout');
+        await session.emit('authorize_timeout'); // at Timeout.<anonymous> (/app/includes/v2/Driver.js:139:17)
       }, duration);
 
     });

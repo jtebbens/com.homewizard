@@ -4,9 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.6.1
+v3.6.2
 * Massive code rework (credits to DCSBL for time and effort)
 * Homey Energy dashhboard: Energylink meter_gas capability added
+* Text fix in Plugin Battery driver
 
 v3.5.5
 * Recode P1 APIv2, improved pairing process (DCSBL)
