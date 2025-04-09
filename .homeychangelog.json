@@ -391,5 +391,8 @@
   },
   "3.6.1": {
     "en": "Homey Energy dashhboard: Energylink meter_gas capability added"
+  },
+  "3.6.2": {
+    "en": "Text fix PIB localization and an attempt to resolve a APIv2 pairing timer timeout problem"
   }
 }
