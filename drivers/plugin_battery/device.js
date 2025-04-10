@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
-const POLL_INTERVAL = 1000 * 10; // 10 seconds
+const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
