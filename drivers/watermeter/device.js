@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const fetch = require('node-fetch');
 
-const POLL_INTERVAL = 1000 * 10; // 10 seconds
+const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 

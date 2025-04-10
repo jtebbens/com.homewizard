@@ -4,6 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.6.3
+* Homey Energy - Polling interval for all Energy devices (P1, kwh, sockets etc.) lowered to 1s (was 10s)
+
 v3.6.2
 * Massive code rework (credits to DCSBL for time and effort)
 * Homey Energy dashhboard: Energylink meter_gas capability added
