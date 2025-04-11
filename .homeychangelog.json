@@ -397,5 +397,8 @@
   },
   "3.6.3": {
     "en": "Polling interval Energy devices lowered to 1s"
+  },
+  "3.6.4": {
+    "en": "Reverted socket interval back 10s as this has an increased load on some wifi networks and (older) homeys"
   }
 }
