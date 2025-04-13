@@ -400,5 +400,8 @@
   },
   "3.6.4": {
     "en": "Reverted socket interval back 10s as this has an increased load on some wifi networks and (older) homeys"
+  },
+  "3.6.5": {
+    "en": "Adjusted P1 polling for Homey Early2019 models"
   }
 }
