@@ -403,5 +403,8 @@
   },
   "3.6.5": {
     "en": "Adjusted P1 polling for Homey Early2019 models"
+  },
+  "3.6.6": {
+    "en": "Reverted interval back 10s as this has an increased load on some wifi networks and (older) homeys (Early2019)"
   }
 }
