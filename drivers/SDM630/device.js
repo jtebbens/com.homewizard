@@ -5,10 +5,18 @@ const fetch = require('node-fetch');
 
 const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
+const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
-    this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+
+    if (Homey2023) {
+      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);  // 1 seconds interval for newer models
+    } else {
+      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL*10);  // 10 seconds interval for older/slower models 
+    }
+        
     if (this.getClass() == 'sensor') {
       this.setClass('socket');
       console.log('Changed sensor to socket.');
