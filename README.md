@@ -4,9 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.6.4
-* Homey Energy - Polling interval for all Energy devices (P1, kwh etc.) lowered to 1s (was 10s)
-* Reverted socket interval back 10s as this has an increased load on some wifi networks and (older) homeys
+v3.6.6
+* Homey Energy - Polling interval for all Energy devices (P1, kwh etc.) lowered to 1s (was 10s) 
+* Reverted interval back 10s as this has an increased load on some wifi networks and (older) homeys (Early2019)
 
 v3.6.2
 * Massive code rework (credits to DCSBL for time and effort)
