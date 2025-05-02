@@ -1,0 +1,20 @@
+{
+    "id": "mode",
+    "type": "dropdown",
+    "value": "plugin-battery",
+    "label": { "en": "Default mode" },
+    "values": [
+      {
+        "id": "zero",
+        "label": { "en": "Zero power balance" }
+      },
+    {
+      "id": "to_full",
+      "label": { "en": "Full charge" }
+    },
+    {
+      "id": "standby",
+      "label": { "en": "Standby" }
+    }
+  ] 
+}
