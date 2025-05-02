@@ -23,9 +23,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL * settings.interval);
     }
 
-
-
-  /*  if (Homey2023) {
+    /*  if (Homey2023) {
       this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL * settings.interval);  // 1 seconds interval for newer models
     } else {
       this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL*10);  // 10 seconds interval for older/slower models 
