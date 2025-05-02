@@ -1,4 +1,4 @@
-{
+[{
     "id": "mode",
     "type": "dropdown",
     "value": "plugin-battery",
@@ -17,4 +17,12 @@
       "label": { "en": "Standby" }
     }
   ] 
+},
+{
+  "id": "polling_interval",
+  "type": "number",
+  "label": { "en": "Polling interval" },
+  "value": 10,
+  "unit": { "en": "s" }
 }
+]
