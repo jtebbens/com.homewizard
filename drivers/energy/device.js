@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const fetch = require('node-fetch');
 
-const POLL_INTERVAL = 1000; // 1000 ms = 1 second
+//const POLL_INTERVAL = 1000; // 1000 ms = 1 second
 
 //const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
@@ -11,16 +11,16 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   async onInit() {
 
-    const settings = this.getSettings();
-    console.log(settings.interval);
+    const settings = await this.getSettings();
+    console.log(settings.polling_interval);
 
-    if (settings.interval === undefined) {
-      settings.interval = 10; // Default to 10 second if not set
+    if (settings.polling_interval === undefined) {
+      settings.polling_interval = 10; // Default to 10 second if not set
       await this.setSettings({
         // Update settings in Homey
-        interval: 10,
+        polling_interval: 10,
       });
-      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL * settings.interval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
     /*  if (Homey2023) {
@@ -529,13 +529,17 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
     // Catch offset updates
-    onSettings(oldSettings, newSettings, changedKeys) {
+    onSettings(MySettings) {
       this.log('Settings updated');
+      this.log('Settings:', MySettings);
       // Update interval polling
-      if (changedKeys.includes('poll_interval')) {
-        this.log('Poll interval changed');
+      if (
+        'polling_interval' in MySettings.oldSettings &&
+        MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+      ) {
+        this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
         clearInterval(this.onPollInterval);
-        this.onPollInterval = setInterval(this.onPoll.bind(this), newSettings.poll_interval * 1000);
+        this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       }
       // return true;
     }

@@ -1232,7 +1232,20 @@
           "template": "add_devices"
         }
       ],
-      "id": "energy"
+      "id": "energy",
+      "settings": [
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
@@ -1316,17 +1329,17 @@
                 "nl": "Compensatie socket Watt"
               },
               "value": 0
+            },
+            {
+              "id": "offset_polling",
+              "type": "number",
+              "label": {
+                "en": "Polling in seconds",
+                "nl": "Interval in seconden"
+              },
+              "value": 10
             }
           ]
-        },
-        {
-          "id": "offset_polling",
-          "type": "number",
-          "label": {
-            "en": "Polling in seconds",
-            "nl": "Interval in seconden"
-          },
-          "value": 10
         }
       ],
       "pair": [
@@ -1580,7 +1593,48 @@
           }
         }
       ],
-      "id": "energy_v2"
+      "id": "energy_v2",
+      "settings": [
+        {
+          "id": "mode",
+          "type": "dropdown",
+          "value": "plugin-battery",
+          "label": {
+            "en": "Default mode"
+          },
+          "values": [
+            {
+              "id": "zero",
+              "label": {
+                "en": "Zero power balance"
+              }
+            },
+            {
+              "id": "to_full",
+              "label": {
+                "en": "Full charge"
+              }
+            },
+            {
+              "id": "standby",
+              "label": {
+                "en": "Standby"
+              }
+            }
+          ]
+        },
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
