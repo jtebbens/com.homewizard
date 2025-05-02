@@ -406,5 +406,8 @@
   },
   "3.6.6": {
     "en": "Reverted interval back 10s as this has an increased load on some wifi networks and (older) homeys (Early2019)"
+  },
+  "3.6.7": {
+    "en": "Update code for custom polling for P1 and sockets (Default is back to 10s)"
   }
 }
