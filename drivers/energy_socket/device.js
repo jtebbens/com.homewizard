@@ -248,13 +248,16 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     // Update display values if offset has changed
     for (const k in changedKeys) {
       const key = changedKeys[k];
-      if (key.slice(0, 7) === 'offset_') {
+      if ((key.slice(0, 7) === 'offset_') && key !== 'offset_polling') {
         const cap = `measure_${key.slice(7)}`;
         const value = this.getCapabilityValue(cap);
         const delta = newSettings[key] - oldSettings[key];
         this.log('Updating value of', cap, 'from', value, 'to', value + delta);
         this.setCapabilityValue(cap, value + delta)
           .catch((err) => this.error(err));
+      } else if (key === 'offset_polling') {
+         clearInterval(this.onPollInterval);
+         this.onPollInterval = setInterval(this.onPoll.bind(this), newSettings[key]);
       }
     }
     // return true;

@@ -1316,17 +1316,17 @@
                 "nl": "Compensatie socket Watt"
               },
               "value": 0
-            },
-            {
-              "id": "offset_polling",
-              "type": "number",
-              "label": {
-                "en": "Polling in seconds",
-                "nl": "Interval in seconden"
-              },
-              "value": 10
             }
           ]
+        },
+        {
+          "id": "offset_polling",
+          "type": "number",
+          "label": {
+            "en": "Polling in seconds",
+            "nl": "Interval in seconden"
+          },
+          "value": 10
         }
       ],
       "pair": [
