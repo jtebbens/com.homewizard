@@ -90,5 +90,27 @@ module.exports = (function() {
     return res.json();
   };
 
+  api.setMode = async function(url, token, selectedMode) {
+    if (!url) throw new Error('URL is not defined');
+    if (!token) throw new Error('Token is not defined');
+    if (!selectedMode) throw new Error('Mode is not defined');
+
+    const res = await fetch(`${url}/api/batteries`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      agent: http_agent, // Ignore SSL errors
+      body: JSON.stringify({ mode: selectedMode })
+    }).catch(((err) => {
+      throw new Error(`Network error: ${err.message}`);
+    }));
+
+    // Check if the response is ok (status code 200-299)
+    if (!res.ok) { throw new Error(res.statusText); }
+
+    return res.json();
+  };
+
   return api;
 }());

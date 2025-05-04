@@ -3,7 +3,7 @@
     "id": "mode",
     "type": "dropdown",
     "value": "plugin-battery",
-    "label": { "en": "Default mode" },
+    "label": { "en": "Plugin Battery mode" },
     "values": [
       {
         "id": "zero",
