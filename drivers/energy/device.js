@@ -12,15 +12,17 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   async onInit() {
 
     const settings = await this.getSettings();
-    console.log(settings.polling_interval);
+    console.log('Settings for P1 apiv1: ',settings.polling_interval);
 
-    if (settings.polling_interval === undefined) {
+    if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
       settings.polling_interval = 10; // Default to 10 second if not set
       await this.setSettings({
         // Update settings in Homey
         polling_interval: 10,
       });
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+      if (settings.polling_interval !== undefined) {
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+      }
     }
 
     /*  if (Homey2023) {
@@ -92,6 +94,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   onPoll() {
     if (!this.url) return;
+
+    // Check if polling interval is running)
+    if (!this.onPollInterval) {
+      this.log('Polling interval is not running, starting now...');
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
 
     Promise.resolve().then(async () => {
       let res = await fetch(`${this.url}/data`);
