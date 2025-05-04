@@ -409,5 +409,8 @@
   },
   "3.6.7": {
     "en": "Update code for custom polling for P1 and sockets (Default is back to 10s)"
+  },
+  "3.6.8": {
+    "en": "Bug fixes polling timers that suddenly stopped"
   }
 }
