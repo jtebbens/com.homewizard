@@ -11,7 +11,19 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+    const settings = await this.getSettings();
+    console.log('Settings for P1 apiv2: ',settings.polling_interval);
+
+    if (settings.polling_interval === undefined) {
+      settings.polling_interval = 10; // Default to 10 second if not set
+      await this.setSettings({
+        // Update settings in Homey
+        polling_interval: 10,
+      });
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    }
+
+    //this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     this.token = this.getStoreValue('token');
 
     this._triggerFlowPrevious = {};
@@ -148,6 +160,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
+    // Check if polling interval is running)
+    if (!this.onPollInterval) {
+      this.log('Polling interval is not running, starting now...');
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
+
     Promise.resolve().then(async () => {
 
       const data = await api.getMeasurement(this.url, this.token);
@@ -249,6 +267,13 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       // Execute all promises concurrently using Promise.all()
       Promise.all(setCapabilityPromises);
       Promise.all(triggerFlowPromises);
+
+      // Battery mode here?
+      const batteryMode = await api.getMode(this.url, this.token);
+      if (batteryMode !== undefined) {
+        console.log('Battery mode:', batteryMode);
+      }
+
     })
       .then(() => {
         this.setAvailable().catch(this.error);
@@ -257,6 +282,21 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         this.error(err);
         this.setUnavailable(err).catch(this.error);
       });
+  }
+
+  onSettings(MySettings) {
+    this.log('Settings updated');
+    this.log('Settings:', MySettings);
+    // Update interval polling
+    if (
+      'polling_interval' in MySettings.oldSettings &&
+      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+    ) {
+      this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+    }
+    // return true;
   }
 
 };
