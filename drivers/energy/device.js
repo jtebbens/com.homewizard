@@ -547,7 +547,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       ) {
         this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
         clearInterval(this.onPollInterval);
-        this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+        //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
       }
       // return true;
     }
