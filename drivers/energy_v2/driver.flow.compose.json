@@ -1,0 +1,87 @@
+{
+    "conditions": [
+      {
+        "id": "check_battery_mode",
+        "title": {
+          "en": "Battery mode !{{is|isn't}}",
+          "nl": "Batterij modus !{{is|is niet}}"
+        },
+        "titleFormatted": {
+          "en": "Check battery mode !{{is|isn't}} [[mode]]",
+          "nl": "Controleer batterij modus !{{is|isn't}} [[mode]]"
+        },
+        "args": [
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "zero",
+                "label": {
+                  "en": "Zero mode",
+                  "nl": "Null op de meter"
+                }
+              },
+              {
+                "id": "to_full",
+                "label": {
+                  "en": "Full charge",
+                  "nl": "Volledig laden"
+                }
+              },
+              {
+                "id": "standby",
+                "label": {
+                  "en": "Standby",
+                  "nl": "Standby"
+                }
+              }
+              
+                ]
+            }
+        ]
+    }
+    ],
+    "actions": [
+      {
+        "id": "set_battery_mode",
+        "title": {
+          "en": "Activate battery mode",
+          "nl": "Activeer battery modus"
+        },
+        "titleFormatted": {
+          "en": "Active mode [[mode]]",
+          "nl": "Activeer modus [[mode]]"
+        },
+        "args": [
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "zero",
+                "label": {
+                  "en": "Zero mode",
+                  "nl": "Null op de meter"
+                }
+              },
+              {
+                "id": "to_full",
+                "label": {
+                  "en": "Full charge",
+                  "nl": "Volledig laden"
+                }
+              },
+              {
+                "id": "standby",
+                "label": {
+                  "en": "Standby",
+                  "nl": "Standby"
+                }
+              }
+            ]
+          }
+        ]
+        }
+    ]
+}
