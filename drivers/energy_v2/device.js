@@ -14,19 +14,27 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     const settings = await this.getSettings();
     console.log('Settings for P1 apiv2: ',settings.polling_interval);
 
+    // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
       settings.polling_interval = 10; // Default to 10 second if not set
       await this.setSettings({
         // Update settings in Homey
         polling_interval: 10,
       });
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
+    
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    
 
     //this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     this.token = this.getStoreValue('token');
 
     this._triggerFlowPrevious = {};
+
+    //this.homey.flow.getConditionCard('check_battery_mode')
+
+    //this.homey.flow.getActionCard('set_battery_mode')
+
   }
 
   onDeleted() {

@@ -7,7 +7,7 @@
     "values": [
       {
         "id": "zero",
-        "label": { "en": "Zero power balance" }
+        "label": { "en": "Zero mode" }
       },
     {
       "id": "to_full",
