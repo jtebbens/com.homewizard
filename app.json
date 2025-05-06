@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.9",
+  "version": "3.6.10",
   "platforms": [
     "local"
   ],
@@ -1455,7 +1455,7 @@
     },
     {
       "name": {
-        "en": "P1 Meter V2"
+        "en": "P1 Meter (apiv2)"
       },
       "images": {
         "large": "drivers/energy_v2/assets/images/large.png",

@@ -415,5 +415,8 @@
   },
   "3.6.9": {
     "en": "P1(APIv2) bug fixes"
+  },
+  "3.6.10": {
+    "en": "P1(apiv2) aggregated total usage added (support for PowerByTheHour app)"
   }
 }
