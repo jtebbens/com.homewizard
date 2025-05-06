@@ -412,5 +412,8 @@
   },
   "3.6.8": {
     "en": "Bug fixes polling timers that suddenly stopped"
+  },
+  "3.6.9": {
+    "en": "P1(APIv2) bug fixes"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.8",
+  "version": "3.6.9",
   "platforms": [
     "local"
   ],
@@ -496,8 +496,8 @@
           "nl": "Batterij modus !{{is|is niet}}"
         },
         "titleFormatted": {
-          "en": "Check !{{is|isn't}} [[mode]]",
-          "nl": "Controleer !{{is|isn't}} [[mode]]"
+          "en": "Check battery mode !{{is|isn't}} [[mode]]",
+          "nl": "Controleer batterij modus !{{is|isn't}} [[mode]]"
         },
         "args": [
           {
