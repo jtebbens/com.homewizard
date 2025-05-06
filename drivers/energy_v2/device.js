@@ -209,6 +209,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         setCapabilityPromises.push(this._setCapabilityValue('meter_power.produced.t4', data.energy_export_t4_kwh).catch(this.error));
       }
 
+      // Aggregated meter for Power by the hour support 
+      if (!this.hasCapability('meter_power')) {
+        setCapabilityPromises.push(this.addCapability('meter_power').catch(this.error));
+      }
+      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
+      if (data.energy_import_kwh === undefined) {
+        if (this.getCapabilityValue('meter_power') != (data.energy_import_kwh - data.energy_export_kwh))
+        { setCapabilityPromises.push(this._setCapabilityValue('meter_power', (data.energy_import_kwh - data.energy_export_kwh)).catch(this.error)); }
+      }
+
       /// / Voltage
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l1', data.voltage_l1_v).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l2', data.voltage_l2_v).catch(this.error));
@@ -244,10 +254,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       // Belgium water meter using external source (P1)
       let latestWaterData = null;
+      let latestGasData = null;
+
       if (externalData && externalData.length > 0) {
 
         // Find the water data with the latest timestamp
-        latestWaterData = externalData.reduce((prev, current) => {
+      latestWaterData = externalData.reduce((prev, current) => {
           if (current.type === 'water_meter') {
             if (!prev || current.timestamp > prev.timestamp) {
               return current;
@@ -255,6 +267,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           }
           return prev;
         }, null);
+
+      latestGasData = externalData.reduce((prev, current) => {
+          if (current.type === 'gas_meter') {
+            if (!prev || current.timestamp > prev.timestamp) {
+              return current;
+            }
+          }
+          return prev;
+        }, null);
+
       }
 
       if (latestWaterData) {
@@ -271,6 +293,22 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         setCapabilityPromises.push(this.removeCapability('meter_water').catch(this.error));
         console.log('Removed meter as there is no water meter in P1.');
       }
+
+      if (latestGasData) {
+        // Access water data
+        const gasValue = latestGasData.value;
+
+        if (!this.hasCapability('meter_gas')) {
+          setCapabilityPromises.push(this.addCapability('meter_gas').catch(this.error));
+        }
+
+        if (this.getCapabilityValue('meter_gas') != gasValue) { setCapabilityPromises.push(this.setCapabilityValue('meter_gas', gasValue).catch(this.error)); }
+
+      } else if (this.hasCapability('meter_gas')) {
+        setCapabilityPromises.push(this.removeCapability('meter_gas').catch(this.error));
+        console.log('Removed meter as there is no gas meter in P1.');
+      }
+
 
       // Execute all promises concurrently using Promise.all()
       Promise.all(setCapabilityPromises);
