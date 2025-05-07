@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.10",
+  "version": "3.6.11",
   "platforms": [
     "local"
   ],
@@ -837,7 +837,20 @@
           "template": "add_devices"
         }
       ],
-      "id": "SDM230"
+      "id": "SDM230",
+      "settings": [
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
@@ -968,7 +981,20 @@
           "template": "add_devices"
         }
       ],
-      "id": "SDM630"
+      "id": "SDM630",
+      "settings": [
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
@@ -1104,7 +1130,20 @@
           "template": "add_devices"
         }
       ],
-      "id": "SDM630-p1mode"
+      "id": "SDM630-p1mode",
+      "settings": [
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
