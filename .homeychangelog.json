@@ -418,5 +418,8 @@
   },
   "3.6.10": {
     "en": "P1(apiv2) aggregated total usage added (support for PowerByTheHour app)"
+  },
+  "3.6.11": {
+    "en": "Custom polling added for SDM230, SDM630 and the SDM630-p1 mode. Default is 10s."
   }
 }
