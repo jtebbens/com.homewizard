@@ -31,9 +31,55 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     this._triggerFlowPrevious = {};
 
-    //this.homey.flow.getConditionCard('check_battery_mode')
+    this.homey.flow.getConditionCard('check_battery_mode')
+    // .register()
+    .registerRunListener(async (args, state) => {
+      if (!args.device) {
+        return false;
+      }
+  
+      return new Promise(async (resolve, reject) => {
+        try {
+          const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH P1 and BATTERY
+  
+          if (!response || typeof response.mode === 'undefined') {
+            console.log('Invalid response, returning false');
+            return resolve(false);
+          }
+  
+          console.log('Retrieved mode:', response.mode);
+          return resolve(response.mode); // Returns the mode value
+        } catch (error) {
+          console.log('Error retrieving mode:', error);
+          return resolve(false); // Or reject(error), depending on your error-handling approach
+        }
+      });
+    });
 
-    //this.homey.flow.getActionCard('set_battery_mode')
+    this.homey.flow.getConditionCard('set_battery_mode')
+    // .register()
+    .registerRunListener(async (args, state) => {
+      if (!args.device) {
+        return false;
+      }
+  
+      return new Promise(async (resolve, reject) => {
+        try {
+          const response = await api.setMode(this.url, this.token, args); // NEEDS TESTING WITH P1 and BATTERY
+  
+          if (!response || typeof response.mode === 'undefined') {
+            console.log('Invalid response, returning false');
+            return resolve(false);
+          }
+  
+          console.log('Set mode:', response.mode);
+          return resolve(response.mode); // Returns the mode value
+        } catch (error) {
+          console.log('Error set mode:', error);
+          return resolve(false); // Or reject(error), depending on your error-handling approach
+        }
+      });
+    });
 
   }
 

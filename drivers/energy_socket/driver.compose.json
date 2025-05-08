@@ -28,7 +28,8 @@
       "title": {
         "en": "Current usage",
         "nl": "Huidig vermogen"
-      }
+      },
+      "insights": true
     },
     "measure_power.l1": {
       "title": {
@@ -61,7 +62,8 @@
       "title": {
         "en": "Current Voltage phase 1",
         "nl": "Huidig Voltage fase 1"
-      }
+      },
+      "insights": true
     }
   },
   "settings": [
