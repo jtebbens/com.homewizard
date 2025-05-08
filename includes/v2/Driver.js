@@ -127,7 +127,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
           this.selectedDevice.store.token = token;
           await session.emit('create', this.selectedDevice);
         }
-      }, 2000);
+      }, 3000); // increased from 2000ms to 3000ms to prevent too many requests
 
       // Stop trying after a certain duration
       // This is to make sure we don't keep trying forever, as we do not get a notification that

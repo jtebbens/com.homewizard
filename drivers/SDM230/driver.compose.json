@@ -24,7 +24,8 @@
       "title": {
         "en": "Current usage",
         "nl": "Huidig vermogen"
-      }
+      },
+      "insights": true
     },
     "measure_power.l1": {
       "title": {
@@ -51,19 +52,22 @@
       "title": {
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh"
-      }
+      },
+      "insights": true
     },
     "measure_voltage": {
       "title": {
         "en": "Current Voltage",
         "nl": "Huidig Voltage"
-      }
+      },
+      "insights": true
     },
     "measure_current": {
       "title": {
         "en": "Current Amp",
         "nl": "Huidig Amp"
-      }
+      },
+      "insights": true
     }
   },
   "pair": [

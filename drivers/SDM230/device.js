@@ -3,19 +3,28 @@
 const Homey = require('homey');
 const fetch = require('node-fetch');
 
-const POLL_INTERVAL = 1000 * 1; // 1 seconds
+//const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
-const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+//const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-    if (Homey2023) {
-      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);  // 1 seconds interval for newer models
-    } else {
-      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL*10);  // 10 seconds interval for older/slower models 
+    const settings = await this.getSettings();
+    console.log('Settings for SDM230: ',settings.polling_interval);
+
+
+    // Check if polling interval is set in settings, if not set default to 10 seconds
+    if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
+      settings.polling_interval = 10; // Default to 10 second if not set
+      await this.setSettings({
+        // Update settings in Homey
+        polling_interval: 10,
+      });
     }
+
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       
     
     if (this.getClass() == 'sensor') {
@@ -52,6 +61,12 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   onPoll() {
     if (!this.url) return;
+
+    // Check if polling interval is running)
+    if (!this.onPollInterval) {
+      this.log('Polling interval is not running, starting now...');
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
 
     Promise.resolve().then(async () => {
 
@@ -186,6 +201,22 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         this.error(err);
         this.setUnavailable(err).catch(this.error);
       });
+  }
+
+  onSettings(MySettings) {
+    this.log('Settings updated');
+    this.log('Settings:', MySettings);
+    // Update interval polling
+    if (
+      'polling_interval' in MySettings.oldSettings &&
+      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+    ) {
+      this.log('Polling_interval for SDM230 changed to:', MySettings.newSettings.polling_interval);
+      clearInterval(this.onPollInterval);
+      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
+    // return true;
   }
 
 };

@@ -30,7 +30,8 @@
       "title": {
         "en": "Current usage",
         "nl": "Huidig vermogen"
-      }
+      },
+      "insights": true
     },
     "measure_power.l1": {
       "title": {
