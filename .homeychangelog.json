@@ -421,5 +421,8 @@
   },
   "3.6.11": {
     "en": "Custom polling added for SDM230, SDM630 and the SDM630-p1 mode. Default is 10s."
+  },
+  "3.6.12": {
+    "en": "kwh meter insights added, custom polling watermeter (user requests)"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.11",
+  "version": "3.6.12",
   "platforms": [
     "local"
   ],
@@ -776,7 +776,8 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
+          },
+          "insights": true
         },
         "measure_power.l1": {
           "title": {
@@ -803,19 +804,22 @@
           "title": {
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
-          }
+          },
+          "insights": true
         },
         "measure_voltage": {
           "title": {
             "en": "Current Voltage",
             "nl": "Huidig Voltage"
-          }
+          },
+          "insights": true
         },
         "measure_current": {
           "title": {
             "en": "Current Amp",
             "nl": "Huidig Amp"
-          }
+          },
+          "insights": true
         }
       },
       "pair": [
@@ -884,7 +888,8 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
+          },
+          "insights": true
         },
         "measure_power.l1": {
           "title": {
@@ -1406,7 +1411,8 @@
           "title": {
             "en": "Current usage",
             "nl": "Huidig vermogen"
-          }
+          },
+          "insights": true
         },
         "measure_power.l1": {
           "title": {
@@ -1439,7 +1445,8 @@
           "title": {
             "en": "Current Voltage phase 1",
             "nl": "Huidig Voltage fase 1"
-          }
+          },
+          "insights": true
         }
       },
       "settings": [
@@ -2416,6 +2423,15 @@
                 "nl": "compensatie watermeter m3"
               },
               "value": 0
+            },
+            {
+              "id": "offset_polling",
+              "type": "number",
+              "label": {
+                "en": "Polling in seconds",
+                "nl": "Interval in seconden"
+              },
+              "value": 10
             }
           ]
         }
