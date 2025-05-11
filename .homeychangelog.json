@@ -424,5 +424,8 @@
   },
   "3.6.12": {
     "en": "kwh meter insights added, custom polling watermeter (user requests)"
+  },
+  "3.6.13": {
+    "en": "Bugfix firmware version check P1apiv2 for action cards"
   }
 }
