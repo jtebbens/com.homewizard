@@ -63,6 +63,15 @@
             "nl": "compensatie watermeter m3"
           },
           "value": 0
+        },
+        {
+          "id": "offset_polling",
+          "type": "number",
+          "label": {
+            "en": "Polling in seconds",
+            "nl": "Interval in seconden"
+          },
+          "value": 10
         }
       ]
     }

@@ -15,6 +15,9 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     console.log('offset_polling', custom_interval); // print the value of offset_polling
     
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
+
+
+    
     this.onPollStateInterval = setInterval(this.onPollState.bind(this), POLL_STATE_INTERVAL);
 
     if (this.getClass() == 'sensor') {

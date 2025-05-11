@@ -8,6 +8,9 @@ const POLL_INTERVAL = 1000 * 1; // 1 seconds
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
+
+    this.token = this.getStoreValue('token');
+
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
@@ -24,12 +27,14 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     }
     
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-    
-
-    //this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
-    this.token = this.getStoreValue('token');
 
     this._triggerFlowPrevious = {};
+
+    if (this.url) {
+      let result = await api.getInfo(this.url, this.token); // this.url is empty
+    
+
+    if ((result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
 
     this.homey.flow.getConditionCard('check_battery_mode')
     // .register()
@@ -56,7 +61,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       });
     });
 
-    this.homey.flow.getConditionCard('set_battery_mode')
+    this.homey.flow.getActionCard('set_battery_mode')
     // .register()
     .registerRunListener(async (args, state) => {
       if (!args.device) {
@@ -80,6 +85,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         }
       });
     });
+    }
+  }
 
   }
 
