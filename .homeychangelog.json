@@ -427,5 +427,8 @@
   },
   "3.6.13": {
     "en": "Bugfix firmware version check P1apiv2 for action cards"
+  },
+  "3.6.14": {
+    "en": "Additional logging Plugin Battery Mode get/set. Wifi metric added for P1 and Battery"
   }
 }

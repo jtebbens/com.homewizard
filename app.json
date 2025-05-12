@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.13",
+  "version": "3.6.14",
   "platforms": [
     "local"
   ],
@@ -1545,7 +1545,8 @@
         "voltage_sag_l3",
         "voltage_swell_l1",
         "voltage_swell_l2",
-        "voltage_swell_l3"
+        "voltage_swell_l3",
+        "rssi"
       ],
       "energy": {
         "cumulative": true,
@@ -2174,7 +2175,8 @@
         "measure_power",
         "measure_current",
         "measure_voltage",
-        "cycles"
+        "cycles",
+        "rssi"
       ],
       "energy": {
         "homeBattery": true
