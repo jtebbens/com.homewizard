@@ -230,6 +230,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     Promise.resolve().then(async () => {
 
       const data = await api.getMeasurement(this.url, this.token);
+      const systemInfo = await api.getSystem(this.url, this.token);
 
       const setCapabilityPromises = [];
       const triggerFlowPromises = [];
@@ -301,6 +302,9 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.active_tariff).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('import_changed', data.energy_import_kwh).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('export_changed', data.energy_export_kwh).catch(this.error));
+
+      // Wifi RSSI
+      setCapabilityPromises.push(this._setCapabilityValue('rssi', systemInfo.wifi_rssi_db).catch(this.error));
 
       // Accessing external data
       const externalData = data.external;
@@ -387,14 +391,19 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling
-    if (
-      'polling_interval' in MySettings.oldSettings &&
+    if ('polling_interval' in MySettings.oldSettings &&
       MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
       //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
+    if ('mode' in MySettings.oldSettings &&
+      MySettings.oldSettings.mode !== MySettings.newSettings.mode
+    ) {
+      this.log('Mode for Plugin Battery via P1 changed to:', MySettings.newSettings.mode);
+      api.setMode(this.url, this.token, MySettings.newSettings.mode);
     }
     // return true;
   }

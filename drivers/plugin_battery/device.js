@@ -103,6 +103,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     Promise.resolve().then(async () => {
 
       const data = await api.getMeasurement(this.url, this.token);
+      const systemInfo = await api.getSystem(this.url, this.token);
 
       // energy_import_kwh
       await this.setCapabilityValue('meter_power.import', data.energy_import_kwh).catch(this.error);
@@ -121,6 +122,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       // measure_battery in percent
       await this.setCapabilityValue('measure_battery', data.state_of_charge_pct).catch(this.error);
+
+      // Wifi RSSI
+      await this.setCapabilityValue('rssi', systemInfo.wifi_rssi_db).catch(this.error);
+
+      
 
       // battery_charging_state
       if (data.power_w > 10) { // Add some tolerance for idle consumption
