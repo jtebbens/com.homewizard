@@ -20,7 +20,8 @@
     "measure_power",
     "measure_current",
     "measure_voltage",
-    "cycles"
+    "cycles",
+    "rssi"
   ],
   "energy": {
     "homeBattery": true

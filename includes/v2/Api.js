@@ -71,6 +71,25 @@ module.exports = (function() {
     return res.json();
   };
 
+  api.getSystem = async function(url, token) {
+    if (!url) throw new Error('URL is not defined');
+    if (!token) throw new Error('Token is not defined');
+
+    const res = await fetch(`${url}/api/system`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      agent: http_agent, // Ignore SSL errors
+    }).catch(((err) => {
+      throw new Error(`Network error: ${err.message}`);
+    }));
+
+    // Check if the response is ok (status code 200-299)
+    if (!res.ok) { throw new Error(res.statusText); }
+
+    return res.json();
+  };
+
   api.getInfo = async function(url, token) {
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
@@ -113,6 +132,7 @@ module.exports = (function() {
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
     if (!selectedMode) throw new Error('Mode is not defined');
+    console.log('This mode will be sent to P1apiv2 ', selectedMode); //
 
     const res = await fetch(`${url}/api/batteries`, {
       method: 'PUT',
