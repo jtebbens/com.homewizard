@@ -433,5 +433,8 @@
   },
   "3.6.15": {
     "en": "RSSI capability fix for P1 and PluginBattery. Also added imported/exported capability for Battery"
+  },
+  "3.6.16": {
+    "en": "Custom polling plugin battery added, default 10s"
   }
 }

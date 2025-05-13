@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.15",
+  "version": "3.6.16",
   "platforms": [
     "local"
   ],
@@ -2279,7 +2279,20 @@
           }
         }
       ],
-      "id": "plugin_battery"
+      "id": "plugin_battery",
+      "settings": [
+        {
+          "id": "polling_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval"
+          },
+          "value": 10,
+          "unit": {
+            "en": "s"
+          }
+        }
+      ]
     },
     {
       "name": {
