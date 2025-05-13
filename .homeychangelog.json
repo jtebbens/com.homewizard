@@ -436,5 +436,8 @@
   },
   "3.6.16": {
     "en": "Custom polling plugin battery added, default 10s"
+  },
+  "3.6.17": {
+    "en": "emoved version check for battery mode, using API query to verify if data is there, only then condition and action cards should show."
   }
 }
