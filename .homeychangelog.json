@@ -430,5 +430,8 @@
   },
   "3.6.14": {
     "en": "Additional logging Plugin Battery Mode get/set. Wifi metric added for P1 and Battery"
+  },
+  "3.6.15": {
+    "en": "RSSI capability fix for P1 and PluginBattery. Also added imported/exported capability for Battery"
   }
 }
