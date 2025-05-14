@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
-const POLL_INTERVAL = 1000 * 1; // 1 seconds
+//const POLL_INTERVAL = 1000 * 10; // 1 seconds
 
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
@@ -11,8 +11,23 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
     this.token = this.getStoreValue('token');
+
+    const settings = await this.getSettings();
+    console.log('Settings for Plugin Battery: ',settings.polling_interval);
+
+
+    // Check if polling interval is set in settings, if not set default to 10 seconds
+    if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
+      settings.polling_interval = 10; // Default to 10 second if not set
+      await this.setSettings({
+        // Update settings in Homey
+        polling_interval: 10,
+      });
+    }
+
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+
   }
 
   onDeleted() {
@@ -100,6 +115,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
+    // Check if polling interval is running)
+    if (!this.onPollInterval) {
+      this.log('Polling interval is not running, starting now...');
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
+
     Promise.resolve().then(async () => {
 
       const data = await api.getMeasurement(this.url, this.token);
@@ -124,6 +145,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       await this.setCapabilityValue('measure_battery', data.state_of_charge_pct).catch(this.error);
 
       // Wifi RSSI
+         
+      if (!this.hasCapability('rssi')) {
+      await this.addCapability('rssi').catch(this.error);
+      }
       await this.setCapabilityValue('rssi', systemInfo.wifi_rssi_db).catch(this.error);
 
       
@@ -149,5 +174,22 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         this.setUnavailable(err).catch(this.error);
       });
   }
+
+  onSettings(MySettings) {
+    this.log('Settings updated');
+    this.log('Settings:', MySettings);
+    // Update interval polling
+    if (
+      'polling_interval' in MySettings.oldSettings &&
+      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+    ) {
+      this.log('Polling_interval for Plugin Battery changed to:', MySettings.newSettings.polling_interval);
+      clearInterval(this.onPollInterval);
+      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+    }
+    // return true;
+  }
+
 
 };
