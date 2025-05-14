@@ -32,7 +32,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     if (this.url) {
       let result = await api.getInfo(this.url, this.token); // this.url is empty
-    
+      console.log('getInfo Result:', result);
 
     if ((result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
 
@@ -371,12 +371,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       Promise.all(setCapabilityPromises);
       Promise.all(triggerFlowPromises);
 
-      // Battery mode here?
-      const batteryMode = await api.getMode(this.url, this.token);
-      if (batteryMode !== undefined) {
-        console.log('Battery mode:', batteryMode);
-      }
+      let result = await api.getInfo(this.url, this.token); // this.url is empty
+      //console.log('getInfo Result:', result);
 
+      if (result && (result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
+        // Battery mode here?
+        const batteryMode = await api.getMode(this.url, this.token);
+        if (batteryMode !== undefined) {
+                console.log('Battery mode:', batteryMode);
+        }
+      }
     })
       .then(() => {
         this.setAvailable().catch(this.error);

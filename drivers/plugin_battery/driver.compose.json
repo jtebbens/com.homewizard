@@ -24,7 +24,9 @@
     "rssi"
   ],
   "energy": {
-    "homeBattery": true
+    "homeBattery": true,
+    "meterPowerImportedCapability": "meter_power.import",
+    "meterPowerExportedCapability": "meter_power.export"
   },
   "capabilitiesOptions": {
     "measure_power": {
@@ -69,6 +71,22 @@
       "title": {
         "en": "Battery Charging",
         "nl": "Batterij opladen"
+      }
+    },
+    "rssi": {
+      "type": "number",
+      "title": {
+        "en": "WiFi Signal",
+        "nl": "WiFi signaal"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "RSSI",
+        "nl": "RSSI"
       }
     }
   },
