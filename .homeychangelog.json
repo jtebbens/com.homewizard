@@ -439,5 +439,8 @@
   },
   "3.6.17": {
     "en": "emoved version check for battery mode, using API query to verify if data is there, only then condition and action cards should show."
+  },
+  "3.6.18": {
+    "en": "Bugfix P1(apiv2) showing as unresponsive due to battery getMode query error."
   }
 }
