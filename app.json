@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.18",
+  "version": "3.6.19",
   "platforms": [
     "local"
   ],
@@ -1723,8 +1723,8 @@
           "insights": true,
           "icon": "assets/rssi.svg",
           "units": {
-            "en": "RSSI",
-            "nl": "RSSI"
+            "en": "dBm",
+            "nl": "dBm"
           }
         }
       },
@@ -2256,8 +2256,8 @@
           "insights": true,
           "icon": "assets/rssi.svg",
           "units": {
-            "en": "RSSI",
-            "nl": "RSSI"
+            "en": "dBm",
+            "nl": "dBm"
           }
         }
       },
