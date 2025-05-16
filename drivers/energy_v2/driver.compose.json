@@ -222,8 +222,8 @@
       "insights": true,
       "icon": "assets/rssi.svg",
       "units": {
-        "en": "RSSI",
-        "nl": "RSSI"
+        "en": "dBm",
+        "nl": "dBm"
       }
     }
   },
