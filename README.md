@@ -4,9 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.6.18
+v3.6.19
 * Update code for custom polling for P1 and sockets (Default is back to 10s).
-  Setting can be adjusted in advanced settings of the device
+* Setting can be adjusted in advanced settings of the device
 * Bug fixes polling timers that suddenly stopped
 * P1(apiv2) gas meter bugfixes
 * P1(apiv2) aggregated total usage added (support for PowerByTheHour app)
@@ -18,6 +18,7 @@ v3.6.18
 * Custom Polling interval added for Plugin Battery
 * Removed version check for battery mode, using API query to verify if data is there, only then condition and action cards should show.
 * Bugfix P1(apiv2) showing as unresponsive due to battery getMode query error. 
+* Attempt to register the condition and action flow cards (error)
 
 v3.6.6
 * Homey Energy - Polling interval for all Energy devices (P1, kwh etc.) lowered to 1s (was 10s) 

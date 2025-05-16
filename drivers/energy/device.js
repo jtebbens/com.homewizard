@@ -96,6 +96,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   onPoll() {
     if (!this.url) return;
 
+    const now = new Date();
+
+
+
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -115,6 +119,24 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       const data = await res.json();
       const promises = []; // Capture all await promises
+
+      // Check if the current time is exactly 00:00
+      if (now.getHours() === 0 && now.getMinutes() === 0) {
+          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);        
+      } else if (!this.getStoreValue('meter_start_day')) {
+        // If the store value is not set, initialize it with the current value first time use
+          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+      }
+      
+      // Update the capability meter_power.daily
+      if (!this.hasCapability('meter_power.daily')) {
+        promises.push(this.addCapability('meter_power.daily').catch(this.error));
+      } else { 
+        //console.log(data.total_power_import_kwh);
+        //console.log(this.getStoreValue('meter_start_day'));
+        this.setCapabilityValue('meter_power.daily', (data.total_power_import_kwh - this.getStoreValue('meter_start_day'))).catch(this.error); 
+      }
+
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {

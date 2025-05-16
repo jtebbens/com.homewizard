@@ -25,6 +25,7 @@
     "meter_power.produced.t3",
     "meter_power.consumed",
     "meter_power.returned",
+    "meter_power.daily",
     "measure_power.l1",
     "measure_power.l2",
     "measure_power.l3",
@@ -179,6 +180,13 @@
       "title": {
         "en": "Sum returned",
         "nl": "Som teruglevering"
+      }
+    },
+    "meter_power.daily": {
+      "decimals": 3,
+      "title": {
+        "en": "Daily usage",
+        "nl": "Dag verbruik"
       }
     },
     "meter_power": {

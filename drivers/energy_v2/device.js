@@ -36,9 +36,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     if ((result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
 
-    this.homey.flow.getConditionCard('check_battery_mode')
-    // .register()
-    .registerRunListener(async (args, state) => {
+    //this._flowConditionCheckBatteryMode =
+    this.homey.flow.getConditionCard('check_battery_mode').registerRunListener(async (args, state) => {
       if (!args.device) {
         return false;
       }
@@ -61,9 +60,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       });
     });
 
-    this.homey.flow.getActionCard('set_battery_mode')
-    // .register()
-    .registerRunListener(async (args, state) => {
+    //this._flowActionSetBatteryMode =
+    this.homey.flow.getActionCard('set_battery_mode').registerRunListener(async (args, state) => {
       if (!args.device) {
         return false;
       }
@@ -303,7 +301,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       triggerFlowPromises.push(this._triggerFlowOnChange('import_changed', data.energy_import_kwh).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('export_changed', data.energy_export_kwh).catch(this.error));
 
-      // Wifi RSSI
+      // Wifi RSSI / dBm
       setCapabilityPromises.push(this._setCapabilityValue('rssi', systemInfo.wifi_rssi_db).catch(this.error));
 
       // Accessing external data
