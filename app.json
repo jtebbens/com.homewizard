@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.19",
+  "version": "3.6.20",
   "platforms": [
     "local"
   ],
@@ -1217,6 +1217,13 @@
             "nl": "Gasmeter"
           }
         },
+        "meter_gas.daily": {
+          "decimals": 3,
+          "title": {
+            "en": "Day Usage Gas",
+            "nl": "Dag verbruik Gas"
+          }
+        },
         "meter_water": {
           "decimals": 3,
           "title": {
@@ -1539,6 +1546,7 @@
         "measure_power.l1",
         "measure_power.l2",
         "measure_power.l3",
+        "measure_current",
         "measure_current.l1",
         "measure_current.l2",
         "measure_current.l3",
@@ -1598,6 +1606,12 @@
           "title": {
             "en": "Current usage phase 3",
             "nl": "Huidig gebruik fase 3"
+          }
+        },
+        "measure_current": {
+          "title": {
+            "en": "Current Amp",
+            "nl": "Huidig Amp"
           }
         },
         "measure_current.l1": {
