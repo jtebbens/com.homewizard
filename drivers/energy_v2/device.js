@@ -9,7 +9,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
 
-    this.token = this.getStoreValue('token');
+    this.token = await this.getStoreValue('token');
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -227,6 +227,10 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     Promise.resolve().then(async () => {
 
+      if(!this.token) { 
+        this.token = await this.getStoreValue('token');
+      }
+
       const data = await api.getMeasurement(this.url, this.token);
       const systemInfo = await api.getSystem(this.url, this.token);
 
@@ -272,12 +276,13 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
 
       /// / Voltage
+      setCapabilityPromises.push(this._setCapabilityValue('measure_voltage', data.voltage_v).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l1', data.voltage_l1_v).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l2', data.voltage_l2_v).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l3', data.voltage_l3_v).catch(this.error));
 
       /// / Current
-      setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_l1_a).catch(this.error));
+      setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_a).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_current.l1', data.current_l1_a).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_current.l2', data.current_l2_a).catch(this.error));
       setCapabilityPromises.push(this._setCapabilityValue('measure_current.l3', data.current_l3_a).catch(this.error));

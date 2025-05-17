@@ -145,6 +145,9 @@ module.exports = (function() {
       throw new Error(`Network error: ${err.message}`);
     }));
 
+    console.log('http PUT res is: ', res);
+    console.log('http PUT body is: ', body);
+
     // Check if the response is ok (status code 200-299)
     if (!res.ok) { throw new Error(res.statusText); }
 
