@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.20",
+  "version": "3.6.21",
   "platforms": [
     "local"
   ],
@@ -1630,6 +1630,12 @@
           "title": {
             "en": "Current Amp phase 3",
             "nl": "Huidig Amp fase 3"
+          }
+        },
+        "measure_voltage": {
+          "title": {
+            "en": "Current Voltage",
+            "nl": "Huidig Voltage"
           }
         },
         "measure_voltage.l1": {
