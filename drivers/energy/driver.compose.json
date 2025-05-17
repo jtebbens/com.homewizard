@@ -65,6 +65,13 @@
         "nl": "Gasmeter"
       }
     },
+    "meter_gas.daily": {
+      "decimals": 3,
+      "title": {
+        "en": "Day Usage Gas",
+        "nl": "Dag verbruik Gas"
+      }
+    },
     "meter_water": {
       "decimals": 3,
       "title": {

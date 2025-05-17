@@ -121,11 +121,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       const promises = []; // Capture all await promises
 
       // Check if the current time is exactly 00:00
-      if (now.getHours() === 0 && now.getMinutes() === 0) {
-          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);        
-      } else if (!this.getStoreValue('meter_start_day')) {
+      if ((now.getHours() === 0 && now.getMinutes() === 0) && data.total_power_import_kwh && data.total_gas_m3) {
+          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+          this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);        
+      } else if (!this.getStoreValue('meter_start_day') || (!this.getStoreValue('gasmeter_start_day')) ) {
         // If the store value is not set, initialize it with the current value first time use
           this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+          this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
       }
       
       // Update the capability meter_power.daily
@@ -137,6 +139,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this.setCapabilityValue('meter_power.daily', (data.total_power_import_kwh - this.getStoreValue('meter_start_day'))).catch(this.error); 
       }
 
+      // Update the capability meter_gas.daily
+      if ((!this.hasCapability('meter_gas.daily')) && data.total_gas_m3) {
+        promises.push(this.addCapability('meter_gas.daily').catch(this.error));
+      } else { 
+        //console.log(data.total_power_import_kwh);
+        //console.log(this.getStoreValue('meter_start_day'));
+        this.setCapabilityValue('meter_gas.daily', (data.total_gas_m3 - this.getStoreValue('gasmeter_start_day'))).catch(this.error); 
+      }
 
       // Save export data check if capabilities are present first
       if (!this.hasCapability('measure_power')) {
