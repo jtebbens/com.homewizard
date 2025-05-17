@@ -448,5 +448,8 @@
   },
   "3.6.20": {
     "en": "Daily usage imported power and gas (P1apiv1) - User request"
+  },
+  "3.6.21": {
+    "en": "P1apiv2 tariff fix."
   }
 }
