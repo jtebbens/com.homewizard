@@ -463,5 +463,11 @@
   },
   "3.6.25": {
     "en": "console.log dump"
+  },
+  "3.6.26": {
+    "en": "redo oninit token P1"
+  },
+  "3.6.27": {
+    "en": "Recreated condition and action cards via homeycompose"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.25",
+  "version": "3.6.27",
   "platforms": [
     "local"
   ],
@@ -490,10 +490,9 @@
     ],
     "conditions": [
       {
-        "id": "check_battery_mode",
         "title": {
-          "en": "Battery mode !{{is|isn't}}",
-          "nl": "Batterij modus !{{is|is niet}}"
+          "en": "Check Battery Mode",
+          "nl": "Controleer batterij Modus"
         },
         "titleFormatted": {
           "en": "Check battery mode !{{is|isn't}} [[mode]]",
@@ -501,13 +500,8 @@
         },
         "args": [
           {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=energy_v2"
-          },
-          {
-            "name": "mode",
             "type": "dropdown",
+            "name": "mode",
             "values": [
               {
                 "id": "zero",
@@ -519,7 +513,7 @@
               {
                 "id": "to_full",
                 "label": {
-                  "en": "Full charge",
+                  "en": "Full Charge",
                   "nl": "Volledig laden"
                 }
               },
@@ -532,7 +526,8 @@
               }
             ]
           }
-        ]
+        ],
+        "id": "check-battery-mode"
       },
       {
         "id": "check_preset",
@@ -589,24 +584,18 @@
     ],
     "actions": [
       {
-        "id": "set_battery_mode",
         "title": {
-          "en": "Activate battery mode",
-          "nl": "Activeer battery modus"
+          "en": "Change Battery Mode",
+          "nl": "Verander batterij Modus"
         },
         "titleFormatted": {
-          "en": "Active mode [[mode]]",
-          "nl": "Activeer modus [[mode]]"
+          "en": "Change Battery Mode [[mode]]",
+          "nl": "Verander Battery Modus [[mode]]"
         },
         "args": [
           {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=energy_v2"
-          },
-          {
-            "name": "mode",
             "type": "dropdown",
+            "name": "mode",
             "values": [
               {
                 "id": "zero",
@@ -618,7 +607,7 @@
               {
                 "id": "to_full",
                 "label": {
-                  "en": "Full charge",
+                  "en": "Full Charge",
                   "nl": "Volledig laden"
                 }
               },
@@ -631,7 +620,8 @@
               }
             ]
           }
-        ]
+        ],
+        "id": "change-battery-mode"
       },
       {
         "id": "set_preset",
@@ -1816,10 +1806,23 @@
           }
         },
         {
-          "id": "token",
+          "id": "pair_token",
           "type": "text",
           "label": {
             "en": "Pairing token"
+          }
+        },
+        {
+          "id": "grid_phase_amps",
+          "type": "number",
+          "label": {
+            "en": "Grid phase Amps",
+            "nl": "Net fase aansluiting"
+          },
+          "value": 40,
+          "unit": {
+            "en": "A",
+            "nl": "A"
           }
         }
       ]
