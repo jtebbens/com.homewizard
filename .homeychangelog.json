@@ -460,5 +460,8 @@
   },
   "3.6.24": {
     "en": "Moved temp setting to oninit"
+  },
+  "3.6.25": {
+    "en": "console.log dump"
   }
 }
