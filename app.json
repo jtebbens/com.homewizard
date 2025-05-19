@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.22",
+  "version": "3.6.23",
   "platforms": [
     "local"
   ],
@@ -1813,6 +1813,13 @@
           "value": 10,
           "unit": {
             "en": "s"
+          }
+        },
+        {
+          "id": "token",
+          "type": "text",
+          "label": {
+            "en": "Pairing token"
           }
         }
       ]

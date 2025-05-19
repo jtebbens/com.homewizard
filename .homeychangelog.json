@@ -454,5 +454,8 @@
   },
   "3.6.22": {
     "en": "ReferenceError: body is not defined (fix)"
+  },
+  "3.6.23": {
+    "en": "Temporary store pair token in settings for troubleshooting"
   }
 }
