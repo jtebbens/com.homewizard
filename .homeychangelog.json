@@ -469,5 +469,8 @@
   },
   "3.6.27": {
     "en": "Recreated condition and action cards via homeycompose"
+  },
+  "3.6.28": {
+    "en": "Adjusted args (included device), added filter (P1apiv2)"
   }
 }

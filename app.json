@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.27",
+  "version": "3.6.28",
   "platforms": [
     "local"
   ],
@@ -500,6 +500,11 @@
         },
         "args": [
           {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          },
+          {
             "type": "dropdown",
             "name": "mode",
             "values": [
@@ -593,6 +598,11 @@
           "nl": "Verander Battery Modus [[mode]]"
         },
         "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          },
           {
             "type": "dropdown",
             "name": "mode",
@@ -1803,13 +1813,6 @@
           "value": 10,
           "unit": {
             "en": "s"
-          }
-        },
-        {
-          "id": "pair_token",
-          "type": "text",
-          "label": {
-            "en": "Pairing token"
           }
         },
         {
