@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.28",
+  "version": "3.6.29",
   "platforms": [
     "local"
   ],
@@ -632,6 +632,48 @@
           }
         ],
         "id": "change-battery-mode"
+      },
+      {
+        "title": {
+          "en": "Set battery to Full Charge mode",
+          "nl": "Zet batterij in Volledig Oplaadmodus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "id": "set-battery-to-full-charge-mode"
+      },
+      {
+        "title": {
+          "en": "Set battery to Standby mode",
+          "nl": "Zet batterij in Standby modus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "id": "set-battery-to-standby-mode"
+      },
+      {
+        "title": {
+          "en": "Set battery to Zero mode",
+          "nl": "Zet batterij in Null-op-de-meter modus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "id": "set-battery-to-zero-mode"
       },
       {
         "id": "set_preset",
@@ -2281,8 +2323,8 @@
         },
         "battery_charging_state": {
           "title": {
-            "en": "Battery Charging",
-            "nl": "Batterij opladen"
+            "en": "Battery State",
+            "nl": "Batterij status"
           }
         },
         "rssi": {
