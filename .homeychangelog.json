@@ -472,5 +472,8 @@
   },
   "3.6.28": {
     "en": "Adjusted args (included device), added filter (P1apiv2)"
+  },
+  "3.6.29": {
+    "en": "Added 3 static action cards for battery mode "
   }
 }
