@@ -69,8 +69,8 @@
     },
     "battery_charging_state": {
       "title": {
-        "en": "Battery Charging",
-        "nl": "Batterij opladen"
+        "en": "Battery State",
+        "nl": "Batterij status"
       }
     },
     "rssi": {

@@ -4,21 +4,16 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.6.20
+v3.6.32
 * Update code for custom polling for P1 and sockets (Default is back to 10s).
 * Setting can be adjusted in advanced settings of the device
 * Bug fixes polling timers that suddenly stopped
 * P1(apiv2) gas meter bugfixes
 * P1(apiv2) aggregated total usage added (support for PowerByTheHour app)
 * Custom polling for Watermeter, SDM230, SDM630 and SDM630-p1 mode, Default 10s, adjust as you wish.
-* (untested) action cards plugin battery - P1apiv2 device is required
-* Bug fix for P1(apiv2) make sure P1apiv2 is firmware version 6.0200 or higher.
-* Additional loggin Plugin Battery mode get/set. 
+* Action cards plugin battery - P1apiv2 device is required (firmware version 6.0200 or higher)
 * Wifi metric (dBm) added for P1(apiv2) and Plugin Battery
 * Custom Polling interval added for Plugin Battery
-* Removed version check for battery mode, using API query to verify if data is there, only then condition and action cards should show.
-* Bugfix P1(apiv2) showing as unresponsive due to battery getMode query error. 
-* Attempt to register the condition and action flow cards (error)
 * Daily usage imported power and gas (P1apiv1) - User request
 
 v3.6.6

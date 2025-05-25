@@ -25,5 +25,14 @@
     "label": { "en": "Polling interval" },
     "value": 10,
     "unit": { "en": "s" }
+  },
+  {
+    "id": "grid_phase_amps",
+    "type": "number",
+    "label": { "en": "Grid phase Amps",
+               "nl": "Net fase aansluiting" },
+    "value": 40,
+    "unit" : { "en": "A",
+               "nl": "A" }
   }
 ]
