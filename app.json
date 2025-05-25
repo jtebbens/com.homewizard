@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.31",
+  "version": "3.6.32",
   "platforms": [
     "local"
   ],
@@ -589,70 +589,58 @@
     ],
     "actions": [
       {
+        "id": "set-battery-to-full-charge-mode",
         "title": {
-          "en": "Change Battery Mode",
-          "nl": "Verander batterij Modus"
+          "en": "Set battery to Full Charge mode",
+          "nl": "Zet batterij in Volledig Oplaadmodus"
         },
         "titleFormatted": {
-          "en": "Change Battery Mode [[mode]]",
-          "nl": "Verander Battery Modus [[mode]]"
+          "en": "Set battery to Full Charge mode",
+          "nl": "Zet batterij in Volledig Oplaadmodus"
         },
         "args": [
           {
             "type": "device",
             "name": "device",
             "filter": "driver_id=energy_v2"
-          },
-          {
-            "type": "dropdown",
-            "name": "mode",
-            "values": [
-              {
-                "id": "zero",
-                "label": {
-                  "en": "Zero mode",
-                  "nl": "Null op de meter"
-                }
-              },
-              {
-                "id": "to_full",
-                "label": {
-                  "en": "Full Charge",
-                  "nl": "Volledig laden"
-                }
-              },
-              {
-                "id": "standby",
-                "label": {
-                  "en": "Standby",
-                  "nl": "Standby"
-                }
-              }
-            ]
           }
-        ],
-        "id": "change-battery-mode"
+        ]
       },
       {
+        "id": "set-battery-to-zero-mode",
         "title": {
-          "en": "Set battery to Full Charge mode",
-          "nl": "Zet batterij in Volledig Oplaadmodus"
+          "en": "Set battery to Zero mode",
+          "nl": "Zet batterij in Zero modus"
         },
-        "id": "set-battery-to-full-charge-mode"
+        "titleFormatted": {
+          "en": "Set battery to Zero mode",
+          "nl": "Zet batterij in Zero modus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
       },
       {
+        "id": "set-battery-to-standby-mode",
         "title": {
           "en": "Set battery to Standby mode",
           "nl": "Zet batterij in Standby modus"
         },
-        "id": "set-battery-to-standby-mode"
-      },
-      {
-        "title": {
-          "en": "Set battery to Zero mode",
-          "nl": "Zet batterij in Nul-op-de-meter modus"
+        "titleFormatted": {
+          "en": "Set battery to Standby mode",
+          "nl": "Zet batterij in Standby modus"
         },
-        "id": "set-battery-to-zero-mode"
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
       },
       {
         "id": "set_preset",

@@ -481,5 +481,8 @@
   },
   "3.6.31": {
     "en": "Added extra log if url and token are there upon action card call"
+  },
+  "3.6.32": {
+    "en": "Restructerd oninit. Cards are now registered."
   }
 }
