@@ -478,5 +478,8 @@
   },
   "3.6.30": {
     "en": "Typo fix actioncard ActionCardFullChargeMode"
+  },
+  "3.6.31": {
+    "en": "Added extra log if url and token are there upon action card call"
   }
 }
