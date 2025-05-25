@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.29",
+  "version": "3.6.30",
   "platforms": [
     "local"
   ],
@@ -664,7 +664,7 @@
       {
         "title": {
           "en": "Set battery to Zero mode",
-          "nl": "Zet batterij in Null-op-de-meter modus"
+          "nl": "Zet batterij in Nul-op-de-meter modus"
         },
         "args": [
           {
