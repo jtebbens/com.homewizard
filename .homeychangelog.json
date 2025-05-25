@@ -475,5 +475,8 @@
   },
   "3.6.29": {
     "en": "Added 3 static action cards for battery mode "
+  },
+  "3.6.30": {
+    "en": "Typo fix actioncard ActionCardFullChargeMode"
   }
 }
