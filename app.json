@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.30",
+  "version": "3.6.31",
   "platforms": [
     "local"
   ],
@@ -638,13 +638,6 @@
           "en": "Set battery to Full Charge mode",
           "nl": "Zet batterij in Volledig Oplaadmodus"
         },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=energy_v2"
-          }
-        ],
         "id": "set-battery-to-full-charge-mode"
       },
       {
@@ -652,13 +645,6 @@
           "en": "Set battery to Standby mode",
           "nl": "Zet batterij in Standby modus"
         },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=energy_v2"
-          }
-        ],
         "id": "set-battery-to-standby-mode"
       },
       {
@@ -666,13 +652,6 @@
           "en": "Set battery to Zero mode",
           "nl": "Zet batterij in Nul-op-de-meter modus"
         },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=energy_v2"
-          }
-        ],
         "id": "set-battery-to-zero-mode"
       },
       {
