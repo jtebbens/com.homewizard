@@ -25,23 +25,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         polling_interval: 10,
       });
     }
-    
-    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
-    this._triggerFlowPrevious = {};
-
-    if (this.url) {
-      let result = await api.getInfo(this.url, this.token); // this.url is empty
-      console.log('getInfo Result:', result);
-
-    if ((result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
-
-    //this._flowConditionCheckBatteryMode =
-    this.homey.flow.getConditionCard('check_battery_mode').registerRunListener(async (args, state) => {
-      if (!args.device) {
-        return false;
-      }
-  
+    //Condition Card
+    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
+    ConditionCardCheckBatteryMode.registerRunListener(async () => {
+      this.log('CheckBatteryModeCard');
+        
       return new Promise(async (resolve, reject) => {
         try {
           const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH P1 and BATTERY
@@ -60,15 +49,91 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       });
     });
 
-    //this._flowActionSetBatteryMode =
-    this.homey.flow.getActionCard('set_battery_mode').registerRunListener(async (args, state) => {
-      if (!args.device) {
+    this.homey.flow.getActionCard('set-battery-to-zero-mode')
+    .registerRunListener(async () => {
+      this.log('ActionCard: Set Battery to Zero Mode');
+      //this.log('This url:', this.url);
+      //this.log('This token:', this.token);
+       return new Promise(async (resolve, reject) => {
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero'); // NEEDS TESTING WITH P1 and BATTERY
+
+          if (!response || typeof response.mode === 'undefined') {
+            console.log('Invalid response, returning false');
+            return resolve(false);
+          }
+
+          console.log('Set mode to zero:', response.mode);
+          return resolve(response.mode); // Returns the mode value
+        } catch (error) {
+          console.log('Error set mode to zero:', error);
+          return resolve(false); // Or reject(error), depending on your error-handling approach
+        }
+      });
+    })
+
+    this.homey.flow.getActionCard('set-battery-to-full-charge-mode')
+    .registerRunListener(async () => {
+      this.log('ActionCard: Set Battery to Full Charge Mode');
+      //this.log('This url:', this.url);
+      //this.log('This token:', this.token);
+      return new Promise(async (resolve, reject) => {
+      try {
+          const response = await api.setMode(this.url, this.token, 'to_full'); // NEEDS TESTING WITH P1 and BATTERY
+
+          if (!response || typeof response.mode === 'undefined') {
+            console.log('Invalid response, returning false');
+            return resolve(false);
+          }
+
+          console.log('Set mode to full charge:', response.mode);
+          return resolve(response.mode); // Returns the mode value
+        } catch (error) {
+          console.log('Error set mode to full charge:', error);
+          return resolve(false); // Or reject(error), depending on your error-handling approach
+        }
+        });
+    })
+
+    this.homey.flow.getActionCard('set-battery-to-standby-mode')
+    .registerRunListener(async () => {
+      this.log('ActionCard: Set Battery to Standby Mode');
+      //this.log('This url:', this.url);
+      //this.log('This token:', this.token);
+      return new Promise(async (resolve, reject) => {
+      try {
+          const response = await api.setMode(this.url, this.token, 'standby'); // NEEDS TESTING WITH P1 and BATTERY
+
+          if (!response || typeof response.mode === 'undefined') {
+            console.log('Invalid response, returning false');
+            return resolve(false);
+          }
+
+          console.log('Set mode to standby:', response.mode);
+          return resolve(response.mode); // Returns the mode value
+        } catch (error) {
+          console.log('Error set mode to standby:', error);
+          return resolve(false); // Or reject(error), depending on your error-handling approach
+        }
+        });
+    })
+
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+
+    this._triggerFlowPrevious = {};
+
+    /*
+    const ActionCardChangeBatteryMode = this.homey.flow.getActionCard('change-battery-mode')
+    ActionCardChangeBatteryMode.registerRunListener(async (args, state) => {
+      this.log('ChangeBatteryModeCard change to:', args);
+
+      if (!this.url) {
         return false;
       }
-  
+
       return new Promise(async (resolve, reject) => {
         try {
-          const response = await api.setMode(this.url, this.token, args); // NEEDS TESTING WITH P1 and BATTERY
+          const response = await api.setMode(this.url, this.token, args.mode); // NEEDS TESTING WITH P1 and BATTERY
   
           if (!response || typeof response.mode === 'undefined') {
             console.log('Invalid response, returning false');
@@ -83,8 +148,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         }
       });
     });
-    }
-  }
+    */
 
   }
 
@@ -219,6 +283,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
+    const settings = this.getSettings();
+
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -245,7 +311,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_power.l3', data.power_l3_w).catch(this.error));
 
       /// / Tariff
-      setCapabilityPromises.push(this._setCapabilityValue('tariff', data.active_tariff).catch(this.error));
+      setCapabilityPromises.push(this._setCapabilityValue('tariff', data.tariff).catch(this.error));
 
       /// / Total consumption
       setCapabilityPromises.push(this._setCapabilityValue('meter_power.consumed', data.energy_import_kwh).catch(this.error));
@@ -302,7 +368,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_power.montly_power_peak', data.montly_power_peak_w).catch(this.error));
 
       // Trigger flows
-      triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.active_tariff).catch(this.error));
+      triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.tariff).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('import_changed', data.energy_import_kwh).catch(this.error));
       triggerFlowPromises.push(this._triggerFlowOnChange('export_changed', data.energy_export_kwh).catch(this.error));
 
@@ -381,9 +447,17 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         // Battery mode here?
         const batteryMode = await api.getMode(this.url, this.token);
         if (batteryMode !== undefined) {
-                console.log('Battery mode:', batteryMode);
+                //console.log('Battery mode:', batteryMode);
+        }
+        if (settings.mode !== batteryMode.mode) {
+          this.log('Battery mode changed to:', batteryMode.mode);
+          await this.setSettings({
+            mode: batteryMode.mode,
+          });
         }
       }
+
+
     })
       .then(() => {
         this.setAvailable().catch(this.error);
@@ -409,7 +483,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     if ('mode' in MySettings.oldSettings &&
       MySettings.oldSettings.mode !== MySettings.newSettings.mode
     ) {
-      this.log('Mode for Plugin Battery via P1 changed to:', MySettings.newSettings.mode);
+      this.log('Mode for Plugin Battery via P1 advanced settings changed to:', MySettings.newSettings.mode);
       api.setMode(this.url, this.token, MySettings.newSettings.mode);
     }
     // return true;

@@ -1,0 +1,44 @@
+{
+  "title": {
+    "en": "Check Battery Mode",
+    "nl": "Controleer batterij Modus"
+  },
+  "titleFormatted": {
+    "en": "Check battery mode !{{is|isn't}} [[mode]]",
+    "nl": "Controleer batterij modus !{{is|isn't}} [[mode]]"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=energy_v2"
+    },
+    {
+      "type": "dropdown",
+      "name": "mode",
+      "values": [
+        {
+          "id": "zero",
+          "label": {
+            "en": "Zero mode",
+            "nl": "Null op de meter"
+          }
+        },
+        {
+          "id": "to_full",
+          "label": {
+            "en": "Full Charge",
+            "nl": "Volledig laden"
+          }
+        },
+        {
+          "id": "standby",
+          "label": {
+            "en": "Standby",
+            "nl": "Standby"
+          }
+        }
+      ]
+    }
+  ]
+}
