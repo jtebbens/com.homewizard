@@ -484,5 +484,8 @@
   },
   "3.6.32": {
     "en": "Restructerd oninit. Cards are now registered."
+  },
+  "3.6.33": {
+    "en": "Condition card updated (PIB), added extra battery group information to P1apiv2"
   }
 }
