@@ -487,5 +487,8 @@
   },
   "3.6.33": {
     "en": "Condition card updated (PIB), added extra battery group information to P1apiv2"
+  },
+  "3.6.34": {
+    "en": "Plugin Battery: added time_to_empty and time_to_full (minutes)"
   }
 }
