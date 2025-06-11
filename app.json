@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.33",
+  "version": "3.6.34",
   "platforms": [
     "local"
   ],
@@ -2270,7 +2270,9 @@
         "measure_current",
         "measure_voltage",
         "cycles",
-        "rssi"
+        "rssi",
+        "time_to_full",
+        "time_to_empty"
       ],
       "energy": {
         "homeBattery": true,
@@ -2336,6 +2338,38 @@
           "units": {
             "en": "dBm",
             "nl": "dBm"
+          }
+        },
+        "time_to_full": {
+          "type": "number",
+          "title": {
+            "en": "Time until full charge",
+            "nl": "Tijd tot vol geladen"
+          },
+          "getable": true,
+          "setable": true,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "assets/rssi.svg",
+          "units": {
+            "en": "min",
+            "nl": "min"
+          }
+        },
+        "time_to_empty": {
+          "type": "number",
+          "title": {
+            "en": "Time until discharged",
+            "nl": "Tijd tot ontladen"
+          },
+          "getable": true,
+          "setable": true,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "assets/rssi.svg",
+          "units": {
+            "en": "min",
+            "nl": "min"
           }
         }
       },
@@ -2807,6 +2841,38 @@
       "units": {
         "en": "Tariff",
         "nl": "Tarief"
+      }
+    },
+    "time_to_empty": {
+      "type": "number",
+      "title": {
+        "en": "Time until discharged",
+        "nl": "Tijd tot ontladen"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "min",
+        "nl": "min"
+      }
+    },
+    "time_to_full": {
+      "type": "number",
+      "title": {
+        "en": "Time until full charge",
+        "nl": "Tijd tot vol geladen"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "assets/rssi.svg",
+      "units": {
+        "en": "min",
+        "nl": "min"
       }
     },
     "voltage_sag_l1": {
