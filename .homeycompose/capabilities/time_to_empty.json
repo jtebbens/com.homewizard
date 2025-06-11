@@ -1,0 +1,16 @@
+{
+          "type": "number",
+          "title": {
+            "en": "Time until discharged",
+            "nl": "Tijd tot ontladen"
+          },
+          "getable": true,
+          "setable": false,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "assets/rssi.svg",
+          "units": {
+            "en": "min",
+            "nl": "min"
+          }
+        }

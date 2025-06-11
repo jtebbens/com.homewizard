@@ -102,6 +102,18 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       await this.addCapability('cycles').catch(this.error);
       console.log(`created capability cycles for ${this.getName()}`);
     }
+
+    if (!this.hasCapability('time_to_empty')) {
+      await this.addCapability('time_to_empty').catch(this.error);
+      console.log(`created capability time_to_empty for ${this.getName()}`);
+    }
+
+    if (!this.hasCapability('time_to_full')) {
+      await this.addCapability('time_to_full').catch(this.error);
+      console.log(`created capability time_to_full for ${this.getName()}`);
+    }
+
+    
   }
 
   async _registerCapabilityListeners() {
@@ -164,6 +176,32 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       // battery Cycles - custom metric needs to be added{
       await this.setCapabilityValue('cycles', data.cycles).catch(this.error);
+
+      // Assumption battery has 2470Wh capacity, bruto 2688Wh, 8% reserved
+      // Calculate when battery is full or empty pending on the load it has power_w
+      // With load of 800W, 2470Wh / 800 = 3,08 * 60min = 185min till battery empty.
+      // time_to_full time_to_empty
+      // 2470Wh * (data.state_of_charge_pct / 100) = current Wh
+
+      // Battery is charging
+      if (data.power_w > 10) {
+        let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
+        let time_to_full = (2470 - current_battery_capacity) / data.power_w * 60;
+        await this.setCapabilityValue('time_to_full', time_to_full ).catch(this.error);
+        // Set time_to_empty to 0 as we are charging
+        await this.setCapabilityValue('time_to_empty', 0).catch(this.error);
+      }
+
+      // Battery is discharging
+      if (data.power_w < -10) {
+        let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
+        let time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
+        await this.setCapabilityValue('time_to_empty', time_to_empty).catch(this.error);
+        
+        // Set time_to_full to 0 as we are discharging
+        await this.setCapabilityValue('time_to_full', 0).catch(this.error);
+      }
+
 
     })
       .then(() => {

@@ -10,6 +10,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
   async onInit() {
 
     this.token = await this.getStoreValue('token');
+    this.log('Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -28,7 +29,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     //Condition Card
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
-    ConditionCardCheckBatteryMode.registerRunListener(async () => {
+    ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
       this.log('CheckBatteryModeCard');
         
       return new Promise(async (resolve, reject) => {
@@ -41,7 +42,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           }
   
           console.log('Retrieved mode:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          return resolve(args.mode == response.mode); // Returns the mode value
+          
         } catch (error) {
           console.log('Error retrieving mode:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
@@ -56,7 +58,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       //this.log('This token:', this.token);
        return new Promise(async (resolve, reject) => {
         try {
-          const response = await api.setMode(this.url, this.token, 'zero'); // NEEDS TESTING WITH P1 and BATTERY
+          const response = await api.setMode(this.url, this.token, 'zero'); 
 
           if (!response || typeof response.mode === 'undefined') {
             console.log('Invalid response, returning false');
@@ -79,7 +81,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       //this.log('This token:', this.token);
       return new Promise(async (resolve, reject) => {
       try {
-          const response = await api.setMode(this.url, this.token, 'to_full'); // NEEDS TESTING WITH P1 and BATTERY
+          const response = await api.setMode(this.url, this.token, 'to_full');
 
           if (!response || typeof response.mode === 'undefined') {
             console.log('Invalid response, returning false');
@@ -102,7 +104,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       //this.log('This token:', this.token);
       return new Promise(async (resolve, reject) => {
       try {
-          const response = await api.setMode(this.url, this.token, 'standby'); // NEEDS TESTING WITH P1 and BATTERY
+          const response = await api.setMode(this.url, this.token, 'standby');
 
           if (!response || typeof response.mode === 'undefined') {
             console.log('Invalid response, returning false');
@@ -336,7 +338,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         setCapabilityPromises.push(this.addCapability('meter_power').catch(this.error));
       }
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      if (data.energy_import_kwh === undefined) {
+      if (data.energy_import_kwh !== undefined) {
         if (this.getCapabilityValue('meter_power') != (data.energy_import_kwh - data.energy_export_kwh))
         { setCapabilityPromises.push(this._setCapabilityValue('meter_power', (data.energy_import_kwh - data.energy_export_kwh)).catch(this.error)); }
       }
@@ -455,6 +457,40 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
             mode: batteryMode.mode,
           });
         }
+        if (batteryMode.power_w) {
+          //this.log('Battery power:', batteryMode.power_w);
+          await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w).catch(this.error);
+        }
+        if (batteryMode.target_power_w) {
+          //this.log('Battery target power:', batteryMode.target_power_w);
+          await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w).catch(this.error);
+        }
+        if (batteryMode.max_consumption_w) {
+          //this.log('Battery max consumption:', batteryMode.max_consumption_w);
+          await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w).catch(this.error);
+        }
+        if (batteryMode.max_production_w) {
+          //this.log('Battery max production:', batteryMode.max_production_w);
+          await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w).catch(this.error);
+        }
+        
+        if (!batteryMode.power_w) {
+          // If power_w is not available, we assume the battery is not connected
+          // Remove the capabilities
+          if (this.hasCapability('measure_power.battery_group_power_w')) {
+            await this.removeCapability('measure_power.battery_group_power_w').catch(this.error);
+          }
+          if (this.hasCapability('measure_power.battery_group_target_power_w')) {
+            await this.removeCapability('measure_power.battery_group_target_power_w').catch(this.error);
+          }
+          if (this.hasCapability('measure_power.battery_group_max_consumption_w')) {
+            await this.removeCapability('measure_power.battery_group_max_consumption_w').catch(this.error);
+          }
+          if (this.hasCapability('measure_power.battery_group_max_production_w')) {
+            await this.removeCapability('measure_power.battery_group_max_production_w').catch(this.error);
+          }
+        }
+
       }
 
 

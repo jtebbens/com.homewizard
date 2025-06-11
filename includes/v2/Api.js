@@ -128,30 +128,43 @@ module.exports = (function() {
     return res.json();
   };
 
-  api.setMode = async function(url, token, selectedMode) {
+api.setMode = async function(url, token, selectedMode) {
+    let retries = 3;
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
     if (!selectedMode) throw new Error('Mode is not defined');
-    console.log('api.setMode: This mode will be sent to P1apiv2: ', selectedMode); //
 
-    const res = await fetch(`${url}/api/batteries`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      agent: http_agent, // Ignore SSL errors
-      body: JSON.stringify({ mode: selectedMode })
-    }).catch(((err) => {
-      throw new Error(`Network error: ${err.message}`);
-    }));
+    console.log('api.setMode: This mode will be sent to P1apiv2:', selectedMode);
 
-    //console.log('Result https PUT is: ', res);
-    
-    // Check if the response is ok (status code 200-299)
-    if (!res.ok) { throw new Error(res.statusText); }
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(`${url}/api/batteries`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                agent: http_agent, // Ignore SSL errors
+                body: JSON.stringify({ mode: selectedMode })
+            });
 
-    return res.json();
-  };
+            if (!res.ok) {
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+
+            return res.json();
+        } catch (err) {
+            console.warn(`Attempt ${attempt} failed: ${err.message}`);
+
+            if (attempt < retries) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Simple 2s delay before retry
+            } else {
+                throw new Error("Fetch failed: P1 Connection problem, max retries reached");
+            }
+        }
+    }
+};
+
+
 
   return api;
 }());

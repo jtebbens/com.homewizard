@@ -97,9 +97,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!this.url) return;
 
     const now = new Date();
+    const tz = this.homey.clock.getTimezone();
+    const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
 
-
-
+    
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -121,7 +122,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       const promises = []; // Capture all await promises
 
       // Check if the current time is exactly 00:00
-      if ((now.getHours() === 0 && now.getMinutes() === 0) && data.total_power_import_kwh && data.total_gas_m3) {
+      if ((nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) && data.total_power_import_kwh && data.total_gas_m3) {
           this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
           this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);        
       } else if (!this.getStoreValue('meter_start_day') || (!this.getStoreValue('gasmeter_start_day')) ) {

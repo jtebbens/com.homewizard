@@ -46,7 +46,11 @@
     "voltage_swell_l1",
     "voltage_swell_l2",
     "voltage_swell_l3",
-    "rssi"
+    "rssi",
+    "measure_power.battery_group_power_w",
+    "measure_power.battery_group_target_power_w",
+    "measure_power.battery_group_max_consumption_w",
+    "measure_power.battery_group_max_production_w"
   ],
   "energy": {
     "cumulative": true,
@@ -221,6 +225,30 @@
       "title": {
         "en": "Monthly Power Peak",
         "nl": "Maandelijks piekvermogen"
+      }
+    },
+    "measure_power.battery_group_power_w": {
+      "title": {
+        "en": "Battery group Current combined Power",
+        "nl": "Battery groep Huidig samengesteld vermogen"
+      }
+    },
+    "measure_power.battery_group_target_power_w": {
+      "title": {
+        "en": "Battery group Target Power",
+        "nl": "Battery groep Doel vermogen"
+      }
+    },
+    "measure_power.battery_group_max_consumption_w": {
+      "title": {
+        "en": "Battery group Max allowed Consumption Power",
+        "nl": "Battery groep Max toegestaand gebruiksvermogen"
+      }
+    },
+    "measure_power.battery_group_max_production_w": {
+      "title": {
+        "en": "Battery group Max allowed Production Power",
+        "nl": "Battery groep Max toegestaand leveringssvermogen"
       }
     },
     "rssi": {
