@@ -1,0 +1,161 @@
+{
+  "name": {
+    "en": "kWh Meter 3P (APIv2)"
+  },
+  "images": {
+    "large": "drivers/SDM630/assets/images/large.png",
+    "small": "drivers/SDM630/assets/images/small.png"
+  },
+  "class": "socket",
+  "discovery": "SDM630_v2",
+  "platforms": [
+    "local"
+  ],
+  "capabilities": [
+    "measure_power",
+    "meter_power",
+    "measure_current",
+    "meter_power.import",
+    "meter_power.export",
+    "measure_power.l1",
+    "measure_power.l2",
+    "measure_power.l3",
+    "measure_current",
+    "measure_current.l1",
+    "measure_current.l2",
+    "measure_current.l3",
+    "measure_voltage.l1",
+    "measure_voltage.l2",
+    "measure_voltage.l3"
+  ],
+  "capabilitiesOptions": {
+    "measure_power": {
+      "title": {
+        "en": "Current usage",
+        "nl": "Huidig vermogen"
+      },
+      "insights": true
+    },
+    "meter_power.import": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage",
+        "nl": "Totaal gebruik"
+      }
+    },
+    "meter_power.export": {
+      "decimals": 3,
+      "title": {
+        "en": "Total deliver",
+        "nl": "Totaal teruglevering"
+      }
+    },
+    "meter_power": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh",
+        "nl": "Totaal verbruik KWh"
+      },
+      "insights": true
+    },
+    "measure_power.l1": {
+      "title": {
+        "en": "Current usage phase 1",
+        "nl": "Huidig gebruik fase 1"
+      }
+    },
+    "measure_power.l2": {
+      "title": {
+        "en": "Current usage phase 2",
+        "nl": "Huidig gebruik fase 2"
+      }
+    },
+    "measure_power.l3": {
+      "title": {
+        "en": "Current usage phase 3",
+        "nl": "Huidig gebruik fase 3"
+      }
+    },
+    "measure_current": {
+      "title": {
+        "en": "Current Amp",
+        "nl": "Huidig Amp"
+      }
+    },
+    "measure_current.l1": {
+      "title": {
+        "en": "Current Amp phase 1",
+        "nl": "Huidig Amp fase 1"
+      }
+    },
+    "measure_current.l2": {
+      "title": {
+        "en": "Current Amp phase 2",
+        "nl": "Huidig Amp fase 2"
+      }
+    },
+    "measure_current.l3": {
+      "title": {
+        "en": "Current Amp phase 3",
+        "nl": "Huidig Amp fase 3"
+      }
+    },
+    "measure_power.battery_group_power_w": {
+      "title": {
+        "en": "Battery group Current combined Power",
+        "nl": "Battery groep Huidig samengesteld vermogen"
+      }
+    },
+    "measure_power.battery_group_target_power_w": {
+      "title": {
+        "en": "Battery group Target Power",
+        "nl": "Battery groep Doel vermogen"
+      }
+    },
+    "measure_power.battery_group_max_consumption_w": {
+      "title": {
+        "en": "Battery group Max allowed Consumption Power",
+        "nl": "Battery groep Max toegestaand gebruiksvermogen"
+      }
+    },
+    "measure_power.battery_group_max_production_w": {
+      "title": {
+        "en": "Battery group Max allowed Production Power",
+        "nl": "Battery groep Max toegestaand leveringssvermogen"
+      }
+    }
+  },
+  "pair": [
+    {
+      "id": "start",
+      "navigation": {
+        "next": "list_devices"
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "id": "SDM630_v2",
+  "settings": [
+    {
+      "id": "polling_interval",
+      "type": "number",
+      "label": {
+        "en": "Polling interval"
+      },
+      "value": 10,
+      "unit": {
+        "en": "s"
+      }
+    }
+  ]
+}

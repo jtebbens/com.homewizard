@@ -3093,10 +3093,66 @@
         ]
       ]
     },
+    "SDM230_v2": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "homewizard",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "SDM230-wifi"
+            }
+          }
+        ],
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-KWH1"
+            }
+          }
+        ]
+      ]
+    },
     "SDM630": {
       "type": "mdns-sd",
       "mdns-sd": {
         "name": "hwenergy",
+        "protocol": "tcp"
+      },
+      "id": "{{txt.serial}}",
+      "conditions": [
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "SDM630-wifi"
+            }
+          }
+        ],
+        [
+          {
+            "field": "txt.product_type",
+            "match": {
+              "type": "string",
+              "value": "HWE-KWH3"
+            }
+          }
+        ]
+      ]
+    },
+    "SDM630v2": {
+      "type": "mdns-sd",
+      "mdns-sd": {
+        "name": "homewizard",
         "protocol": "tcp"
       },
       "id": "{{txt.serial}}",
