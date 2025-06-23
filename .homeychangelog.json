@@ -490,5 +490,8 @@
   },
   "3.6.34": {
     "en": "Plugin Battery: added time_to_empty and time_to_full (minutes)"
+  },
+  "3.6.35": {
+    "en": "Bugfix Energy - Invalid Capability: meter_gas.daily"
   }
 }
