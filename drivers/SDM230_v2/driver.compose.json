@@ -3,8 +3,8 @@
     "en": "kWh Meter 1P (APIv2)"
   },
   "images": {
-    "large": "drivers/SDM230/assets/images/large.png",
-    "small": "drivers/SDM230/assets/images/small.png"
+    "large": "drivers/SDM230_v2/assets/images/large.png",
+    "small": "drivers/SDM230_v2/assets/images/small.png"
   },
   "class": "socket",
   "discovery": "SDM230_v2",
@@ -89,22 +89,20 @@
     }
   },
   "pair": [
-    {
-      "id": "start",
-      "navigation": {
-        "next": "list_devices"
-      }
-    },
-    {
+        {
       "id": "list_devices",
       "template": "list_devices",
       "navigation": {
-        "next": "add_devices"
-      }
+        "next": "authorize"
+      },
+      "options": { "singular": true }
     },
     {
-      "id": "add_devices",
-      "template": "add_devices"
+      "id": "authorize",
+      "navigation":
+      {
+        "prev": "list_devices"
+      }
     }
   ],
   "id": "SDM230_v2",

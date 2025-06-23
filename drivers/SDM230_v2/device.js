@@ -51,7 +51,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       });
     });
 
-    this.homey.flow.getActionCard('set-battery-to-zero-mode')
+    this.homey.flow.getActionCard('sdm230-set-battery-to-zero-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Zero Mode');
       //this.log('This url:', this.url);
@@ -74,7 +74,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       });
     })
 
-    this.homey.flow.getActionCard('set-battery-to-full-charge-mode')
+    this.homey.flow.getActionCard('sdm230-set-battery-to-full-charge-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Full Charge Mode');
       //this.log('This url:', this.url);
@@ -97,7 +97,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         });
     })
 
-    this.homey.flow.getActionCard('set-battery-to-standby-mode')
+    this.homey.flow.getActionCard('sdm230-set-battery-to-standby-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Standby Mode');
       //this.log('This url:', this.url);

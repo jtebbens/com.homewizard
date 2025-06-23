@@ -3,8 +3,8 @@
     "en": "kWh Meter 3P (APIv2)"
   },
   "images": {
-    "large": "drivers/SDM630/assets/images/large.png",
-    "small": "drivers/SDM630/assets/images/small.png"
+    "large": "drivers/SDM630_v2/assets/images/large.png",
+    "small": "drivers/SDM630_v2/assets/images/small.png"
   },
   "class": "socket",
   "discovery": "SDM630_v2",
@@ -14,7 +14,6 @@
   "capabilities": [
     "measure_power",
     "meter_power",
-    "measure_current",
     "meter_power.import",
     "meter_power.export",
     "measure_power.l1",
@@ -126,22 +125,20 @@
     }
   },
   "pair": [
-    {
-      "id": "start",
-      "navigation": {
-        "next": "list_devices"
-      }
-    },
-    {
+        {
       "id": "list_devices",
       "template": "list_devices",
       "navigation": {
-        "next": "add_devices"
-      }
+        "next": "authorize"
+      },
+      "options": { "singular": true }
     },
     {
-      "id": "add_devices",
-      "template": "add_devices"
+      "id": "authorize",
+      "navigation":
+      {
+        "prev": "list_devices"
+      }
     }
   ],
   "id": "SDM630_v2",

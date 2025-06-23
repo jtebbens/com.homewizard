@@ -137,7 +137,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       } else { 
         //console.log(data.total_power_import_kwh);
         //console.log(this.getStoreValue('meter_start_day'));
-        this.setCapabilityValue('meter_power.daily', (data.total_power_import_kwh - this.getStoreValue('meter_start_day'))).catch(this.error); 
+        promises.push(this.setCapabilityValue('meter_power.daily', (data.total_power_import_kwh - this.getStoreValue('meter_start_day'))).catch(this.error)); 
       }
 
       // Update the capability meter_gas.daily
@@ -146,7 +146,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       } else { 
         //console.log(data.total_power_import_kwh);
         //console.log(this.getStoreValue('meter_start_day'));
-        this.setCapabilityValue('meter_gas.daily', (data.total_gas_m3 - this.getStoreValue('gasmeter_start_day'))).catch(this.error); 
+        promises.push(this.setCapabilityValue('meter_gas.daily', (data.total_gas_m3 - this.getStoreValue('gasmeter_start_day'))).catch(this.error)); 
       }
 
       // Save export data check if capabilities are present first
@@ -180,7 +180,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       if (!this.hasCapability('identify')) {
-        await this.addCapability('identify').catch(this.error);
+        promises.push(await this.addCapability('identify').catch(this.error));
       }
 
       // Update values

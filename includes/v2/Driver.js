@@ -91,6 +91,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
     // This event is triggered when the authorize screen is shown or when the user presses retry action
     session.setHandler('try_authorize', async (duration) => {
+      try {
 
       // Check if any previous timers are running and stop them
       if (this.interval !== null) {
@@ -136,10 +137,16 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         clearInterval(this.interval);
         clearInterval(this.timeout);
         console.log('Timeout!');
-        await session.emit('authorize_timeout'); // at Timeout.<anonymous> (/app/includes/v2/Driver.js:139:17)
+        await session.emit('authorize_timeout'); 
       }, duration);
 
-    });
+    }
+    catch (error) {
+      console.log('Pair Session Timeout error', error); // at Timeout.<anonymous> (/app/includes/v2/Driver.js:139:17)
+    }
+  }
+
+  );
   }
 
 };
