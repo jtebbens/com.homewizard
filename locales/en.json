@@ -23,6 +23,12 @@
         },
         "plugin_battery": {
             "autorize_instruction": "Press the button on the Plugin Battery to complete the pairing"
-        }
+        },
+        "SDM230_v2": {
+            "authorize_instruction": "Press the button on the KWH Meter to complete the pairing"
+        },
+        "SDM630_v2": {
+            "authorize_instruction": "Press the button on the KWH Meter to complete the pairing"
+        }        
     }
 }

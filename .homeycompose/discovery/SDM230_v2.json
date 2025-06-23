@@ -1,0 +1,28 @@
+{
+  "type": "mdns-sd",
+  "mdns-sd": {
+    "name": "homewizard",
+    "protocol": "tcp"
+  },
+  "id": "{{txt.serial}}",
+  "conditions": [
+    [
+      {
+        "field": "txt.product_type",
+        "match": {
+          "type": "string",
+          "value": "SDM230-wifi"
+        }
+      }
+    ],
+    [
+      {
+        "field": "txt.product_type",
+        "match": {
+          "type": "string",
+          "value": "HWE-KWH1"
+        }
+      }
+    ]
+  ]
+}

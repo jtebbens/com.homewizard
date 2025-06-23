@@ -2,7 +2,7 @@
       
 "actions": [
     {
-        "id": "set-battery-to-full-charge-mode",
+        "id": "sdm630-set-battery-to-full-charge-mode",
         "title": {
             "en": "Set battery to Full Charge mode",
             "nl": "Zet batterij in Volledig Oplaad modus"
@@ -14,7 +14,7 @@
         "args": []
     },
     {
-        "id": "set-battery-to-zero-mode",
+        "id": "sdm630-set-battery-to-zero-mode",
         "title": {
             "en": "Set battery to Zero mode",
             "nl": "Zet batterij in Zero modus"
@@ -26,7 +26,7 @@
         "args": []
     },
     {
-        "id": "set-battery-to-standby-mode",
+        "id": "sdm630-set-battery-to-standby-mode",
         "title": {
             "en": "Set battery to Standby mode",
             "nl": "Zet batterij in Standby modus"
