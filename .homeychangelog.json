@@ -496,5 +496,8 @@
   },
   "3.6.36": {
     "en": "Code split for daily tracking gas and energy. (bug fix)"
+  },
+  "3.6.37": {
+    "en": "Resolved async function call that should not have been async at all."
   }
 }
