@@ -493,5 +493,8 @@
   },
   "3.6.35": {
     "en": "Bugfix Energy - Invalid Capability: meter_gas.daily"
+  },
+  "3.6.36": {
+    "en": "Code split for daily tracking gas and energy. (bug fix)"
   }
 }
