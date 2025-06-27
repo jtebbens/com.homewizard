@@ -499,5 +499,8 @@
   },
   "3.6.37": {
     "en": "Resolved async function call that should not have been async at all."
+  },
+  "3.6.38": {
+    "en": "Added trigger for battery mode change"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.37",
+  "version": "3.6.38",
   "platforms": [
     "local"
   ],
@@ -175,6 +175,19 @@
               "nl": "export"
             },
             "example": 1
+          }
+        ]
+      },
+      {
+        "id": "battery_mode_changed",
+        "title": {
+          "en": "Battery mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
           }
         ]
       },
@@ -1595,7 +1608,8 @@
         "voltage_sag_l3",
         "voltage_swell_l1",
         "voltage_swell_l2",
-        "voltage_swell_l3"
+        "voltage_swell_l3",
+        "connection_error"
       ],
       "energy": {
         "cumulative": true,
@@ -1818,7 +1832,8 @@
         "meter_power.consumed.t1",
         "meter_power.produced.t1",
         "measure_power.l1",
-        "rssi"
+        "rssi",
+        "connection_error"
       ],
       "capabilitiesOptions": {
         "measure_power": {
@@ -1965,7 +1980,8 @@
         "measure_power.battery_group_power_w",
         "measure_power.battery_group_target_power_w",
         "measure_power.battery_group_max_consumption_w",
-        "measure_power.battery_group_max_production_w"
+        "measure_power.battery_group_max_production_w",
+        "connection_error"
       ],
       "energy": {
         "cumulative": true,
@@ -3160,6 +3176,16 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/central_heating.svg"
+    },
+    "connection_error": {
+      "type": "string",
+      "title": {
+        "en": "Connection Error",
+        "nl": "Verbindingsfout"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true
     },
     "cycles": {
       "type": "number",
