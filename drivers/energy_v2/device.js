@@ -9,6 +9,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
 
+    if (!this.hasCapability('connection_error')) {
+        await this.addCapability('connection_error').catch(this.error);
+    }
+    await this.setCapabilityValue('connection_error', 'No errors');
+
+
     this.token = await this.getStoreValue('token');
     this.log('Token:', this.token);
 
@@ -26,6 +32,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         polling_interval: 10,
       });
     }
+
+    if (settings.cloud === undefined) {
+      settings.cloud = 1; // Default true
+      await this.setSettings({
+        // Update settings in Homey
+        cloud: 1,
+      });
+    }
+
+    
 
     //Condition Card
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
@@ -442,21 +458,45 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       Promise.all(setCapabilityPromises);
       Promise.all(triggerFlowPromises);
 
+      // Function to check version
+      function isVersionGreater(v1, v2) {
+      const toParts = v => v.split('.').map(Number);
+      const parts1 = toParts(v1);
+      const parts2 = toParts(v2);
+      const maxLen = Math.max(parts1.length, parts2.length);
+
+      for (let i = 0; i < maxLen; i++) {
+        const num1 = parts1[i] || 0;
+        const num2 = parts2[i] || 0;
+        if (num1 > num2) return true;
+        if (num1 < num2) return false;
+      }
+        return false;
+      }
+
+
       let result = await api.getInfo(this.url, this.token); // this.url is empty
       //console.log('getInfo Result:', result);
 
-      if (result && (result.firmware_version === "6.0200") || (result.firmware_version === "6.0201")) {
+      if (result && isVersionGreater(result.firmware_version, "6.0203")) {
         // Battery mode here?
         const batteryMode = await api.getMode(this.url, this.token);
-        if (batteryMode !== undefined) {
-                //console.log('Battery mode:', batteryMode);
-        }
+        
         if (settings.mode !== batteryMode.mode) {
           this.log('Battery mode changed to:', batteryMode.mode);
           await this.setSettings({
             mode: batteryMode.mode,
           });
         }
+
+         //trigger battery_mode_change
+       
+        if (batteryMode.mode != this.getStoreValue('last_battery_mode')) {
+          this.flowTriggerTariff(this, { battery_mode_changed: batteryMode.mode });
+          this.setStoreValue('last_battery_mode', batteryMode.mode).catch(this.error);
+        }
+
+
         if (batteryMode.power_w) {
           //this.log('Battery power:', batteryMode.power_w);
           await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w).catch(this.error);
@@ -522,6 +562,21 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       this.log('Mode for Plugin Battery via P1 advanced settings changed to:', MySettings.newSettings.mode);
       api.setMode(this.url, this.token, MySettings.newSettings.mode);
     }
+
+    if ('cloud' in MySettings.oldSettings &&
+      MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+    ) {
+      this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
+
+      if (MySettings.newSettings.cloud == 1) {
+         api.setCloudOn(this.url, this.token);  
+      }
+      else if (MySettings.newSettings.cloud == 0) {
+        api.setCloudOff(this.url, this.token);
+      }
+    }
+
+    
     // return true;
   }
 

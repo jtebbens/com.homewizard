@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Connection Error",
+    "nl": "Verbindingsfout"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": true
+}

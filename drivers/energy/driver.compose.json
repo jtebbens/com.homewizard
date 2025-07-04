@@ -44,7 +44,8 @@
     "voltage_sag_l3",
     "voltage_swell_l1",
     "voltage_swell_l2",
-    "voltage_swell_l3"
+    "voltage_swell_l3",
+    "connection_error"
   ],
   "energy": {
     "cumulative": true,

@@ -59,6 +59,39 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     this.onPoll();
   }
 
+  async setCloudOn() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/system`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud_enabled: true })
+    }).catch(this.error);
+
+    if (!res.ok)
+    { 
+      //await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
+  }
+
+
+  async setCloudOff() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/system`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud_enabled: false })
+    }).catch(this.error);
+
+    if (!res.ok)
+    { 
+      //await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
+  }
+
   onPoll() {
     if (!this.url) return;
 
@@ -216,6 +249,19 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
+
+      if ('cloud' in MySettings.oldSettings &&
+        MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+      ) {
+        this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
+
+        if (MySettings.newSettings.cloud == 1) {
+            this.setCloudOn();  
+        }
+        else if (MySettings.newSettings.cloud == 0) {
+            this.setCloudOff();
+        }
+      }
     // return true;
   }
 

@@ -7,7 +7,11 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 v3.7.0
 * Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0005 for kwh meters (beta)
 
-v3.6.34
+v3.6.39
+* Cloud connection setting made available for P1, Sockets, Watermeter, SDM230, SDM630
+* Bugfix Offset watermeter
+
+v3.6.38
 * P1(apiv2) gas meter bugfixes
 * P1(apiv2) aggregated total usage added (support for PowerByTheHour app)
 * Custom polling for Watermeter, SDM230, SDM630 and SDM630-p1 mode, Default 10s, adjust in advanced settings
@@ -16,6 +20,7 @@ v3.6.34
 * Custom Polling interval added for Plugin Battery
 * Daily usage imported power and gas (P1apiv1) - User request
 * Plugin Battery: added time_to_empty and time_to_full (minutes)
+* Trigger for battery mode change
 
 v3.6.6
 * Homey Energy - Polling interval for all Energy devices (P1, kwh etc.) lowered to 1s (was 10s) 

@@ -11,6 +11,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   async onInit() {
 
+    if (!this.hasCapability('connection_error')) {
+        await this.addCapability('connection_error').catch(this.error);
+    }
+    await this.setCapabilityValue('connection_error', 'No errors');
+
     const settings = await this.getSettings();
     console.log('Settings for P1 apiv1: ',settings.polling_interval);
 
@@ -80,6 +85,39 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.onPoll();
   }
 
+  async setCloudOn() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/system`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud_enabled: true })
+    }).catch(this.error);
+
+    if (!res.ok)
+    { 
+      //await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
+  }
+
+
+  async setCloudOff() {
+    if (!this.url) return;
+
+    const res = await fetch(`${this.url}/system`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cloud_enabled: false })
+    }).catch(this.error);
+
+    if (!res.ok)
+    { 
+      //await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
+  }
+
   async onRequest(body) {
     if (!this.url) return;
 
@@ -90,7 +128,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }).catch(this.error);
 
     if (!res.ok)
-    { throw new Error(res.statusText); }
+    { 
+      await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
   }
 
   onPoll() {
@@ -115,20 +156,30 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         // try again
         res = await fetch(`${this.url}/data`);
         if (!res || !res.ok)
-        { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+        { 
+          this.setCapabilityValue('connection_error', res.code);
+          throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
       }
 
       const data = await res.json();
       const promises = []; // Capture all await promises
 
-      // Check if the current time is exactly 00:00
-      if ((nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) && data.total_power_import_kwh && data.total_gas_m3) {
+      // At exactly midnight
+      if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
+        if (data.total_power_import_kwh != null) {
           this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
-          this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);        
-      } else if (!this.getStoreValue('meter_start_day') || (!this.getStoreValue('gasmeter_start_day')) ) {
-        // If the store value is not set, initialize it with the current value first time use
-          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+        }
+        if (data.total_gas_m3 != null) {
           this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
+        }
+      } else {
+        // First-time setup fallback
+        if (!this.getStoreValue('meter_start_day') && data.total_power_import_kwh != null) {
+          this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+        }
+        if (!this.getStoreValue('gasmeter_start_day') && data.total_gas_m3 != null) {
+          this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
+        }
       }
       
       // Update the capability meter_power.daily
@@ -141,12 +192,20 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       // Update the capability meter_gas.daily
-      if ((!this.hasCapability('meter_gas.daily')) && data.total_gas_m3) {
-        promises.push(this.addCapability('meter_gas.daily').catch(this.error));
-      } else { 
-        //console.log(data.total_power_import_kwh);
-        //console.log(this.getStoreValue('meter_start_day'));
-        promises.push(this.setCapabilityValue('meter_gas.daily', (data.total_gas_m3 - this.getStoreValue('gasmeter_start_day'))).catch(this.error)); 
+      if (data.total_gas_m3 != null) {
+        if (!this.hasCapability('meter_gas.daily')) {
+          promises.push(this.addCapability('meter_gas.daily').catch(this.error));
+        } else {
+            const gasStart = this.getStoreValue('gasmeter_start_day');
+            if (gasStart != null) {
+              const gasDiff = data.total_gas_m3 - gasStart;
+              promises.push(this.setCapabilityValue('meter_gas.daily', gasDiff).catch(this.error));
+        }
+        }
+      } 
+      
+      if ((data.total_gas_m3 == null) && this.hasCapability('meter_gas.daily')) {
+        promises.push(this.removeCapability('meter_gas.daily').catch(this.error));
       }
 
       // Save export data check if capabilities are present first
@@ -583,6 +642,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         clearInterval(this.onPollInterval);
         //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
         this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      }
+
+      if ('cloud' in MySettings.oldSettings &&
+        MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+      ) {
+        this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
+  
+        if (MySettings.newSettings.cloud == 1) {
+            this.setCloudOn();  
+        }
+        else if (MySettings.newSettings.cloud == 0) {
+            this.setCloudOff();
+        }
       }
       // return true;
     }

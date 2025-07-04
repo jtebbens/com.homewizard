@@ -164,7 +164,76 @@ api.setMode = async function(url, token, selectedMode) {
     }
 };
 
+api.setCloudOn = async function(url, token) {
+    let retries = 3;
+    if (!url) throw new Error('URL is not defined');
+    if (!token) throw new Error('Token is not defined');
+    //if (!selectedCloud) throw new Error('selectedCloud is not defined');
 
+    console.log('api.setCloud: This cloudstate will be sent to: ON');
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(`${url}/api/system`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                agent: http_agent, // Ignore SSL errors
+                body: JSON.stringify({ cloud_enabled: true })
+            });
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+
+            return res.json();
+        } catch (err) {
+            console.warn(`Attempt ${attempt} failed: ${err.message}`);
+
+            if (attempt < retries) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Simple 2s delay before retry
+            } else {
+                throw new Error("Fetch failed: P1 Connection problem, max retries reached");
+            }
+        }
+    }
+};
+
+api.setCloudOff = async function(url, token) {
+    let retries = 3;
+    if (!url) throw new Error('URL is not defined');
+    if (!token) throw new Error('Token is not defined');
+    
+    console.log('api.setCloud: This cloudstate will be sent to: OFF');
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const res = await fetch(`${url}/api/system`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                agent: http_agent, // Ignore SSL errors
+                body: JSON.stringify({ cloud_enabled: false })
+            });
+
+            if (!res.ok) {
+                throw new Error(`HTTP error! Status: ${res.status}`);
+            }
+
+            return res.json();
+        } catch (err) {
+            console.warn(`Attempt ${attempt} failed: ${err.message}`);
+
+            if (attempt < retries) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Simple 2s delay before retry
+            } else {
+                throw new Error("Fetch failed: P1 Connection problem, max retries reached");
+            }
+        }
+    }
+};
 
   return api;
 }());
