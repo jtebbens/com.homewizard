@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.38",
+  "version": "3.6.39",
   "platforms": [
     "local"
   ],
@@ -983,6 +983,15 @@
           "unit": {
             "en": "s"
           }
+        },
+        {
+          "id": "cloud",
+          "type": "number",
+          "label": {
+            "en": "Cloud connection 1=on 0=off",
+            "nl": "Cloud verbinding 1=actief 0=uit"
+          },
+          "value": 1
         }
       ]
     },
@@ -1251,6 +1260,15 @@
           "unit": {
             "en": "s"
           }
+        },
+        {
+          "id": "cloud",
+          "type": "number",
+          "label": {
+            "en": "Cloud connection 1=on 0=off",
+            "nl": "Cloud verbinding 1=actief 0=uit"
+          },
+          "value": 1
         }
       ]
     },
@@ -1806,6 +1824,15 @@
           "unit": {
             "en": "s"
           }
+        },
+        {
+          "id": "cloud",
+          "type": "number",
+          "label": {
+            "en": "Cloud connection 1=on 0=off",
+            "nl": "Cloud verbinding 1=actief 0=uit"
+          },
+          "value": 1
         }
       ]
     },
@@ -1903,6 +1930,15 @@
                 "nl": "Interval in seconden"
               },
               "value": 10
+            },
+            {
+              "id": "cloud",
+              "type": "number",
+              "label": {
+                "en": "Cloud connection 1=on 0=off",
+                "nl": "Cloud verbinding 1=actief 0=uit"
+              },
+              "value": 1
             }
           ]
         }
@@ -2270,6 +2306,15 @@
             "en": "A",
             "nl": "A"
           }
+        },
+        {
+          "id": "cloud",
+          "type": "number",
+          "label": {
+            "en": "Cloud connection 1=on 0=off",
+            "nl": "Cloud verbinding 1=actief 0=uit"
+          },
+          "value": 1
         }
       ]
     },
@@ -2999,6 +3044,15 @@
                 "nl": "Interval in seconden"
               },
               "value": 10
+            },
+            {
+              "id": "cloud",
+              "type": "number",
+              "label": {
+                "en": "Cloud connection 1=on 0=off",
+                "nl": "Cloud verbinding 1=actief 0=uit"
+              },
+              "value": 1
             }
           ]
         }
