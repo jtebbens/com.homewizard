@@ -38,5 +38,11 @@
         "args": []
     }
 
-    ]
+],
+"triggers": [
+    {
+      "id": "battery_mode_changed",
+      "title": { "en": "Battery mode changed" }
+    }
+  ]
 }

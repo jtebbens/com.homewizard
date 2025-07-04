@@ -10,6 +10,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
+    
+    if (!this.hasCapability('connection_error')) {
+        await this.addCapability('connection_error').catch(this.error);
+    }
+    await this.setCapabilityValue('connection_error', 'No errors');
+
     const custom_interval = this.getSetting('offset_polling');
 
     console.log('offset_polling', custom_interval); // print the value of offset_polling
@@ -83,7 +89,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }).catch(this.error);
 
     if (!res.ok)
-    { throw new Error(res.statusText); }
+    { 
+      await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
   }
 
   async onIdentify() {
@@ -95,8 +104,46 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }).catch(this.error);
 
     if (!res.ok)
-    { throw new Error(res.statusText); }
+    { 
+      await this.setCapabilityValue('connection_error',res.code);
+      throw new Error(res.statusText); 
+    }
   }
+
+    async setCloudOn() {
+      if (!this.url) return;
+  
+      const res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: true })
+      }).catch(this.error);
+  
+      if (!res.ok)
+      { 
+        //await this.setCapabilityValue('connection_error',res.code);
+        throw new Error(res.statusText); 
+      }
+    }
+  
+  
+    async setCloudOff() {
+      if (!this.url) return;
+  
+      const res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: false })
+      }).catch(this.error);
+  
+      if (!res.ok)
+      { 
+        //await this.setCapabilityValue('connection_error',res.code);
+        throw new Error(res.statusText); 
+      }
+    }
+
+
 
   onPoll() {
     if (!this.url) return;
@@ -110,7 +157,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         // try again
         res = await fetch(`${this.url}/data`);
         if (!res || !res.ok)
-        { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+        { 
+          await this.setCapabilityValue('connection_error',res.code);
+          throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
+        }
       }
 
       const data = await res.json();
@@ -276,6 +326,17 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
             } else {
                 this.log('Invalid polling interval:', oldSettings.newSettings.offset_polling);
             }
+        }
+        else if (key === 'cloud') {
+            this.log('Updating cloud connection', oldSettings.newSettings.cloud);
+
+            if (oldSettings.newSettings.cloud == 1) {
+            this.setCloudOn();  
+            }
+            else if (oldSettings.newSettings.cloud == 0) {
+            this.setCloudOff();
+        }
+
         }
     }
 }

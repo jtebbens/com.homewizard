@@ -34,5 +34,13 @@
     "value": 40,
     "unit" : { "en": "A",
                "nl": "A" }
+  },
+  {
+    "id": "cloud",
+    "type": "number",
+    "label": { "en": "Cloud connection 1=on 0=off",
+                "nl": "Cloud verbinding 1=actief 0=uit"
+   },
+    "value": 1
   }
 ]

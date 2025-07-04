@@ -10,7 +10,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   async onInit() {
 
     const settings = await this.getSettings();
-    console.log('Settings for Watermeter: ',settings.offset_polling);
+    console.log('Offset polling for Watermeter: ',settings.offset_polling);
 
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -19,6 +19,14 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       await this.setSettings({
         // Update settings in Homey
         offset_polling: 10,
+      });
+    }
+
+    if ((settings.offset_water === undefined) || (settings.offset_water === null)) {
+      settings.offset_water = 0; // Default to 0 second if not set
+      await this.setSettings({
+        // Update settings in Homey
+        offset_water: 0,
       });
     }
 
@@ -68,6 +76,39 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     { throw new Error(res.statusText); }
   }
 
+      async setCloudOn() {
+        if (!this.url) return;
+    
+        const res = await fetch(`${this.url}/system`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cloud_enabled: true })
+        }).catch(this.error);
+    
+        if (!res.ok)
+        { 
+          //await this.setCapabilityValue('connection_error',res.code);
+          throw new Error(res.statusText); 
+        }
+      }
+    
+    
+      async setCloudOff() {
+        if (!this.url) return;
+    
+        const res = await fetch(`${this.url}/system`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cloud_enabled: false })
+        }).catch(this.error);
+    
+        if (!res.ok)
+        { 
+          //await this.setCapabilityValue('connection_error',res.code);
+          throw new Error(res.statusText); 
+        }
+      }
+
   onPoll() {
     if (!this.url) return;
 
@@ -87,8 +128,13 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       let offset_water_m3;
 
       // if watermeter offset is set in Homewizard Energy app take that value else use the configured value in Homey Homewizard water offset
+
+      const settings = await this.getSettings();
+      //console.log('Offset for Watermeter: ',settings.offset_water);
+
+
       if (data.total_liter_offset_m3 = '0') {
-        offset_water_m3 = this.getSetting('offset_water');
+        offset_water_m3 = settings.offset_water;
       }
       else if (data.total_liter_offset_m3 != '0') {
         offset_water_m3 = data.total_liter_offset_m3;
@@ -163,6 +209,16 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
                 this.log('Invalid polling interval:', oldSettings.newSettings.offset_polling);
             }
         }
+        else if (key === 'cloud') {
+            this.log('Updating cloud connection', oldSettings.newSettings.cloud);
+
+            if (oldSettings.newSettings.cloud == 1) {
+            this.setCloudOn();  
+            }
+            else if (oldSettings.newSettings.cloud == 0) {
+            this.setCloudOff();
+        }
+      }
     }
 }
 

@@ -50,7 +50,8 @@
     "measure_power.battery_group_power_w",
     "measure_power.battery_group_target_power_w",
     "measure_power.battery_group_max_consumption_w",
-    "measure_power.battery_group_max_production_w"
+    "measure_power.battery_group_max_production_w",
+    "connection_error"
   ],
   "energy": {
     "cumulative": true,
