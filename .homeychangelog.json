@@ -502,5 +502,8 @@
   },
   "3.6.38": {
     "en": "Added trigger for battery mode change"
+  },
+  "3.6.39": {
+    "en": "Cloud connection setting made available for P1, Sockets, Watermeter, SDM230, SDM630"
   }
 }
