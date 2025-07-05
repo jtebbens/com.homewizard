@@ -505,5 +505,8 @@
   },
   "3.6.39": {
     "en": "Cloud connection setting made available for P1, Sockets, Watermeter, SDM230, SDM630"
+  },
+  "3.6.40": {
+    "en": "Offset watermeter fix"
   }
 }
