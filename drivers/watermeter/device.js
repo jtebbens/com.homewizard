@@ -179,24 +179,17 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   // Catch offset updates
   onSettings(oldSettings, newSettings) {
-    this.log('Settings updated');
-    this.log('oldSettings', oldSettings);
-
-    // Retrieve changedKeys from oldSettings
+    this.log('Settings updated')
+    // Update display values if offset has changed
+        // Retrieve changedKeys from oldSettings
     const changedKeys = oldSettings.changedKeys || [];
     this.log('Debug: Updated keys =', changedKeys);
 
-    // Iterate over changedKeys to update settings
-    for (const key of changedKeys) {
-        if (key.startsWith('offset_') && key !== 'offset_polling') {
-            const cap = `meter_${key.slice(7)}`;
-            const value = this.getCapabilityValue(cap) || 0; // Prevent undefined values
-            const delta = newSettings[key] - (oldSettings[key] || 0); // Default oldSettings[key] to 0 if missing
-            this.log('Updating value of', cap, 'from', value, 'to', value + delta);
-
-            this.setCapabilityValue(cap, value + delta)
-                .catch((err) => this.error(err));
-        } else if (key === 'offset_polling') {
+    if (changedKeys == 'offset_water') {
+      this.log('Updating offset_water', oldSettings.newSettings.offset_water);
+        
+    }
+    else if (changedKeys === 'offset_polling') {
             this.log('Updating polling interval to', oldSettings.newSettings.offset_polling);
 
             // Ensure polling interval is a valid number
@@ -209,7 +202,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
                 this.log('Invalid polling interval:', oldSettings.newSettings.offset_polling);
             }
         }
-        else if (key === 'cloud') {
+        else if (changedKeys === 'cloud') {
             this.log('Updating cloud connection', oldSettings.newSettings.cloud);
 
             if (oldSettings.newSettings.cloud == 1) {
@@ -219,8 +212,13 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
             this.setCloudOff();
         }
       }
-    }
-}
+
+
+
+
+    //return true;
+  }
+  
 
   updateValue(cap, value) {
     // add offset if defined
