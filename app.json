@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.40",
+  "version": "3.6.41",
   "platforms": [
     "local"
   ],
@@ -1614,6 +1614,12 @@
         "measure_current.l1",
         "measure_current.l2",
         "measure_current.l3",
+        "net_load_phase1",
+        "net_load_phase1_pct",
+        "net_load_phase2",
+        "net_load_phase2_pct",
+        "net_load_phase3",
+        "net_load_phase3_pct",
         "measure_voltage.l1",
         "measure_voltage.l2",
         "measure_voltage.l3",
@@ -1696,6 +1702,42 @@
           "title": {
             "en": "Current Amp phase 3",
             "nl": "Huidig Amp fase 3"
+          }
+        },
+        "net_load_phase1": {
+          "title": {
+            "en": "Phase 1 load",
+            "nl": "Fase 1 belasting"
+          }
+        },
+        "net_load_phase1_pct": {
+          "title": {
+            "en": "Phase 1 load %",
+            "nl": "Fase 1 belasting %"
+          }
+        },
+        "net_load_phase2": {
+          "title": {
+            "en": "Net load Phase 2",
+            "nl": "Net belasting fase 2"
+          }
+        },
+        "net_load_phase2_pct": {
+          "title": {
+            "en": "Phase 2 load %",
+            "nl": "Fase 2 belasting %"
+          }
+        },
+        "net_load_phase3": {
+          "title": {
+            "en": "Net load Phase 3",
+            "nl": "Net belasting fase 3"
+          }
+        },
+        "net_load_phase3_pct": {
+          "title": {
+            "en": "Phase 3 load %",
+            "nl": "Fase 3 belasting %"
           }
         },
         "measure_voltage.l1": {
@@ -1823,6 +1865,27 @@
           "value": 10,
           "unit": {
             "en": "s"
+          }
+        },
+        {
+          "id": "number_of_phases",
+          "type": "number",
+          "label": {
+            "en": "Amount of phase(s)",
+            "nl": "Aantal fase(s)"
+          },
+          "value": 1
+        },
+        {
+          "id": "phase_capacity",
+          "type": "number",
+          "label": {
+            "en": "Phase capacity",
+            "nl": "Fase capaciteit"
+          },
+          "value": 40,
+          "unit": {
+            "en": "A"
           }
         },
         {
@@ -3280,6 +3343,168 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/power_fail.svg"
+    },
+    "net_load_phase1": {
+      "type": "number",
+      "title": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "desc": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "slider",
+      "insights": true,
+      "units": {
+        "en": "A",
+        "nl": "A"
+      },
+      "icon": "assets/icon.svg"
+    },
+    "net_load_phase1_pct": {
+      "type": "number",
+      "title": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "desc": {
+        "en": "Phase 1 load",
+        "nl": "Fase 1 belasting"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "icon": "assets/icon.svg"
+    },
+    "net_load_phase2": {
+      "type": "number",
+      "title": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "desc": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "slider",
+      "insights": true,
+      "units": {
+        "en": "A",
+        "nl": "A"
+      },
+      "icon": "assets/icon.svg"
+    },
+    "net_load_phase2_pct": {
+      "type": "number",
+      "title": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "desc": {
+        "en": "Phase 2 load",
+        "nl": "Fase 2 belasting"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "icon": "assets/icon.svg"
+    },
+    "net_load_phase3": {
+      "type": "number",
+      "title": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "desc": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "decimals": 0,
+      "chartType": "stepLine",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "slider",
+      "insights": true,
+      "units": {
+        "en": "A",
+        "nl": "A"
+      },
+      "icon": "assets/icon.svg"
+    },
+    "net_load_phase3_pct": {
+      "type": "number",
+      "title": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "titleFormatted": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "desc": {
+        "en": "Phase 3 load",
+        "nl": "Fase 3 belasting"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "icon": "assets/icon.svg"
     },
     "rssi": {
       "type": "number",

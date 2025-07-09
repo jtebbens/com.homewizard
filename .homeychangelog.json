@@ -508,5 +508,8 @@
   },
   "3.6.40": {
     "en": "Offset watermeter fix"
+  },
+  "3.6.41": {
+    "en": "Phase capacity added, adjust setting for 1 or 3 phases and their capacity in Amps"
   }
 }
