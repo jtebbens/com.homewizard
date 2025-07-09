@@ -1,0 +1,25 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Phase 3 load",
+    "nl": "Fase 3 belasting"
+  },
+  "titleFormatted": {
+    "en": "Phase 3 load",
+    "nl": "Fase 3 belasting"
+  },
+  "desc" : {
+    "en": "Phase 3 load",
+    "nl": "Fase 3 belasting"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "units": {
+    "en": "%",
+    "nl": "%"
+  },
+  "icon": "assets/icon.svg"
+}

@@ -7,6 +7,21 @@
   "unit": { "en": "s" }
   },
   {
+  "id": "number_of_phases",
+  "type": "number",
+  "label": { "en": "Amount of phase(s)",
+             "nl": "Aantal fase(s)" },
+  "value": 1
+  },
+  {
+  "id": "phase_capacity",
+  "type": "number",
+  "label": { "en": "Phase capacity A",
+             "nl": "Fase capaciteit A" },
+  "value": 40,
+  "unit": { "en": "A" }
+  },
+  {
     "id": "cloud",
     "type": "number",
     "label": { "en": "Cloud connection 1=on 0=off",
