@@ -13,6 +13,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     if (!this.hasCapability('connection_error')) {
         await this.addCapability('connection_error').catch(this.error);
+        
     }
     await this.setCapabilityValue('connection_error', 'No errors');
 
@@ -28,6 +29,25 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         polling_interval: 10,
       });
     }
+
+    // Check if polling interval is set in settings, if not set default to 10 seconds
+    if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null)) {
+      settings.number_of_phases = 1; // Default to 1 phase
+      await this.setSettings({
+        // Update settings in Homey
+        number_of_phases: 1,
+      });
+    }
+
+    // Check if polling interval is set in settings, if not set default to 10 seconds
+    if ((settings.phase_capacity === undefined) || (settings.phase_capacity === null)) {
+      settings.phase_capacity = 40; // Default to 40 Amp
+      await this.setSettings({
+        // Update settings in Homey
+        phase_capacity: 40,
+      });
+    }
+    
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
@@ -140,6 +160,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     const now = new Date();
     const tz = this.homey.clock.getTimezone();
     const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+
+    const settings = this.getSettings();
+
+    this.setCapabilityOptions('net_load_phase1', { max: settings.phase_capacity });
+    this.setCapabilityOptions('net_load_phase2', { max: settings.phase_capacity });
+    this.setCapabilityOptions('net_load_phase3', { max: settings.phase_capacity });
+    //this.setCapabilityOptions('net_load_phase1', { title: "FASE" });
 
     
     // Check if polling interval is running)
@@ -531,18 +558,75 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           promises.push(this.addCapability('measure_current.l1').catch(this.error));
         }
         if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
-        { promises.push(this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error)); }
+        { 
+          promises.push(this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error)); 
+          // 
+          let temp_current_phase1_load = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
+          //this.log("temp net load is", temp_current_phase_load);
+          //this.log("Current amount phases", settings.number_of_phases);
+          //this.log("Current amount capacity per phase", settings.phase_capacity);
+
+          // Send a notification
+          //await this.homey.notifications.createNotification({excerpt: `test`});
+
+
+          if (!this.hasCapability('net_load_phase1')) {
+            promises.push(this.addCapability('net_load_phase1').catch(this.error));
+          }
+
+          if (!this.hasCapability('net_load_phase1_pct')) {
+            promises.push(this.addCapability('net_load_phase1_pct').catch(this.error));
+          }
+
+          promises.push(this.setCapabilityValue('net_load_phase1', Math.abs(data.active_current_l1_a)).catch(this.error));
+          promises.push(this.setCapabilityValue('net_load_phase1_pct', temp_current_phase1_load).catch(this.error));
+
+          if (temp_current_phase1_load > 95) {
+            // Send a notification to timeline
+          await this.homey.notifications.createNotification({excerpt: `Fase 1 overbelast 95%`});
+          }
+
+        }
       }
       else if ((data.active_current_l1_a == undefined) && (this.hasCapability('measure_current.l1'))) {
         promises.push(this.removeCapability('measure_current.l1').catch(this.error));
       }
+
 
       if (data.active_current_l2_a !== undefined) {
         if (!this.hasCapability('measure_current.l2')) {
           promises.push(this.addCapability('measure_current.l2').catch(this.error));
         }
         if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
-        { promises.push(this.setCapabilityValue('measure_current.l2', data.active_current_l2_a).catch(this.error)); }
+        { promises.push(this.setCapabilityValue('measure_current.l2', data.active_current_l2_a).catch(this.error)); 
+
+          // 
+          let temp_current_phase2_load = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
+          //this.log("temp net load is", temp_current_phase_load);
+          //this.log("Current amount phases", settings.number_of_phases);
+          //this.log("Current amount capacity per phase", settings.phase_capacity);
+
+          // Send a notification
+          //await this.homey.notifications.createNotification({excerpt: `test`});
+
+
+          if (!this.hasCapability('net_load_phase2')) {
+            promises.push(this.addCapability('net_load_phase2').catch(this.error));
+          }
+
+          if (!this.hasCapability('net_load_phase2_pct')) {
+            promises.push(this.addCapability('net_load_phase2_pct').catch(this.error));
+          }
+
+          promises.push(this.setCapabilityValue('net_load_phase2', Math.abs(data.active_current_l2_a)).catch(this.error));
+          promises.push(this.setCapabilityValue('net_load_phase2_pct', temp_current_phase2_load).catch(this.error));
+
+          if (temp_current_phase2_load > 95) {
+            // Send a notification to timeline
+          await this.homey.notifications.createNotification({excerpt: `Fase 2 overbelast 95%`});
+          }
+
+        }
       }
       else if ((data.active_current_l2_a == undefined) && (this.hasCapability('measure_current.l2'))) {
         promises.push(this.removeCapability('measure_current.l2').catch(this.error));
@@ -553,7 +637,35 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           promises.push(this.addCapability('measure_current.l3').catch(this.error));
         }
         if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
-        { promises.push(this.setCapabilityValue('measure_current.l3', data.active_current_l3_a).catch(this.error)); }
+        { promises.push(this.setCapabilityValue('measure_current.l3', data.active_current_l3_a).catch(this.error));
+
+          // 
+          let temp_current_phase3_load = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
+          //this.log("temp net load is", temp_current_phase_load);
+          //this.log("Current amount phases", settings.number_of_phases);
+          //this.log("Current amount capacity per phase", settings.phase_capacity);
+
+          // Send a notification
+          //await this.homey.notifications.createNotification({excerpt: `test`});
+
+
+          if (!this.hasCapability('net_load_phase3')) {
+            promises.push(this.addCapability('net_load_phase3').catch(this.error));
+          }
+
+          if (!this.hasCapability('net_load_phase3_pct')) {
+            promises.push(this.addCapability('net_load_phase3_pct').catch(this.error));
+          }
+
+          promises.push(this.setCapabilityValue('net_load_phase3', Math.abs(data.active_current_l3_a)).catch(this.error));
+          promises.push(this.setCapabilityValue('net_load_phase3_pct', temp_current_phase3_load).catch(this.error));
+
+          if (temp_current_phase2_load > 95) {
+            // Send a notification to timeline
+          await this.homey.notifications.createNotification({excerpt: `Fase 3 overbelast 95%`});
+          }
+
+         }
       }
       else if ((data.active_current_l3_a == undefined) && (this.hasCapability('measure_current.l3'))) {
         promises.push(this.removeCapability('measure_current.l3').catch(this.error));
