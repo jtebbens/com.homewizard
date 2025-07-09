@@ -7,9 +7,9 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 v3.7.0
 * Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0005 for kwh meters (beta)
 
-v3.6.39
+v3.6.40
 * Cloud connection setting made available for P1, Sockets, Watermeter, SDM230, SDM630
-* Bugfix Offset watermeter
+* Bugfix Offset watermeter (Cannot read properties of undefined - reading 'offset_water')
 
 v3.6.38
 * P1(apiv2) gas meter bugfixes
