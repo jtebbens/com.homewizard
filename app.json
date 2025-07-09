@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.41",
+  "version": "3.6.42",
   "platforms": [
     "local"
   ],
@@ -1880,8 +1880,8 @@
           "id": "phase_capacity",
           "type": "number",
           "label": {
-            "en": "Phase capacity",
-            "nl": "Fase capaciteit"
+            "en": "Phase capacity A",
+            "nl": "Fase capaciteit A"
           },
           "value": 40,
           "unit": {
