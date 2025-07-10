@@ -514,5 +514,8 @@
   },
   "3.6.42": {
     "en": "Bugfix : ReferenceError: temp_current_phase2_load is not defined"
+  },
+  "3.6.43": {
+    "en": "Bugfix for sliders when gridconnection has 3 phases"
   }
 }
