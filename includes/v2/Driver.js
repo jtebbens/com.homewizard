@@ -137,7 +137,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         clearInterval(this.interval);
         clearInterval(this.timeout);
         console.log('Timeout!');
-        await session.emit('authorize_timeout'); 
+        await session.emit('authorize_timeout'); //Timeout._onTimeout (/app/includes/v2/Driver.js:140:23)
       }, duration);
 
     }

@@ -15,6 +15,7 @@
     "identify",
     "measure_power",
     "meter_gas",
+    "measure_gas",
     "meter_water",
     "meter_power",
     "meter_power.consumed.t1",

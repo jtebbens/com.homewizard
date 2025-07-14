@@ -91,7 +91,8 @@
             "en": "Polling in seconds",
             "nl": "Interval in seconden"
           },
-          "value": 10
+          "value": 10,
+          "min": 1
         },
         {
           "id": "cloud",
