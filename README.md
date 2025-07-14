@@ -5,11 +5,13 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
 v3.7.0
-* Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0005 for kwh meters (beta)
+* Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta)
 
-v3.6.41
+v3.6.44
 * Added phase monitoring
 * Adjust settings to align with your energy grid
+* Bugfix for sliders when gridconnection has 3 phases
+* Actual gas meter measurement added (5min poll pending on smartmeter)
 
 
 v3.6.40

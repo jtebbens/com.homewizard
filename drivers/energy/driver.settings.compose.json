@@ -4,6 +4,7 @@
   "type": "number",
   "label": { "en": "Polling interval" },
   "value": 10,
+  "min": 1,
   "unit": { "en": "s" }
   },
   {

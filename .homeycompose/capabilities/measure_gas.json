@@ -1,0 +1,17 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Current gas usage",
+    "nl": "Huidig gasverbruik"
+  },
+  "getable": true,
+  "setable": false,
+  "decimals": 3,
+  "uiComponent": "sensor",
+  "insights": true,
+  "units": {
+    "en": "m3",
+    "nl": "m3"
+  },
+  "icon": "assets/icon.svg"
+}

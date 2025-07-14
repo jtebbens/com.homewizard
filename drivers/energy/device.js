@@ -18,12 +18,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     await this.setCapabilityValue('connection_error', 'No errors');
 
     const settings = await this.getSettings();
-    console.log('Settings for P1 apiv1: ',settings.polling_interval);
+    console.log('Polling settings for P1 apiv1: ',settings.polling_interval);
 
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
-    if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
-      settings.polling_interval = 10; // Default to 10 second if not set
+    if ((settings.polling_interval === undefined) || (settings.polling_interval === null) || (settings.polling_interval == 0)) {
+      settings.polling_interval = 10; // Default to 10 second if not set or 0
       await this.setSettings({
         // Update settings in Homey
         polling_interval: 10,
@@ -48,6 +48,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
     }
     
+    if (settings.number_of_phases == 1) {
+        await this.removeCapability('net_load_phase2').catch(this.error);
+        await this.removeCapability('net_load_phase3').catch(this.error);  
+    }
+
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
@@ -116,7 +121,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     if (!res.ok)
     { 
-      //await this.setCapabilityValue('connection_error',res.code);
+      await this.setCapabilityValue('connection_error',res.code);
       throw new Error(res.statusText); 
     }
   }
@@ -133,7 +138,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     if (!res.ok)
     { 
-      //await this.setCapabilityValue('connection_error',res.code);
+      await this.setCapabilityValue('connection_error',res.code);
       throw new Error(res.statusText); 
     }
   }
@@ -163,12 +168,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     const settings = this.getSettings();
 
-    this.setCapabilityOptions('net_load_phase1', { max: settings.phase_capacity });
-    this.setCapabilityOptions('net_load_phase2', { max: settings.phase_capacity });
-    this.setCapabilityOptions('net_load_phase3', { max: settings.phase_capacity });
-    //this.setCapabilityOptions('net_load_phase1', { title: "FASE" });
-
-    
+  
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -208,6 +208,28 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
         }
       }
+
+      // Check if it is 5 minutes
+      if (nowLocal.getMinutes() % 5 === 0) {
+        if (data.total_gas_m3 != null) {
+
+          if (!this.hasCapability('measure_gas')) {
+             await this.addCapability('measure_gas').catch(this.error);
+          }
+
+          const prevReading = await this.getStoreValue('gasmeter_previous_reading');
+          
+          // Calculate delta if we have a previous reading
+          if (prevReading != null) {
+            const gasDelta = data.total_gas_m3 - prevReading;
+            await this.setCapabilityValue('measure_gas', gasDelta).catch(this.error);
+          }
+
+          // Update stored value for next hour
+          await this.setStoreValue('gasmeter_previous_reading', data.total_gas_m3).catch(this.error);
+        }
+      }
+
       
       // Update the capability meter_power.daily
       if (!this.hasCapability('meter_power.daily')) {
@@ -572,6 +594,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           if (!this.hasCapability('net_load_phase1')) {
             promises.push(this.addCapability('net_load_phase1').catch(this.error));
+            promises.push(this.setCapabilityOptions('net_load_phase1', { max: settings.phase_capacity }));
           }
 
           if (!this.hasCapability('net_load_phase1_pct')) {
@@ -612,6 +635,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           if (!this.hasCapability('net_load_phase2')) {
             promises.push(this.addCapability('net_load_phase2').catch(this.error));
+            promises.push(this.setCapabilityOptions('net_load_phase2', { max: settings.phase_capacity }));
           }
 
           if (!this.hasCapability('net_load_phase2_pct')) {
@@ -651,6 +675,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           if (!this.hasCapability('net_load_phase3')) {
             promises.push(this.addCapability('net_load_phase3').catch(this.error));
+            promises.push(this.setCapabilityOptions('net_load_phase3', { max: settings.phase_capacity }));
           }
 
           if (!this.hasCapability('net_load_phase3_pct')) {
@@ -660,7 +685,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           promises.push(this.setCapabilityValue('net_load_phase3', Math.abs(data.active_current_l3_a)).catch(this.error));
           promises.push(this.setCapabilityValue('net_load_phase3_pct', temp_current_phase3_load).catch(this.error));
 
-          if (temp_current_phase2_load > 95) {
+          if (temp_current_phase3_load > 95) {
             // Send a notification to timeline
           await this.homey.notifications.createNotification({excerpt: `Fase 3 overbelast 95%`});
           }
