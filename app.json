@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.43",
+  "version": "3.6.44",
   "platforms": [
     "local"
   ],
@@ -1601,6 +1601,7 @@
         "identify",
         "measure_power",
         "meter_gas",
+        "measure_gas",
         "meter_water",
         "meter_power",
         "meter_power.consumed.t1",
@@ -3309,7 +3310,8 @@
       },
       "getable": true,
       "setable": false,
-      "insights": true
+      "insights": true,
+      "icon": "assets/icon.svg"
     },
     "cycles": {
       "type": "number",
@@ -3350,6 +3352,23 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/power_fail.svg"
+    },
+    "measure_gas": {
+      "type": "number",
+      "title": {
+        "en": "Current gas usage",
+        "nl": "Huidig gasverbruik"
+      },
+      "getable": true,
+      "setable": false,
+      "decimals": 3,
+      "uiComponent": "sensor",
+      "insights": true,
+      "units": {
+        "en": "m3",
+        "nl": "m3"
+      },
+      "icon": "assets/icon.svg"
     },
     "net_load_phase1": {
       "type": "number",
