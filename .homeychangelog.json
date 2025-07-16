@@ -520,5 +520,8 @@
   },
   "3.6.44": {
     "en": "Actual gas meter measurement added (5min poll pending on smartmeter)"
+  },
+  "3.6.45": {
+    "en": "P1apiv1 code refactored"
   }
 }
