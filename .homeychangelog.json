@@ -523,5 +523,8 @@
   },
   "3.6.45": {
     "en": "P1apiv1 code refactored"
+  },
+  "3.6.46": {
+    "en": "Bugfix: batteryCapacityWh is not defined"
   }
 }
