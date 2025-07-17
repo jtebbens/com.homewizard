@@ -529,5 +529,8 @@
   },
   "3.6.47": {
     "en": "Extra plugin battery trigger cards (state change, time to full, time to empty)"
+  },
+  "3.6.48": {
+    "en": "Bugfix: time_to_empty is not defined"
   }
 }
