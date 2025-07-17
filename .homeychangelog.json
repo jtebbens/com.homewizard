@@ -526,5 +526,8 @@
   },
   "3.6.46": {
     "en": "Bugfix: batteryCapacityWh is not defined"
+  },
+  "3.6.47": {
+    "en": "Extra plugin battery trigger cards (state change, time to full, time to empty)"
   }
 }
