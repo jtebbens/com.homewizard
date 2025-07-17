@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.46",
+  "version": "3.6.47",
   "platforms": [
     "local"
   ],
@@ -472,6 +472,85 @@
               "nl": "Tekst"
             },
             "example": "Home"
+          }
+        ]
+      },
+      {
+        "id": "battery_state_changed",
+        "title": {
+          "en": "Battery state changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
+          },
+          {
+            "name": "state",
+            "type": "dropdown",
+            "title": {
+              "en": "Charging state"
+            },
+            "values": [
+              {
+                "id": "charging",
+                "name": {
+                  "en": "Charging"
+                }
+              },
+              {
+                "id": "discharging",
+                "name": {
+                  "en": "Discharging"
+                }
+              },
+              {
+                "id": "idle",
+                "name": {
+                  "en": "Idle"
+                }
+              }
+            ]
+          }
+        ],
+        "titleFormatted": {
+          "en": "Battery state changed to [[state]]"
+        }
+      },
+      {
+        "id": "battery_low_runtime",
+        "title": {
+          "en": "Battery time to empty is low"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
+          },
+          {
+            "name": "minutes",
+            "type": "number",
+            "title": {
+              "en": "Minutes remaining"
+            }
+          }
+        ],
+        "titleFormatted": {
+          "en": "Battery time to empty is [[minutes]] minutes"
+        }
+      },
+      {
+        "id": "battery_full",
+        "title": {
+          "en": "Battery is fully charged"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
           }
         ]
       },
