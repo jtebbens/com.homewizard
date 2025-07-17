@@ -1,0 +1,41 @@
+{
+  "triggers": [
+    {
+    "id": "battery_state_changed",
+    "title": { "en": "Battery state changed" },
+    "args": [
+        {
+        "name": "state",
+        "type": "dropdown",
+        "title": { "en": "Charging state" },
+        "values": [
+            { "id": "charging", "name": { "en": "Charging" } },
+            { "id": "discharging", "name": { "en": "Discharging" } },
+            { "id": "idle", "name": { "en": "Idle" } }
+        ]
+        }
+    ],
+    "titleFormatted": {
+    "en": "Battery state changed to [[state]]"
+    }
+    },
+    {
+      "id": "battery_low_runtime",
+      "title": { "en": "Battery time to empty is low" },
+      "args": [
+        {
+          "name": "minutes",
+          "type": "number",
+          "title": { "en": "Minutes remaining" }
+        }
+      ],
+      "titleFormatted": {
+        "en": "Battery time to empty is [[minutes]] minutes"
+      }
+    },
+    {
+      "id": "battery_full",
+      "title": { "en": "Battery is fully charged" }
+    }
+  ]
+}

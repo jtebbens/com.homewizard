@@ -11,6 +11,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
+    this.previousChargingState = null;
+    this.previousTimeToEmpty = null;
+    this.previousStateOfCharge = null;
+
     this.token = this.getStoreValue('token');
 
     const settings = await this.getSettings();
@@ -166,13 +170,16 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       
 
       // battery_charging_state
-      if (data.power_w > 10) { // Add some tolerance for idle consumption
-        await this.setCapabilityValue('battery_charging_state', 'charging').catch(this.error);
+      let chargingState;
+      if (data.power_w > 10) {
+        chargingState = 'charging';
       } else if (data.power_w < 0) {
-        await this.setCapabilityValue('battery_charging_state', 'discharging').catch(this.error);
+        chargingState = 'discharging';
       } else {
-        await this.setCapabilityValue('battery_charging_state', 'idle').catch(this.error);
+        chargingState = 'idle';
       }
+      await this.setCapabilityValue('battery_charging_state', chargingState).catch(this.error);
+
 
       // battery Cycles - custom metric needs to be added{
       await this.setCapabilityValue('cycles', data.cycles).catch(this.error);
@@ -187,7 +194,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       if (data.power_w > 10) {
         let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
         let time_to_full = (2470 - current_battery_capacity) / data.power_w * 60;
-        await this.setCapabilityValue('time_to_full', time_to_full ).catch(this.error);
+        await this.setCapabilityValue('time_to_full', Math.round(time_to_full) ).catch(this.error);
         // Set time_to_empty to 0 as we are charging
         await this.setCapabilityValue('time_to_empty', 0).catch(this.error);
       }
@@ -196,11 +203,44 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       if (data.power_w < -10) {
         let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
         let time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
-        await this.setCapabilityValue('time_to_empty', time_to_empty).catch(this.error);
+        await this.setCapabilityValue('time_to_empty', Math.round(time_to_empty)).catch(this.error);
         
         // Set time_to_full to 0 as we are discharging
         await this.setCapabilityValue('time_to_full', 0).catch(this.error);
       }
+
+      // Triggers
+      // Battery charging state change
+      if (chargingState !== this.previousChargingState) {
+        this.previousChargingState = chargingState;
+        this.homey.flow
+          .getDeviceTriggerCard('battery_state_changed')
+          .trigger(this, { state: chargingState })
+          .catch(this.error);
+      }
+
+      // Battery time-to-empty below threshold (e.g. 30 min)
+      if (time_to_empty < 30 && this.previousTimeToEmpty >= 30) {
+        this.previousTimeToEmpty = time_to_empty;
+        this.homey.flow
+          .getDeviceTriggerCard('battery_low_runtime')
+          .trigger(this, { minutes: Math.round(time_to_empty) })
+          .catch(this.error);
+      } else {
+        this.previousTimeToEmpty = time_to_empty;
+      }
+
+      // Battery fully charged
+      if (data.state_of_charge_pct === 100 && this.previousStateOfCharge < 100) {
+        this.previousStateOfCharge = data.state_of_charge_pct;
+        this.homey.flow
+          .getDeviceTriggerCard('battery_full')
+          .trigger(this)
+          .catch(this.error);
+      } else {
+        this.previousStateOfCharge = data.state_of_charge_pct;
+      }
+
 
 
     })
