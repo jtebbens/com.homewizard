@@ -532,5 +532,8 @@
   },
   "3.6.48": {
     "en": "Bugfix: time_to_empty is not defined"
+  },
+  "3.6.49": {
+    "en": "Removed sliders in GUI for P1 phases"
   }
 }
