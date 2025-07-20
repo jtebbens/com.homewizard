@@ -535,5 +535,8 @@
   },
   "3.6.49": {
     "en": "Removed sliders in GUI for P1 phases"
+  },
+  "3.6.50": {
+    "en": "Removed sliders from Homeycompose"
   }
 }
