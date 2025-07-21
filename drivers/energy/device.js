@@ -45,7 +45,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
     }
 
-    // Check if polling interval is set in settings, if not set default to 10 seconds
+    // Check if number of phases is set, if not default to 1
     if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null)) {
       settings.number_of_phases = 1; // Default to 1 phase
       await this.setSettings({
@@ -63,10 +63,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
     }
     
-    if (settings.number_of_phases == 1) {
-        await this.removeCapability('net_load_phase2').catch(this.error);
-        await this.removeCapability('net_load_phase3').catch(this.error);  
-    }
+    await this.removeCapability('net_load_phase1').catch(this.error);
+    await this.removeCapability('net_load_phase2').catch(this.error);
+    await this.removeCapability('net_load_phase3').catch(this.error);  
+    
 
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
@@ -362,9 +362,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           if (data.active_current_l1_a !== undefined) {
             const tempCurrentPhase1Load = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
 
-            await updateCapability(this, 'net_load_phase1', Math.abs(data.active_current_l1_a));
             await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load);
-            await this.setCapabilityOptions('net_load_phase1', { max: settings.phase_capacity }).catch(this.error);
 
             if (tempCurrentPhase1Load > 95) {
               await this.homey.notifications.createNotification({
@@ -376,6 +374,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           // Rewrite Voltage/Amp Phase 2 and 3 (this part will be skipped if netgrid is only 1 phase)
 
           if ((data.active_power_l2_w !== undefined) || (data.active_power_l3_w !== undefined)) {
+
+              if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null) || (settings.number_of_phases == 1)) {
+                await this.setSettings({
+                  // Update settings in Homey
+                  number_of_phases: 3,
+                });
+              }
 
               // voltage_sag_l2_count - Net L2 dip
               await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count);
@@ -404,9 +409,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               if (data.active_current_l2_a !== undefined) {
                 const tempCurrentPhase2Load = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
 
-                await updateCapability(this, 'net_load_phase2', Math.abs(data.active_current_l2_a));
+                
                 await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load);
-                await this.setCapabilityOptions('net_load_phase2', { max: settings.phase_capacity }).catch(this.error);
+                
 
                 if (tempCurrentPhase2Load > 95) {
                   await this.homey.notifications.createNotification({
@@ -421,9 +426,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               if (data.active_current_l3_a !== undefined) {
                 const tempCurrentPhase3Load = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
 
-                await updateCapability(this, 'net_load_phase3', Math.abs(data.active_current_l3_a));
+                
                 await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load);
-                await this.setCapabilityOptions('net_load_phase3', { max: settings.phase_capacity }).catch(this.error);
+                
 
                 if (tempCurrentPhase3Load > 95) {
                   await this.homey.notifications.createNotification({
