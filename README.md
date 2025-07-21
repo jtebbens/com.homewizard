@@ -7,13 +7,14 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 v3.7.0
 * Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta)
 
-v3.6.47
+v3.6.50
 * Added phase monitoring
 * Adjust settings to align with your energy grid
 * Bugfix for sliders when gridconnection has 3 phases
 * Actual gas meter measurement added (5min poll pending on smartmeter)
 * P1apiv1 - Code refactored (clean up repetive lines)
 * Extra plugin battery trigger cards (state change, time to full, time to empty)
+* Removed sliders in GUI to show grid load per phases
 
 v3.6.40
 * Cloud connection setting made available for P1, Sockets, Watermeter, SDM230, SDM630

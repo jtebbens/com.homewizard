@@ -131,6 +131,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
+    let time_to_empty = null;
+    let time_to_full  = null;
+    const BATTERY_CAPACITY_WH = 2470;
+
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -192,8 +196,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       // Battery is charging
       if (data.power_w > 10) {
-        let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
-        let time_to_full = (2470 - current_battery_capacity) / data.power_w * 60;
+        let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
+        time_to_full = (BATTERY_CAPACITY_WH - current_battery_capacity) / data.power_w * 60;
         await this.setCapabilityValue('time_to_full', Math.round(time_to_full) ).catch(this.error);
         // Set time_to_empty to 0 as we are charging
         await this.setCapabilityValue('time_to_empty', 0).catch(this.error);
@@ -201,8 +205,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       // Battery is discharging
       if (data.power_w < -10) {
-        let current_battery_capacity = 2470 * (data.state_of_charge_pct / 100);
-        let time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
+        let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
+        time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
         await this.setCapabilityValue('time_to_empty', Math.round(time_to_empty)).catch(this.error);
         
         // Set time_to_full to 0 as we are discharging
@@ -220,7 +224,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       }
 
       // Battery time-to-empty below threshold (e.g. 30 min)
-      if (time_to_empty < 30 && this.previousTimeToEmpty >= 30) {
+      if (typeof time_to_empty === 'number' && time_to_empty < 30 && this.previousTimeToEmpty >= 30) {
         this.previousTimeToEmpty = time_to_empty;
         this.homey.flow
           .getDeviceTriggerCard('battery_low_runtime')
@@ -229,6 +233,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       } else {
         this.previousTimeToEmpty = time_to_empty;
       }
+
 
       // Battery fully charged
       if (data.state_of_charge_pct === 100 && this.previousStateOfCharge < 100) {
