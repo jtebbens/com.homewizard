@@ -541,5 +541,8 @@
   },
   "3.6.51": {
     "en": "Bugfix: added hasCapability test to avoid error upon untest removal capability"
+  },
+  "3.6.52": {
+    "en": "Firmware 12.5.2RC3 issue with removal or hascapabilty checks. "
   }
 }
