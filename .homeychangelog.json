@@ -538,5 +538,8 @@
   },
   "3.6.50": {
     "en": "Removed sliders from Homeycompose"
+  },
+  "3.6.51": {
+    "en": "Bugfix: added hasCapability test to avoid error upon untest removal capability"
   }
 }
