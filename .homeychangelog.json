@@ -544,5 +544,8 @@
   },
   "3.6.52": {
     "en": "Firmware 12.5.2RC3 issue with removal or hascapabilty checks. "
+  },
+  "3.6.53": {
+    "en": "Attempt to fix reported user problem after firmware 12.5.2"
   }
 }
