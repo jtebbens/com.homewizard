@@ -550,5 +550,8 @@
   },
   "3.6.54": {
     "en": "Another attempt to resolve user reported problem"
+  },
+  "3.6.55": {
+    "en": "Typo fix for 3rd phase removal slider. Many const - let replacements in code (attempt to lower memory footprint)"
   }
 }
