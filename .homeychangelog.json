@@ -538,5 +538,10 @@
   },
   "3.6.50": {
     "en": "Removed sliders from Homeycompose"
+  },
+  "3.6.56": {
+    "en": "Removed trigger from P1apiv2"
   }
+  
+  
 }
