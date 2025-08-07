@@ -492,7 +492,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
          //trigger battery_mode_change
        
         if (batteryMode.mode != this.getStoreValue('last_battery_mode')) {
-          this.flowTriggerTariff(this, { battery_mode_changed: batteryMode.mode });
+          //this.flowTriggerTariff(this, { battery_mode_changed: batteryMode.mode });
           this.setStoreValue('last_battery_mode', batteryMode.mode).catch(this.error);
         }
 
