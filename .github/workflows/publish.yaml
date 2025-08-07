@@ -1,4 +1,4 @@
-name: Wrong
+name: Publish Homey app
 on:
   workflow_dispatch:
 
