@@ -24,6 +24,10 @@
     "rssi",
     "connection_error"
   ],
+  "energy": {
+    "meterPowerImportedCapability": "meter_power.consumed.t1",
+    "meterPowerExportedCapability": "meter_power.produced.t1"
+  },
   "capabilitiesOptions": {
     "measure_power": {
       "title": {

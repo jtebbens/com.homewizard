@@ -106,11 +106,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       let res = await fetch(`${this.url}/data`);
 
       if (!res || !res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
-        // try again
-        res = await fetch(`${this.url}/data`);
-        if (!res || !res.ok)
-        { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
       }
 
       const data = await res.json();

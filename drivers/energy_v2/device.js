@@ -136,38 +136,19 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         });
     })
 
+    //this.flowTriggerBatteryMode
+    
+    this._flowTriggerBatteryMode = this.homey.flow.getDeviceTriggerCard('battery_mode_changed');
+
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     this._triggerFlowPrevious = {};
 
-    /*
-    const ActionCardChangeBatteryMode = this.homey.flow.getActionCard('change-battery-mode')
-    ActionCardChangeBatteryMode.registerRunListener(async (args, state) => {
-      this.log('ChangeBatteryModeCard change to:', args);
+    
+  }
 
-      if (!this.url) {
-        return false;
-      }
-
-      return new Promise(async (resolve, reject) => {
-        try {
-          const response = await api.setMode(this.url, this.token, args.mode); // NEEDS TESTING WITH P1 and BATTERY
-  
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
-  
-          console.log('Set mode:', response.mode);
-          return resolve(response.mode); // Returns the mode value
-        } catch (error) {
-          console.log('Error set mode:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
-        }
-      });
-    });
-    */
-
+  flowTriggerBatteryMode(device, tokens) {
+    this._flowTriggerBatteryMode.trigger(device, tokens).catch(this.error);
   }
 
   onDeleted() {
@@ -316,6 +297,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
 
       const data = await api.getMeasurement(this.url, this.token);
+      new Promise((resolve) => setTimeout(resolve, 2000)); // wait 2s for next fetch (P1) as 2 calls might affect P1 query response
       const systemInfo = await api.getSystem(this.url, this.token);
 
       const setCapabilityPromises = [];
@@ -475,11 +457,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
 
 
-      let result = await api.getInfo(this.url, this.token); // this.url is empty
+      //let result = await api.getInfo(this.url, this.token); // this.url is empty
       //console.log('getInfo Result:', result);
 
-      if (result && isVersionGreater(result.firmware_version, "6.0203")) {
+      //if (result && isVersionGreater(result.firmware_version, "6.0203")) {
         // Battery mode here?
+        new Promise((resolve) => setTimeout(resolve, 1000)); // wait 1s
         const batteryMode = await api.getMode(this.url, this.token);
         
         if (settings.mode !== batteryMode.mode) {
@@ -492,7 +475,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
          //trigger battery_mode_change
        
         if (batteryMode.mode != this.getStoreValue('last_battery_mode')) {
-          this.flowTriggerTariff(this, { battery_mode_changed: batteryMode.mode });
+          this.flowTriggerBatteryMode(this, { battery_mode_changed: batteryMode.mode });
           this.setStoreValue('last_battery_mode', batteryMode.mode).catch(this.error);
         }
 
@@ -531,7 +514,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           }
         }
 
-      }
+      //}
 
 
     })
