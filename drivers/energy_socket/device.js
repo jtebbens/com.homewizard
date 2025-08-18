@@ -264,8 +264,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       const data = await res.json();
 
-      const offset_socket = this.getSetting('offset_socket');
-
       if (!this.hasCapability('onoff')) {
         await this.addCapability('onoff').catch(this.error);
       }

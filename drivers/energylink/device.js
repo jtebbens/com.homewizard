@@ -336,7 +336,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
         }
         // Execute all promises concurrently using Promise.all()
-        await Promise.all(promises);
+        await Promise.allSettled(promises);
 
       } else {
         this.setUnavailable('No Energylink data available');

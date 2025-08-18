@@ -32,6 +32,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     await updateCapability(this, 'connection_error', 'No errors');
 
+    if (this.hasCapability('net_load_phase1')) {
+         await this.removeCapability('net_load_phase1').catch(this.error);
+    }
+
+    if (this.hasCapability('net_load_phase2')) {
+      await this.removeCapability('net_load_phase2').catch(this.error);
+    }
+
+    if (this.hasCapability('net_load_phase3')) {
+      await this.removeCapability('net_load_phase3').catch(this.error);
+    }
+
     const settings = await this.getSettings();
     console.log('Polling settings for P1 apiv1: ',settings.polling_interval);
 
@@ -63,12 +75,6 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
     }
     
-    await this.removeCapability('net_load_phase1').catch(this.error);
-    await this.removeCapability('net_load_phase2').catch(this.error);
-    await this.removeCapability('net_load_phase3').catch(this.error);  
-    
-
-
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     /*  if (Homey2023) {
@@ -185,24 +191,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
 
         const settings = this.getSettings();
-
-      
+             
         // Check if polling interval is running)
         if (!this.onPollInterval) {
           this.log('Polling interval is not running, starting now...');
           this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
         }
 
-        let res = await fetch(`${this.url}/data`);
+        const res = await fetch(`${this.url}/data`);
 
           if (!res || !res.ok) {
-            await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
-            // try again
-            res = await fetch(`${this.url}/data`);
-            if (!res || !res.ok)
-            { 
+             
               await updateCapability(this, 'connection_error', res.code);
-              throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+              throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
           }
 
           const data = await res.json();
