@@ -1,0 +1,23 @@
+name: Publish Homey App (old)
+
+on:
+  push:
+    branches:
+      - main  # Replace with the branch you want to trigger the publish
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Publish to Homey
+      uses: jtebbens/homey-app-publish@v1
+      with:
+        HOMEY_CLI_TOKEN: ${{ secrets.HOMEY_CLI_TOKEN }}
