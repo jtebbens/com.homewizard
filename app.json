@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.55",
+  "version": "3.6.57",
   "platforms": [
     "local"
   ],
@@ -1992,6 +1992,10 @@
         "rssi",
         "connection_error"
       ],
+      "energy": {
+        "meterPowerImportedCapability": "meter_power.consumed.t1",
+        "meterPowerExportedCapability": "meter_power.produced.t1"
+      },
       "capabilitiesOptions": {
         "measure_power": {
           "title": {

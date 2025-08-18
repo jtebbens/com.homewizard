@@ -553,5 +553,8 @@
   },
   "3.6.55": {
     "en": "Typo fix for 3rd phase removal slider. Many const - let replacements in code (attempt to lower memory footprint)"
+  },
+  "3.6.57": {
+    "en": "Code cleanup, Energyv2 tweak, Energy socket Battery tracking (imported/exported energy for dashboard)"
   }
 }
