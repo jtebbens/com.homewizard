@@ -21,8 +21,4 @@ After connecting your HomeWizard Base Station, you can add the following devices
 - Rainmeter
 - Wattcher (the alternative "Energylink" which only tracks usage from the blinking led)
 - Motion sensor
-<<<<<<< HEAD
 - Smoke sensor
-=======
-- Smoke sensor
->>>>>>> 6800dcbbcf5b93856755d4e3ff0016a145937f24
