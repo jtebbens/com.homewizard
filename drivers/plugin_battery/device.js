@@ -131,8 +131,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
-    const time_to_empty = null;
-    const time_to_full  = null;
+    let time_to_empty = null;
+    let time_to_full  = null;
     const BATTERY_CAPACITY_WH = 2470;
 
     // Check if polling interval is running)
