@@ -559,7 +559,8 @@
   },
   "3.6.58": {
     "en": "Const / let assignment error for plugin battery (fix)"
+  },
+  "3.6.59": {
+    "en": "SDM230 (p1 mode), Daily usage kwh for APIv2 P1, Adjustment P1 for Norway specific P1's"
   }
-  
-  
 }
