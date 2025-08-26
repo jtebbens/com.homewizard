@@ -565,5 +565,8 @@
   },
   "3.6.60": {
     "en": "HTTP - keepalive agent added to P1, sockets, APIv2 devices"
+  },
+  "3.6.61": {
+    "en": "Increase keepAlive default time from 1000ms to 15000 or 35000ms as polling cycle is more than 1sec."
   }
 }
