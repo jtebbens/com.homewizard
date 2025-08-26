@@ -28,6 +28,7 @@ async function updateCapability(device, capability, value) {
 
 const agent = new http.Agent({
   keepAlive: true,
+  keepAliveMsecs: 35000,
   timeout: 60000 // optional: socket timeout in ms
 });
 

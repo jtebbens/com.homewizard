@@ -7,6 +7,7 @@ const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
+  keepAliveMsecs: 15000,
   timeout: 60000 // optional: socket timeout in ms
 });
 

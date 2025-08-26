@@ -9,8 +9,10 @@ module.exports = (function() {
 
   const http_agent = new https.Agent({
     keepAlive: true,
+    keepAliveMsecs: 30000,
     rejectUnauthorized: false,
-    maxSockets: 5 //limit concurrent sockets per host
+    maxSockets: 2,
+    maxFreeSockets: 1
   });
 
   /**
