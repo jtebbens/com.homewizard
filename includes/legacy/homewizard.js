@@ -4,9 +4,16 @@ const fetch = require('node-fetch');
 const Homey = require('homey');
 const AbortController = require('abort-controller');
 
+const http = require('http');
+
 const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+
+const agent = new http.Agent({
+  keepAlive: true,
+  timeout: 60000 // optional: socket timeout
+});
 
 module.exports = (function() {
   const homewizard = {};
@@ -78,7 +85,17 @@ module.exports = (function() {
           console.log('Fetch request timed out');
         }, timeoutDuration);
 
-        const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, { signal, follow: 0, redirect: 'error' });
+  //      const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, { signal, follow: 0, redirect: 'error' });
+
+        const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, {
+          agent,
+          signal,
+          follow: 0,
+          redirect: 'error',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
         clearTimeout(timeout); // Clear the timeout since the fetch request completed
 

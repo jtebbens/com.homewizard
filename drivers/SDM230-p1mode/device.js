@@ -2,13 +2,6 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-const http = require('http');
-
-const agent = new http.Agent({
-  keepAlive: true,
-  timeout: 60000 // optional: socket timeout in ms
-});
-
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
@@ -110,16 +103,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
     Promise.resolve().then(async () => {
 
-      //let res = await fetch(`${this.url}/data`);
-
-      const res = await fetch(`${this.url}/data`, {
-          agent,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-      });
-
+      let res = await fetch(`${this.url}/data`);
 
       if (!res || !res.ok) {
         throw new Error(res ? res.statusText : 'Unknown error during fetch'); 

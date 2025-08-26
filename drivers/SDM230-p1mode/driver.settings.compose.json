@@ -1,0 +1,18 @@
+[
+  {
+  "id": "polling_interval",
+  "type": "number",
+  "label": { "en": "Polling interval" },
+  "value": 10,
+  "min": 1,
+  "unit": { "en": "s" }
+  },
+  {
+    "id": "cloud",
+    "type": "number",
+    "label": { "en": "Cloud connection 1=on 0=off",
+                "nl": "Cloud verbinding 1=actief 0=uit"
+   },
+    "value": 1
+  }
+]
