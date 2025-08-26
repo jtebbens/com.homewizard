@@ -562,5 +562,8 @@
   },
   "3.6.59": {
     "en": "SDM230 (p1 mode), Daily usage kwh for APIv2 P1, Adjustment P1 for Norway specific P1's"
+  },
+  "3.6.60": {
+    "en": "HTTP - keepalive agent added to P1, sockets, APIv2 devices"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.59",
+  "version": "3.6.60",
   "platforms": [
     "local"
   ],
@@ -2270,6 +2270,7 @@
         "voltage_swell_l2",
         "voltage_swell_l3",
         "rssi",
+        "wifi_quality",
         "measure_power.battery_group_power_w",
         "measure_power.battery_group_target_power_w",
         "measure_power.battery_group_max_consumption_w",
@@ -3873,6 +3874,18 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/shower.svg"
+    },
+    "wifi_quality": {
+      "type": "string",
+      "title": {
+        "en": "WiFi State",
+        "nl": "WiFi Status"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/rssi.svg"
     }
   },
   "discovery": {
