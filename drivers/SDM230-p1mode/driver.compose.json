@@ -1,28 +1,22 @@
 {
   "name": {
-    "en": "kWh Meter (3 phase) P1 mode"
+    "en": "kWh Meter (1 phase) P1 mode"
   },
   "images": {
-    "large": "drivers/SDM630-p1mode/assets/images/large.png",
-    "small": "drivers/SDM630-p1mode/assets/images/small.png"
+    "large": "drivers/SDM230-p1mode/assets/images/large.png",
+    "small": "drivers/SDM230-p1mode/assets/images/small.png"
   },
   "class": "socket",
-  "discovery": "SDM630",
+  "discovery": "SDM230",
   "platforms": [
     "local"
   ],
   "capabilities": [
     "measure_power",
     "meter_power",
+    "measure_current",
     "measure_power.l1",
-    "measure_power.l2",
-    "measure_power.l3",
-    "measure_current.l1",
-    "measure_current.l2",
-    "measure_current.l3",
-    "measure_voltage.l1",
-    "measure_voltage.l2",
-    "measure_voltage.l3",
+    "measure_voltage",
     "rssi"
   ],
   "energy": {
@@ -35,24 +29,13 @@
       "title": {
         "en": "Current usage",
         "nl": "Huidig vermogen"
-      }
+      },
+      "insights": true
     },
     "measure_power.l1": {
       "title": {
         "en": "Current usage phase 1",
         "nl": "Huidig gebruik fase 1"
-      }
-    },
-    "measure_power.l2": {
-      "title": {
-        "en": "Current usage phase 2",
-        "nl": "Huidig gebruik fase 2"
-      }
-    },
-    "measure_power.l3": {
-      "title": {
-        "en": "Current usage phase 3",
-        "nl": "Huidig gebruik fase 3"
       }
     },
     "meter_power.consumed.t1": {
@@ -74,43 +57,22 @@
       "title": {
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh"
-      }
+      },
+      "insights": true
     },
-    "measure_current.l1": {
+    "measure_voltage": {
       "title": {
-        "en": "Current Amp phase 1",
-        "nl": "Huidig Amp fase 1"
-      }
+        "en": "Current Voltage",
+        "nl": "Huidig Voltage"
+      },
+      "insights": true
     },
-    "measure_current.l2": {
+    "measure_current": {
       "title": {
-        "en": "Current Amp phase 2",
-        "nl": "Huidig Amp fase 2"
-      }
-    },
-    "measure_current.l3": {
-      "title": {
-        "en": "Current Amp phase 3",
-        "nl": "Huidig Amp fase 3"
-      }
-    },
-    "measure_voltage.l1": {
-      "title": {
-        "en": "Current Voltage phase 1",
-        "nl": "Huidig Voltage fase 1"
-      }
-    },
-    "measure_voltage.l2": {
-      "title": {
-        "en": "Current Voltage phase 2",
-        "nl": "Huidig Voltage fase 2"
-      }
-    },
-    "measure_voltage.l3": {
-      "title": {
-        "en": "Current Voltage phase 3",
-        "nl": "Huidig Voltage fase 3"
-      }
+        "en": "Current Amp",
+        "nl": "Huidig Amp"
+      },
+      "insights": true
     }
   },
   "pair": [

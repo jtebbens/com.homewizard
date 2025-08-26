@@ -3,6 +3,13 @@
 const Homey = require('homey');
 const fetch = require('node-fetch');
 
+const http = require('http');
+
+const agent = new http.Agent({
+  keepAlive: true,
+  timeout: 60000 // optional: socket timeout in ms
+});
+
 //const POLL_INTERVAL = 1000 * 10; // 10 seconds
 
 module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
@@ -113,14 +120,19 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     if (!this.url) return;
 
     Promise.resolve().then(async () => {
-      let res = await fetch(`${this.url}/data`);
+
+      //let res = await fetch(`${this.url}/data`);
+
+      const res = await fetch(`${this.url}/data`, {
+          agent,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+      });
 
       if (!res || !res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
-        // try again
-        res = await fetch(`${this.url}/data`);
-        if (!res || !res.ok)
-        { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+         throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
       }
 
       const data = await res.json();

@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
+const http = require('http');
 
 //const POLL_INTERVAL = 1000; // 1000 ms = 1 second
 
@@ -25,6 +26,10 @@ async function updateCapability(device, capability, value) {
         }
 }
 
+const agent = new http.Agent({
+  keepAlive: true,
+  timeout: 60000 // optional: socket timeout in ms
+});
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
@@ -198,7 +203,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
         }
 
-        const res = await fetch(`${this.url}/data`);
+        //const res = await fetch(`${this.url}/data`);
+        const res = await fetch(`${this.url}/data`, {
+            agent,
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
 
           if (!res || !res.ok) {
              
@@ -365,16 +377,16 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
             await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load);
 
-            if (tempCurrentPhase1Load > 95) {
+            if (tempCurrentPhase1Load > 97) {
               await this.homey.notifications.createNotification({
-                excerpt: `Fase 1 overbelast 95%`
+                excerpt: `Phase 1 overloaded 97%`
               });
             }
           }
 
           // Rewrite Voltage/Amp Phase 2 and 3 (this part will be skipped if netgrid is only 1 phase)
 
-          if ((data.active_power_l2_w !== undefined) || (data.active_power_l3_w !== undefined)) {
+          if ((data.active_current_l2_a !== undefined) || (data.active_current_l3_a !== undefined)) {
 
               if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null) || (settings.number_of_phases == 1)) {
                 await this.setSettings({
@@ -414,9 +426,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load);
                 
 
-                if (tempCurrentPhase2Load > 95) {
+                if (tempCurrentPhase2Load > 97) {
                   await this.homey.notifications.createNotification({
-                    excerpt: `Fase 2 overbelast 95%`
+                    excerpt: `Phase 2 overloaded 97%`
                   });
                 }
               }
@@ -431,9 +443,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load);
                 
 
-                if (tempCurrentPhase3Load > 95) {
+                if (tempCurrentPhase3Load > 97) {
                   await this.homey.notifications.createNotification({
-                    excerpt: `Fase 3 overbelast 95%`
+                    excerpt: `Phase 3 overloaded 97%`
                   });
                 }
               }

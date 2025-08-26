@@ -27,6 +27,7 @@
     "meter_power.produced.t4",
     "meter_power.consumed",
     "meter_power.returned",
+    "meter_power.daily",
     "measure_power.l1",
     "measure_power.l2",
     "measure_power.l3",
@@ -47,6 +48,7 @@
     "voltage_swell_l2",
     "voltage_swell_l3",
     "rssi",
+    "wifi_quality",
     "measure_power.battery_group_power_w",
     "measure_power.battery_group_target_power_w",
     "measure_power.battery_group_max_consumption_w",
@@ -213,6 +215,13 @@
       "title": {
         "en": "Sum returned",
         "nl": "Som teruglevering"
+      }
+    },
+    "meter_power.daily": {
+      "decimals": 3,
+      "title": {
+        "en": "Daily usage",
+        "nl": "Dag verbruik"
       }
     },
     "meter_power": {

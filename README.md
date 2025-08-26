@@ -7,7 +7,13 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 v3.7.0
 * Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta)
 
-v3.6.57
+v3.6.60
+* SDM230 (p1 mode added)
+* P1apiv2 - added daily usage kwh (resets at nightime) (does not cater for directly consumed solar-used energy as this does not pass the smart meter at all)
+* Adjustment for P1 to look at Amp datapoints to detect 3-Phased devices in Norway
+* HTTP - keepalive agent added to P1, sockets, APIv2 devices
+
+v3.6.58
 * Bugfix that was caused by experimental firmware Homey 12.5.2RC3 and slider capability that could not be removed
 * Added energy flags for sockets so they can trace imported/exported energy in Homey Energy Dashboard (Home Batteries connected via sockets)
 * Code cleanup

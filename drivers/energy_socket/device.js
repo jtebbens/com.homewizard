@@ -2,9 +2,16 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
+const http = require('http');
+
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds
+
+const agent = new http.Agent({
+  keepAlive: true,
+  timeout: 60000 // optional: socket timeout in ms
+});
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
@@ -150,7 +157,15 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
     Promise.resolve().then(async () => {
       //
-      let res = await fetch(`${this.url}/data`);
+      //let res = await fetch(`${this.url}/data`);
+
+      const res = await fetch(`${this.url}/data`, {
+          agent,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
       if (!res || !res.ok) {
         await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
