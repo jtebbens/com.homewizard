@@ -12,6 +12,7 @@ const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 const agent = new http.Agent({
   keepAlive: true,
+  keepAliveMsecs: 30000,
   timeout: 60000 // optional: socket timeout
 });
 
