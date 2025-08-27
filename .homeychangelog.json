@@ -571,5 +571,8 @@
   },
   "3.6.62": {
     "en": "AbortController added (apiv2) and Wifi quality capability"
+  },
+  "3.6.63": {
+    "en": "Bugfix: P1, missed setAvailable(). Code didn’t recover from a failed P1 connection and kept P1 offline"
   }
 }
