@@ -568,5 +568,8 @@
   },
   "3.6.61": {
     "en": "Increase keepAlive default time from 1000ms to 15000 or 35000ms as polling cycle is more than 1sec."
+  },
+  "3.6.62": {
+    "en": "AbortController added (apiv2) and Wifi quality capability"
   }
 }
