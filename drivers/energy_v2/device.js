@@ -350,8 +350,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       /// / Total consumption
       await updateCapability(this, 'meter_power.consumed', data.energy_import_kwh);
-      await updateCapability(this, 'meter_power.consumed.t3', data.energy_import_t1_kwh);
-      await updateCapability(this, 'meter_power.consumed.t3', data.energy_import_t2_kwh);
+      await updateCapability(this, 'meter_power.consumed.t1', data.energy_import_t1_kwh);
+      await updateCapability(this, 'meter_power.consumed.t2', data.energy_import_t2_kwh);
       await updateCapability(this, 'meter_power.consumed.t3', data.energy_import_t3_kwh);
       await updateCapability(this, 'meter_power.consumed.t4', data.energy_import_t4_kwh);
 
@@ -630,7 +630,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       });
   }
 
-  onSettings(MySettings) {
+  async onSettings(MySettings) {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling
@@ -646,7 +646,11 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       MySettings.oldSettings.mode !== MySettings.newSettings.mode
     ) {
       this.log('Mode for Plugin Battery via P1 advanced settings changed to:', MySettings.newSettings.mode);
-      api.setMode(this.url, this.token, MySettings.newSettings.mode);
+      try {
+        await api.setMode(this.url, this.token, MySettings.newSettings.mode);
+      } catch (err) {
+        this.log('Failed to set mode:', err.message);
+      }
     }
 
     if ('cloud' in MySettings.oldSettings &&
@@ -654,16 +658,19 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     ) {
       this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
 
-      if (MySettings.newSettings.cloud == 1) {
-         api.setCloudOn(this.url, this.token);  
-      }
-      else if (MySettings.newSettings.cloud == 0) {
-        api.setCloudOff(this.url, this.token);
-      }
+      try {
+            if (MySettings.newSettings.cloud == 1) {
+              await api.setCloudOn(this.url, this.token);
+            } else if (MySettings.newSettings.cloud == 0) {
+              await api.setCloudOff(this.url, this.token);
+            }
+          } catch (err) {
+            this.log('Failed to update cloud setting:', err.message);
+        }
     }
 
     
-    // return true;
+    return true;
   }
 
 };

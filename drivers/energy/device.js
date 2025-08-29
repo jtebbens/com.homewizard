@@ -26,9 +26,18 @@ async function updateCapability(device, capability, value) {
         }
 }
 
+function getWifiQuality(percent) {
+  if (percent >= 80) return 'Excellent / Strong';
+  if (percent >= 60) return 'Moderate';
+  if (percent >= 40) return 'Weak';
+  if (percent >= 20) return 'Poor';
+  if (percent > 0) return 'Unusable';
+  return 'Unusable';
+}
+
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 35000,
+  keepAliveMsecs: 15000,
   timeout: 60000 // optional: socket timeout in ms
 });
 
@@ -191,7 +200,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!this.url) return;
 
     try {
-
+      
         const now = new Date();
         const tz = this.homey.clock.getTimezone();
         const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
@@ -288,6 +297,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           await updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh);
           await updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh);
 
+          const wifiQuality = await getWifiQuality(data.wifi_strength);
+          await updateCapability(this, 'wifi_quality', wifiQuality);
 
           // Trigger tariff
           if (data.active_tariff != this.getStoreValue('last_active_tariff')) {
@@ -481,6 +492,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           // Execute all promises concurrently using Promise.all()
           //await Promise.all(promises);
           //await Promise.allSettled(promises);
+
+          this.setAvailable().catch(this.error);
 
       } catch (err) {
       this.error(err);

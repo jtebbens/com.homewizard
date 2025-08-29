@@ -44,6 +44,7 @@
     "measure_voltage.l3",
     "measure_power.montly_power_peak",
     "rssi",
+    "wifi_quality",
     "tariff",
     "long_power_fail_count",
     "voltage_sag_l1",
