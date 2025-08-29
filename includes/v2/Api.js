@@ -3,16 +3,42 @@
 const fetch = require('node-fetch');
 const https = require('https');
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`HTTP ${res.status}: ${res.statusText} - ${body}`);
+    }
+
+    return res.json();
+  } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      throw new Error('Request timed out');
+    }
+    throw new Error(`Network error: ${err.message}`);
+  }
+}
+
 module.exports = (function() {
 
   const api = {};
 
   const http_agent = new https.Agent({
     keepAlive: true,
-    keepAliveMsecs: 30000,
+    keepAliveMsecs: 15000,
     rejectUnauthorized: false,
-    maxSockets: 2,
-    maxFreeSockets: 1
+    maxSockets: 3,
+    maxFreeSockets: 2
   });
 
   /**
@@ -56,25 +82,40 @@ module.exports = (function() {
    *
    * @returns {Promise<data>} A promise that resolves with the response data when the request is successful.
    */
-  api.getMeasurement = async function(url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
 
-    const res = await fetch(`${url}/api/measurement`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      agent: http_agent, // Ignore SSL errors
-    }).catch(((err) => {
-      throw new Error(`Network error: ${err.message}`);
-    }));
+    api.getMeasurement = async function(url, token) {
+      if (!url) throw new Error('URL is not defined');
+      if (!token) throw new Error('Token is not defined');
 
-    // Check if the response is ok (status code 200-299)
-    if (!res.ok) { throw new Error(res.statusText); }
+      try {
+        return await fetchWithTimeout(`${url}/api/measurement`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          agent: http_agent
+        });
+      } catch (err) {
+        throw new Error(`getMeasurement failed: ${err.message}`);
+      }
+    };
 
-    return res.json();
-  };
+    api.getSystem = async function(url, token) {
+      if (!url) throw new Error('URL is not defined');
+      if (!token) throw new Error('Token is not defined');
 
+      try {
+        return await fetchWithTimeout(`${url}/api/system`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          agent: http_agent
+        });
+      } catch (err) {
+        throw new Error(`getSystem failed: ${err.message}`);
+      }
+    };
+
+    /*
   api.getSystem = async function(url, token) {
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
@@ -87,12 +128,12 @@ module.exports = (function() {
     }).catch(((err) => {
       throw new Error(`Network error: ${err.message}`);
     }));
-
     // Check if the response is ok (status code 200-299)
     if (!res.ok) { throw new Error(res.statusText); }
 
     return res.json();
   };
+  */
 
   api.getInfo = async function(url, token) {
     if (!url) throw new Error('URL is not defined');
@@ -117,6 +158,23 @@ module.exports = (function() {
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
 
+    try {
+      return await fetchWithTimeout(`${url}/api/batteries`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        agent: http_agent
+      });
+    } catch (err) {
+      throw new Error(`getMode failed: ${err.message}`);
+    }
+  };
+
+  /*
+  api.getMode = async function(url, token) {
+    if (!url) throw new Error('URL is not defined');
+    if (!token) throw new Error('Token is not defined');
+
     const res = await fetch(`${url}/api/batteries`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -131,9 +189,10 @@ module.exports = (function() {
 
     return res.json();
   };
+  */
 
-api.setMode = async function(url, token, selectedMode) {
-    let retries = 3;
+  api.setMode = async function(url, token, selectedMode) {
+    let retries = 4;
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
     if (!selectedMode) throw new Error('Mode is not defined');
@@ -142,25 +201,25 @@ api.setMode = async function(url, token, selectedMode) {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
         try {
-            const res = await fetch(`${url}/api/batteries`, {
-                method: 'PUT',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-                agent: http_agent, // Ignore SSL errors
-                body: JSON.stringify({ mode: selectedMode })
-            });
+            const res = await fetchWithTimeout(`${url}/api/batteries`, {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              agent: http_agent,
+              body: JSON.stringify({ mode: selectedMode })
+            }, 5000); // 5s timeout
 
             if (!res.ok) {
-                throw new Error(`HTTP error! Status: ${res.status}`);
+                const errorText = await res.text();
+                throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
             }
-
             return res.json();
         } catch (err) {
             console.warn(`Attempt ${attempt} failed: ${err.message}`);
 
             if (attempt < retries) {
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Simple 2s delay before retry
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Simple 3s delay before retry
             } else {
                 throw new Error("Fetch failed: P1 Connection problem, max retries reached");
             }

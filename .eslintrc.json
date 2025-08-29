@@ -24,6 +24,7 @@
     "no-unused-vars": "off",
     "node/no-unsupported-features/node-builtins": "off",
     "radix": "off",
-    "valid-typeof": "off"
+    "valid-typeof": "off",
+    "linebreak-style":0
   }
 }
