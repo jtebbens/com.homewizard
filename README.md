@@ -5,7 +5,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
 v3.7.0
-* Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta)
+* Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta).
+
+v3.6.64
+* Fall back url setting upon initial poll for P1, sockets, kwh's, watermeter. (older Homey Pro;s 2016/2019 seems to struggle with mDNS updates)
+* Removed retry code for Homewizard legacy devices (changed to keeping http agent session open / keepAlive)
+NOTE: First time running this version will fail as the url setting is empty so it should improve onwards.
 
 v3.6.63
 * SDM230 (p1 mode added)

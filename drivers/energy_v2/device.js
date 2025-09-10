@@ -306,14 +306,20 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   onPoll() {
     
+
+    const settings = this.getSettings();
+
     // URL may be undefined if the device is not available
-    if (!this.url) return;
+    if (!this.url) {
+          if (settings.url) {
+            this.url = settings.url;
+          }
+          else return;
+    }
     
     const now = new Date();
     const tz = this.homey.clock.getTimezone();
     const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-
-    const settings = this.getSettings();
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {
@@ -618,6 +624,14 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         }
 
       //}
+      if (this.url != settings.url) {
+            this.log("P1apiv2 - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+      }
+
 
 
     })

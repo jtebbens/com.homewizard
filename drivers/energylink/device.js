@@ -5,8 +5,8 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 
 const debug = false;
 
-let refreshIntervalId;
-let refreshIntervalIdReadings;
+var refreshIntervalId;
+var refreshIntervalIdReadings;
 
 class HomeWizardEnergylink extends Homey.Device {
 
@@ -73,11 +73,11 @@ class HomeWizardEnergylink extends Homey.Device {
   startPolling() {
 
     // Clear interval
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
+    if (refreshIntervalId) {
+      clearInterval(refreshIntervalId);
     }
 
-    this.refreshIntervalId = setInterval(() => {
+    refreshIntervalId = setInterval(() => {
 
       if (debug) { console.log('--Start Energylink Polling-- '); }
       if (debug) { console.log(this.getSetting('homewizard_id')); }
@@ -90,11 +90,11 @@ class HomeWizardEnergylink extends Homey.Device {
     }, 1000 * 20);
 
     // Clear interval
-    if (this.refreshIntervalIdReadings) {
-      clearInterval(this.refreshIntervalIdReadings);
+    if (refreshIntervalIdReadings) {
+      clearInterval(refreshIntervalIdReadings);
     }
 
-    this.refreshIntervalIdReadings = setInterval(() => {
+    refreshIntervalIdReadings = setInterval(() => {
       if (debug) { console.log('--Start Energylink Readings Polling-- '); }
 
       if (this.getSetting('homewizard_id') !== undefined) {
@@ -403,8 +403,8 @@ class HomeWizardEnergylink extends Homey.Device {
 
   onDeleted() {
 
-    clearInterval(this.refreshIntervalId);
-    clearInterval(this.refreshIntervalIdReadings);
+    clearInterval(refreshIntervalId);
+    clearInterval(refreshIntervalIdReadings);
     console.log('--Stopped Polling--');
     console.log(`deleted: ${JSON.stringify(this)}`);
 

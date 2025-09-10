@@ -38,7 +38,8 @@ function getWifiQuality(percent) {
 const agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 15000,
-  timeout: 60000 // optional: socket timeout in ms
+  maxSockets: 10,
+  maxFreeSockets: 5
 });
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
@@ -126,24 +127,25 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  async onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryLastSeenChanged(discoveryResult) {
+  async onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.setAvailable();
-    this.onPoll();
+    this.log('onDiscoveryLastSeenChanged');
+    await this.setAvailable();
+    await this.onPoll();
   }
 
   async setCloudOn() {
@@ -197,7 +199,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
  async onPoll() {
-    if (!this.url) return;
+
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
 
     try {
       
@@ -205,7 +215,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         const tz = this.homey.clock.getTimezone();
         const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
 
-        const settings = this.getSettings();
+        const homey_lang = this.homey.i18n.getLanguage();
              
         // Check if polling interval is running)
         if (!this.onPollInterval) {
@@ -390,9 +400,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
             await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load);
 
             if (tempCurrentPhase1Load > 97) {
-              await this.homey.notifications.createNotification({
-                excerpt: `Phase 1 overloaded 97%`
-              });
+                if (homey_lang == "nl") {
+                    await this.homey.notifications.createNotification({
+                    excerpt: `Fase 1 overbelast 97%`
+                });  
+                } else {
+                    await this.homey.notifications.createNotification({
+                    excerpt: `Phase 1 overloaded 97%`
+                    });
+                }
             }
           }
 
@@ -439,9 +455,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 
 
                 if (tempCurrentPhase2Load > 97) {
-                  await this.homey.notifications.createNotification({
+                  if (homey_lang == "nl") {
+                    await this.homey.notifications.createNotification({
+                    excerpt: `Fase 2 overbelast 97%`
+                });  
+                } else {
+                    await this.homey.notifications.createNotification({
                     excerpt: `Phase 2 overloaded 97%`
-                  });
+                    });
+                }
                 }
               }
 
@@ -456,9 +478,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 
 
                 if (tempCurrentPhase3Load > 97) {
-                  await this.homey.notifications.createNotification({
+                  if (homey_lang == "nl") {
+                    await this.homey.notifications.createNotification({
+                    excerpt: `Fase 3 overbelast 97%`
+                });  
+                } else {
+                    await this.homey.notifications.createNotification({
                     excerpt: `Phase 3 overloaded 97%`
-                  });
+                    });
+                }
                 }
               }
 
@@ -495,6 +523,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           this.setAvailable().catch(this.error);
 
+          if (this.url != settings.url) {
+            this.log("P1 - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+          }
+
       } catch (err) {
       this.error(err);
       await this.setUnavailable(err);
@@ -502,7 +538,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
     // Catch offset updates
-    onSettings(MySettings) {
+    async onSettings(MySettings) {
       this.log('Settings updated');
       this.log('Settings:', MySettings);
       // Update interval polling
