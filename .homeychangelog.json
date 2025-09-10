@@ -574,5 +574,8 @@
   },
   "3.6.63": {
     "en": "Bugfix: P1, missed setAvailable(). Code didn’t recover from a failed P1 connection and kept P1 offline"
+  },
+  "3.6.64": {
+    "en": "Fallback url for mDNS problems. Homewizard Legacy devices removed retry code, changed to keepAlive agent mode"
   }
 }
