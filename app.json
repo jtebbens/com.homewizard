@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.63",
+  "version": "3.6.64",
   "platforms": [
     "local"
   ],
@@ -2085,6 +2085,14 @@
             "nl": "Cloud verbinding 1=actief 0=uit"
           },
           "value": 1
+        },
+        {
+          "id": "url",
+          "type": "text",
+          "label": {
+            "en": "url",
+            "nl": "url"
+          }
         }
       ]
     },
