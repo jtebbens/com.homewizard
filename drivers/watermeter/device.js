@@ -118,7 +118,15 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       }
 
   onPoll() {
-    if (!this.url) return;
+
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
 
     Promise.resolve().then(async () => {
 
@@ -179,6 +187,15 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       { await this.setCapabilityValue('meter_water', temp_total_liter_m3).catch(this.error); }
       if (this.getCapabilityValue('rssi') != data.wifi_strength)
       { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
+
+      if (this.url != settings.url) {
+            this.log("Watermeter - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+      }
+
 
     })
       .then(() => {

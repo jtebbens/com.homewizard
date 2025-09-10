@@ -90,7 +90,15 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
   }
 
   onPoll() {
-    if (!this.url) return;
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
+
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {
@@ -256,6 +264,15 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
       else if ((data.active_current_l3_a == undefined) && (this.hasCapability('measure_current.l3'))) {
         await this.removeCapability('measure_current.l3').catch(this.error);
       }
+
+      if (this.url != settings.url) {
+            this.log("SDM630 - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+      }
+
 
     })
       .then(() => {

@@ -6,7 +6,9 @@ const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
-  timeout: 60000 // optional: socket timeout in ms
+  keepAliveMsecs: 15000,
+  maxSockets: 10,
+  maxFreeSockets: 5
 });
 
 
@@ -100,7 +102,15 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   }
 
   onPoll() {
-    if (!this.url) return;
+
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {
@@ -236,6 +246,14 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       }
       else if ((data.active_current_a == undefined) && (this.hasCapability('measure_current'))) {
         await this.removeCapability('measure_current').catch(this.error);
+      }
+
+      if (this.url != settings.url) {
+            this.log("SDM230 - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
       }
 
     })

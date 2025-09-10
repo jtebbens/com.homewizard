@@ -6,7 +6,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 // const { ManagerDrivers } = require('homey');
 // const driver = ManagerDrivers.getDriver('thermometer');
 
-let refreshIntervalId;
+var refreshIntervalId;
 const devices = {};
 // const thermometers = {};
 const debug = false;
@@ -33,12 +33,12 @@ class HomeWizardThermometer extends Homey.Device {
   startPolling(devices) {
 
     // Clear interval
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
+    if (refreshIntervalId) {
+      clearInterval(refreshIntervalId);
     }
 
     // Start polling for thermometer
-    this.refreshIntervalId = setInterval(() => {
+    refreshIntervalId = setInterval(() => {
       if (debug) { console.log('--Start Thermometer Polling-- '); }
 
       this.getStatus(devices);

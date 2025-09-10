@@ -10,7 +10,9 @@ const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds
 
 const agent = new http.Agent({
   keepAlive: true,
-  timeout: 60000 // optional: socket timeout in ms
+  keepAliveMsecs: 15000,
+  maxSockets: 10,
+  maxFreeSockets: 5
 });
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
@@ -66,24 +68,24 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  async onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryLastSeenChanged(discoveryResult) {
+  async onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
-    this.setAvailable();
+    await this.onPoll();
+    await this.setAvailable();
   }
 
   async onRequest(body) {
@@ -152,8 +154,16 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
 
 
-  onPoll() {
-    if (!this.url) return;
+  async onPoll() {
+
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
 
     Promise.resolve().then(async () => {
       //
@@ -168,7 +178,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
 
       if (!res || !res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
+        await new Promise((resolve) => setTimeout(resolve, 10000)); // wait 10s to avoid false reports due to bad wifi from users
         // try again
         res = await fetch(`${this.url}/data`);
         if (!res || !res.ok)
@@ -254,6 +264,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         await this.removeCapability('measure_voltage').catch(this.error);
       }
 
+      if (this.url != settings.url) {
+            this.log("Socket - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+      }
+
     })
       .then(() => {
         this.setAvailable().catch(this.error);
@@ -309,7 +327,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings) {
+  async onSettings(oldSettings, newSettings) {
     this.log('Settings updated');
     this.log('oldSettings', oldSettings);
 

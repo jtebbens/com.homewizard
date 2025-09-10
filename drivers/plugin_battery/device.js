@@ -129,7 +129,14 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   onPoll() {
 
     // URL may be undefined if the device is not available
-    if (!this.url) return;
+    const settings = this.getSettings();
+
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      }
+      else return;
+    }
 
     let time_to_empty = null;
     let time_to_full  = null;
@@ -246,7 +253,13 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         this.previousStateOfCharge = data.state_of_charge_pct;
       }
 
-
+      if (this.url != settings.url) {
+            this.log("SDM630 - Updating settings url");
+            await this.setSettings({
+                  // Update url settings
+                  url: this.url
+                });
+      }
 
     })
       .then(() => {
@@ -258,7 +271,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       });
   }
 
-  onSettings(MySettings) {
+  async onSettings(MySettings) {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling

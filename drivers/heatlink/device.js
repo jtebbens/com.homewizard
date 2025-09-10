@@ -5,7 +5,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 // const { ManagerDrivers } = require('homey');
 // const driver = ManagerDrivers.getDriver('heatlink');
 
-let refreshIntervalId;
+var refreshIntervalId;
 const devices = {};
 // var temperature;
 
@@ -63,12 +63,12 @@ class HomeWizardHeatlink extends Homey.Device {
   startPolling() {
 
     // Clear interval
-    if (this.refreshIntervalId) {
-      clearInterval(this.refreshIntervalId);
+    if (refreshIntervalId) {
+      clearInterval(refreshIntervalId);
     }
 
     // Start polling for thermometer
-    this.refreshIntervalId = setInterval(() => {
+    refreshIntervalId = setInterval(() => {
       if (debug) { console.log('--Start Heatlink Polling-- '); }
 
       this.getStatus();
@@ -174,7 +174,7 @@ class HomeWizardHeatlink extends Homey.Device {
     } else {
 		  console.log('HW ID not found');
 		  if (Object.keys(devices).length === 1) {
-        clearInterval(this.refreshIntervalId);
+        clearInterval(refreshIntervalId);
 		  }
     }
 	  }
