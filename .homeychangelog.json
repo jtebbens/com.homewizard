@@ -577,5 +577,8 @@
   },
   "3.6.64": {
     "en": "Fallback url for mDNS problems. Homewizard Legacy devices removed retry code, changed to keepAlive agent mode"
+  },
+  "3.6.65": {
+    "en": "Battery Group data removed from P1 after a fetch fail (bugfix)"
   }
 }
