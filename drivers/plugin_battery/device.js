@@ -16,6 +16,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousStateOfCharge = null;
 
     this.token = this.getStoreValue('token');
+    this.log('PIB Token:', this.token);
 
     const settings = await this.getSettings();
     console.log('Settings for Plugin Battery: ',settings.polling_interval);
@@ -254,7 +255,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       }
 
       if (this.url != settings.url) {
-            this.log("SDM630 - Updating settings url");
+            this.log("Plugin Battery - Updating settings url");
             await this.setSettings({
                   // Update url settings
                   url: this.url

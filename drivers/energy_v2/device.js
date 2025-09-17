@@ -43,7 +43,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 
     this.token = await this.getStoreValue('token');
-    this.log('Token:', this.token);
+    this.log('P1 Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -589,7 +589,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         }
 
 
-        if (batteryMode.power_w) {
+        if ((batteryMode.power_w) && ((batteryMode.battery_count != 0))){
           //this.log('Battery power:', batteryMode.power_w);
           await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w).catch(this.error);
         }
@@ -606,7 +606,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w).catch(this.error);
         }
         
-        if (!batteryMode.power_w) {
+        if ((!batteryMode.power_w) && (batteryMode.battery_count == 0) && (!batteryMode.mode)) {
           // If power_w is not available, we assume the battery is not connected
           // Remove the capabilities
           if (this.hasCapability('measure_power.battery_group_power_w')) {
