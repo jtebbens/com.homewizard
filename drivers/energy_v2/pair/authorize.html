@@ -10,10 +10,10 @@
 <script type="application/javascript">
 
   // Start the authorization process
-  Homey.emit("try_authorize", 30000);
+  Homey.emit("try_authorize", 60000);
 
   document.getElementById('authorize-button').addEventListener('click', async () => {
-    Homey.emit("try_authorize", 30000);
+    Homey.emit("try_authorize", 60000);
 
     // Add is-loading and is-disabled classes, set button text to 'Waiting'
     document.getElementById('authorize-button').classList.add('is-loading');
