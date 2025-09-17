@@ -580,5 +580,8 @@
   },
   "3.6.65": {
     "en": "Battery Group data removed from P1 after a fetch fail (bugfix)"
+  },
+  "3.6.66": {
+    "en": "APIv2 increased timeout authorization, Language update notification P1 warning phase overload"
   }
 }
