@@ -583,5 +583,8 @@
   },
   "3.6.66": {
     "en": "APIv2 increased timeout authorization, Language update notification P1 warning phase overload"
+  },
+  "3.6.67": {
+    "en": "Enforcing interval clears on various devices when interval is reset"
   }
 }
