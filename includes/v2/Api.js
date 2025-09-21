@@ -12,7 +12,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
       ...options,
       signal: controller.signal
     });
-    clearTimeout(timeout);
 
     if (!res.ok) {
       const body = await res.text();
@@ -21,11 +20,12 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 
     return res.json();
   } catch (err) {
-    clearTimeout(timeout);
     if (err.name === 'AbortError') {
       throw new Error('Request timed out');
     }
     throw new Error(`Network error: ${err.message}`);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

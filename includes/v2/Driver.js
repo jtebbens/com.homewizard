@@ -92,61 +92,61 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
     // This event is triggered when the authorize screen is shown or when the user presses retry action
     session.setHandler('try_authorize', async (duration) => {
       try {
+        // Check if any previous timers are running and stop them
+        if (this.interval !== null) {
+          clearInterval(this.interval);
+          clearTimeout(this.timeout);
+        }
 
-      // Check if any previous timers are running and stop them
-      if (this.interval !== null) {
-        clearInterval(this.interval);
-        clearInterval(this.timeout);
+        // Try obtaining the token at intervals
+        this.interval = setInterval(async () => {
+          console.debug('Checking for button press...');
+
+          let token = null;
+
+          try {
+            token = await requestToken(this.selectedDevice.store.address);
+          }
+          catch (error) {
+            console.error('Error while trying to get token: ', error);
+            try {
+              await session.emit('error', error.message);
+            } catch (e) {
+              console.error('Pair session already closed:', e.message);
+            }
+            clearInterval(this.interval);
+            clearTimeout(this.timeout);
+            return;
+          }
+
+          if (token) {
+            clearInterval(this.interval);
+            clearTimeout(this.timeout);
+            this.selectedDevice.store.token = token;
+            try {
+              await session.emit('create', this.selectedDevice);
+            } catch (e) {
+              console.error('Pair session already closed:', e.message);
+            }
+          }
+        }, 2000); // Check every 2 seconds
+
+        // Stop trying after a certain duration (use setTimeout, not setInterval)
+        this.timeout = setTimeout(async () => {
+          clearInterval(this.interval);
+          clearTimeout(this.timeout);
+          console.log('Timeout!');
+          try {
+            await session.emit('authorize_timeout');
+          } catch (e) {
+            console.error('Pair session already closed:', e.message);
+          }
+        }, duration);
+
+      } catch (error) {
+        console.log('Pair Session Timeout error', error);
       }
-
-      // Try obtaining the token at intervals
-      this.interval = setInterval(async () => {
-        console.debug('Checking for button press...');
-
-        let token = null;
-
-        try {
-          token = await requestToken(this.selectedDevice.store.address);
-        }
-        catch (error) {
-          console.error('Error while trying to get token: ', error);
-          await session.emit('error', error.message); //timer - timeout issue  at Timeout._onTimeout (/app/includes/v2/Driver.js:112:19)
-
-          // Stop trying
-          clearInterval(this.interval);
-          clearInterval(this.timeout);
-
-          return;
-        }
-
-        if (token) {
-
-          // We are done trying, stop timers
-          clearInterval(this.interval);
-          clearInterval(this.timeout);
-
-          this.selectedDevice.store.token = token;
-          await session.emit('create', this.selectedDevice);
-        }
-      }, 2000); // Check every 2 seconds
-
-      // Stop trying after a certain duration
-      // This is to make sure we don't keep trying forever, as we do not get a notification that
-      // the flow has been stopped by the user
-      this.timeout = setInterval(async () => {
-        clearInterval(this.interval);
-        clearInterval(this.timeout);
-        console.log('Timeout!');
-        await session.emit('authorize_timeout'); //Timeout._onTimeout (/app/includes/v2/Driver.js:140:23)
-      }, duration);
-
-    }
-    catch (error) {
-      console.log('Pair Session Timeout error', error); // at Timeout.<anonymous> (/app/includes/v2/Driver.js:139:17)
-    }
-  }
-
-  );
+    });
   }
 
 };

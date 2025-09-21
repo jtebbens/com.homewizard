@@ -33,6 +33,10 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       });
     }
 
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+    }
+
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       
     
@@ -45,6 +49,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
@@ -101,9 +106,9 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  onPoll() {
+  async onPoll() {
 
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -112,14 +117,14 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       else return;
     }
 
+    try {
     // Check if polling interval is running)
-    if (!this.onPollInterval) {
-      this.log('Polling interval is not running, starting now...');
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
-    }
+      if (!this.onPollInterval) {
+        this.log('Polling interval is not running, starting now...');
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      }
 
-    Promise.resolve().then(async () => {
-
+    
       //let res = await fetch(`${this.url}/data`);
 
       const res = await fetch(`${this.url}/data`, {
@@ -256,14 +261,11 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
                 });
       }
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
+    this.setAvailable().catch(this.error);
+    } catch (err) {
+      this.error(err);
+      this.setUnavailable(err).catch(this.error);
+    }
   }
 
   onSettings(MySettings) {

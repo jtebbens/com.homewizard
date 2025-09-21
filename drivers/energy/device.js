@@ -4,9 +4,7 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const http = require('http');
 
-//const POLL_INTERVAL = 1000; // 1000 ms = 1 second
-
-//const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+this._isPolling = false;
 
 async function updateCapability(device, capability, value) {
         if (value === null || value === undefined) {
@@ -62,6 +60,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     const settings = await this.getSettings();
     console.log('Polling settings for P1 apiv1: ',settings.polling_interval);
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -91,7 +90,6 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
     }
     
-    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     /*  if (Homey2023) {
       this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL * settings.interval);  // 1 seconds interval for newer models
@@ -127,25 +125,25 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryLastSeenChanged');
-    await this.setAvailable();
-    await this.onPoll();
+    this.setAvailable();
+    this.onPoll();
   }
 
   async setCloudOn() {
@@ -200,7 +198,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
  async onPoll() {
 
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -208,6 +206,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
       else return;
     }
+
+    if (this._isPolling) {
+      this.log('Previous poll still running, skipping this interval.');
+      return;
+    }
+    this._isPolling = true;
 
     try {
       
@@ -535,6 +539,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       this.error(err);
       await this.setUnavailable(err);
     }
+    finally {
+      this._isPolling = false;
+    }
   }
 
     // Catch offset updates
@@ -549,7 +556,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
         clearInterval(this.onPollInterval);
         //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+        const settings = await this.getSettings();
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       }
 
       if ('cloud' in MySettings.oldSettings &&

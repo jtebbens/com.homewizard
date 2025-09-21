@@ -25,13 +25,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
     await this.setCapabilityValue('connection_error', 'No errors');
 
-    const custom_interval = this.getSetting('offset_polling');
+    const custom_interval = await this.getSetting('offset_polling');
 
-    console.log('offset_polling', custom_interval); // print the value of offset_polling
+    this.log('offset_polling', custom_interval); // print the value of offset_polling
     
     this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
-
-
     
     this.onPollStateInterval = setInterval(this.onPollState.bind(this), POLL_STATE_INTERVAL);
 
@@ -68,24 +66,24 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
-    await this.setAvailable();
+    this.onPoll();
+    this.setAvailable();
   }
 
   async onRequest(body) {
@@ -156,7 +154,15 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onPoll() {
 
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
+
+    // Check if polling interval is running
+    if (!this.onPollInterval) {
+      this.log('Socket - Polling interval is not running, starting now...');
+      // Clear any possible leftover interval just in case
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    }
 
     if (!this.url) {
       if (settings.url) {
@@ -279,7 +285,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       .catch((err) => {
         if (err.code === 'ECONNRESET') {
           // Handle the ECONNRESET error
-          console.log('Connection was reset');
+          console.log('Socket - Connection was reset');
         } else {
           this.error(err);
         }

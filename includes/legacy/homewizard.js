@@ -116,6 +116,8 @@ homewizard.callnew = async function(device_id, uri_part, callback) {
       console.log('Homewizard Legacy - Fetch request aborted');
     } else if (error.code === 'ECONNRESET') {
       console.log('Homewizard Legacy - Connection was reset');
+    } else if (['ENETUNREACH', 'EHOSTUNREACH', 'ETIMEDOUT'].includes(error.code)) {
+      console.log(`Homewizard Legacy - Network error: ${error.code}`);
     } else {
       console.error(`Homewizard Legacy - FETCH PROBLEM -> ${error}`);
     }

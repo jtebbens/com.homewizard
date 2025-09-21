@@ -43,13 +43,13 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 
     this.token = await this.getStoreValue('token');
-    this.log('P1 Token:', this.token);
+    console.log('P1 Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
     const settings = await this.getSettings();
-    console.log('Settings for P1 apiv2: ',settings.polling_interval);
+    this.log('Settings for P1 apiv2: ',settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
@@ -150,14 +150,14 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           const response = await api.setMode(this.url, this.token, 'standby');
 
           if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
+            this.log('set-battery-to-standby-mode : Invalid response, returning false');
             return resolve(false);
           }
 
-          console.log('Set mode to standby:', response.mode);
+          this.log('Set mode to standby:', response.mode);
           return resolve(response.mode); // Returns the mode value
         } catch (error) {
-          console.log('Error set mode to standby:', error);
+          this.error('Error set mode to standby:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
         });
@@ -304,11 +304,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     flow.trigger(this, { [flow_id]: value }).catch(this.error);
   }
 
-  onPoll() {
-    
-
-    const settings = this.getSettings();
-
+  async onPoll() {
+    const settings = await this.getSettings();
     // URL may be undefined if the device is not available
     if (!this.url) {
           if (settings.url) {
@@ -321,13 +318,13 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     const tz = this.homey.clock.getTimezone();
     const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
 
-    // Check if polling interval is running)
+    // Check if polling interval is running
     if (!this.onPollInterval) {
-      this.log('Polling interval is not running, starting now...');
+      this.log('P1apiv2 - Polling interval is not running, starting now...');
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
 
-    Promise.resolve().then(async () => {
+    try {
 
       if(!this.token) { 
         this.token = await this.getStoreValue('token');
@@ -480,7 +477,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       } else if (this.hasCapability('meter_gas')) {
         setCapabilityPromises.push(this.removeCapability('meter_gas').catch(this.error));
-        console.log('Removed meter as there is no gas meter in P1.');
+        this.log('Removed meter as there is no gas meter in P1.');
       }
 
       // At exactly midnight
@@ -544,8 +541,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
 
       // Execute all promises concurrently using Promise.all()
-      Promise.all(setCapabilityPromises);
-      Promise.all(triggerFlowPromises);
+      await Promise.all(setCapabilityPromises);
+      await Promise.all(triggerFlowPromises);
 
       /*
       // Function to check version
@@ -634,14 +631,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
+    
+    this.setAvailable().catch(this.error);
+    } catch (err) {
+      this.error(err);
+      this.setUnavailable(err).catch(this.error);
+    }
   }
 
   async onSettings(MySettings) {
