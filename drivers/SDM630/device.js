@@ -89,8 +89,8 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     }
   }
 
-  onPoll() {
-    const settings = this.getSettings();
+  async onPoll() {
+    const settings = await this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -103,7 +103,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
     Promise.resolve().then(async () => {

@@ -280,17 +280,17 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     flow.trigger(this, { [flow_id]: value }).catch(this.error);
   }
 
-  onPoll() {
+  async onPoll() {
 
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
     Promise.resolve().then(async () => {
@@ -300,7 +300,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
       }
 
       const data = await api.getMeasurement(this.url, this.token);
-      const systemInfo = await api.getSystem(this.url, this.token);
+      //const systemInfo = await api.getSystem(this.url, this.token);
 
       const setCapabilityPromises = [];
       const triggerFlowPromises = [];

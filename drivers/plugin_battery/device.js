@@ -15,22 +15,23 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousTimeToEmpty = null;
     this.previousStateOfCharge = null;
 
-    this.token = this.getStoreValue('token');
-    this.log('PIB Token:', this.token);
+    this.token = await this.getStoreValue('token');
+    console.log('PIB Token:', this.token);
 
-    const settings = await this.getSettings();
-    console.log('Settings for Plugin Battery: ',settings.polling_interval);
+    let settings = await this.getSettings();
+    this.log('Settings for Plugin Battery: ', settings.polling_interval);
 
 
-    // Check if polling interval is set in settings, if not set default to 10 seconds
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
-      settings.polling_interval = 10; // Default to 10 second if not set
-      await this.setSettings({
-        // Update settings in Homey
-        polling_interval: 10,
-      });
+      await this.setSettings({ polling_interval: 10 });
+      settings.polling_interval = 10; // update local variable
     }
 
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
+    
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
   }
@@ -127,10 +128,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     });
   }
 
-  onPoll() {
+  async onPoll() {
+    
+    try {
 
     // URL may be undefined if the device is not available
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -143,13 +146,13 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     let time_to_full  = null;
     const BATTERY_CAPACITY_WH = 2470;
 
-    // Check if polling interval is running)
-    if (!this.onPollInterval) {
-      this.log('Polling interval is not running, starting now...');
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
-    }
-
-    Promise.resolve().then(async () => {
+    // Check if polling interval is running
+      if (!this.onPollInterval) {
+        this.log('Polling interval is not running, starting now...');
+        // Clear any possible leftover interval just in case
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+      }
+          
 
       const data = await api.getMeasurement(this.url, this.token);
       const systemInfo = await api.getSystem(this.url, this.token);
@@ -262,18 +265,15 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
                 });
       }
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
+      this.setAvailable().catch(this.error);
+    } catch (err) {
+      this.error(err);
+      this.setUnavailable(err).catch(this.error);
+    }
   }
 
   async onSettings(MySettings) {
-    this.log('Settings updated');
+    this.log('Plugin Battery Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling
     if (

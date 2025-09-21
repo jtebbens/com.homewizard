@@ -128,6 +128,12 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       else return;
     }
 
+    if (!this.onPollInterval) {
+        this.log('Watermeter - Polling interval is not running, starting now...');
+        // Clear any possible leftover interval just in case
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    }
+
     Promise.resolve().then(async () => {
 
       //let res = await fetch(`${this.url}/data`);

@@ -92,7 +92,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  onPoll() {
+  async onPoll() {
     if (!this.url) return;
 
     // Check if polling interval is running)
