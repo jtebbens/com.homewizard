@@ -586,5 +586,8 @@
   },
   "3.6.67": {
     "en": "Enforcing interval clears on various devices when interval is reset"
+  },
+  "3.6.68": {
+    "en": "Finetuning polling and capability during init phase of various drivers"
   }
 }
