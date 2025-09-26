@@ -589,5 +589,8 @@
   },
   "3.6.68": {
     "en": "Finetuning polling and capability during init phase of various drivers"
+  },
+  "3.6.69": {
+    "en": "Added more logging for diagnostic reports"
   }
 }
