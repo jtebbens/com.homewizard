@@ -592,5 +592,8 @@
   },
   "3.6.69": {
     "en": "Added more logging for diagnostic reports"
+  },
+  "3.6.70": {
+    "en": "Bugfix SDM230 solar parameter was undefined"
   }
 }
