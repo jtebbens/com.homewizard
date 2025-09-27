@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.70",
+  "version": "3.6.71",
   "platforms": [
     "local"
   ],
@@ -3022,7 +3022,8 @@
         "cycles",
         "rssi",
         "time_to_full",
-        "time_to_empty"
+        "time_to_empty",
+        "estimate_kwh"
       ],
       "energy": {
         "homeBattery": true,
@@ -3120,6 +3121,22 @@
           "units": {
             "en": "min",
             "nl": "min"
+          }
+        },
+        "estimate_kwh": {
+          "type": "number",
+          "title": {
+            "en": "Est. kWh in battery",
+            "nl": "Geschatte kWh in batterij"
+          },
+          "getable": true,
+          "setable": true,
+          "insights": true,
+          "uiComponent": "sensor",
+          "icon": "assets/tariff.svg",
+          "units": {
+            "en": "kWh",
+            "nl": "kWh"
           }
         }
       },
@@ -3563,6 +3580,22 @@
       "units": {
         "en": "cycles",
         "nl": "cycli"
+      }
+    },
+    "estimate_kwh": {
+      "type": "number",
+      "title": {
+        "en": "Estimate kWh in battery",
+        "nl": "Geschatte kWh in batterij"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "assets/tariff.svg",
+      "units": {
+        "en": "kWh",
+        "nl": "kWh"
       }
     },
     "identify": {
