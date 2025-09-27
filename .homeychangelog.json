@@ -595,5 +595,8 @@
   },
   "3.6.70": {
     "en": "Bugfix SDM230 solar parameter was undefined"
+  },
+  "3.6.71": {
+    "en": "Added an estimate charge available in plugin battery value"
   }
 }
