@@ -598,5 +598,8 @@
   },
   "3.6.71": {
     "en": "Added an estimate charge available in plugin battery value"
+  },
+  "3.6.72": {
+    "en": "More try/catch code to avoid any crashes on Homewizard Legacy main unit getStatus fail (Device not found)"
   }
 }
