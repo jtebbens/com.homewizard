@@ -36,6 +36,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 

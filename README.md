@@ -7,6 +7,17 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 v3.7.0
 * Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta).
 
+v3.6.72
+* More try/catch code to avoid any crashes on Homewizard Legacy main unit getStatus fail (Device not found)
+* Fine tune "estimated kwh" plugin battery calculation based on user feedback
+
+v3.6.71
+* Finetuning polling and capability during init phase of various drivers
+* Added more logging to support diagnostic reports
+* Bugfix SDM230 solar parameter was undefined 
+* Added an estimate charge available in plugin battery value
+* Extra code checking for Homewizard Legacy (getStatus function) when there is a connection failure/device not found
+
 v3.6.67
 * Enforcing interval clears on various devices when interval is reset
 * try_authorize handler bugfix (interval / timeout) app crash logs

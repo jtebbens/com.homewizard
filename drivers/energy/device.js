@@ -4,8 +4,15 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const http = require('http');
 
-this._isPolling = false;
-
+/**
+ * Helper function to add, remove or update a capability
+ *
+ * @async
+ * @param {*} device 
+ * @param {*} capability 
+ * @param {*} value 
+ * @returns {*} 
+ */
 async function updateCapability(device, capability, value) {
         if (value === null || value === undefined) {
           if (device.hasCapability(capability)) {
@@ -24,7 +31,14 @@ async function updateCapability(device, capability, value) {
         }
 }
 
-function getWifiQuality(percent) {
+/**
+ * Helper function to determine WiFi quality based on RSSI percentage
+ *
+ * @async
+ * @param {*} percent 
+ * @returns {unknown} 
+ */
+async function getWifiQuality(percent) {
   if (percent >= 80) return 'Excellent / Strong';
   if (percent >= 60) return 'Moderate';
   if (percent >= 40) return 'Weak';
@@ -33,6 +47,11 @@ function getWifiQuality(percent) {
   return 'Unusable';
 }
 
+// http.agent options to improve performance
+// KeepAlive to true to reuse connections
+// KeepAliveMsecs to 15 seconds to keep connections alive for 15 seconds
+// maxSockets to 10 to limit the number of concurrent sockets
+// maxFreeSockets to 5 to limit the number of free sockets
 const agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 15000,
@@ -59,18 +78,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
 
     const settings = await this.getSettings();
-    console.log('Polling settings for P1 apiv1: ',settings.polling_interval);
-    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-
-
-    // Check if polling interval is set in settings, if not set default to 10 seconds
-    if ((settings.polling_interval === undefined) || (settings.polling_interval === null) || (settings.polling_interval == 0)) {
-      settings.polling_interval = 10; // Default to 10 second if not set or 0
-      await this.setSettings({
-        // Update settings in Homey
-        polling_interval: 10,
-      });
+    // ... set defaults if needed ...
+    if (!settings.polling_interval) {
+      settings.polling_interval = 10;
+      await this.setSettings({ polling_interval: 10 });
     }
+    this.log('Polling settings for P1 apiv1: ',settings.polling_interval);
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     // Check if number of phases is set, if not default to 1
     if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null)) {
@@ -89,15 +103,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         phase_capacity: 40,
       });
     }
-    
 
-    /*  if (Homey2023) {
-      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL * settings.interval);  // 1 seconds interval for newer models
-    } else {
-      this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL*10);  // 10 seconds interval for older/slower models 
-    }
-    */
-
+    // Initialize flow triggers
     this._flowTriggerTariff = this.homey.flow.getDeviceTriggerCard('tariff_changed');
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
     this._flowTriggerExport = this.homey.flow.getDeviceTriggerCard('export_changed');
@@ -122,15 +129,42 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.onPoll();
+  
+  /**
+   * Handles a newly discovered device and starts polling.
+   *
+   * @async
+   * @param {*} discoveryResult - The result from device discovery, containing address, port, and TXT record.
+   * @returns {Promise<void>}
+   */
+  async onDiscoveryAvailable(discoveryResult) {
+    try {
+      // Validate discovery result
+      if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
+        throw new Error('Invalid discovery result: missing address, port, or path');
+      }
+
+      // Construct device URL
+      this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+      this.log(`Discovered device URL: ${this.url}`);
+
+      // Start polling the device
+      await this.onPoll();
+    } catch (err) {
+      this.log(`Discovery failed: ${err.message}`);
+    }
   }
 
+  
+  /**
+   * Handles mDNS address changes by updating the device URL and polling.
+   *
+   * @param {*} discoveryResult 
+   */
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
@@ -146,75 +180,89 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.onPoll();
   }
 
+  // Function to enable Cloud mode on the device
   async setCloudOn() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/system`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: true })
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: true })
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during setCloudOn');
+    }
 
-    if (!res.ok)
-    { 
-      await this.setCapabilityValue('connection_error',res.code);
-      throw new Error(res.statusText); 
+    if (!res || !res.ok) {
+      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
 
-
+  // Function to disable Cloud mode on the device
   async setCloudOff() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/system`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: false })
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: false })
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during setCloudOff');
+    }
 
-    if (!res.ok)
-    { 
-      //await this.setCapabilityValue('connection_error',res.code);
-      await updateCapability(this, 'connection_error', res.code);
-      throw new Error(res.statusText); 
+    if (!res || !res.ok) {
+      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
 
   async onRequest(body) {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/state`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/state`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+    });
+    } catch (err) {
+      this.error(err);
+      await updateCapability(this, 'connection_error', 'fetch failed');
+      throw new Error('Network error during onRequest');
+    }
 
-    if (!res.ok)
-    { 
-      await updateCapability(this, 'connection_error', res.code);
-      throw new Error(res.statusText); 
+    if (!res || !res.ok) {
+      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
 
  async onPoll() {
 
-    const settings = await this.getSettings();
+    let settings = await this.getSettings();
+
+    // Array to hold all update promises
+    const promises = [];
 
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
       }
       else return;
+      this.log("No URL found for P1apiv1, please check your device settings.");
     }
 
-    if (this._isPolling) {
-      this.log('Previous poll still running, skipping this interval.');
-      return;
-    }
-    this._isPolling = true;
-
-    try {
-      
+    Promise.resolve().then(async () => {
+        // Get current time in the timezone of Homey
         const now = new Date();
         const tz = this.homey.clock.getTimezone();
         const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
@@ -269,14 +317,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
             if (prevReadingTimeStamp == null) {
               await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp);
             }
-
+            // Calculate gas usage delta
             if (data.total_gas_m3 != null && prevReadingTimeStamp !== data.gas_timestamp) {
               const prevReading = await this.getStoreValue('gasmeter_previous_reading');
 
               if (prevReading != null) {
                 const gasDelta = data.total_gas_m3 - prevReading;
                 if (gasDelta >= 0) {
-                  await updateCapability(this, 'measure_gas', gasDelta);
+                  promises.push((updateCapability(this, 'measure_gas', gasDelta)).catch(this.error));
                 }
               }
 
@@ -290,7 +338,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           const meterStart = await this.getStoreValue('meter_start_day');
           if (meterStart != null && data.total_power_import_kwh != null) {
             const dailyImport = data.total_power_import_kwh - meterStart;
-            await updateCapability(this, 'meter_power.daily', dailyImport);
+            promises.push((updateCapability(this, 'meter_power.daily', dailyImport)).catch(this.error));
           }
 
           // Update the capability meter_gas.daily
@@ -299,20 +347,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
             ? data.total_gas_m3 - gasStart
             : null;
 
-          await updateCapability(this, 'meter_gas.daily', gasDiff);
+          promises.push((updateCapability(this, 'meter_gas.daily', gasDiff)).catch(this.error));
 
           // Save export data check if capabilities are present first
-          await updateCapability(this, 'measure_power', data.active_power_w);
-          //await updateCapability(this, 'measure_power.active_power_w', null);
-          await updateCapability(this, 'rssi', data.wifi_strength);
-          await updateCapability(this, 'tariff', data.active_tariff);
-          await updateCapability(this, 'identify', 'identify'); // or another placeholder value if needed
-          await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
-          await updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh);
-          await updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh);
+          promises.push((updateCapability(this, 'measure_power', data.active_power_w)).catch(this.error));
+          promises.push((updateCapability(this, 'rssi', data.wifi_strength)).catch(this.error));
+          promises.push((updateCapability(this, 'tariff', data.active_tariff)).catch(this.error));
+          promises.push((updateCapability(this, 'identify', 'identify')).catch(this.error)); // or another placeholder value if needed
+          promises.push((updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh)).catch(this.error));
+          promises.push((updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh)).catch(this.error));
+          promises.push((updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh)).catch(this.error));
 
           const wifiQuality = await getWifiQuality(data.wifi_strength);
-          await updateCapability(this, 'wifi_quality', wifiQuality);
+          promises.push((updateCapability(this, 'wifi_quality', wifiQuality)).catch(this.error));
 
           // Trigger tariff
           if (data.active_tariff != this.getStoreValue('last_active_tariff')) {
@@ -320,22 +367,22 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
             this.setStoreValue('last_active_tariff', data.active_tariff).catch(this.error);
           }
 
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          promises.push((updateCapability(this, 'measure_current.l1', data.active_current_l1_a)).catch(this.error));
 
           // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
 
-          await updateCapability(this, 'meter_gas', data.total_gas_m3);
+          promises.push((updateCapability(this, 'meter_gas', data.total_gas_m3)).catch(this.error));
 
           // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-          await updateCapability(this, 'meter_power.produced.t1', 
+          promises.push((updateCapability(this, 'meter_power.produced.t1', 
             (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
             ? data.total_power_export_t1_kwh 
-            : null);
+            : null)).catch(this.error));
 
-          await updateCapability(this, 'meter_power.produced.t2', 
+          promises.push((updateCapability(this, 'meter_power.produced.t2', 
             (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
               ? data.total_power_export_t2_kwh 
-              : null);
+              : null)).catch(this.error));
 
 
           // aggregated meter for Power by the hour support
@@ -345,11 +392,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) - (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
               : data.total_power_import_kwh - data.total_power_export_kwh;
 
-          await updateCapability(this, 'meter_power', netImport);
+          promises.push((updateCapability(this, 'meter_power', netImport)).catch(this.error));
 
           // Also update returned power if firmware supports it
           if (data.total_power_import_kwh !== undefined) {
-            await updateCapability(this, 'meter_power.returned', data.total_power_export_kwh);
+            promises.push((updateCapability(this, 'meter_power.returned', data.total_power_export_kwh)).catch(this.error));
           }
 
 
@@ -366,42 +413,43 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           }
 
           // Belgium
-          await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w);
+          promises.push((updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w)).catch(this.error));
 
 
           // active_voltage_l1_v Some P1 meters do have voltage data
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
+          promises.push((updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v)).catch(this.error));
 
 
           // active_current_l1_a Some P1 meters do have amp data
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          promises.push((updateCapability(this, 'measure_current.l1', data.active_current_l1_a)).catch(this.error));
 
 
           // Power failure count - long_power_fail_count
-          await updateCapability(this, 'long_power_fail_count', data.long_power_fail_count);
+          promises.push((updateCapability(this, 'long_power_fail_count', data.long_power_fail_count)).catch(this.error));
 
 
           // voltage_sag_l1_count - Net L1 dip
-          await updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count);
+          promises.push((updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count)).catch(this.error));
 
           // voltage_swell_l1_count - Net L1 peak
-          await updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count);
+          promises.push((updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count)).catch(this.error));
 
           
 
           
           // Rewrite of L1/L2/L3 Voltage/Amp
-          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
+          promises.push((updateCapability(this, 'measure_power.l1', data.active_power_l1_w)).catch(this.error));
+          promises.push((updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v)).catch(this.error));
           
 
 
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          promises.push((updateCapability(this, 'measure_current.l1', data.active_current_l1_a)).catch(this.error));
 
+          //
           if (data.active_current_l1_a !== undefined) {
             const tempCurrentPhase1Load = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
 
-            await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load);
+            promises.push((updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load)).catch(this.error));
 
             if (tempCurrentPhase1Load > 97) {
                 if (homey_lang == "nl") {
@@ -421,6 +469,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           if ((data.active_current_l2_a !== undefined) || (data.active_current_l3_a !== undefined)) {
 
               if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null) || (settings.number_of_phases == 1)) {
+                settings.number_of_phases = 3; // Default to 3 phase
                 await this.setSettings({
                   // Update settings in Homey
                   number_of_phases: 3,
@@ -428,34 +477,34 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               }
 
               // voltage_sag_l2_count - Net L2 dip
-              await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count);
+              promises.push((updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count)).catch(this.error));
               
               // voltage_sag_l3_count - Net L3 dip
-              await updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count);
+              promises.push((updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count)).catch(this.error));
               
               // voltage_swell_l2_count - Net L2 peak
-              await updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count);
+              promises.push((updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count)).catch(this.error));
               
               // voltage_swell_l3_count - Net L3 peak
-              await updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count);
+              promises.push((updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count)).catch(this.error));
 
 
-              await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
-              await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
+              promises.push((updateCapability(this, 'measure_power.l2', data.active_power_l2_w)).catch(this.error));
+              promises.push((updateCapability(this, 'measure_power.l3', data.active_power_l3_w)).catch(this.error));
               
-              await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v);
-              await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v);
+              promises.push((updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v)).catch(this.error));
+              promises.push((updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v)).catch(this.error));
 
 
 
-              await updateCapability(this, 'measure_current.l2', data.active_current_l2_a);
+              promises.push((updateCapability(this, 'measure_current.l2', data.active_current_l2_a)).catch(this.error));
 
 
               if (data.active_current_l2_a !== undefined) {
                 const tempCurrentPhase2Load = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
 
                 
-                await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load);
+                promises.push((updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load)).catch(this.error));
                 
 
                 if (tempCurrentPhase2Load > 97) {
@@ -471,14 +520,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 }
               }
 
-              await updateCapability(this, 'measure_current.l3', data.active_current_l3_a);
+              promises.push((updateCapability(this, 'measure_current.l3', data.active_current_l3_a)).catch(this.error));
 
 
               if (data.active_current_l3_a !== undefined) {
                 const tempCurrentPhase3Load = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
 
                 
-                await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load);
+                promises.push((updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load)).catch(this.error));
                 
 
                 if (tempCurrentPhase3Load > 97) {
@@ -497,8 +546,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           } // END OF PHASE 2 and 3 Capabilities
 
           // T3 meter request import and export
-          await updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh);
-          await updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh);
+          promises.push((updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh)).catch(this.error));
+          promises.push((updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh)).catch(this.error));
 
 
           // Accessing external data
@@ -513,7 +562,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           }, null);
 
           // Update or remove meter_water capability
-          await updateCapability(this, 'meter_water', latestWaterData?.value ?? null);
+          promises.push((updateCapability(this, 'meter_water', latestWaterData?.value ?? null)).catch(this.error));
 
           // Log if the water meter capability was removed due to no valid source
           if (!latestWaterData && this.hasCapability('meter_water')) {
@@ -522,11 +571,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 
           // Execute all promises concurrently using Promise.all()
-          //await Promise.all(promises);
-          //await Promise.allSettled(promises);
-
-          this.setAvailable().catch(this.error);
-
+          
           if (this.url != settings.url) {
             this.log("P1 - Updating settings url");
             await this.setSettings({
@@ -535,13 +580,16 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
                 });
           }
 
-      } catch (err) {
-      this.error(err);
-      await this.setUnavailable(err);
-    }
-    finally {
-      this._isPolling = false;
-    }
+          await Promise.allSettled(promises);
+
+      })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch((err) => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      });
   }
 
     // Catch offset updates
@@ -566,10 +614,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
   
         if (MySettings.newSettings.cloud == 1) {
-            this.setCloudOn();  
+            await this.setCloudOn();  
         }
         else if (MySettings.newSettings.cloud == 0) {
-            this.setCloudOff();
+            await this.setCloudOff();
         }
       }
       // return true;
