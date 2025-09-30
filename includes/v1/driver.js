@@ -5,15 +5,22 @@ const fetch = require('node-fetch');
 
 module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
+  
+/**
+ * Discovers available devices and returns them for pairing.
+ *
+ * @async
+ * @returns {Promise<Array>} List of discovered devices with name and ID.
+ */
   async onPairListDevices() {
 
     const discoveryStrategy = this.getDiscoveryStrategy();
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Allow discovery process to settle 2seconds
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
     const numberOfDiscoveryResults = Object.keys(discoveryResults).length;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
+    
     const devices = [];
     await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
       try {
@@ -24,6 +31,7 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
         const data = await res.json();
 
+        // Construct device name
         let name = data.product_name;
         if (numberOfDiscoveryResults > 1) {
           name = `${data.product_name} (${data.serial})`;
@@ -36,9 +44,12 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
           },
         });
       } catch (err) {
-        this.error(discoveryResult.id, err);
+        this.error(`Discovery failed for ${discoveryResult.id}:`, err.message);
       }
     }));
+    if (devices.length === 0) {
+      throw new Error('No new devices found on the network.');
+    }
     return devices;
 
   }

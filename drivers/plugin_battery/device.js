@@ -3,7 +3,30 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
-//const POLL_INTERVAL = 1000 * 10; // 1 seconds
+// Estimate battery kWh capacity left based on load percentage, number of cycles and inverter efficiency
+// Nominal capacity is 2.768kWh, at 6000 cycles it is 80% capacity left
+// Linear degradation assumed
+// loadPct is the current state of charge in percent (0-100)
+// cycles is the number of charge/discharge cycles the battery has gone through
+
+function estimateBatteryKWh(loadPct, cycles, inverterEfficiency) {
+  const nominalCapacity = 2.8; // kWh
+  const referenceCycles = 6000;
+  const referenceDegradation = 0.8; // 80% capacity at 6000 cycles
+
+  // Linear degradation rate
+  const degradationRate = (1 - referenceDegradation) / referenceCycles;
+
+  // Degradation factor based on cycles
+  let degradationFactor = 1 - (degradationRate * cycles);
+  degradationFactor = Math.max(degradationFactor, 0);
+
+  // Final usable energy
+  if (inverterEfficiency < 0.75) inverterEfficiency = 0.75; // minimum 75% to avoid unrealistic low values based on cycles
+  const estimatedKWh = nominalCapacity * inverterEfficiency * (loadPct / 100) * degradationFactor;
+
+  return estimatedKWh;
+}
 
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
@@ -39,10 +62,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -119,6 +143,16 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       console.log(`created capability time_to_full for ${this.getName()}`);
     }
 
+    if (!this.hasCapability('rssi')) {
+    await this.addCapability('rssi').catch(this.error);
+    console.log(`created capability rssi for ${this.getName()}`);
+    }
+
+    if (!this.hasCapability('estimate_kwh')) {
+        await this.addCapability('estimate_kwh').catch(this.error);
+      console.log(`created capability estimate_kwh for ${this.getName()}`);
+   }
+
     
   }
 
@@ -130,7 +164,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
   async onPoll() {
     
-    try {
+    
 
     // URL may be undefined if the device is not available
     const settings = await this.getSettings();
@@ -153,6 +187,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       }
           
+      Promise.resolve().then(async () => {
 
       const data = await api.getMeasurement(this.url, this.token);
       const systemInfo = await api.getSystem(this.url, this.token);
@@ -176,10 +211,6 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       await this.setCapabilityValue('measure_battery', data.state_of_charge_pct).catch(this.error);
 
       // Wifi RSSI
-         
-      if (!this.hasCapability('rssi')) {
-      await this.addCapability('rssi').catch(this.error);
-      }
       await this.setCapabilityValue('rssi', systemInfo.wifi_rssi_db).catch(this.error);
 
       
@@ -265,12 +296,27 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
                 });
       }
 
-      this.setAvailable().catch(this.error);
-    } catch (err) {
-      this.error(err);
-      this.setUnavailable(err).catch(this.error);
-    }
+      // Calculate inverter efficiency based on total energy in and out
+      // This is a rough estimate as energy losses are not only in the inverter
+      // but also in the battery and other components.
+      // RTE (Round Trip Efficiency) = input energy / output energy 
+      const inverterEfficiency = data.energy_export_kwh / data.energy_import_kwh;
+      // Estimate kWh left in battery based on state_of_charge_pct, cycles and inverter efficiency
+      // Example: 2.768kWh nominal capacity, at 6000 cycles it is 80% capacity left
+      // Linear degradation assumed
+      const estimate_kwh = estimateBatteryKWh(data.state_of_charge_pct, data.cycles, inverterEfficiency);
+      await this.setCapabilityValue('estimate_kwh', Math.round(estimate_kwh * 100) / 100).catch(this.error);
+
+      })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch((err) => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      });
   }
+
 
   async onSettings(MySettings) {
     this.log('Plugin Battery Settings updated');

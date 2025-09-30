@@ -65,11 +65,20 @@ class HomeWizardDevice extends Homey.Device {
   }
 
 async getStatus(devices) {
-  try {
-    const homey_lang = this.homey.i18n.getLanguage();
+  const homey_lang = this.homey.i18n.getLanguage();
+  
+  for (const device of devices) {
+    let deviceName = 'Unknown';
+    let deviceId = 'Unknown';
 
-    for (const device of devices) {
-      const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
+    try {
+      if (!device || typeof device.getData !== 'function') continue;
+      
+      deviceId = device.getData().id;
+      deviceName = device.getName();
+      //const deviceId = device.getData().id;
+
+      const callback = await homewizard.getDeviceData(deviceId, 'preset');
       const currentPreset = await device.getStoreValue('preset');
 
       if (currentPreset === null || currentPreset !== callback) {
@@ -80,13 +89,18 @@ async getStatus(devices) {
 
         if (debug) this.log(`Preset updated: ${preset_text}`);
       }
-    }
+    } catch (deviceErr) {
+      //console.warn(`Device ${device.getName()} (${device.getData().id}) not found or failed:`, deviceErr.message);
+      console.warn(`Device ${deviceName} (${deviceId}) not found or failed:`, deviceErr.message);
 
-    await this.setAvailable();
-  } catch (err) {
-    console.error('Error in getStatus:', err);
-    await this.setUnavailable(err);
+      try {
+        await device.setUnavailable('Device not found or unreachable');
+      } catch (unavailableErr) {
+        this.log(`Failed to set device unavailable: ${unavailableErr.message}`);
+      }
+    }
   }
+  await this.setAvailable();
 }
 
   

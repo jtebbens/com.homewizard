@@ -181,10 +181,11 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -304,6 +305,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     flow.trigger(this, { [flow_id]: value }).catch(this.error);
   }
 
+  // The main polling function
   async onPoll() {
     const settings = await this.getSettings();
     // URL may be undefined if the device is not available
@@ -324,7 +326,9 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
 
-    try {
+    Promise.resolve().then(async () => {
+
+      const promises = [];
 
       if(!this.token) { 
         this.token = await this.getStoreValue('token');
@@ -342,31 +346,31 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       // Values
       /// / Power
-      await updateCapability(this, 'measure_power',  data.power_w);
-      await updateCapability(this, 'measure_power.l1', data.power_l1_w);
-      await updateCapability(this, 'measure_power.l2', data.power_l2_w);
-      await updateCapability(this, 'measure_power.l3', data.power_l3_w);
+      promises.push((updateCapability(this, 'measure_power',  data.power_w)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_power.l1', data.power_l1_w)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_power.l2', data.power_l2_w)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_power.l3', data.power_l3_w)).catch(this.error));
 
 
       /// / Tariff
-      await updateCapability(this, 'tariff', data.tariff);
+      promises.push((updateCapability(this, 'tariff', data.tariff)).catch(this.error));
 
       /// / Total consumption
-      await updateCapability(this, 'meter_power.consumed', data.energy_import_kwh);
-      await updateCapability(this, 'meter_power.consumed.t1', data.energy_import_t1_kwh);
-      await updateCapability(this, 'meter_power.consumed.t2', data.energy_import_t2_kwh);
-      await updateCapability(this, 'meter_power.consumed.t3', data.energy_import_t3_kwh);
-      await updateCapability(this, 'meter_power.consumed.t4', data.energy_import_t4_kwh);
+      promises.push((updateCapability(this, 'meter_power.consumed', data.energy_import_kwh)).catch(this.error));
+      promises.push((updateCapability(this, 'meter_power.consumed.t1', data.energy_import_t1_kwh)).catch(this.error));
+      promises.push((updateCapability(this, 'meter_power.consumed.t2', data.energy_import_t2_kwh)).catch(this.error));
+      promises.push((updateCapability(this, 'meter_power.consumed.t3', data.energy_import_t3_kwh)).catch(this.error));
+      promises.push((updateCapability(this, 'meter_power.consumed.t4', data.energy_import_t4_kwh)).catch(this.error));
 
       /// / Total production
       // if energy_export_kwh == 0, we assume the device does not produce energy
       // We ignore this case
       if (data.energy_export_kwh != 0) {
-        await updateCapability(this, 'meter_power.returned', data.energy_export_kwh);
-        await updateCapability(this, 'meter_power.produced.t1', data.energy_export_t1_kwh);
-        await updateCapability(this, 'meter_power.produced.t2', data.energy_export_t2_kwh);
-        await updateCapability(this, 'meter_power.produced.t3', data.energy_export_t3_kwh);
-        await updateCapability(this, 'meter_power.produced.t4', data.energy_export_t4_kwh);
+        promises.push((updateCapability(this, 'meter_power.returned', data.energy_export_kwh)).catch(this.error));
+        promises.push((updateCapability(this, 'meter_power.produced.t1', data.energy_export_t1_kwh)).catch(this.error));
+        promises.push((updateCapability(this, 'meter_power.produced.t2', data.energy_export_t2_kwh)).catch(this.error));
+        promises.push((updateCapability(this, 'meter_power.produced.t3', data.energy_export_t3_kwh)).catch(this.error));
+        promises.push((updateCapability(this, 'meter_power.produced.t4', data.energy_export_t4_kwh)).catch(this.error));
       }
 
       // Aggregated meter for Power by the hour support 
@@ -377,36 +381,36 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       if (data.energy_import_kwh !== undefined) {
         if (this.getCapabilityValue('meter_power') != (data.energy_import_kwh - data.energy_export_kwh))
         { 
-          await updateCapability(this, 'meter_power', (data.energy_import_kwh - data.energy_export_kwh));
+          promises.push((updateCapability(this, 'meter_power', (data.energy_import_kwh - data.energy_export_kwh))).catch(this.error));
         }
       }
 
       /// / Voltage
-      await updateCapability(this, 'measure_voltage', data.voltage_v);
-      await updateCapability(this, 'measure_voltage.l1', data.voltage_l1_v);
-      await updateCapability(this, 'measure_voltage.l2', data.voltage_l2_v);
-      await updateCapability(this, 'measure_voltage.l3', data.voltage_l3_v);
+      promises.push((updateCapability(this, 'measure_voltage', data.voltage_v)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_voltage.l1', data.voltage_l1_v)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_voltage.l2', data.voltage_l2_v)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_voltage.l3', data.voltage_l3_v)).catch(this.error));
 
       /// / Current
-      await updateCapability(this, 'measure_current', data.current_a);
-      await updateCapability(this, 'measure_current.l1', data.current_l1_a);
-      await updateCapability(this, 'measure_current.l2', data.current_l2_a);
-      await updateCapability(this, 'measure_current.l3', data.current_l3_a);
+      promises.push((updateCapability(this, 'measure_current', data.current_a)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_current.l1', data.current_l1_a)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_current.l2', data.current_l2_a)).catch(this.error));
+      promises.push((updateCapability(this, 'measure_current.l3', data.current_l3_a)).catch(this.error));
 
       /// / Voltage sags and swells
-      await updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count);
-      await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count);
-      await updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count);
+      promises.push((updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count)).catch(this.error));
+      promises.push((updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count)).catch(this.error));
+      promises.push((updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count)).catch(this.error));
 
-      await updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count);
-      await updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count);
-      await updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count);
+      promises.push((updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count)).catch(this.error));
+      promises.push((updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count)).catch(this.error));
+      promises.push((updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count)).catch(this.error));
 
       /// / Power failures
-      await updateCapability(this, 'long_power_fail_count', data.long_power_fail_count);
+      promises.push((updateCapability(this, 'long_power_fail_count', data.long_power_fail_count)).catch(this.error));
 
       /// / Belgium
-      await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w);
+      promises.push((updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w)).catch(this.error));
 
       // Trigger flows
       triggerFlowPromises.push(this._triggerFlowOnChange('tariff_changed', data.tariff).catch(this.error));
@@ -414,12 +418,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       triggerFlowPromises.push(this._triggerFlowOnChange('export_changed', data.energy_export_kwh).catch(this.error));
 
       // Wifi RSSI / dBm
-      await updateCapability(this, 'rssi', systemInfo.wifi_rssi_db);
+      promises.push((updateCapability(this, 'rssi', systemInfo.wifi_rssi_db)).catch(this.error));
 
 
       //const wifiStrength = data.wifi_strength; // e.g., -65
       const wifiQuality = await getWifiQuality(systemInfo.wifi_rssi_db);
-      await updateCapability(this, 'wifi_quality', wifiQuality);
+      promises.push((updateCapability(this, 'wifi_quality', wifiQuality)).catch(this.error));
       //console.log(`Wi-Fi Quality: ${wifiQuality}`);
 
 
@@ -498,76 +502,18 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
         //}
       }
 
-      // Check if it is 5 minutes
-      /*
-      if (nowLocal.getMinutes() % 5 === 0) {
-        const prevReadingTimeStamp = await this.getStoreValue('gasmeter_previous_reading_timestamp');
-        
-        if (prevReadingTimeStamp == null) {
-          await this.setStoreValue('gasmeter_previous_reading_timestamp', latestGasData.timestamp);
-        }
-
-        if (latestGasData.value != null && prevReadingTimeStamp !== latestGasData.timestamp) {
-          const prevReading = await this.getStoreValue('gasmeter_previous_reading');
-
-          if (prevReading != null) {
-            const gasDelta = latestGasData.value - prevReading;
-            if (gasDelta >= 0) {
-              await updateCapability(this, 'measure_gas', gasDelta);
-            }
-          }
-
-          await this.setStoreValue('gasmeter_previous_reading', latestGasData.value).catch(this.error);
-          await this.setStoreValue('gasmeter_previous_reading_timestamp', latestGasData.timestamp).catch(this.error);
-        }
-      }
-      
-
-          // Update the capability meter_gas.daily
-          const gasStart = await this.getStoreValue('gasmeter_start_day');
-          const gasDiff = (latestGasData.value != null && gasStart != null)
-            ? latestGasData.value - gasStart
-            : null;
-
-          await updateCapability(this, 'meter_gas.daily', gasDiff);
-
-     */
-
       // Update the capability meter_power.daily
       const meterStart = await this.getStoreValue('meter_start_day');
           if (meterStart != null && data.energy_import_kwh != null) {
             const dailyImport = data.energy_import_kwh - meterStart;
-            await updateCapability(this, 'meter_power.daily', dailyImport);
+            promises.push((updateCapability(this, 'meter_power.daily', dailyImport)).catch(this.error));
       }
 
       // Execute all promises concurrently using Promise.all()
-      await Promise.all(setCapabilityPromises);
-      await Promise.all(triggerFlowPromises);
+      await Promise.allSettled(setCapabilityPromises);
+      await Promise.allSettled(triggerFlowPromises);
 
-      /*
-      // Function to check version
-      function isVersionGreater(v1, v2) {
-      const toParts = v => v.split('.').map(Number);
-      const parts1 = toParts(v1);
-      const parts2 = toParts(v2);
-      const maxLen = Math.max(parts1.length, parts2.length);
-
-      for (let i = 0; i < maxLen; i++) {
-        const num1 = parts1[i] || 0;
-        const num2 = parts2[i] || 0;
-        if (num1 > num2) return true;
-        if (num1 < num2) return false;
-      }
-        return false;
-      }
-      */
-
-
-      //let result = await api.getInfo(this.url, this.token); // this.url is empty
-      //console.log('getInfo Result:', result);
-
-      //if (result && isVersionGreater(result.firmware_version, "6.0203")) {
-        // Battery mode here?
+      // Battery mode here?
         await new Promise((resolve) => setTimeout(resolve, 500)); // wait 500ms
         const batteryMode = await api.getMode(this.url, this.token);
         
@@ -630,13 +576,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
 
 
-
-    
-    this.setAvailable().catch(this.error);
-    } catch (err) {
-      this.error(err);
-      this.setUnavailable(err).catch(this.error);
-    }
+      await Promise.allSettled(promises);
+      
+      })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch((err) => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      });
   }
 
   async onSettings(MySettings) {

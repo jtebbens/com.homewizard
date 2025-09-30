@@ -55,18 +55,42 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.registerCapabilityListener('locked', async (value) => {
       await this.onRequest({ switch_lock: value });
     });
+
+     
+    if (!this.hasCapability('measure_power')) {
+      await this.addCapability('measure_power').catch(this.error);
+    }
+
+    if (this.hasCapability('measure_power.active_power_w')) {
+      await this.removeCapability('measure_power.active_power_w').catch(this.error);
+    } // remove
+
+    if (!this.hasCapability('meter_power.consumed.t1')) {
+      await this.addCapability('meter_power.consumed.t1').catch(this.error);
+    }
+
+    if (!this.hasCapability('measure_power.l1')) {
+      await this.addCapability('measure_power.l1').catch(this.error);
+    }
+
+    if (!this.hasCapability('rssi')) {
+      await this.addCapability('rssi').catch(this.error);
+    }
+
   }
 
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
     if (this.onPollStateInterval) {
       clearInterval(this.onPollStateInterval);
+      this.onPollStateInterval = null;
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -89,47 +113,61 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onRequest(body) {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/state`, {
-      method: 'PUT',
-      body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/state`, {
+        method: 'PUT',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during onRequest');
+    }
 
-    if (!res.ok)
-    { 
-      await this.setCapabilityValue('connection_error',res.code);
-      throw new Error(res.statusText); 
+    if (!res || !res.ok) {
+      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
 
   async onIdentify() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/identify`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/identify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during onIdentify');
+    }
 
-    if (!res.ok)
-    { 
-      await this.setCapabilityValue('connection_error',res.code);
-      throw new Error(res.statusText); 
+    if (!res || !res.ok) {
+      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
 
     async setCloudOn() {
       if (!this.url) return;
   
-      const res = await fetch(`${this.url}/system`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cloud_enabled: true })
-      }).catch(this.error);
+      let res;
+      try {
+        res = await fetch(`${this.url}/system`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cloud_enabled: true })
+        });
+      } catch (err) {
+        this.error(err);
+        throw new Error('Network error during setCloudOn');
+      }
   
-      if (!res.ok)
-      { 
-        //await this.setCapabilityValue('connection_error',res.code);
-        throw new Error(res.statusText); 
+      if (!res || !res.ok) {
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
     }
   
@@ -137,16 +175,20 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     async setCloudOff() {
       if (!this.url) return;
   
-      const res = await fetch(`${this.url}/system`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cloud_enabled: false })
-      }).catch(this.error);
+      let res;
+      try {
+        res = await fetch(`${this.url}/system`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cloud_enabled: false })
+        });
+      } catch (err) {
+        this.error(err);
+        throw new Error('Network error during setCloudOff');
+      }
   
-      if (!res.ok)
-      { 
-        //await this.setCapabilityValue('connection_error',res.code);
-        throw new Error(res.statusText); 
+      if (!res || !res.ok) { 
+        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
       }
     }
 
@@ -184,14 +226,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
 
       if (!res || !res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 10000)); // wait 10s to avoid false reports due to bad wifi from users
-        // try again
-        res = await fetch(`${this.url}/data`);
-        if (!res || !res.ok)
-        { 
           await this.setCapabilityValue('connection_error',res.code);
           throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
-        }
       }
 
       const data = await res.json();
@@ -200,26 +236,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       const temp_socket_watt = data.active_power_w + offset_socket;
 
-      // Save export data check if capabilities are present first
-      if (!this.hasCapability('measure_power')) {
-        await this.addCapability('measure_power').catch(this.error);
-      }
 
-      if (this.hasCapability('measure_power.active_power_w')) {
-        await this.removeCapability('measure_power.active_power_w').catch(this.error);
-      } // remove
-
-      if (!this.hasCapability('meter_power.consumed.t1')) {
-        await this.addCapability('meter_power.consumed.t1').catch(this.error);
-      }
-
-      if (!this.hasCapability('measure_power.l1')) {
-        await this.addCapability('measure_power.l1').catch(this.error);
-      }
-
-      if (!this.hasCapability('rssi')) {
-        await this.addCapability('rssi').catch(this.error);
-      }
 
       // Update values
       // if (this.getCapabilityValue('measure_power') != data.active_power_w)
@@ -297,9 +314,22 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     if (!this.url) return;
 
     Promise.resolve().then(async () => {
-      const res = await fetch(`${this.url}/state`).catch(this.error); // Error: Not Found
-      if (!res)
-      { throw new Error(res.statusText); }
+      let res;
+      try {
+        res = await fetch(`${this.url}/state`, {
+          agent,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (err) {
+        this.error(err);
+        throw new Error('Network error during onPollState');
+      }
+      if (!res || !res.ok) {
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
 
       const data = await res.json();
 

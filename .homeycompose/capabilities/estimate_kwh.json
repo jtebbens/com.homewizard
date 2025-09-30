@@ -1,0 +1,17 @@
+{
+"type": "number",
+      "title": {
+        "en": "Estimate kWh in battery",
+        "nl": "Geschatte kWh in batterij"
+      },
+      "getable": true,
+      "setable": true,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "assets/tariff.svg",
+      "units": {
+        "en": "kWh",
+        "nl": "kWh"
+      }
+}
+        

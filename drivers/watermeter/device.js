@@ -44,15 +44,34 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     this.registerCapabilityListener('identify', async (value) => {
       await this.onIdentify();
     });
+
+      // Save export data check if capabilities are present first
+      if (!this.hasCapability('measure_water')) {
+        await this.addCapability('measure_water').catch(this.error);
+      }
+
+      if (!this.hasCapability('meter_water')) {
+        await this.addCapability('meter_water').catch(this.error);
+      }
+
+      if (!this.hasCapability('identify')) {
+        await this.addCapability('identify').catch(this.error);
+      }
+
+      if (!this.hasCapability('rssi')) {
+        await this.addCapability('rssi').catch(this.error);
+      }
+
   }
 
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
+  async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -84,42 +103,50 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     { throw new Error(res.statusText); }
   }
 
-      async setCloudOn() {
-        if (!this.url) return;
-    
-        const res = await fetch(`${this.url}/system`, {
+   async setCloudOn() {
+      if (!this.url) return;
+  
+      let res;
+      try {
+        res = await fetch(`${this.url}/system`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cloud_enabled: true })
-        }).catch(this.error);
-    
-        if (!res.ok)
-        { 
-          //await this.setCapabilityValue('connection_error',res.code);
-          throw new Error(res.statusText); 
-        }
+        });
+      } catch (err) {
+        this.error(err);
+        throw new Error('Network error during setCloudOn');
       }
-    
-    
-      async setCloudOff() {
-        if (!this.url) return;
-    
-        const res = await fetch(`${this.url}/system`, {
+  
+      if (!res || !res.ok) {
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+    }
+  
+  
+    async setCloudOff() {
+      if (!this.url) return;
+  
+      let res;
+      try {
+        res = await fetch(`${this.url}/system`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cloud_enabled: false })
-        }).catch(this.error);
-    
-        if (!res.ok)
-        { 
-          //await this.setCapabilityValue('connection_error',res.code);
-          throw new Error(res.statusText); 
-        }
+        });
+      } catch (err) {
+        this.error(err);
+        throw new Error('Network error during setCloudOff');
       }
+  
+      if (!res || !res.ok) { 
+        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
+      }
+    }
 
-  onPoll() {
+  async onPoll() {
 
-    const settings = this.getSettings();
+    const settings = await this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -167,22 +194,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         offset_water_m3 = data.total_liter_offset_m3;
       }
 
-      // Save export data check if capabilities are present first
-      if (!this.hasCapability('measure_water')) {
-        await this.addCapability('measure_water').catch(this.error);
-      }
 
-      if (!this.hasCapability('meter_water')) {
-        await this.addCapability('meter_water').catch(this.error);
-      }
-
-      if (!this.hasCapability('identify')) {
-        await this.addCapability('identify').catch(this.error);
-      }
-
-      if (!this.hasCapability('rssi')) {
-        await this.addCapability('rssi').catch(this.error);
-      }
 
       const temp_total_liter_m3 = data.total_liter_m3 + offset_water_m3;
 
@@ -214,7 +226,15 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   }
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings) {
+    /**
+   * onSettings is called when the user updates the device's settings.
+   * @param {object} onSettings event data
+   * @param {object} oldSettings The old settings object
+   * @param {object} newSettings The new settings object
+   * @param {string[]} changedKeys An array of keys changed since the previous version
+   * @returns {Promise<string|void>} return a custom message that will be displayed
+   */
+  async onSettings(oldSettings) {
     this.log('Settings updated')
     // Update display values if offset has changed
         // Retrieve changedKeys from oldSettings

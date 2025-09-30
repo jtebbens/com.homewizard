@@ -157,6 +157,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
   onDeleted() {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
   }
 
@@ -336,8 +337,8 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_a).catch(this.error));
       
       // Execute all promises concurrently using Promise.all()
-      Promise.all(setCapabilityPromises);
-      Promise.all(triggerFlowPromises);
+      await Promise.allSettled(setCapabilityPromises);
+      await Promise.allSettled(triggerFlowPromises);
 
       let result = await api.getInfo(this.url, this.token); // this.url is empty
       //console.log('getInfo Result:', result);
