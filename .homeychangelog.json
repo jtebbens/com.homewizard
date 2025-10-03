@@ -601,5 +601,8 @@
   },
   "3.6.72": {
     "en": "More try/catch code to avoid any crashes on Homewizard Legacy main unit getStatus fail (Device not found)"
+  },
+  "3.6.73": {
+    "en": "Code fixes: unhandledRejections CloudOn/Off for sockets and P1"
   }
 }
