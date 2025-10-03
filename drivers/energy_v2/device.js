@@ -6,7 +6,7 @@ const api = require('../../includes/v2/Api');
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 async function updateCapability(device, capability, value) {
-        if (value === null || value === undefined) {
+        if (value == null) {
           if (device.hasCapability(capability)) {
             await device.removeCapability(capability).catch(device.error);
           }
@@ -48,7 +48,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     this.log('Settings for P1 apiv2: ',settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
@@ -185,7 +185,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -307,7 +307,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   // The main polling function
   async onPoll() {
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     // URL may be undefined if the device is not available
     if (!this.url) {
           if (settings.url) {
@@ -462,11 +462,13 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           setCapabilityPromises.push(this.addCapability('meter_water').catch(this.error));
         }
 
-        if (this.getCapabilityValue('meter_water') != waterValue) { setCapabilityPromises.push(this.setCapabilityValue('meter_water', waterValue).catch(this.error)); }
+        if (this.getCapabilityValue('meter_water') !== waterValue) { 
+          setCapabilityPromises.push(this.setCapabilityValue('meter_water', waterValue).catch(this.error)); 
+        }
 
       } else if (this.hasCapability('meter_water')) {
-        setCapabilityPromises.push(this.removeCapability('meter_water').catch(this.error));
-        console.log('Removed meter as there is no water meter in P1.');
+          setCapabilityPromises.push(this.removeCapability('meter_water').catch(this.error));
+          console.log('Removed meter as there is no water meter in P1.');
       }
 
       if (latestGasData) {
@@ -477,30 +479,28 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
           setCapabilityPromises.push(this.addCapability('meter_gas').catch(this.error));
         }
 
-        if (this.getCapabilityValue('meter_gas') != gasValue) { setCapabilityPromises.push(this.setCapabilityValue('meter_gas', gasValue).catch(this.error)); }
+        if (this.getCapabilityValue('meter_gas') !== gasValue) { 
+          setCapabilityPromises.push(this.setCapabilityValue('meter_gas', gasValue).catch(this.error)); 
+        }
 
-      } else if (this.hasCapability('meter_gas')) {
-        setCapabilityPromises.push(this.removeCapability('meter_gas').catch(this.error));
-        this.log('Removed meter as there is no gas meter in P1.');
+        } else if (this.hasCapability('meter_gas')) {
+          setCapabilityPromises.push(this.removeCapability('meter_gas').catch(this.error));
+          this.log('Removed meter as there is no gas meter in P1.');
       }
 
       // At exactly midnight
       if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
         if (data.energy_import_kwh !== undefined) {
-          this.setStoreValue('meter_start_day', data.energy_import_kwh).catch(this.error);
+          await this.setStoreValue('meter_start_day', data.energy_import_kwh).catch(this.error);
         }
-        // if (latestGasData.value !== undefined) {
-        //  this.setStoreValue('gasmeter_start_day', latestGasData.value).catch(this.error);
-        //}
       } else {
         // First-time setup fallback
-        if (!this.getStoreValue('meter_start_day') && data.energy_import_kwh !== undefined) {
-          this.setStoreValue('meter_start_day', data.energy_import_kwh).catch(this.error);
+        const meterStartDay = await this.getStoreValue('meter_start_day');
+        if (!meterStartDay && data.energy_import_kwh !== undefined) {
+          await this.setStoreValue('meter_start_day', data.energy_import_kwh).catch(this.error);
         }
-        //if (!this.getStoreValue('gasmeter_start_day') && latestGasData.value !== undefined) {
-        //  this.setStoreValue('gasmeter_start_day', latestGasData.value).catch(this.error);
-        //}
       }
+
 
       // Update the capability meter_power.daily
       const meterStart = await this.getStoreValue('meter_start_day');
@@ -526,9 +526,10 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
          //trigger battery_mode_change
        
-        if (batteryMode.mode != this.getStoreValue('last_battery_mode')) {
+        const lastBatteryMode = await this.getStoreValue('last_battery_mode');
+        if (batteryMode.mode !== lastBatteryMode) {
           this.flowTriggerBatteryMode(this, { battery_mode_changed: batteryMode.mode });
-          this.setStoreValue('last_battery_mode', batteryMode.mode).catch(this.error);
+          await this.setStoreValue('last_battery_mode', batteryMode.mode).catch(this.error);
         }
 
 

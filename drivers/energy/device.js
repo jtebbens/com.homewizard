@@ -14,7 +14,7 @@ const http = require('http');
  * @returns {*} 
  */
 async function updateCapability(device, capability, value) {
-        if (value === null || value === undefined) {
+        if (value == null) {
           if (device.hasCapability(capability)) {
             await device.removeCapability(capability).catch(device.error);
           }
@@ -77,7 +77,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       await this.removeCapability('net_load_phase3').catch(this.error);
     }
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     // ... set defaults if needed ...
     if (!settings.polling_interval) {
       settings.polling_interval = 10;
@@ -141,7 +141,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
    * @param {*} discoveryResult - The result from device discovery, containing address, port, and TXT record.
    * @returns {Promise<void>}
    */
-  async onDiscoveryAvailable(discoveryResult) {
+   onDiscoveryAvailable(discoveryResult) {
     try {
       // Validate discovery result
       if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
@@ -153,7 +153,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       this.log(`Discovered device URL: ${this.url}`);
 
       // Start polling the device
-      await this.onPoll();
+      this.onPoll();
     } catch (err) {
       this.log(`Discovery failed: ${err.message}`);
     }
@@ -248,7 +248,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
  async onPoll() {
 
-    let settings = await this.getSettings();
+    let settings = this.getSettings();
 
     // Array to hold all update promises
     const promises = [];
@@ -295,28 +295,35 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           // At exactly midnight
           if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
             if (data.total_power_import_kwh !== undefined) {
-              this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+              await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
             }
             if (data.total_gas_m3 !== undefined) {
-              this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
+              await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
             }
           } else {
             // First-time setup fallback
-            if (!this.getStoreValue('meter_start_day') && data.total_power_import_kwh !== undefined) {
-              this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+            const meterStartDay = await this.getStoreValue('meter_start_day');
+            const gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
+
+            if (!meterStartDay && data.total_power_import_kwh !== undefined) {
+              await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
             }
-            if (!this.getStoreValue('gasmeter_start_day') && data.total_gas_m3 !== undefined) {
-              this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
+            if (!gasmeterStartDay && data.total_gas_m3 !== undefined) {
+              await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
             }
           }
+
 
           // Check if it is 5 minutes
           if (nowLocal.getMinutes() % 5 === 0) {
             const prevReadingTimeStamp = await this.getStoreValue('gasmeter_previous_reading_timestamp');
-            
+
+            // First-time setup
             if (prevReadingTimeStamp == null) {
-              await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp);
+              await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error);
+              return; // Exit early to avoid calculating delta with missing timestamp
             }
+
             // Calculate gas usage delta
             if (data.total_gas_m3 != null && prevReadingTimeStamp !== data.gas_timestamp) {
               const prevReading = await this.getStoreValue('gasmeter_previous_reading');
@@ -324,7 +331,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               if (prevReading != null) {
                 const gasDelta = data.total_gas_m3 - prevReading;
                 if (gasDelta >= 0) {
-                  promises.push((updateCapability(this, 'measure_gas', gasDelta)).catch(this.error));
+                  promises.push(updateCapability(this, 'measure_gas', gasDelta).catch(this.error));
                 }
               }
 
@@ -332,6 +339,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
               await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error);
             }
           }
+
 
           
           // Update the capability meter_power.daily
@@ -362,10 +370,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           promises.push((updateCapability(this, 'wifi_quality', wifiQuality)).catch(this.error));
 
           // Trigger tariff
-          if (data.active_tariff != this.getStoreValue('last_active_tariff')) {
-            this.flowTriggerTariff(this, { tariff_changed: data.active_tariff });
-            this.setStoreValue('last_active_tariff', data.active_tariff).catch(this.error);
+          const lastTariff = await this.getStoreValue('last_active_tariff');
+          const currentTariff = data.active_tariff;
+
+          if (typeof currentTariff === 'number' && currentTariff !== lastTariff) {
+            this.flowTriggerTariff(this, { tariff_changed: currentTariff });
+            try {
+              await this.setStoreValue('last_active_tariff', currentTariff);
+            } catch (err) {
+              this.error(err);
+            }
           }
+
 
           promises.push((updateCapability(this, 'measure_current.l1', data.active_current_l1_a)).catch(this.error));
 
@@ -401,16 +417,23 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 
           // Trigger import
-          if (data.total_power_import_kwh != this.getStoreValue('last_total_import_kwh')) {
-            this.flowTriggerImport(this, { import_changed: data.total_power_import_kwh });
-            this.setStoreValue('last_total_import_kwh', data.total_power_import_kwh).catch(this.error);
+          const lastImport = await this.getStoreValue('last_total_import_kwh');
+          const currentImport = data.total_power_import_kwh;
+
+          if (typeof currentImport === 'number' && currentImport !== lastImport) {
+            this.flowTriggerImport(this, { import_changed: currentImport });
+            await this.setStoreValue('last_total_import_kwh', currentImport).catch(this.error);
+          }
+          
+          // Trigger export
+          const lastExport = await this.getStoreValue('last_total_export_kwh');
+          const currentExport = data.total_power_export_kwh;
+
+          if (typeof currentExport === 'number' && currentExport !== lastExport) {
+            this.flowTriggerExport(this, { export_changed: currentExport });
+            await this.setStoreValue('last_total_export_kwh', currentExport).catch(this.error);
           }
 
-          // Trigger export
-          if (data.total_power_export_kwh != this.getStoreValue('last_total_export_kwh')) {
-            this.flowTriggerExport(this, { export_changed: data.total_power_export_kwh });
-            this.setStoreValue('last_total_export_kwh', data.total_power_export_kwh).catch(this.error);
-          }
 
           // Belgium
           promises.push((updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w)).catch(this.error));
@@ -604,7 +627,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
         clearInterval(this.onPollInterval);
         //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-        const settings = await this.getSettings();
+        const settings = this.getSettings();
         this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       }
 
@@ -613,11 +636,15 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       ) {
         this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
   
+        try {
         if (MySettings.newSettings.cloud == 1) {
             await this.setCloudOn();  
         }
         else if (MySettings.newSettings.cloud == 0) {
             await this.setCloudOff();
+        }
+        } catch (err) {
+            this.error('Failed to update cloud connection:', err);
         }
       }
       // return true;

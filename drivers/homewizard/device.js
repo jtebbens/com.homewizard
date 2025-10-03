@@ -100,7 +100,7 @@ async getStatus(devices) {
       }
     }
   }
-  await this.setAvailable();
+  this.setAvailable();
 }
 
   

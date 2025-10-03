@@ -11,7 +11,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     console.log('Settings for SDM230: ',settings.polling_interval);
 
 
@@ -31,6 +31,29 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       this.setClass('socket');
       console.log('Changed sensor to socket.');
     }
+
+    // Save export data check if capabilities are present first
+    if (!this.hasCapability('measure_power')) {
+      await this.addCapability('measure_power').catch(this.error);
+    }
+
+    if (this.hasCapability('measure_power.active_power_w')) {
+      await this.removeCapability('measure_power.active_power_w').catch(this.error);
+    } // remove
+
+    if (!this.hasCapability('meter_power.consumed.t1')) {
+      await this.addCapability('meter_power.consumed.t1').catch(this.error);
+      // await this.addCapability('meter_power.consumed.t2').catch(this.error);
+    }
+
+    if (!this.hasCapability('measure_power.l1')) {
+      await this.addCapability('measure_power.l1').catch(this.error);
+    }
+
+    if (!this.hasCapability('rssi')) {
+      await this.addCapability('rssi').catch(this.error);
+    }
+
   }
 
   onDeleted() {
@@ -112,54 +135,10 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
       const data = await res.json();
 
-      // OLD CODE / REPLACED BY SOCKET METHOD
-      // if (((data.active_power_w < 0) || (data.active_power_l1_w < 0)) && (this.getClass() == 'sensor')) {
-      //   if (this.getClass() != 'solarpanel') {
-      //     await this.setClass('solarpanel').catch(this.error);
-      //   }
-      // }
-
-      // Save export data check if capabilities are present first
-      if (!this.hasCapability('measure_power')) {
-        await this.addCapability('measure_power').catch(this.error);
-      }
-
-      if (this.hasCapability('measure_power.active_power_w')) {
-        await this.removeCapability('measure_power.active_power_w').catch(this.error);
-      } // remove
-
-      if (!this.hasCapability('meter_power.consumed.t1')) {
-        await this.addCapability('meter_power.consumed.t1').catch(this.error);
-        // await this.addCapability('meter_power.consumed.t2').catch(this.error);
-      }
-
-      if (!this.hasCapability('measure_power.l1')) {
-        await this.addCapability('measure_power.l1').catch(this.error);
-      }
-
-      if (!this.hasCapability('rssi')) {
-        await this.addCapability('rssi').catch(this.error);
-      }
 
       if (this.getCapabilityValue('rssi') != data.wifi_strength)
       { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
 
-      // Update values 3phase kwh
-      // KWH 1 fase
-      // total_power_import_t1_kwh *
-      // total_power_export_t1_kwh *
-      // active_power_w
-      // active_power_l1_w
-
-      // {“wifi_ssid”:“xxxxx”,“wifi_strength”:68,“total_power_import_t1_kwh”:8.468,“total_power_export_t1_kwh”:764.34,“active_power_w”:-803.989,“active_power_l1_w”:-803.989}
-
-      // First we need to check if the kwh active_power_w is negative (solar)
-
-      //      if ((data.active_power_w < 0) || (data.active_power_l1_w < 0) || (this.getClass() != 'socket')) {
-      //        if (this.getClass() != 'solarpanel') {
-      //          await this.setClass('solarpanel').catch(this.error);
-      //        }
-      //      }
 
       // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
       if (this.getClass() == 'solarpanel') {
@@ -233,7 +212,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       });
   }
 
-  onSettings(MySettings) {
+  async onSettings(MySettings) {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling

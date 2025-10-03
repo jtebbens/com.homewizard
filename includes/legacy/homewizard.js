@@ -37,21 +37,18 @@ module.exports = (function() {
   };
 
   homewizard.getDeviceData = function(device_id, data_part) {
-    return new Promise((resolve, reject) => {
-      if (
-        typeof self.devices[device_id] === 'undefined'
-        || typeof self.devices[device_id].polldata === 'undefined'
-        || typeof self.devices[device_id].polldata[data_part] === 'undefined'
-        || typeof self.devices[device_id] === undefined
-        || typeof self.devices[device_id].polldata === undefined
-        || typeof self.devices[device_id].polldata[data_part] === undefined
-      ) {
-        resolve([]);
-      } else {
-        resolve(self.devices[device_id].polldata[data_part]);
-      }
-    });
+  return new Promise((resolve) => {
+    const device = self.devices[device_id];
+    const data = device?.polldata?.[data_part];
+
+    if (typeof data === 'undefined') {
+      resolve([]);
+    } else {
+      resolve(data);
+    }
+  });
   };
+
 
 homewizard.callnew = async function(device_id, uri_part, callback) {
   const timeoutDuration = 18000;
