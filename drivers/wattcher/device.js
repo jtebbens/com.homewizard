@@ -60,9 +60,9 @@ class HomeWizardWattcher extends Homey.Device {
               const energy_daytotal_cons = callback[0].dayTotal; // KWH Energy used JSON $energymeters[0]['dayTotal']
 
               // Wattcher elec current
-              this.setCapabilityValue('measure_power', energy_current_cons).catch(this.error);
+              await this.setCapabilityValue('measure_power', energy_current_cons).catch(this.error);
               // Wattcher elec total day
-              this.setCapabilityValue('meter_power', energy_daytotal_cons).catch(this.error);
+              await this.setCapabilityValue('meter_power', energy_daytotal_cons).catch(this.error);
 
               // this.log('End capturing data');
               // console.log('Wattcher usage- ' + energy_current_cons);

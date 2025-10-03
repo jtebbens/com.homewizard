@@ -20,7 +20,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-      const settings = await this.getSettings();
+      const settings = this.getSettings();
       console.log('Settings for SDM230: ',settings.polling_interval);
 
 
@@ -72,7 +72,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -127,7 +127,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onPoll() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     const promises = [];
 
@@ -197,7 +197,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         promises.push((this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh)).catch(this.error));
       }
       else if (data.total_power_export_t1_kwh < 1) {
-        this.removeCapability('meter_power.produced.t1').catch(this.error);
+        await this.removeCapability('meter_power.produced.t1').catch(this.error);
       }
 
       

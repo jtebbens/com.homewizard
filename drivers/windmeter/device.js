@@ -73,7 +73,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
   }
 
-	  async getStatus(devices) {
+	  async getStatus() {
     if (this.getSetting('homewizard_id') !== undefined) {
 		  const homewizard_id = this.getSetting('homewizard_id');
 

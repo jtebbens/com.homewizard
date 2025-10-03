@@ -129,7 +129,7 @@ class HomeWizardThermometer extends Homey.Device {
   }
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings, changedKeys) {
+  async onSettings(oldSettings, newSettings, changedKeys) {
     this.log('Settings updated');
     // Update display values if offset has changed
     for (const k in changedKeys) {
@@ -139,14 +139,14 @@ class HomeWizardThermometer extends Homey.Device {
         const value = this.getCapabilityValue(cap);
         const delta = newSettings[key] - oldSettings[key];
         this.log('Updating value of', cap, 'from', value, 'to', value + delta);
-        this.setCapabilityValue(cap, value + delta)
+        await this.setCapabilityValue(cap, value + delta)
           .catch((err) => this.error(err));
       }
     }
 
   }
 
-  updateValue(cap, value) {
+  async updateValue(cap, value) {
     // add offset if defined
     this.log('Updating value of', this.id, 'with capability', cap, 'to', value);
     const cap_offset = cap.replace('measure', 'offset');
@@ -155,7 +155,7 @@ class HomeWizardThermometer extends Homey.Device {
     if (offset != null) {
       value += offset;
     }
-    this.setCapabilityValue(cap, value)
+    await this.setCapabilityValue(cap, value)
       .catch((err) => this.error(err));
   }
 

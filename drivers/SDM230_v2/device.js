@@ -15,7 +15,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     console.log('Settings for SDM230 apiv2: ',settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
@@ -286,7 +286,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     // URL may be undefined if the device is not available
     if (!this.url) return;
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {

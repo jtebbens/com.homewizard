@@ -17,7 +17,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     console.log('Offset polling for Watermeter: ',settings.offset_polling);
 
 
@@ -71,7 +71,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -146,7 +146,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onPoll() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -183,7 +183,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
       // if watermeter offset is set in Homewizard Energy app take that value else use the configured value in Homey Homewizard water offset
 
-      const settings = await this.getSettings();
+      const settings = this.getSettings();
       //console.log('Offset for Watermeter: ',settings.offset_water);
 
 
@@ -261,12 +261,17 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
         else if (changedKeys === 'cloud') {
             this.log('Updating cloud connection', oldSettings.newSettings.cloud);
 
+            try {
             if (oldSettings.newSettings.cloud == 1) {
             this.setCloudOn();  
             }
             else if (oldSettings.newSettings.cloud == 0) {
             this.setCloudOff();
+            }
+        } catch (err) {
+          this.error('Failed to update cloud connection:', err);
         }
+
       }
 
 

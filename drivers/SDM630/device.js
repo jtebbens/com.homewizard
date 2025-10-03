@@ -11,7 +11,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
     console.log('Settings for SDM630: ',settings.polling_interval);
     // Check if polling interval is set in settings, if not set default to 10 seconds
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
@@ -91,7 +91,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
   }
 
   async onPoll() {
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -172,7 +172,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
         await this.addCapability('meter_power').catch(this.error);
       }
       // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh)).catch(this.error);
+      await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh)).catch(this.error);
 
       // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
       if (data.active_power_l2_w !== null) {
@@ -181,9 +181,9 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
           await this.addCapability('measure_power.l2').catch(this.error);
           await this.addCapability('measure_power.l3').catch(this.error);
         }
-        this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
-        this.setCapabilityValue('measure_power.l2', data.active_power_l2_w).catch(this.error);
-        this.setCapabilityValue('measure_power.l3', data.active_power_l3_w).catch(this.error);
+        await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
+        await this.setCapabilityValue('measure_power.l2', data.active_power_l2_w).catch(this.error);
+        await this.setCapabilityValue('measure_power.l3', data.active_power_l3_w).catch(this.error);
       }
       else if (data.active_power_l2_w == null) {
         if (this.hasCapability('measure_power.l2')) {

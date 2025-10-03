@@ -41,7 +41,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.token = await this.getStoreValue('token');
     console.log('PIB Token:', this.token);
 
-    let settings = await this.getSettings();
+    let settings = this.getSettings();
     this.log('Settings for Plugin Battery: ', settings.polling_interval);
 
 
@@ -66,7 +66,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
@@ -167,7 +167,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     
 
     // URL may be undefined if the device is not available
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -318,7 +318,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   }
 
 
-  async onSettings(MySettings) {
+  onSettings(MySettings) {
     this.log('Plugin Battery Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling

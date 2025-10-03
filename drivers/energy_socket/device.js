@@ -25,7 +25,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
     await this.setCapabilityValue('connection_error', 'No errors');
 
-    const custom_interval = await this.getSetting('offset_polling');
+    const custom_interval = this.getSetting('offset_polling');
 
     this.log('offset_polling', custom_interval); // print the value of offset_polling
     
@@ -77,6 +77,22 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       await this.addCapability('rssi').catch(this.error);
     }
 
+    if (!this.hasCapability('onoff')) {
+      await this.addCapability('onoff').catch(this.error);
+    }
+
+    if (!this.hasCapability('dim')) {
+      await this.addCapability('dim').catch(this.error);
+    }
+
+    if (!this.hasCapability('identify')) {
+      await this.addCapability('identify').catch(this.error);
+    }
+
+    if (!this.hasCapability('locked')) {
+      await this.addCapability('locked').catch(this.error);
+    }
+
   }
 
   onDeleted() {
@@ -93,21 +109,21 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
+  async onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    this.onPoll();
+    await this.onPoll();
   }
 
-  onDiscoveryLastSeenChanged(discoveryResult) {
+  async onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
     this.setAvailable();
+    await this.onPoll();
   }
 
   async onRequest(body) {
@@ -163,7 +179,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
       } catch (err) {
         this.error(err);
-        throw new Error('Network error during setCloudOn');
+        throw new Error('Network error during setCloudOn:', err);
       }
   
       if (!res || !res.ok) {
@@ -184,7 +200,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
       } catch (err) {
         this.error(err);
-        throw new Error('Network error during setCloudOff');
+        throw new Error('Network error during setCloudOff:', err);
       }
   
       if (!res || !res.ok) { 
@@ -196,7 +212,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onPoll() {
 
-    const settings = await this.getSettings();
+    const settings = this.getSettings();
 
     // Check if polling interval is running
     if (!this.onPollInterval) {
@@ -327,27 +343,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         this.error(err);
         throw new Error('Network error during onPollState');
       }
+
       if (!res || !res.ok) {
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
       const data = await res.json();
-
-      if (!this.hasCapability('onoff')) {
-        await this.addCapability('onoff').catch(this.error);
-      }
-
-      if (!this.hasCapability('dim')) {
-        await this.addCapability('dim').catch(this.error);
-      }
-
-      if (!this.hasCapability('identify')) {
-        await this.addCapability('identify').catch(this.error);
-      }
-
-      if (!this.hasCapability('locked')) {
-        await this.addCapability('locked').catch(this.error);
-      }
 
       // Update values
       if (this.getCapabilityValue('onoff') != data.power_on)
@@ -379,7 +380,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
             const delta = newSettings[key] - (oldSettings[key] || 0); // Default oldSettings[key] to 0 if missing
             this.log('Updating value of', cap, 'from', value, 'to', value + delta);
 
-            this.setCapabilityValue(cap, value + delta)
+            await this.setCapabilityValue(cap, value + delta)
                 .catch((err) => this.error(err));
         } else if (key === 'offset_polling') {
             this.log('Updating polling interval to', oldSettings.newSettings.offset_polling);
@@ -395,21 +396,23 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
             }
         }
         else if (key === 'cloud') {
-            this.log('Updating cloud connection', oldSettings.newSettings.cloud);
+        this.log('Updating cloud connection', oldSettings.newSettings.cloud);
 
-            if (oldSettings.newSettings.cloud == 1) {
-            this.setCloudOn();  
-            }
-            else if (oldSettings.newSettings.cloud == 0) {
-            this.setCloudOff();
+        try {
+          if (oldSettings.newSettings.cloud == 1) {
+            await this.setCloudOn();  
+          } else if (oldSettings.newSettings.cloud == 0) {
+            await this.setCloudOff();
+          }
+        } catch (err) {
+          this.error('Failed to update cloud connection:', err);
         }
-
-        }
+      }
     }
 }
 
 
-  updateValue(cap, value) {
+  async updateValue(cap, value) {
     // add offset if defined
     this.log('Updating value of', this.id, 'with capability', cap, 'to', value);
     const cap_offset = cap.replace('measure', 'offset');
@@ -418,7 +421,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     if (offset != null) {
       value += offset;
     }
-    this.setCapabilityValue(cap, value)
+    await this.setCapabilityValue(cap, value)
       .catch((err) => this.error(err));
   }
 
