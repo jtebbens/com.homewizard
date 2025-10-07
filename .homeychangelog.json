@@ -604,5 +604,8 @@
   },
   "3.6.73": {
     "en": "Code fixes: unhandledRejections CloudOn/Off for sockets and P1"
+  },
+  "3.6.74": {
+    "en": "Homewizard Legacy - Thermometer recode, main unit adjustment (promises), finetuning keepAlive for other devices"
   }
 }

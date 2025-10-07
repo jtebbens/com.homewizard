@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.73",
+  "version": "3.6.74",
   "platforms": [
     "local"
   ],
@@ -3239,7 +3239,8 @@
       "class": "sensor",
       "capabilities": [
         "measure_temperature",
-        "measure_humidity"
+        "measure_humidity",
+        "alarm_battery"
       ],
       "energy": {
         "batteries": [
