@@ -607,5 +607,8 @@
   },
   "3.6.74": {
     "en": "Homewizard Legacy - Thermometer recode, main unit adjustment (promises), finetuning keepAlive for other devices"
+  },
+  "3.6.75": {
+    "en": "Added verbose mDNS discovery results for troubleshooting (apiv1)"
   }
 }
