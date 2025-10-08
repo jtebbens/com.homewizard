@@ -6,9 +6,7 @@ const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 15000,
-  maxSockets: 10,
-  maxFreeSockets: 5
+  keepAliveMsecs : 11000
 });
 
 

@@ -49,14 +49,11 @@ async function getWifiQuality(percent) {
 
 // http.agent options to improve performance
 // KeepAlive to true to reuse connections
-// KeepAliveMsecs to 15 seconds to keep connections alive for 15 seconds
-// maxSockets to 10 to limit the number of concurrent sockets
-// maxFreeSockets to 5 to limit the number of free sockets
+// KeepAliveMsecs to 1 second to keep connections alive
+// maxSockets to 5 to limit the number of concurrent sockets
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 15000,
-  maxSockets: 10,
-  maxFreeSockets: 5
+  keepAliveMsecs : 11000
 });
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
@@ -87,8 +84,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     // Check if number of phases is set, if not default to 1
-    if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null)) {
-      settings.number_of_phases = 1; // Default to 1 phase
+    if (settings.number_of_phases === undefined || settings.number_of_phases === null) {
       await this.setSettings({
         // Update settings in Homey
         number_of_phases: 1,
@@ -125,6 +121,28 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   flowTriggerExport(device, tokens) {
     this._flowTriggerExport.trigger(device, tokens).catch(this.error);
   }
+
+  async onIdentify() {
+    if (!this.url) return;
+
+    let res;
+    try {
+      res = await fetch(`${this.url}/identify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during onIdentify');
+    }
+
+    if (!res || !res.ok) {
+      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
+    }
+  }
+
+  
 
   onDeleted() {
     if (this.onPollInterval) {
@@ -491,12 +509,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           if ((data.active_current_l2_a !== undefined) || (data.active_current_l3_a !== undefined)) {
 
-              if ((settings.number_of_phases === undefined) || (settings.number_of_phases === null) || (settings.number_of_phases == 1)) {
-                settings.number_of_phases = 3; // Default to 3 phase
-                await this.setSettings({
-                  // Update settings in Homey
-                  number_of_phases: 3,
-                });
+              if (
+                settings.number_of_phases === undefined ||
+                settings.number_of_phases === null ||
+                settings.number_of_phases === 1
+              ) {
+                await this.setSettings({ number_of_phases: 3 });
               }
 
               // voltage_sag_l2_count - Net L2 dip

@@ -7,8 +7,7 @@ const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 15000,
-  timeout: 60000 // optional: socket timeout in ms
+  keepAliveMsecs : 11000
 });
 
 //const POLL_INTERVAL = 1000 * 10; // 10 seconds
@@ -94,14 +93,23 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   async onIdentify() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/identify`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(this.error);
+    let res;
+    try {
+      res = await fetch(`${this.url}/identify`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (err) {
+      this.error(err);
+      throw new Error('Network error during onIdentify');
+    }
 
-    if (!res.ok)
-    { throw new Error(res.statusText); }
+    if (!res || !res.ok) {
+      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
+    }
   }
+
 
    async setCloudOn() {
       if (!this.url) return;

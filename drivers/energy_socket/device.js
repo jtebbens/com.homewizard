@@ -10,9 +10,7 @@ const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds
 
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs: 15000,
-  maxSockets: 10,
-  maxFreeSockets: 5
+  keepAliveMsecs : 11000
 });
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
@@ -106,24 +104,24 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
   }
 
-  async onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+  onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    await this.onPoll();
+    this.onPoll();
   }
 
-  async onDiscoveryLastSeenChanged(discoveryResult) {
+  onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.setAvailable();
-    await this.onPoll();
+    this.onPoll();
   }
 
   async onRequest(body) {
@@ -251,8 +249,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       const offset_socket = this.getSetting('offset_socket');
 
       const temp_socket_watt = data.active_power_w + offset_socket;
-
-
 
       // Update values
       // if (this.getCapabilityValue('measure_power') != data.active_power_w)

@@ -64,6 +64,8 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
+      console.log('Discovered devices:', discoveryResults);
+
       // Return list of devices, we do not test if device is reachable as we trust the discovery results
       const devices = [];
       for (const discoveryResult of Object.values(discoveryResults)) {
