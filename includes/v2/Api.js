@@ -35,10 +35,8 @@ module.exports = (function() {
 
   const http_agent = new https.Agent({
     keepAlive: true,
-    keepAliveMsecs: 15000,
-    rejectUnauthorized: false,
-    maxSockets: 3,
-    maxFreeSockets: 2
+    keepAliveMsecs : 11000,
+    rejectUnauthorized: false, // Ignore SSL errors
   });
 
   /**

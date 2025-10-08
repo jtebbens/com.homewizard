@@ -5,7 +5,7 @@ const Homey = require('homey');
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
 
-let homewizard_devices;
+//let homewizard_devices;
 
 class HomeWizardThermometer extends Homey.Driver {
 
@@ -34,26 +34,38 @@ class HomeWizardThermometer extends Homey.Driver {
 
     // socket.on('get_homewizards', function () {
     await socket.setHandler('get_homewizards', async () => {
+      try {
+        // You can keep this if you plan to use main unit metadata later
+        const homewizardDriver = this.homey.drivers.getDriver('homewizard');
+        const mainUnitDevices = homewizardDriver?.getDevices?.();
 
-      // homewizard_devices = driver.getDevices();
-      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
+        if (!Array.isArray(mainUnitDevices)) {
+          console.warn('Main unit driver did not return an array');
+        }
 
-      homewizard.getDevices((homewizard_devices) => {
+        // This is your actual device registry
+        const fetchedDevices = await getDevicesAsync();
         const hw_devices = {};
 
-        Object.keys(homewizard_devices).forEach((key) => {
-          const thermometers = JSON.stringify(homewizard_devices[key].polldata.thermometers);
+        for (const [key, device] of Object.entries(fetchedDevices)) {
+          const thermometers = device.polldata?.thermometers ?? {};
+          hw_devices[key] = {
+            id: key,
+            name: device.name,
+            model: device.model,
+            thermometers,
+            // Add other fields if needed
+          };
+        }
 
-          hw_devices[key] = homewizard_devices[key];
-          hw_devices[key].polldata = {};
-          hw_devices[key].thermometers = thermometers;
-        });
-
-        console.log(hw_devices);
+        console.log(`Emitting ${Object.keys(hw_devices).length} devices`);
         socket.emit('hw_devices', hw_devices);
-
-      });
+      } catch (err) {
+        console.error('Error emitting hw_devices:', err);
+      }
     });
+
+
 
     await socket.setHandler('manual_add', (device) => {
       if (typeof device.settings.homewizard_id == 'string' && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {

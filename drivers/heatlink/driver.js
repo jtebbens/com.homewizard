@@ -59,22 +59,22 @@ class HomeWizardHeatlink extends Homey.Driver {
     });
 
     // socket.on('get_homewizards', function () {
-    await socket.setHandler('get_homewizards', () => {
+    await socket.setHandler('get_homewizards', async () => {
+      try {
+        const homewizardDriver = this.homey.drivers.getDriver('homewizard');
+        const homewizard_devices = homewizardDriver.getDevices();
 
-      // homewizard_devices = driver.getDevices();
-      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
+        const fetchedDevices = await getDevicesAsync();
 
-      homewizard.getDevices((homewizard_devices) => {
         const hw_devices = {};
-
-        Object.keys(homewizard_devices).forEach((key) => {
-          hw_devices[key] = homewizard_devices[key];
+        Object.keys(fetchedDevices).forEach((key) => {
+          hw_devices[key] = fetchedDevices[key];
         });
 
-        console.log(hw_devices);
         socket.emit('hw_devices', hw_devices);
-
-      });
+      } catch (err) {
+        console.error('Error during get_homewizards:', err);
+      }
     });
 
     await socket.setHandler('manual_add', (device) => {

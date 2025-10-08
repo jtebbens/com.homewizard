@@ -30,7 +30,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     //Condition Card
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
-      this.log('CheckBatteryModeCard');
+      //this.log('CheckBatteryModeCard');
         
       return new Promise(async (resolve, reject) => {
         try {

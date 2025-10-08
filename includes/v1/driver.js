@@ -20,7 +20,8 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
     const numberOfDiscoveryResults = Object.keys(discoveryResults).length;
-    
+    console.log('Discovered devices:', discoveryResults);
+        
     const devices = [];
     await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
       try {
