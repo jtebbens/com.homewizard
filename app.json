@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.75",
+  "version": "3.6.76",
   "platforms": [
     "local"
   ],
@@ -2962,6 +2962,18 @@
                 "nl": "Gebruik ledring"
               },
               "value": false
+            },
+            {
+              "id": "polling_interval",
+              "type": "number",
+              "label": {
+                "en": "Polling interval"
+              },
+              "value": 20,
+              "min": 10,
+              "unit": {
+                "en": "s"
+              }
             }
           ]
         }
