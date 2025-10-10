@@ -610,5 +610,8 @@
   },
   "3.6.75": {
     "en": "Added verbose mDNS discovery results for troubleshooting (apiv1)"
+  },
+  "3.6.76": {
+    "en": "Custom polling-interval option made available for Homewizard Legacy main unit"
   }
 }
