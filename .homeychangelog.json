@@ -613,5 +613,8 @@
   },
   "3.6.76": {
     "en": "Custom polling-interval option made available for Homewizard Legacy main unit"
+  },
+  "3.6.77": {
+    "en": "Fallback url for P1 mode SDM230 / SDM630"
   }
 }
