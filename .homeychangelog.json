@@ -619,5 +619,8 @@
   },
   "3.6.78": {
     "en": "Realtime data for P1 (apiv2) via Websocket"
+  },
+  "3.6.79": {
+    "en": "Realtime data for Plugin Battery via Websocket / Bugfix P1apiv2 when gas is null"
   }
 }
