@@ -616,5 +616,8 @@
   },
   "3.6.77": {
     "en": "Fallback url for P1 mode SDM230 / SDM630"
+  },
+  "3.6.78": {
+    "en": "Realtime data for P1 (apiv2) via Websocket"
   }
 }

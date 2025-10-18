@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.77",
+  "version": "3.6.78",
   "platforms": [
     "local"
   ],
@@ -182,6 +182,32 @@
         "id": "battery_mode_changed",
         "title": {
           "en": "Battery mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
+        "id": "battery_error_detected",
+        "title": {
+          "en": "Battery error detected"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
+        "id": "battery_group_state_changed",
+        "title": {
+          "en": "Battery group state changed"
         },
         "args": [
           {
@@ -553,6 +579,23 @@
             "filter": "driver_id=plugin_battery"
           }
         ]
+      },
+      {
+        "id": "battery_soc_drift_detected",
+        "title": {
+          "en": "Battery SoC Drift Detected"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
+          }
+        ],
+        "titleFormatted": {
+          "en": "Battery SoC drift detected",
+          "nl": "Batterij SoC-afwijking gedetecteerd"
+        }
       },
       {
         "id": "rainmeter_value_changed",
@@ -2316,7 +2359,10 @@
         "measure_power.battery_group_target_power_w",
         "measure_power.battery_group_max_consumption_w",
         "measure_power.battery_group_max_production_w",
-        "connection_error"
+        "connection_error",
+        "battery_group_total_capacity_kwh",
+        "battery_group_average_soc",
+        "battery_group_state"
       ],
       "energy": {
         "cumulative": true,
@@ -2523,6 +2569,46 @@
             "en": "Battery group Max allowed Production Power",
             "nl": "Battery groep Max toegestaand leveringssvermogen"
           }
+        },
+        "battery_group_total_capacity_kwh": {
+          "type": "number",
+          "getable": true,
+          "setable": false,
+          "uiComponent": "sensor",
+          "icon": "assets/battery.svg",
+          "units": {
+            "en": "kWh"
+          },
+          "title": {
+            "en": "Battery Group Total Capacity"
+          },
+          "insights": false
+        },
+        "battery_group_average_soc": {
+          "type": "number",
+          "getable": true,
+          "setable": false,
+          "uiComponent": "sensor",
+          "icon": "assets/battery.svg",
+          "units": {
+            "en": "%"
+          },
+          "title": {
+            "en": "Battery Group Average SoC"
+          },
+          "insights": true
+        },
+        "battery_group_state": {
+          "type": "string",
+          "getable": true,
+          "setable": false,
+          "uiComponent": "sensor",
+          "icon": "assets/battery.svg",
+          "title": {
+            "en": "Battery Group Charge state",
+            "nl": "Battery Groep Laadt status"
+          },
+          "insights": true
         },
         "rssi": {
           "type": "number",
@@ -3129,7 +3215,7 @@
           "setable": true,
           "insights": true,
           "uiComponent": "sensor",
-          "icon": "assets/rssi.svg",
+          "icon": "assets/clock.svg",
           "units": {
             "en": "min",
             "nl": "min"
@@ -3145,7 +3231,7 @@
           "setable": true,
           "insights": true,
           "uiComponent": "sensor",
-          "icon": "assets/rssi.svg",
+          "icon": "assets/clock.svg",
           "units": {
             "en": "min",
             "nl": "min"
@@ -3560,6 +3646,48 @@
     }
   ],
   "capabilities": {
+    "battery_group_average_soc": {
+      "type": "number",
+      "title": {
+        "en": "Battery Group Average SoC",
+        "nl": "Batterij Groep Lading"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": true,
+      "uiComponent": "sensor",
+      "icon": "assets/battery.svg",
+      "units": {
+        "en": "%",
+        "nl": "%"
+      }
+    },
+    "battery_group_state": {
+      "type": "string",
+      "title": {
+        "en": "Battery Group Charge state",
+        "nl": "Battery Groep Laadt status"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/battery.svg"
+    },
+    "battery_group_total_capacity_kwh": {
+      "type": "number",
+      "title": {
+        "en": "Battery Group Total Capacity"
+      },
+      "units": {
+        "en": "kWh"
+      },
+      "getable": true,
+      "setable": false,
+      "insights": false,
+      "icon": "assets/battery.svg",
+      "uiComponent": "sensor"
+    },
     "central_heating_flame": {
       "type": "boolean",
       "title": {
@@ -3605,7 +3733,7 @@
       "setable": false,
       "uiComponent": "sensor",
       "insights": true,
-      "icon": "assets/rssi.svg",
+      "icon": "assets/cycles.svg",
       "units": {
         "en": "cycles",
         "nl": "cycli"
@@ -3872,7 +4000,7 @@
       "setable": false,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "assets/rssi.svg",
+      "icon": "assets/clock.svg",
       "units": {
         "en": "min",
         "nl": "min"
@@ -3888,7 +4016,7 @@
       "setable": false,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "assets/rssi.svg",
+      "icon": "assets/clock.svg",
       "units": {
         "en": "min",
         "nl": "min"
