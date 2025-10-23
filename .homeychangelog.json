@@ -622,5 +622,11 @@
   },
   "3.6.79": {
     "en": "Realtime data for Plugin Battery via Websocket / Bugfix P1apiv2 when gas is null"
+  },
+  "3.6.80": {
+    "en": "Gas reading fix, websocket logic (reconnect) added"
+  },
+  "3.6.81": {
+    "en": "Finetuning gas data via websockets"
   }
 }
