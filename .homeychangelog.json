@@ -628,5 +628,8 @@
   },
   "3.6.81": {
     "en": "Finetuning gas data via websockets"
+  },
+  "3.6.82": {
+    "en": "Plugin Battery group fix (tracking combined set of batteries) - bugfix / Refenece error"
   }
 }
