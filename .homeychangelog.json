@@ -631,5 +631,8 @@
   },
   "3.6.82": {
     "en": "Plugin Battery group fix (tracking combined set of batteries) - bugfix / Refenece error"
+  },
+  "3.6.83": {
+    "en": "Various bugfixes (websocket) and added netfrequency capability to Plugin Battery and trigger for out of range"
   }
 }

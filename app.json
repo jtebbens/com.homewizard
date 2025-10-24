@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.82",
+  "version": "3.6.83",
   "platforms": [
     "local"
   ],
@@ -214,6 +214,81 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
+        "id": "tariff_changed_v2",
+        "title": {
+          "en": "Peak / Normal Tariff changed",
+          "nl": "Dal / Normaal Tarief veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "tariff",
+            "type": "number",
+            "title": {
+              "en": "tariff",
+              "nl": "tarief"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "import_changed_v2",
+        "title": {
+          "en": "Total used changed",
+          "nl": "Som gebruik veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "import",
+            "type": "number",
+            "title": {
+              "en": "import",
+              "nl": "import"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "export_changed_v2",
+        "title": {
+          "en": "Total delivered changed",
+          "nl": "Som teruglevering veranderd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "export",
+            "type": "number",
+            "title": {
+              "en": "export",
+              "nl": "export"
+            },
+            "example": 1
           }
         ]
       },
@@ -595,6 +670,24 @@
         "titleFormatted": {
           "en": "Battery SoC drift detected",
           "nl": "Batterij SoC-afwijking gedetecteerd"
+        }
+      },
+      {
+        "id": "net_frequency_out_of_range",
+        "title": {
+          "en": "Network frequency out of range",
+          "nl": "Netwerkfrequentie buiten bereik"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
+          }
+        ],
+        "titleFormatted": {
+          "en": "Network frequency is out of range",
+          "nl": "Netwerkfrequentie is buiten bereik"
         }
       },
       {
@@ -3133,6 +3226,7 @@
         "measure_power",
         "measure_current",
         "measure_voltage",
+        "measure_frequency",
         "cycles",
         "rssi",
         "time_to_full",
