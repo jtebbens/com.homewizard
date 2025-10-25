@@ -634,5 +634,8 @@
   },
   "3.6.83": {
     "en": "Various bugfixes (websocket) and added netfrequency capability to Plugin Battery and trigger for out of range"
+  },
+  "3.6.84": {
+    "en": "Bugfix - WebSocket was closed before the connection was established"
   }
 }
