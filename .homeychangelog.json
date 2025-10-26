@@ -637,5 +637,8 @@
   },
   "3.6.84": {
     "en": "Bugfix - WebSocket was closed before the connection was established"
+  },
+  "3.6.85": {
+    "en": "Homewizard Legacy - code rollback (pairing problems after improvements)"
   }
 }
