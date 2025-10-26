@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.6.84",
+  "version": "3.6.85",
   "platforms": [
     "local"
   ],
@@ -3157,18 +3157,6 @@
                 "nl": "Gebruik ledring"
               },
               "value": false
-            },
-            {
-              "id": "polling_interval",
-              "type": "number",
-              "label": {
-                "en": "Polling interval"
-              },
-              "value": 20,
-              "min": 10,
-              "unit": {
-                "en": "s"
-              }
             }
           ]
         }
@@ -3447,8 +3435,7 @@
       "class": "sensor",
       "capabilities": [
         "measure_temperature",
-        "measure_humidity",
-        "alarm_battery"
+        "measure_humidity"
       ],
       "energy": {
         "batteries": [
