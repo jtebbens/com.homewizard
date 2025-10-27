@@ -7,19 +7,25 @@ function saveSettings () {
     } else {
         var homewizard_ledring = false;   
     }
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW'+Math.floor(Date.now() / 1000)
-	    },
-	    settings: {
-		    'homewizard_ip': $('#homewizard_ip').val(),
-		    'homewizard_pass': $('#homewizard_pass').val(),
-            'homewizard_ledring': homewizard_ledring
-	    },
-	    name: 'HomeWizard',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
+    Homey.emit('manual_add', {
+    data: { id: 'HW'+Math.floor(Date.now() / 1000) },
+    settings: {
+        'homewizard_ip': $('#homewizard_ip').val(),
+        'homewizard_pass': $('#homewizard_pass').val(),
+        'homewizard_ledring': homewizard_ledring
+    },
+    name: 'HomeWizard',
+    }, function(err, result) {
+    if (err) {
+        console.error('[PAIRING VIEW] manual_add error:', err);
+        $('#error').html('Error: ' + err);
+        $('#save').prop('disabled', false);
+        return;
+    }
+
+    console.log('[PAIRING VIEW] manual_add result:', result);
+    });
+
     
     Homey.on('success', function(device){
 		$('#error').html('Connected, saving...');
@@ -51,21 +57,36 @@ function saveSettings () {
 <html>
     <head>
         <style>
-            label {
-                width: 150px;
-                display:inline-block !important;   
+            select {
+            font-size: 18px;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 15px;
+            height: 50px;
+            box-sizing: border-box;
             }
-            input {
-                border: 1px solid #ccc;
-                padding: 3px;
-            }
+
             button {
-                padding: 10px;
-                background-color: #ddd;
-                border: 1px solid #ccc;
+            font-size: 18px;
+            padding: 12px 20px;
+            background-color: #ddd;
+            border: 1px solid #ccc;
+            cursor: pointer;
             }
+
+            label {
+            font-size: 16px;
+            margin-bottom: 5px;
+            display: block;
+            }
+
+            .field.row {
+            margin-bottom: 20px;
+            }
+
             #error {
-                color: red;
+            color: red;
+            font-size: 16px;
             }
         </style>
     </head>

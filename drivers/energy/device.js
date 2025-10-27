@@ -14,21 +14,22 @@ const http = require('http');
  * @returns {*} 
  */
 async function updateCapability(device, capability, value) {
-        if (value == null) {
-          if (device.hasCapability(capability)) {
-            await device.removeCapability(capability).catch(device.error);
-          }
-          return;
-        }
+  if (value == null) {
+    if (device.hasCapability(capability) && device.getCapabilityValue(capability) !== null) {
+      await device.removeCapability(capability).catch(device.error);
+    }
+    return;
+  }
 
-        if (!device.hasCapability(capability)) {
-          await device.addCapability(capability).catch(device.error);
-        }
+  if (!device.hasCapability(capability)) {
+    device.log(`⚠️ Capability "${capability}" missing — skipping update`);
+    return;
+  }
 
-        const current = device.getCapabilityValue(capability);
-        if (current !== value) {
-          await device.setCapabilityValue(capability, value).catch(device.error);
-        }
+  const current = device.getCapabilityValue(capability);
+  if (current !== value) {
+    await device.setCapabilityValue(capability, value).catch(device.error);
+  }
 }
 
 /**
@@ -242,29 +243,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-  async onRequest(body) {
-    if (!this.url) return;
-
-    let res;
-    try {
-      res = await fetch(`${this.url}/state`, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-    });
-    } catch (err) {
-      this.error(err);
-      await updateCapability(this, 'connection_error', 'fetch failed');
-      throw new Error('Network error during onRequest');
-    }
-
-    if (!res || !res.ok) {
-      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
-      throw new Error(res ? res.statusText : 'Unknown error during fetch');
-    }
-  }
-
- async onPoll() {
+async onPoll() {
 
     let settings = this.getSettings();
 
@@ -509,14 +488,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
           if ((data.active_current_l2_a !== undefined) || (data.active_current_l3_a !== undefined)) {
 
-              if (
-                settings.number_of_phases === undefined ||
-                settings.number_of_phases === null ||
-                settings.number_of_phases === 1
-              ) {
-                await this.setSettings({ number_of_phases: 3 });
+              try {
+                if (
+                  settings.number_of_phases === undefined ||
+                  settings.number_of_phases === null ||
+                  Number(settings.number_of_phases) === 1
+                ) {
+                  await this.setSettings({ number_of_phases: 3 });
+                  console.log('number_of_phases successfully updated to 3');
+                }
+              } catch (err) {
+                console.error('Failed to update number_of_phases:', err.message, err.stack);
               }
-
               // voltage_sag_l2_count - Net L2 dip
               promises.push((updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count)).catch(this.error));
               

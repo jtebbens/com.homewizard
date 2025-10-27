@@ -6,7 +6,9 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "node-fetch": "^2.7.0",
-    "npm": "^10.8.3"
+    "npm": "^10.8.3",
+    "npm-check": "^6.0.1",
+    "ws": "^8.18.3"
   },
   "scripts": {
     "test": "athom app run",

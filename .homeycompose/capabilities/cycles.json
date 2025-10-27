@@ -8,7 +8,7 @@
   "setable": false,
   "uiComponent": "sensor",
   "insights": true,
-  "icon": "assets/rssi.svg",
+  "icon": "assets/cycles.svg",
   "units": {
     "en": "cycles",
     "nl": "cycli"

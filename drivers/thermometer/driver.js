@@ -5,7 +5,6 @@ const Homey = require('homey');
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
 
-//let homewizard_devices;
 
 class HomeWizardThermometer extends Homey.Driver {
 
@@ -14,17 +13,18 @@ class HomeWizardThermometer extends Homey.Driver {
   }
 
   async onPair(socket) {
+    let homewizard_devices;
     // Show a specific view by ID
     await socket.showView('start');
 
     // Show the next view
-    await socket.nextView();
+    //await socket.nextView();
 
     // Show the previous view
-    await socket.prevView();
+    //await socket.prevView();
 
     // Close the pair session
-    await socket.done();
+    //await socket.done();
 
     // Received when a view has changed
     await socket.setHandler('showView', (viewId) => {
@@ -33,38 +33,29 @@ class HomeWizardThermometer extends Homey.Driver {
     });
 
     // socket.on('get_homewizards', function () {
-    await socket.setHandler('get_homewizards', async () => {
-      try {
-        // You can keep this if you plan to use main unit metadata later
-        const homewizardDriver = this.homey.drivers.getDriver('homewizard');
-        const mainUnitDevices = homewizardDriver?.getDevices?.();
+await socket.setHandler('get_homewizards', async () => {
+  const hwDevices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-        if (!Array.isArray(mainUnitDevices)) {
-          console.warn('Main unit driver did not return an array');
-        }
+  homewizard.getDevices((fetchedDevices) => {
+    const thermometerList = [];
 
-        // This is your actual device registry
-        const fetchedDevices = await getDevicesAsync();
-        const hw_devices = {};
-
-        for (const [key, device] of Object.entries(fetchedDevices)) {
-          const thermometers = device.polldata?.thermometers ?? {};
-          hw_devices[key] = {
-            id: key,
-            name: device.name,
-            model: device.model,
-            thermometers,
-            // Add other fields if needed
-          };
-        }
-
-        console.log(`Emitting ${Object.keys(hw_devices).length} devices`);
-        socket.emit('hw_devices', hw_devices);
-      } catch (err) {
-        console.error('Error emitting hw_devices:', err);
+    Object.keys(fetchedDevices).forEach((hwId) => {
+      const thermometers = fetchedDevices[hwId].polldata?.thermometers;
+      if (Array.isArray(thermometers)) {
+        thermometers.forEach((t) => {
+          thermometerList.push({
+            id: t.id,
+            name: t.name,
+            homewizard_id: hwId
+          });
+        });
       }
     });
 
+    console.log('[PAIRING] Emitting thermometer list:', thermometerList);
+    socket.emit('thermometer_list', thermometerList);
+  });
+});
 
 
     await socket.setHandler('manual_add', (device) => {

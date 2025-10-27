@@ -1,102 +1,104 @@
 <script>
-$( document ).ready(function() {
-	var hw_device_list = [];
-	
-	Homey.emit('get_homewizards');
+$(document).ready(function () {
+  Homey.emit('get_homewizards');
 
-	Homey.on('hw_devices', function(hw_devices){
-
-		hw_device_list = hw_devices;
-		$('#homewizard_select').find('option').remove();
-		$('#homewizard_select').append('<option>Select HomeWizard</option>');
-		$.each(hw_devices, function( index, value ) {
-			$('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
-		});
-		$('#homewizard_select').trigger('change');
+  Homey.on('thermometer_list', function (list) {
+    $('#thermometer_select').empty().append('<option>Selecteer Thermometer</option>');
+    list.forEach((t) => {
+      $('#thermometer_select').append(
+        $('<option>')
+          .val(t.id)
+          .text(t.name)
+          .data('homewizard_id', t.homewizard_id)
+      );
     });
-	
-	$('#homewizard_select').on('change', function() {
-		$('#thermometer_select').find('option').remove();
-        $('#thermometer_select').append('<option>Select Thermometer</option>');
-		$.each(JSON.parse(hw_device_list[$('#homewizard_select').val()].thermometers), function( index, value ) {
-			$('#thermometer_select').append($("<option>").attr('value',value.id).text(value.name));
-		});
-	});
+  });
 });
 
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-	console.log('MA');
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW_TM'+Math.floor(Date.now() / 1000)
-	    },
-		settings: {
-		    'homewizard_id': $('#homewizard_select').val(),
-			'thermometer_id': $('#thermometer_select').val(),
-	    },
-	    name: $("#thermometer_select option:selected").text(),
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
-    
-    Homey.on('success', function(device){
-		$('#error').html('Saving...');
-        $('#save').prop('disabled', true);
-        Homey.addDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: device.data.id
-            },
-			settings: {
-                'homewizard_id': device.settings.homewizard_id,
-				'thermometer_id': device.settings.thermometer_id,
-            },
-            name: device.name
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
-        });
+function saveSettings() {
+  $('#error').html('');
+  $('#save').prop('disabled', true);
+
+  const selectedOption = $('#thermometer_select option:selected');
+  const thermometer_id = selectedOption.val();
+  const homewizard_id = selectedOption.data('homewizard_id');
+  const thermometer_name = selectedOption.text();
+
+  Homey.emit('manual_add', {
+    data: { id: 'HW_TM' + Math.floor(Date.now() / 1000) },
+    settings: {
+      homewizard_id,
+      thermometer_id
+    },
+    name: thermometer_name
+  }, function (err, result) {
+    if (err) return console.error(err);
+  });
+
+  Homey.on('success', function (device) {
+    $('#error').html('Saving...');
+    $('#save').prop('disabled', true);
+    Homey.addDevice({
+      data: { id: device.data.id },
+      settings: device.settings,
+      name: device.name
+    }, function (err) {
+      if (err) return console.error(err);
+      Homey.done();
     });
-    
-    Homey.on('error', function(message){
-        $('#error').html('Error: '+message);
-        $('#save').prop('disabled', false);
-    });
+  });
+
+  Homey.on('error', function (message) {
+    $('#error').html('Error: ' + message);
+    $('#save').prop('disabled', false);
+  });
 }
 </script>
+
 <!doctype html>
 <html>
     <head>
         <style>
-            label {
-                width: 150px;
-                display:inline-block !important;   
+            select {
+            font-size: 18px;
+            padding: 10px;
+            width: 100%;
+            margin-bottom: 15px;
+            height: 50px;
+            box-sizing: border-box;
             }
-            input {
-                border: 1px solid #ccc;
-                padding: 3px;
-            }
+
             button {
-                padding: 10px;
-                background-color: #ddd;
-                border: 1px solid #ccc;
+            font-size: 18px;
+            padding: 12px 20px;
+            background-color: #ddd;
+            border: 1px solid #ccc;
+            cursor: pointer;
             }
+
+            label {
+            font-size: 16px;
+            margin-bottom: 5px;
+            display: block;
+            }
+
+            .field.row {
+            margin-bottom: 20px;
+            }
+
             #error {
-                color: red;
+            color: red;
+            font-size: 16px;
             }
         </style>
     </head>
     <body>
         <p data-i18n="settings.thermometer_intro"></p>
             <div class="field row">
-				<select id="homewizard_select">
-					<option>Select HomeWizard</option>
-				</select>
-				<br>
-				<select id="thermometer_select">
-					<option>Select Thermometer</option>
-				</select>
+            <label for="thermometer_select">Thermometer</label>
+            <select id="thermometer_select">
+                <option>Selecteer Thermometer</option>
+            </select>
             </div>
             <br>
             <p id="error"></p>

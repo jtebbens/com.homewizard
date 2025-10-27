@@ -1,0 +1,14 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Battery Group Total Capacity"
+  },
+  "units": {
+    "en": "kWh"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": false,
+  "icon": "assets/battery.svg",
+  "uiComponent": "sensor"
+}

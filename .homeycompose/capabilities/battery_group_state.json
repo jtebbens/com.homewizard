@@ -1,0 +1,12 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Battery Group Charge state",
+    "nl": "Battery Groep Laadt status"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "assets/battery.svg"
+}

@@ -3,119 +3,125 @@
 const Homey = require('homey');
 const homewizard = require('../../includes/legacy/homewizard.js');
 
+// const { ManagerDrivers } = require('homey');
+// const driver = ManagerDrivers.getDriver('thermometer');
+
 let refreshIntervalId;
-let pollingStarted = false;
 const devices = {};
 // const thermometers = {};
 const debug = false;
 
-function startPolling() {
-  refreshIntervalId = setInterval(async () => {
-    try {
-      // Group devices by homewizard_id
-      const grouped = {};
-      for (const id in devices) {
-        const hw_id = devices[id].getSetting('homewizard_id');
-        if (!grouped[hw_id]) grouped[hw_id] = [];
-        grouped[hw_id].push(devices[id]);
-      }
-
-      // Fetch data per HomeWizard unit
-      for (const hw_id in grouped) {
-        const result = await homewizard.getDeviceData(hw_id, 'thermometers');
-        if (debug) console.log('Thermometer data:', JSON.stringify(result));
-        const payload = Array.isArray(result) ? result : result?.response;
-
-        if (!Array.isArray(payload)) {
-          if (debug) console.log(`No thermometer data for ${hw_id}`);
-          continue;
-        }
-
-        for (const device of grouped[hw_id]) {
-          device.updateFromPayload(payload);
-        }
-      }
-    } catch (err) {
-      console.error('Polling error:', err);
-    }
-  }, 1000 * 60);
-}
-
-
-
-
-
 class HomeWizardThermometer extends Homey.Device {
 
-onInit() {
-  const id = this.getData().id;
-  devices[id] = this;
+  onInit() {
 
-  if (debug) {
-    console.log(`HomeWizard Thermometer ${this.getName()} registered`);
+    if (debug) { console.log(`HomeWizard Thermometer ${this.getName()} has been inited`); }
+
+    const devices = this.homey.drivers.getDriver('thermometer').getDevices();
+
+    devices.forEach((device) => {
+      if (debug) { console.log(`add device: ${JSON.stringify(device.getName())}`); }
+      devices[device.getData().id] = device;
+      devices[device.getData().id].settings = device.getSettings();
+    });
+
+    if (Object.keys(devices).length > 0) {
+		  this.startPolling(devices);
+    }
   }
 
-  if (!pollingStarted) {
-    pollingStarted = true;
-    startPolling();
-  }
-}
+  startPolling(devices) {
 
-updateFromPayload(payload) {
-  const thermometer_id = this.getSetting('thermometer_id');
-  const entry = payload.find(t => String(t.id) === String(thermometer_id));
+    // Clear interval
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+    }
 
-  if (debug) {
-    console.log(`Device ${this.getName()} matched entry:`, entry);
-  }
+    // Start polling for thermometer
+    this.refreshIntervalId = setInterval(() => {
+      if (debug) { console.log('--Start Thermometer Polling-- '); }
 
-  if (!entry || typeof entry.te !== 'number' || typeof entry.hu !== 'number') {
-    this.setUnavailable('No data for this thermometer').catch(this.error);
-    return;
+      this.getStatus(devices);
+
+    }, 1000 * 20);
+
   }
 
-  this.setAvailable().catch(this.error);
+  async getStatus(devices) {
+    try {
+		  const promises = devices.map(async (device) => { // parallel processing using Promise.all
+        if (device.settings.homewizard_id !== undefined) {
+			  const { homewizard_id } = device.settings;
+			  const { thermometer_id } = device.settings;
 
-  // Round and apply offsets
-  let te = entry.te;
-  let hu = entry.hu;
+			  const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
 
-  te += this.getSetting('offset_temperature') || 0;
-  hu += this.getSetting('offset_humidity') || 0;
+			  if (Object.keys(result).length > 0) {
+            for (const index2 in result) {
+				  if (
+                result[index2].id == thermometer_id
+					&& result[index2].te != undefined
+					&& result[index2].hu != undefined
+					&& typeof result[index2].te != 'undefined'
+					&& typeof result[index2].hu != 'undefined'
+				  ) {
+                let te = (result[index2].te.toFixed(1) * 2) / 2;
+                let hu = (result[index2].hu.toFixed(1) * 2) / 2;
 
-  // Compare and update temperature
-  const currentTe = this.getCapabilityValue('measure_temperature');
-  if (currentTe !== te) {
-    if (debug) console.log(`${this.getName()} updating temperature: ${currentTe} → ${te}`);
-    this.setCapabilityValue('measure_temperature', te).catch(this.error);
-  }
+                // First adjust retrieved temperature with offset
+                const offset_temp = device.getSetting('offset_temperature');
+                te += offset_temp;
 
-  // Compare and update humidity
-  const currentHu = this.getCapabilityValue('measure_humidity');
-  if (currentHu !== hu) {
-    if (debug) console.log(`${this.getName()} updating humidity: ${currentHu} → ${hu}`);
-    this.setCapabilityValue('measure_humidity', hu).catch(this.error);
-  }
+                // Check current temperature
+                if (device.getCapabilityValue('measure_temperature') != te) {
+					  if (debug) { console.log(`New TE - ${te}`); }
+					  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
+                }
 
-  // Compare and update battery status
-  const lowBattery = entry.lowBattery === 'yes';
-  if (!this.hasCapability('alarm_battery')) {
-    this.addCapability('alarm_battery').catch(this.error);
-  }
+                // First adjust retrieved humidity with offset
+                const offset_hu = device.getSetting('offset_humidity');
+                hu += offset_hu;
 
-  const currentBattery = this.getCapabilityValue('alarm_battery');
-  if (currentBattery !== lowBattery) {
-    if (debug) console.log(`${this.getName()} updating battery status: ${currentBattery} → ${lowBattery}`);
-    this.setCapabilityValue('alarm_battery', lowBattery).catch(this.error);
-  }
-}
+                // Check current humidity
+                if (device.getCapabilityValue('measure_humidity') != hu) {
+					  if (debug) { console.log(`New HU - ${hu}`); }
+					  await device.setCapabilityValue('measure_humidity', hu).catch(this.error);
+                }
 
+                if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+					  if (!device.hasCapability('alarm_battery')) {
+                    await device.addCapability('alarm_battery').catch(this.error);
+					  }
+
+					  const lowBattery_temp = result[index2].lowBattery;
+					  const lowBattery_status = lowBattery_temp == 'yes';
+
+					  if (device.getCapabilityValue('alarm_battery') != lowBattery_status) {
+                    if (debug) { console.log(`New status - ${lowBattery_status}`); }
+                    await device.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
+					  }
+                } else if (device.hasCapability('alarm_battery')) {
+                  await device.removeCapability('alarm_battery').catch(this.error);
+					  }
+				  }
+            }
+			  }
+        }
+		  });
+
+		  await Promise.all(promises);
+
+		  await this.setAvailable().catch(this.error);
+    } catch (err) {
+		  this.error(err);
+		  await this.setUnavailable(err).catch(this.error);
+    }
+	  }
   
   onDeleted() {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);
-      pollingStarted = false;
       if (debug) { console.log('--Stopped Polling--'); }
     }
 
@@ -123,7 +129,7 @@ updateFromPayload(payload) {
   }
 
   // Catch offset updates
-  async onSettings(oldSettings, newSettings, changedKeys) {
+  onSettings(oldSettings, newSettings, changedKeys) {
     this.log('Settings updated');
     // Update display values if offset has changed
     for (const k in changedKeys) {
@@ -133,14 +139,14 @@ updateFromPayload(payload) {
         const value = this.getCapabilityValue(cap);
         const delta = newSettings[key] - oldSettings[key];
         this.log('Updating value of', cap, 'from', value, 'to', value + delta);
-        await this.setCapabilityValue(cap, value + delta)
+        this.setCapabilityValue(cap, value + delta)
           .catch((err) => this.error(err));
       }
     }
 
   }
 
-  async updateValue(cap, value) {
+  updateValue(cap, value) {
     // add offset if defined
     this.log('Updating value of', this.id, 'with capability', cap, 'to', value);
     const cap_offset = cap.replace('measure', 'offset');
@@ -149,7 +155,7 @@ updateFromPayload(payload) {
     if (offset != null) {
       value += offset;
     }
-    await this.setCapabilityValue(cap, value)
+    this.setCapabilityValue(cap, value)
       .catch((err) => this.error(err));
   }
 

@@ -196,7 +196,32 @@ class HomeWizardDriver extends Homey.Driver {
         return devices;
 
       }
-      
+      /*
+            request(url, function (error, response, body) {
+                if (response === null || response === undefined) {
+                            socket.emit("error", "http error");
+                            return;
+                }
+                if (!error && response.statusCode == 200) {
+                    var jsonObject = JSON.parse(body);
+
+                    if (jsonObject.status == 'ok') {
+                        console.log('Call OK');
+
+                        devices[device.data.id] = {
+                            id: device.data.id,
+                            name: device.name,
+                            settings: device.settings,
+                            capabilities: device.capabilities
+                        };
+                        homewizard.setDevices(devices);
+
+                        callback( null, devices );
+                        socket.emit("success", device);
+                    }
+                }
+            });
+  */
     });
 
     socket.setHandler('disconnect', async () => {

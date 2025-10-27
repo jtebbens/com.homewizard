@@ -43,6 +43,74 @@
     {
       "id": "battery_mode_changed",
       "title": { "en": "Battery mode changed" }
+    },
+    {
+        "id": "battery_error_detected",
+        "title": {
+            "en": "Battery error detected"
+        },
+        "args": []
+    },
+    {
+      "id": "battery_group_state_changed",
+      "title": { "en": "Battery group state changed" }
+    },
+    {
+      "id": "tariff_changed_v2",
+      "title": {
+        "en": "Peak / Normal Tariff changed",
+        "nl": "Dal / Normaal Tarief veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "tariff",
+          "type": "number",
+          "title": {
+            "en": "tariff",
+            "nl": "tarief"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "import_changed_v2",
+      "title": {
+        "en": "Total used changed",
+        "nl": "Som gebruik veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "import",
+          "type": "number",
+          "title": {
+            "en": "import",
+            "nl": "import"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "export_changed_v2",
+      "title": {
+        "en": "Total delivered changed",
+        "nl": "Som teruglevering veranderd"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "export",
+          "type": "number",
+          "title": {
+            "en": "export",
+            "nl": "export"
+          },
+          "example": 1
+        }
+      ]
     }
   ]
 }
