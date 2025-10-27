@@ -643,5 +643,8 @@
   },
   "3.7.0": {
     "en": "P1 (apiv2) - Added checkbox setting to fallback to polling if websocket is to heavy for Homey device"
+  },
+  "3.7.1": {
+    "en": "Version bump to refresh package upload and potentially fix non working app comments on forum."
   }
 }
