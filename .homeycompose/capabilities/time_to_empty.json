@@ -8,7 +8,7 @@
           "setable": false,
           "insights": true,
           "uiComponent": "sensor",
-          "icon": "assets/rssi.svg",
+          "icon": "assets/clock.svg",
           "units": {
             "en": "min",
             "nl": "min"

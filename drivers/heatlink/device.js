@@ -5,7 +5,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 // const { ManagerDrivers } = require('homey');
 // const driver = ManagerDrivers.getDriver('heatlink');
 
-var refreshIntervalId;
+let refreshIntervalId;
 const devices = {};
 // var temperature;
 
@@ -63,12 +63,12 @@ class HomeWizardHeatlink extends Homey.Device {
   startPolling() {
 
     // Clear interval
-    if (refreshIntervalId) {
-      clearInterval(refreshIntervalId);
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
     }
 
     // Start polling for thermometer
-    refreshIntervalId = setInterval(() => {
+    this.refreshIntervalId = setInterval(() => {
       if (debug) { console.log('--Start Heatlink Polling-- '); }
 
       this.getStatus();
@@ -94,52 +94,29 @@ class HomeWizardHeatlink extends Homey.Device {
 			  const tte = (callback[0].tte.toFixed(1) * 2) / 2;
 			  const wte = (callback[0].wte.toFixed(1) * 2) / 2;
 
-			  const storedTemperature = await this.getStoreValue('temperature');
-        if (storedTemperature !== rte) {
-          if (debug) {
-            console.log(`New RTE - ${rte}`);
-          }
-          promises.push(this.setCapabilityValue('measure_temperature', rte).catch(this.error));
-          await this.setStoreValue('temperature', rte).catch(this.error);
-        } else if (debug) {
-          console.log('RTE: no change');
-        }
+			  if (this.getStoreValue('temperature') != rte) {
+            if (debug) { console.log(`New RTE - ${rte}`); }
+            promises.push(this.setCapabilityValue('measure_temperature', rte).catch(this.error));
+            this.setStoreValue('temperature', rte).catch(this.error);
+			  } else if (debug) { console.log('RTE: no change'); }
 
-			  const thermTemperature = await this.getStoreValue('thermTemperature');
-        if (thermTemperature !== rsp) {
-          if (debug) {
-            console.log(`New RSP - ${rsp}`);
-          }
+			  if (this.getStoreValue('thermTemperature') != rsp) {
+            if (debug) { console.log(`New RSP - ${rsp}`); }
+            if (this.getStoreValue('setTemperature') === 0) {
+              promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
+            }
+            this.setStoreValue('thermTemperature', rsp).catch(this.error);
+			  } else if (debug) { console.log('RSP: no change'); }
 
-          const setTemperature = await this.getStoreValue('setTemperature');
-          if (setTemperature === 0) {
-            promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
-          }
-
-          await this.setStoreValue('thermTemperature', rsp).catch(this.error);
-        } else if (debug) {
-          console.log('RSP: no change');
-        }
-
-
-			  const setTemperature = await this.getStoreValue('setTemperature');
-        if (setTemperature !== tte) {
-          if (debug) {
-            console.log(`New TTE - ${tte}`);
-          }
-
-          if (tte > 0) {
-            promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
-          } else {
-            const thermTemperature = await this.getStoreValue('thermTemperature');
-            promises.push(this.setCapabilityValue('target_temperature', thermTemperature).catch(this.error));
-          }
-
-          await this.setStoreValue('setTemperature', tte).catch(this.error);
-        } else if (debug) {
-          console.log('TTE: no change');
-        }
-
+			  if (this.getStoreValue('setTemperature') != tte) {
+            if (debug) { console.log(`New TTE - ${tte}`); }
+            if (tte > 0) {
+              promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
+            } else {
+              promises.push(this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error));
+            }
+            this.setStoreValue('setTemperature', tte).catch(this.error);
+			  } else if (debug) { console.log('TTE: no change'); }
 
 			  if (!this.hasCapability('measure_temperature.boiler')) {
             promises.push(this.addCapability('measure_temperature.boiler').catch(this.error));
@@ -197,7 +174,7 @@ class HomeWizardHeatlink extends Homey.Device {
     } else {
 		  console.log('HW ID not found');
 		  if (Object.keys(devices).length === 1) {
-        clearInterval(refreshIntervalId);
+        clearInterval(this.refreshIntervalId);
 		  }
     }
 	  }

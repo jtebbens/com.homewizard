@@ -5,5 +5,12 @@
   "label": { "en": "Polling interval" },
   "value": 10,
   "unit": { "en": "s" }
-  }
+  },
+  {
+    "id": "url",
+    "type": "text",
+    "label": { "en": "url",
+                "nl": "url"
+   }
+  }  
 ]

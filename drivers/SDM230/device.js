@@ -93,35 +93,52 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   async setCloudOn() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/system`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: true })
-    }).catch(this.error);
+    try {
+      const res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: true })
+      });
 
-    if (!res.ok)
-    { 
-      //await this.setCapabilityValue('connection_error',res.code);
-      throw new Error(res.statusText); 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      // Optionally log success
+      this.log('Cloud enabled successfully');
+    } catch (err) {
+      this.error('Failed to enable cloud:', err);
+      // Optionally set a capability or trigger a flow here
+      // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
     }
   }
+
+
 
 
   async setCloudOff() {
     if (!this.url) return;
 
-    const res = await fetch(`${this.url}/system`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: false })
-    }).catch(this.error);
+    try {
+      const res = await fetch(`${this.url}/system`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: false })
+      });
 
-    if (!res.ok)
-    { 
-      //await this.setCapabilityValue('connection_error',res.code);
-      throw new Error(res.statusText); 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      // Optionally log success
+      this.log('Cloud disabled successfully');
+    } catch (err) {
+      this.error('Failed to disable cloud:', err);
+      // Optionally set a capability or trigger a flow here
+      // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
     }
   }
+
 
   async onPoll() {
 

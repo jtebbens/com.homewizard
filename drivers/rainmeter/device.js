@@ -5,7 +5,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 // const { ManagerDrivers } = require('homey');
 // const driver = ManagerDrivers.getDriver('rainmeter');
 
-var refreshIntervalId;
+let refreshIntervalId;
 const devices = {};
 // var temperature;
 
@@ -36,12 +36,12 @@ class HomeWizardRainmeter extends Homey.Device {
   startPolling() {
 
     // Clear interval
-    if (refreshIntervalId) {
-      clearInterval(refreshIntervalId);
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
     }
 
     // Start polling for thermometer
-    refreshIntervalId = setInterval(() => {
+    this.refreshIntervalId = setInterval(() => {
       // console.log("--Start Rainmeter Polling-- ");
 
       this.getStatus();
@@ -51,60 +51,117 @@ class HomeWizardRainmeter extends Homey.Device {
   }
 
   async getStatus() {
-    const me = this;
+    Promise.resolve()
+      .then(async () => {
 
-    try {
-      const homewizard_id = this.getSetting('homewizard_id');
-      if (typeof homewizard_id === 'undefined') {
-        console.log('Rainmeter settings not found, stop polling set unavailable');
-        return;
-      }
+        const me = this;
 
-      const callback = await homewizard.getDeviceData(homewizard_id, 'rainmeters');
-      if (!callback || Object.keys(callback).length === 0) return;
+        if (this.getSetting('homewizard_id') !== undefined) {
+          const homewizard_id = this.getSetting('homewizard_id');
+          const callback = await homewizard.getDeviceData(homewizard_id, 'rainmeters');
 
-      const rainmeter = callback[0];
+          if (Object.keys(callback).length > 0) {
+            try {
+              // me.setAvailable();
 
-      // Battery check
-      if (rainmeter.lowBattery != null) {
-        if (!this.hasCapability('alarm_battery')) {
-          await this.addCapability('alarm_battery').catch(me.error);
+              // Check Battery
+              if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
+                if (!this.hasCapability('alarm_battery')) {
+                  await this.addCapability('alarm_battery').catch(me.error);
+                }
+
+                const lowBattery_temp = callback[0].lowBattery;
+                const lowBattery_status = lowBattery_temp == 'yes';
+
+                if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
+                  // if (debug) { console.log("New status - " + lowBattery_status); }
+                  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
+                }
+              } else if (this.hasCapability('alarm_battery')) {
+                await this.removeCapability('alarm_battery').catch(me.error);
+              }
+
+              const rain_daytotal = callback[0].mm; // Total Rain in mm used JSON $rainmeters[0]['mm']
+              const rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
+
+              // Rain last 3 hours
+              await me.setCapabilityValue('measure_rain.last3h', rain_last3h).catch(me.error);
+
+              // Rain total day
+              await me.setCapabilityValue('measure_rain.total', rain_daytotal).catch(me.error);
+
+              // Trigger flows
+              if (rain_daytotal != me.getStoreValue('last_raintotal') && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
+                me.flowTriggerValueChanged(me, { rainmeter_changed: rain_daytotal });
+                await me.setStoreValue('last_raintotal', rain_daytotal).catch(me.error); // Update last_raintotal
+              }
+            } catch (err) {
+              console.log('ERROR RainMeter getStatus ', err);
+              me.setUnavailable();
+            }
+          }
+        } else {
+          console.log('Rainmeter settings not found, stop polling set unavailable');
+          // this.setUnavailable();
+
+          // Only clear interval when the unavailable device is the only device on this driver
+          // This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+          // In the event that a user has multiple devices with old settings, this function will get called every 10 seconds, but that should not be a problem
         }
+      })
+      .then(() => {
+        this.setAvailable().catch(this.error);
+      })
+      .catch((err) => {
+        this.error(err);
+        this.setUnavailable(err).catch(this.error);
+      });
+  }
 
-        const lowBattery_status = rainmeter.lowBattery === 'yes';
-        if (this.getCapabilityValue('alarm_battery') !== lowBattery_status) {
-          await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
-        }
-      } else if (this.hasCapability('alarm_battery')) {
-        await this.removeCapability('alarm_battery').catch(me.error);
-      }
+  /*
+	getStatus() {
 
-      // Rain data
-      const rain_daytotal = rainmeter.mm;
-      const rain_last3h = rainmeter['3h'];
+		var me = this;
 
-      await me.setCapabilityValue('measure_rain.last3h', rain_last3h).catch(me.error);
-      await me.setCapabilityValue('measure_rain.total', rain_daytotal).catch(me.error);
+		if(this.getSetting('homewizard_id') !== undefined ) {
+			var homewizard_id = this.getSetting('homewizard_id');
 
-      // Trigger flow if rain total changed
-      const lastRainTotal = await me.getStoreValue('last_raintotal');
-      if (
-        typeof rain_daytotal === 'number' &&
-        rain_daytotal !== 0 &&
-        rain_daytotal !== lastRainTotal
-      ) {
-        me.flowTriggerValueChanged(me, { rainmeter_changed: rain_daytotal });
-        await me.setStoreValue('last_raintotal', rain_daytotal).catch(me.error);
-      }
+			homewizard.getDeviceData(homewizard_id, 'rainmeters', function(callback) {
+				if (Object.keys(callback).length > 0) {
+					try {
+						me.setAvailable();
 
-      await this.setAvailable().catch(this.error);
-    } catch (err) {
-      console.error('ERROR RainMeter getStatus', err);
-      await this.setUnavailable(err).catch(this.error);
-    }
-}
+						var rain_daytotal = ( callback[0].mm ); // Total Rain in mm used JSON $rainmeters[0]['mm']
+						var rain_last3h = ( callback[0]['3h'] ); // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
+						// Rain last 3 hours
+						me.setCapabilityValue("measure_rain.last3h", rain_last3h ).catch(me.error);
+						// Rain total day
+						me.setCapabilityValue("measure_rain.total", rain_daytotal ).catch(me.error);
 
+						// Trigger flows
+						if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
+							//console.log("Current Total Rainfall - "+ rain_daytotal);
+							me.flowTriggerValueChanged(me, {rainmeter_changed: rain_daytotal})
+						  me.setStoreValue("last_raintotal",rain_daytotal); // Update last_raintotal
+						}
 
+					} catch (err) {
+						console.log('ERROR RainMeter getStatus ', err);
+						me.setUnavailable();
+					}
+				}
+			});
+		} else {
+			console.log('Rainmeter settings not found, stop polling set unavailable');
+			this.setUnavailable();
+
+			// Only clear interval when the unavailable device is the only device on this driver
+			// This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
+			// In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
+
+		}
+	}
+	*/
 
   onDeleted() {
 

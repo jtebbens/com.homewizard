@@ -20,6 +20,7 @@
     "measure_power",
     "measure_current",
     "measure_voltage",
+    "measure_frequency",
     "cycles",
     "rssi",
     "time_to_full",
@@ -102,7 +103,7 @@
       "setable": true,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "assets/rssi.svg",
+      "icon": "assets/clock.svg",
       "units": {
         "en": "min",
         "nl": "min"
@@ -118,7 +119,7 @@
       "setable": true,
       "insights": true,
       "uiComponent": "sensor",
-      "icon": "assets/rssi.svg",
+      "icon": "assets/clock.svg",
       "units": {
         "en": "min",
         "nl": "min"

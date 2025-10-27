@@ -5,7 +5,25 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
 v3.7.0
-* Initial support KWH P1 and P3 meter (SDM230/SDM630) to control Plugin Battery (not tested) - Requires firmware 5.0006 for kwh meters (beta).
+* Trigger card for battery SoC Drift (triggers on expected vs actual State-of-charge)
+* Trigger card for battery error (based on energy returned to grid while battery group should be charging)
+* Trigger card for battery netfrequency out of range
+* Icon update for various capabilities
+* Battery group details added to P1apiv2. (Charging state)
+* Realtime data for P1 (apiv2) via Websocket
+* Realtime data for Plugin Battery via Websocket
+* Bugfixes/crashes on P1 (apiv2) - no gas data on first poll / ignore
+* Websocket reconnect code for covering wifi disconnect & terminate issues 
+* Plugin Battery group fix (tracking combined set of batteries) - bugfix / Refenece error
+* Netfrequency capability added for Plugin Battery
+* Homewizard Legacy - code rollback (pairing problems after improvements)
+* P1 (apiv2) - Added checkbox setting to fallback to polling if websocket is to heavy for Homey device
+
+v3.6.77
+* Custom polling-interval option made for Homewizard Legacy unit (default 20s, when adjusted restart app to active it)
+  To adjust setting check the main unit advanced settings
+* Energy sockets with poor wifi connection will have 3 attempts now
+* Fallback url for P1 mode SDM230 / SDM630
 
 v3.6.75
 * Thermometer (Homewizard Legacy) - full code refractoring

@@ -1,0 +1,16 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Battery Group Average SoC",
+    "nl": "Batterij Groep Lading"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "assets/battery.svg",
+  "units": {
+    "en": "%",
+    "nl": "%"
+  }
+}

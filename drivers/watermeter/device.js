@@ -112,43 +112,51 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
 
    async setCloudOn() {
-      if (!this.url) return;
-  
-      let res;
-      try {
-        res = await fetch(`${this.url}/system`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cloud_enabled: true })
-        });
-      } catch (err) {
-        this.error(err);
-        throw new Error('Network error during setCloudOn');
-      }
-  
-      if (!res || !res.ok) {
-        throw new Error(res ? res.statusText : 'Unknown error during fetch');
-      }
-    }
-  
-  
+       if (!this.url) return;
+   
+       try {
+         const res = await fetch(`${this.url}/system`, {
+           method: 'PUT',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ cloud_enabled: true })
+         });
+   
+         if (!res.ok) {
+           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+         }
+   
+         // Optionally log success
+         this.log('Cloud enabled successfully');
+       } catch (err) {
+         this.error('Failed to enable cloud:', err);
+         // Optionally set a capability or trigger a flow here
+         // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
+       }
+     }
+   
+   
+   
+   
     async setCloudOff() {
       if (!this.url) return;
   
-      let res;
       try {
-        res = await fetch(`${this.url}/system`, {
+        const res = await fetch(`${this.url}/system`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cloud_enabled: false })
         });
-      } catch (err) {
-        this.error(err);
-        throw new Error('Network error during setCloudOff');
-      }
   
-      if (!res || !res.ok) { 
-        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+  
+        // Optionally log success
+        this.log('Cloud disabled successfully');
+      } catch (err) {
+        this.error('Failed to disable cloud:', err);
+        // Optionally set a capability or trigger a flow here
+        // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
       }
     }
 

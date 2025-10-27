@@ -127,23 +127,39 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onRequest(body) {
     if (!this.url) return;
 
+    const maxRetries = 2;
+    let attempt = 0;
     let res;
-    try {
-      res = await fetch(`${this.url}/state`, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch (err) {
-      this.error(err);
-      throw new Error('Network error during onRequest');
-    }
 
-    if (!res || !res.ok) {
-      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
-      throw new Error(res ? res.statusText : 'Unknown error during fetch');
+    while (attempt <= maxRetries) {
+      try {
+        res = await fetch(`${this.url}/state`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (res.ok) {
+          return; // Success
+        }
+
+        // Response received but not OK
+        throw new Error(res.statusText || 'Unknown error during fetch');
+
+      } catch (err) {
+        this.error(`Attempt ${attempt + 1} failed:`, err);
+
+        if (attempt === maxRetries) {
+          await this.setCapabilityValue('connection_error', 'fetch failed');
+          throw new Error('Network error during onRequest');
+        }
+
+        attempt++;
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Optional backoff
+      }
     }
   }
+
 
   async onIdentify() {
     if (!this.url) return;
@@ -240,7 +256,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
 
       if (!res || !res.ok) {
-          await this.setCapabilityValue('connection_error',res.code);
+          //await this.setCapabilityValue('connection_error',res.code);
           throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
       }
 
@@ -311,53 +327,73 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       .then(() => {
         this.setAvailable().catch(this.error);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         if (err.code === 'ECONNRESET') {
-          // Handle the ECONNRESET error
           console.log('Socket - Connection was reset');
+          await this.setCapabilityValue('connection_error', 'Connection reset');
+        } else if (err.code === 'EHOSTUNREACH') {
+          await this.setCapabilityValue('connection_error', 'Socket unreachable');
         } else {
           this.error(err);
         }
-        this.setUnavailable(err).catch(this.error);
+
+        await this.setUnavailable(err).catch(this.error);
       });
   }
 
-  onPollState() {
-    if (!this.url) return;
+async onPollState() {
+  if (!this.url) return;
 
-    Promise.resolve().then(async () => {
-      let res;
-      try {
-        res = await fetch(`${this.url}/state`, {
-          agent,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-      } catch (err) {
-        this.error(err);
-        throw new Error('Network error during onPollState');
+  try {
+    const res = await fetch(`${this.url}/state`, {
+      agent,
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
       }
+    });
 
-      if (!res || !res.ok) {
-        throw new Error(res ? res.statusText : 'Unknown error during fetch');
-      }
+    if (!res.ok) {
+      this.error(`Polling failed with status ${res.status}: ${res.statusText}`);
+      throw new Error(res.statusText);
+    }
 
-      const data = await res.json();
+    const data = await res.json();
 
-      // Update values
-      if (this.getCapabilityValue('onoff') != data.power_on)
-      { await this.setCapabilityValue('onoff', data.power_on).catch(this.error); }
-      if (this.getCapabilityValue('dim') != data.brightness)
-      { await this.setCapabilityValue('dim', data.brightness * (1 / 255)).catch(this.error); }
-      if (this.getCapabilityValue('locked') != data.switch_lock)
-      { await this.setCapabilityValue('locked', data.switch_lock).catch(this.error); }
-    })
-      .catch((err) => {
-        this.error(err);
-      });
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid response format');
+    }
+
+    // Update values
+    if (this.getCapabilityValue('onoff') !== data.power_on) {
+      await this.setCapabilityValue('onoff', data.power_on).catch(this.error);
+    }
+    if (this.getCapabilityValue('dim') !== data.brightness) {
+      await this.setCapabilityValue('dim', data.brightness * (1 / 255)).catch(this.error);
+    }
+    if (this.getCapabilityValue('locked') !== data.switch_lock) {
+      await this.setCapabilityValue('locked', data.switch_lock).catch(this.error);
+    }
+
+    await this.setCapabilityValue('connection_error', 'No error');
+
+  } catch (err) {
+    if (err.code === 'ECONNRESET') {
+      this.log('Socket - Connection was reset');
+      await this.setCapabilityValue('connection_error', 'Connection reset');
+    } else if (err.code === 'EHOSTUNREACH') {
+      this.log('Socket unreachable');
+      await this.setCapabilityValue('connection_error', 'Device unreachable');
+    } else {
+      await this.setCapabilityValue('connection_error', err.message || 'Polling error');
+      this.error(err);
+    }
+
+    await this.setUnavailable(err).catch(this.error);
   }
+}
+
+
 
   // Catch offset updates
   async onSettings(oldSettings, newSettings) {

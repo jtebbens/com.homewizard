@@ -53,7 +53,10 @@
     "measure_power.battery_group_target_power_w",
     "measure_power.battery_group_max_consumption_w",
     "measure_power.battery_group_max_production_w",
-    "connection_error"
+    "connection_error",
+    "battery_group_total_capacity_kwh",
+    "battery_group_average_soc",
+    "battery_group_state"
   ],
   "energy": {
     "cumulative": true,
@@ -260,6 +263,46 @@
         "en": "Battery group Max allowed Production Power",
         "nl": "Battery groep Max toegestaand leveringssvermogen"
       }
+    },
+    "battery_group_total_capacity_kwh": {
+      "type": "number",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/battery.svg",
+      "units": {
+        "en": "kWh"
+      },
+      "title": {
+        "en": "Battery Group Total Capacity"
+      },
+      "insights": false
+    },
+    "battery_group_average_soc": {
+      "type": "number",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/battery.svg",
+      "units": {
+        "en": "%"
+      },
+      "title": {
+        "en": "Battery Group Average SoC"
+      },
+      "insights": true
+    },
+    "battery_group_state": {
+      "type": "string",
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/battery.svg",
+      "title": {
+        "en": "Battery Group Charge state",
+        "nl": "Battery Groep Laadt status"
+      },
+      "insights": true
     },
     "rssi": {
       "type": "number",

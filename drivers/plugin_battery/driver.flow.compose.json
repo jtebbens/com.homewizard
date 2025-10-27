@@ -36,6 +36,30 @@
     {
       "id": "battery_full",
       "title": { "en": "Battery is fully charged" }
+    },
+    {
+      "id": "battery_soc_drift_detected",
+      "title": {
+        "en": "Battery SoC Drift Detected"
+      },
+      "args": [],
+      "titleFormatted": {
+        "en": "Battery SoC drift detected",
+        "nl": "Batterij SoC-afwijking gedetecteerd"
+      }
+
+    },
+    {
+      "id": "net_frequency_out_of_range",
+      "title": {
+        "en": "Network frequency out of range",
+        "nl": "Netwerkfrequentie buiten bereik"
+      },
+      "args": [],
+      "titleFormatted": {
+        "en": "Network frequency is out of range",
+        "nl": "Netwerkfrequentie is buiten bereik"
+      }
     }
   ]
 }
