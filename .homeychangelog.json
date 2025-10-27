@@ -640,5 +640,8 @@
   },
   "3.6.85": {
     "en": "Homewizard Legacy - code rollback (pairing problems after improvements)"
+  },
+  "3.7.0": {
+    "en": "P1 (apiv2) - Added checkbox setting to fallback to polling if websocket is to heavy for Homey device"
   }
 }
