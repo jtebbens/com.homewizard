@@ -4,7 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.7.0
+v3.7.2
+* Extra check upon websocket creation to avoid crashes
+
+v3.7.1
 * Trigger card for battery SoC Drift (triggers on expected vs actual State-of-charge)
 * Trigger card for battery error (based on energy returned to grid while battery group should be charging)
 * Trigger card for battery netfrequency out of range
