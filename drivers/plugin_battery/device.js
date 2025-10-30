@@ -4,6 +4,16 @@ const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+process.on('uncaughtException', (err) => {
+  this.error('💥 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  this.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+
 const WebSocket = require('ws');
 const https = require('https');
 
@@ -306,7 +316,15 @@ startWebSocket() {
     const agent = new (require('https')).Agent({ rejectUnauthorized: false });
     //const wsUrl = this.url.replace('https://', 'wss://') + '/api/ws';
     const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
-    this.ws = new (require('ws'))(wsUrl, { agent });
+
+    // Catch Websocket errors upon create
+    try {
+      this.ws = new (require('ws'))(wsUrl, { agent });
+    } catch (err) {
+      this.error('❌ Failed to create WebSocket:', err);
+      this.wsActive = false;
+      return;
+    }
 
     this.ws.on('open', () => {
       this.wsActive = true;
