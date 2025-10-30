@@ -646,5 +646,8 @@
   },
   "3.7.1": {
     "en": "Version bump to refresh package upload and potentially fix non working app comments on forum."
+  },
+  "3.7.2": {
+    "en": "Extra check upon websocket creation to avoid crashes"
   }
 }
