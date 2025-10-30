@@ -649,5 +649,8 @@
   },
   "3.7.2": {
     "en": "Extra check upon websocket creation to avoid crashes"
+  },
+  "3.7.3": {
+    "en": "Plugin battery catch all error (unhandled exception)"
   }
 }
