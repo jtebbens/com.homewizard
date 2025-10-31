@@ -658,5 +658,11 @@
   },
   "3.7.5": {
     "en": "Version bump (unknown install problem)"
+  },
+  "3.7.6": {
+    "en": "Syntax error in P1 (websocket)"
+  },
+  "3.7.7": {
+    "en": "Fetch was not defined for fetchWithTimeout"
   }
 }
