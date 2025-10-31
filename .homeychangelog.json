@@ -655,5 +655,8 @@
   },
   "3.7.4": {
     "en": "Additional checking and error handling on bad wifi connections (websocket based)"
+  },
+  "3.7.5": {
+    "en": "Version bump (unknown install problem)"
   }
 }
