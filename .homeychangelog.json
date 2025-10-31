@@ -652,5 +652,8 @@
   },
   "3.7.3": {
     "en": "Plugin battery catch all error (unhandled exception)"
+  },
+  "3.7.4": {
+    "en": "Additional checking and error handling on bad wifi connections (websocket based)"
   }
 }
