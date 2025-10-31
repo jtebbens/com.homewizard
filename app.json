@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.7.7",
+  "version": "3.7.8",
   "platforms": [
     "local"
   ],
@@ -3272,6 +3272,13 @@
           "title": {
             "en": "Battery Level",
             "nl": "Batterij niveau"
+          }
+        },
+        "measure_frequency": {
+          "decimals": 3,
+          "title": {
+            "en": "Current Frequency",
+            "nl": "Huidige Frequentie"
           }
         },
         "battery_charging_state": {
