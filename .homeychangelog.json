@@ -667,5 +667,8 @@
   },
   "3.7.8": {
     "en": "net_frequence fix (3 decimals)"
+  },
+  "3.7.9": {
+    "en": "Capability update fix (avoid removal check)"
   }
 }
