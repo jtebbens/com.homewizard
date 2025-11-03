@@ -4,10 +4,18 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.7.5
+v3.8.0
+* Removed node-fetch for Homey 12.9.x (nodejs v22 - native fetch)
+* Moved Websocket functions to include to clean up P1 and plugin_battery code
+
+v3.7.9
 * Extra check upon websocket creation to avoid crashes
 * Plugin battery catch all error (unhandled exception)
 * Additional checking and error handling on bad wifi connections (websocket based)
+* (fix) Error: WebSocket is not open: readyState 0 (CONNECTING)
+* Fetch was not defined for fetchWithTimeout function
+* Missed net_frequency update, also made it 3 decimals
+* Capability update fix (avoid removal check)
 
 v3.7.1
 * Trigger card for battery SoC Drift (triggers on expected vs actual State-of-charge)

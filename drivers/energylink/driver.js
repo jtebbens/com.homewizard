@@ -13,7 +13,7 @@ const devices = {};
 class HomeWizardEnergyLink extends Homey.Driver {
 
   onInit() {
-    console.log('HomeWizard EnergyLink has been inited');
+    //console.log('HomeWizard EnergyLink has been inited');
   }
 
   async onPair(socket) {

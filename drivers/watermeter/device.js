@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 
 const http = require('http');
 
@@ -15,6 +15,8 @@ const agent = new http.Agent({
 module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
+
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const settings = this.getSettings();
     console.log('Offset polling for Watermeter: ',settings.offset_polling);

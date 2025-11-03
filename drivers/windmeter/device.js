@@ -13,7 +13,9 @@ const debug = false;
 
 class HomeWizardWindmeter extends Homey.Device {
 
-  onInit() {
+  async onInit() {
+
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     console.log(`HomeWizard Windmeter ${this.getName()} has been inited`);
 
@@ -76,11 +78,13 @@ class HomeWizardWindmeter extends Homey.Device {
 	  async getStatus(devices) {
     if (this.getSetting('homewizard_id') !== undefined) {
 		  const homewizard_id = this.getSetting('homewizard_id');
-
+      
 		  try {
         const callback = await homewizard.getDeviceData(homewizard_id, 'windmeters');
 
         if (Object.keys(callback).length > 0) {
+
+          this.setAvailable().catch(this.error); 
 
           // Check Battery
           if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {

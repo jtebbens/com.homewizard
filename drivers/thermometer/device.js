@@ -13,9 +13,9 @@ const debug = false;
 
 class HomeWizardThermometer extends Homey.Device {
 
-  onInit() {
+  async onInit() {
 
-    if (debug) { console.log(`HomeWizard Thermometer ${this.getName()} has been inited`); }
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const devices = this.homey.drivers.getDriver('thermometer').getDevices();
 

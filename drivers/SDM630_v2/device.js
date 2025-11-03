@@ -9,6 +9,8 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onInit() {
 
+    await this.setUnavailable(err).catch(this.error);
+
     this.token = await this.getStoreValue('token');
     this.log('Token:', this.token);
 
@@ -401,11 +403,11 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
     })
       .then(() => {
-        this.setAvailable().catch(this.error);
+        await this.setAvailable().catch(this.error);
       })
       .catch((err) => {
         this.error(err);
-        this.setUnavailable(err).catch(this.error);
+        await this.setUnavailable(err).catch(this.error);
       });
   }
 

@@ -24,5 +24,9 @@
         "plugin_battery": {
             "autorize_instruction": "Druk op de knop van de plugin batterij om de koppeling te voltooien"
         }
+    },
+    "device": {
+        "init": "Apparaat initialiseren...",
+        "unreachable": "Apparaat onbereikbaar"
     }
 }

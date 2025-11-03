@@ -14,7 +14,7 @@ let homewizard_devices;
 class HomeWizardWattcher extends Homey.Driver {
 
   onInit() {
-    console.log('HomeWizard Wattcher has been inited');
+    //console.log('HomeWizard Wattcher has been inited');
   }
 
   async onPair(socket) {

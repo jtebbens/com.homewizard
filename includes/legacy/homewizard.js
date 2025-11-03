@@ -1,8 +1,8 @@
 'use strict';
 
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const Homey = require('homey');
-const AbortController = require('abort-controller');
+//const AbortController = require('abort-controller');
 
 const http = require('http');
 

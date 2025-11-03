@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const http = require('http');
 
 const agent = new http.Agent({
@@ -17,6 +17,8 @@ const agent = new http.Agent({
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
+
+      await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
       const settings = this.getSettings();
       console.log('Settings for SDM230: ',settings.polling_interval);

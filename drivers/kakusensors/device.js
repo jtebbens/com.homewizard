@@ -11,7 +11,9 @@ const devices = {};
 
 class HomeWizardKakusensors extends Homey.Device {
 
-  onInit() {
+  async onInit() {
+
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     if (debug) { console.log(`HomeWizard Kakusensors ${this.getName()} has been inited`); }
 
@@ -59,6 +61,8 @@ class HomeWizardKakusensors extends Homey.Device {
 
         try {
 			  const result = await homewizard.getDeviceData(homewizard_id, 'kakusensors');
+
+        this.setAvailable().catch(this.error);
 
 			  if (Object.keys(result).length > 0) {
             for (const index2 in result) {

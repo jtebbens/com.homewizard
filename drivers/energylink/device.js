@@ -10,9 +10,9 @@ let refreshIntervalIdReadings;
 
 class HomeWizardEnergylink extends Homey.Device {
 
-  onInit() {
-
-    console.log(`HomeWizard Energylink: "${this.getName()}" has been added`);
+  async onInit() {
+    
+    await this.setUnavailable(err).catch(this.error);
 
     this.startPolling();
 
@@ -337,6 +337,8 @@ class HomeWizardEnergylink extends Homey.Device {
         }
         // Execute all promises concurrently using Promise.all()
         await Promise.allSettled(promises);
+
+        this.setAvailable().catch(this.error);
 
       } else {
         this.setUnavailable('No Energylink data available');

@@ -13,9 +13,11 @@ const debug = false;
 
 class HomeWizardHeatlink extends Homey.Device {
 
-  onInit() {
+  async onInit() {
 
-    console.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+
+    //console.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
     devices.forEach((device) => {
