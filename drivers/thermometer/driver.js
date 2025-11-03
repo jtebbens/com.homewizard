@@ -9,7 +9,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 class HomeWizardThermometer extends Homey.Driver {
 
   onInit() {
-    console.log('HomeWizard Thermometer has been inited');
+    //console.log('HomeWizard Thermometer has been inited');
   }
 
   async onPair(socket) {

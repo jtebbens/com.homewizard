@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
@@ -26,13 +26,14 @@ async function updateCapability(device, capability, value) {
 
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
-    device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
 async onInit() {
+    await this.setUnavailable(err).catch(this.error);
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
 

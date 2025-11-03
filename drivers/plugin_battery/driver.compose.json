@@ -71,6 +71,13 @@
         "nl": "Batterij niveau"
       }
     },
+    "measure_frequency": {
+      "decimals": 3,
+      "title": {
+        "en": "Current Frequency",
+        "nl": "Huidige Frequentie"
+      }
+    },
     "battery_charging_state": {
       "title": {
         "en": "Battery State",

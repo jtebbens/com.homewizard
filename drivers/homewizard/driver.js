@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 // const request = require('request');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
@@ -11,7 +11,7 @@ let refreshIntervalId;
 
 class HomeWizardDriver extends Homey.Driver {
   onInit() {
-    console.log('HomeWizard has been inited');
+    //console.log('HomeWizard has been inited');
 
     const me = this;
 

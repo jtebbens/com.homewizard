@@ -14,6 +14,8 @@ class HomeWizardWattcher extends Homey.Device {
 
   onInit() {
 
+    await this.setUnavailable(err).catch(this.error);
+
     console.log(`HomeWizard Wattcher ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('wattcher').getDevices();

@@ -2,6 +2,8 @@
 
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
+const WebSocketManager = require('../../includes/v2/Ws')
+//const fetch = require('node-fetch');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -33,21 +35,24 @@ const agent = new https.Agent({
  * @returns {Promise<void>} 
  */
 async function updateCapability(device, capability, value) {
+  const current = device.getCapabilityValue(capability);
+
   if (value == null) {
-    // No value, keep capability for now
+    if (device.hasCapability(capability) && current !== null) {
+      await device.removeCapability(capability).catch(device.error);
+      device.log(`🗑️ Removed capability "${capability}"`);
+    }
     return;
   }
 
-  // Add missing capability
   if (!device.hasCapability(capability)) {
-    device.log(`➕ Capability "${capability}" missing — adding`);
     await device.addCapability(capability).catch(device.error);
+    device.log(`➕ Added capability "${capability}"`);
   }
 
-  // Update value if it has changed
-  const current = device.getCapabilityValue(capability);
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
+    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
@@ -139,13 +144,11 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
 
-    this.ws = null;
-    this.wsActive = false;
-    this.reconnecting = false; 
     this.pollingInterval = null;
-
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
+
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     if (!this.hasCapability('connection_error')) {
         await this.addCapability('connection_error').catch(this.error);
@@ -291,8 +294,20 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       this.log('⚙️ Polling enabled via settings');
       this.startPolling();
     } else {
-      this.startWebSocket();
-    }
+      this.wsManager = new WebSocketManager({
+        url: this.url,
+        token: this.token,
+        log: this.log.bind(this),
+        error: this.error.bind(this),
+        setAvailable: this.setAvailable.bind(this),
+        getSetting: this.getSetting.bind(this),
+        handleMeasurement: this._handleMeasurement.bind(this),
+        handleSystem: this._handleSystem.bind(this),
+        handleBatteries: this._handleBatteries.bind(this)
+      });
+
+      this.wsManager.start();
+}
 
     
     
@@ -646,260 +661,6 @@ async _handleBatteries(data) {
 
 }
 
-_startHeartbeatMonitor() {
-  if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-  this.heartbeatTimer = setInterval(() => {
-    const now = Date.now();
-    if (now - this.lastMeasurementAt > 60000) {
-      this.log('💤 No measurement in 60s — reconnecting WebSocket');
-      this._reconnectWebSocket();
-    }
-  }, 30000);
-}
-
-_reconnectWebSocket() {
-  if (this.ws) {
-    this.ws.removeAllListeners();
-
-    const state = this.ws.readyState;
-    this.log(`🔄 Reconnecting WebSocket — current state: ${state}`);
-
-    try {
-      if (state === WebSocket.CONNECTING && this.ws.readyState === WebSocket.CONNECTING) {
-        this.log(`🕓 WebSocket still connecting — skipping close()`);
-        // Optionally wait or retry later
-      } else if (state === WebSocket.OPEN || state === WebSocket.CLOSING) {
-        this.log(`❌ Terminating WebSocket`);
-        this.ws.terminate();
-      }
-
-    } catch (err) {
-      this.error(`⚠️ Error during WebSocket cleanup:`, err);
-    }
-
-    this.ws = null;
-  }
-
-  this.wsActive = false;
-
-  // Optional: add delay to avoid hammering
-  setTimeout(() => {
-    this.startWebSocket();
-  }, 2000);
-}
-
-
-
-
-async startWebSocket() {
-  this.reconnectAttempts = this.reconnectAttempts || 0;
-
-  if (this.ws) {
-    try {
-      switch (this.ws.readyState) {
-        case this.ws.OPEN:
-          this.ws.terminate();
-          break;
-        case this.ws.CONNECTING:
-          this.log('⚠️ WebSocket still connecting — skipping termination');
-          return;
-        case this.ws.CLOSING:
-        case this.ws.CLOSED:
-          this.ws.close();
-          break;
-      }
-    } catch (err) {
-      this.error('❌ Failed to clean up WebSocket:', err);
-    }
-
-    this.ws = null;
-    this.wsActive = false;
-  }
-
-  const settingsUrl = this.getSetting('url');
-  if (!this.url && settingsUrl) {
-    this.url = settingsUrl;
-  }
-
-  if (!this.token || !this.url) {
-    this.error('❌ Missing token or URL — cannot start WebSocket');
-    return;
-  }
-
-  const agent = new (require('https')).Agent({ rejectUnauthorized: false });
-  const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
-
-  // 🔍 Preflight reachability check
-  try {
-    const res = await fetchWithTimeout(`${this.url}/api/system`, {
-      headers: { Authorization: `Bearer ${this.token}` },
-      agent
-    }, 3000);
-    if (!res || typeof res.cloud_enabled === 'undefined') {
-      this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
-      return;
-    }
-  } catch (err) {
-    this.error(`❌ Preflight check failed: ${err.message}`);
-    return;
-  }
-
-  // 🔌 Create WebSocket
-  try {
-    this.ws = new (require('ws'))(wsUrl, { agent });
-  } catch (err) {
-    this.error('❌ Failed to create WebSocket:', err);
-    this.wsActive = false;
-    return;
-  }
-
-  this.ws.on('open', () => {
-    this.wsActive = true;
-    this.lastMeasurementAt = Date.now();
-    this.reconnectAttempts = 0; // ✅ Reset backoff
-    this._startHeartbeatMonitor();
-    this.log('🔌 WebSocket opened — waiting to authorize...');
-
-    // ✅ Enable TCP keep-alive
-    if (this.ws._socket) {
-      this.ws._socket.setKeepAlive(true, 30000);
-    }
-
-    const maxRetries = 30;
-    let retries = 0;
-    let retryTimer;
-
-    const tryAuthorize = () => {
-      if (!this.ws) return;
-
-      if (this.ws.readyState === this.ws.OPEN) {
-        this.log('🔐 Sending WebSocket authorization');
-        this.ws.send(JSON.stringify({ type: 'authorization', data: this.token }));
-        clearTimeout(retryTimer);
-      } else if (retries < maxRetries) {
-        retries++;
-        retryTimer = setTimeout(tryAuthorize, 100);
-      } else {
-        this.error('❌ WebSocket failed to open after timeout — giving up');
-        this.ws.terminate();
-        this.wsActive = false;
-      }
-    };
-
-    tryAuthorize();
-  });
-
-  this.ws.on('message', (msg) => {
-    let data;
-    try {
-      data = JSON.parse(msg.toString());
-    } catch (err) {
-      this.error('❌ Failed to parse WebSocket message:', err);
-      return;
-    }
-
-    if (data.type === 'authorized') {
-      ['system', 'measurement', 'batteries'].forEach(topic => {
-        this.ws.send(JSON.stringify({ type: 'subscribe', data: topic }));
-      });
-      this.wsActive = true;
-    } else if (data.type === 'measurement') {
-      this._handleMeasurement(data.data);
-    } else if (data.type === 'system') {
-      this._handleSystem(data.data);
-    } else if (data.type === 'batteries') {
-      this._handleBatteries(data.data);
-    }
-  });
-
-  const reconnect = () => {
-    if (this.reconnecting) return;
-    this.reconnecting = true;
-
-    this.reconnectAttempts++;
-    const delay = Math.min(30000, 5000 * this.reconnectAttempts); // exponential backoff
-
-    setTimeout(() => {
-      this.reconnecting = false;
-      this._reconnectWebSocket();
-    }, delay);
-  };
-
-  this.ws.on('error', (err) => {
-    this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-    this.wsActive = false;
-    reconnect();
-  });
-
-  this.ws.on('close', () => {
-    this.log('🔌 WebSocket closed — retrying');
-    this.wsActive = false;
-    reconnect();
-  });
-}
-
-
-
-
-    this.ws.on('message', (msg) => {
-
-      //const data = JSON.parse(msg.toString());
-      let data;
-      try {
-        data = JSON.parse(msg.toString());
-      } catch (err) {
-        this.error('❌ Failed to parse WebSocket message:', err);
-        return;
-      }
-
-      if (data.type === 'authorization_requested') {
-        //this.log('🔐 Press the button on your HomeWizard device to authorize WebSocket access');
-      } else if (data.type === 'authorized') {
-        //this.log('✅ Authorized — subscribing to system, measurement, and batteries');
-        ['system', 'measurement', 'batteries'].forEach(topic => {
-          this.ws.send(JSON.stringify({ type: 'subscribe', data: topic }));
-        });
-        this.wsActive = true;
-      } else if (data.type === 'measurement') {
-         //this.log('📊 Measurement data received:', data.data);
-        this._handleMeasurement(data.data);
-      } else if (data.type === 'system') {
-      //  this.log('⚙️ System update:', data.data);
-        this._handleSystem(data.data);
-      } else if (data.type === 'batteries') {
-        //this.log('🔋 Battery update:', data.data);
-        this._handleBatteries(data.data);
-      } else {
-        //this.log('ℹ️ Other message:', data);
-      }
-    });
-
-    this.ws.on('error', (err) => {
-      if (this.reconnecting) return;
-      this.reconnecting = true;
-
-      this.error('❌ WebSocket error:', err);
-      this.wsActive = false;
-
-      setTimeout(() => {
-        this.reconnecting = false;
-        this._reconnectWebSocket();
-      }, 5000);
-    });
-
-    this.ws.on('close', () => {
-      if (this.reconnecting) return;
-      this.reconnecting = true;
-
-      this.log('🔌 WebSocket closed — retrying in 5s');
-      this.wsActive = false;
-
-      setTimeout(() => {
-        this.reconnecting = false;
-        this._reconnectWebSocket();
-      }, 5000);
-    });
-  }
 
     startPolling() {
       if (this.wsActive || this.onPollInterval) return;
@@ -918,30 +679,10 @@ async startWebSocket() {
         this.onPollInterval = null;
       }
 
-      if (this.ws) {
-        this.ws.close();
-        this.ws = null;
-        this.wsActive = false;
+      if (this.wsManager) {
+        this.wsManager.stop();
       }
     }
-
-
-    _resetWebSocket() {
-  if (this.ws) {
-    try {
-      if (this.ws.readyState === this.ws.CONNECTING || this.ws.readyState === this.ws.OPEN) {
-        this.ws.terminate();
-      } else {
-        this.ws.close();
-      }
-    } catch (err) {
-      this.error('❌ Failed to reset WebSocket:', err);
-    }
-    this.ws = null;
-    this.wsActive = false;
-  }
-}
-
 
 async onDiscoveryAvailable(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
@@ -971,8 +712,9 @@ async onDiscoveryAvailable(discoveryResult) {
       }
 
       this.log('✅ Discovery: device reachable — restarting WebSocket');
-      this._resetWebSocket();
-      this.startWebSocket();
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
 
     } catch (err) {
       this.error(`❌ Discovery: preflight check failed — ${err.message}`);
@@ -982,29 +724,29 @@ async onDiscoveryAvailable(discoveryResult) {
 
 
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+
+async onDiscoveryAddressChanged(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
   this.log(`🌐 Address changed — new URL: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
-  // Optional: debounce reconnects
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
     if (!this.getSettings().use_polling) {
-      this._resetWebSocket();
-      this.startWebSocket();
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
     } else {
       this.log('🔁 Address change: polling is active, skipping WebSocket reconnect');
     }
   }, 500);
-
 }
 
 async onDiscoveryLastSeenChanged(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
   this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
-  this.setAvailable();
+  await this.setAvailable();
 
   const settings = this.getSettings();
 
@@ -1012,13 +754,15 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
   this._wsReconnectTimeout = setTimeout(() => {
     if (!settings.use_polling) {
       this.log('🔁 Reconnecting WebSocket due to last seen update...');
-      this._resetWebSocket();
-      this.startWebSocket();
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
     } else {
       this.log('🔁 Device seen again: polling is active, skipping WebSocket reconnect');
     }
   }, 500);
 }
+
 
 
 
@@ -1152,6 +896,7 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
         await this._handleSystem(system);
       }
 
+      //console.log(batteries);
       // Reuse websocket based battery capabilities code
       if (batteries) {
         await this._handleBatteries(batteries);
@@ -1205,15 +950,31 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
       this.log(`⚙️ use_polling gewijzigd naar: ${MySettings.newSettings.use_polling}`);
 
       if (MySettings.newSettings.use_polling) {
-        this._resetWebSocket?.();
+        this.wsManager?.stop(); // cleanly stop WebSocket
         this.startPolling();
       } else {
         if (this.pollingInterval) {
           clearInterval(this.pollingInterval);
           this.pollingInterval = null;
         }
-        this.startWebSocket();
+
+        if (!this.wsManager) {
+          this.wsManager = new WebSocketManager({
+            url: this.url,
+            token: this.token,
+            log: this.log.bind(this),
+            error: this.error.bind(this),
+            setAvailable: this.setAvailable.bind(this),
+            getSetting: this.getSetting.bind(this),
+            handleMeasurement: this._handleMeasurement.bind(this),
+            handleSystem: this._handleSystem.bind(this),
+            handleBatteries: this._handleBatteries.bind(this)
+          });
+        }
+
+        this.wsManager.start();
       }
+
     }
 
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
@@ -10,6 +10,8 @@ const fetch = require('node-fetch');
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
+
+    await this.setUnavailable(err).catch(this.error);
 
     const settings = this.getSettings();
     console.log('Settings for SDM230: ',settings.polling_interval);

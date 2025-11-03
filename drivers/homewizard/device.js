@@ -18,7 +18,9 @@ const debug = false;
 
 class HomeWizardDevice extends Homey.Device {
 
-  onInit() {
+  async onInit() {
+
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     if (debug) { console.log('HomeWizard Appliance has been inited'); }
 

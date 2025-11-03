@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const http = require('http');
 
 
@@ -13,14 +13,34 @@ const agent = new http.Agent({
   keepAliveMsecs : 11000
 });
 
+async function updateCapability(device, capability, value) {
+  const current = device.getCapabilityValue(capability);
+
+  if (value == null) {
+    if (device.hasCapability(capability) && current !== null) {
+      await device.removeCapability(capability).catch(device.error);
+      device.log(`🗑️ Removed capability "${capability}"`);
+    }
+    return;
+  }
+
+  if (!device.hasCapability(capability)) {
+    await device.addCapability(capability).catch(device.error);
+    device.log(`➕ Added capability "${capability}"`);
+  }
+
+  if (current !== value) {
+    await device.setCapabilityValue(capability, value).catch(device.error);
+    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+  }
+}
+
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     
-    if (!this.hasCapability('connection_error')) {
-        await this.addCapability('connection_error').catch(this.error);
-    }
     await this.setCapabilityValue('connection_error', 'No errors');
 
     const custom_interval = this.getSetting('offset_polling');
@@ -53,43 +73,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.registerCapabilityListener('locked', async (value) => {
       await this.onRequest({ switch_lock: value });
     });
-
-     
-    if (!this.hasCapability('measure_power')) {
-      await this.addCapability('measure_power').catch(this.error);
-    }
-
-    if (this.hasCapability('measure_power.active_power_w')) {
-      await this.removeCapability('measure_power.active_power_w').catch(this.error);
-    } // remove
-
-    if (!this.hasCapability('meter_power.consumed.t1')) {
-      await this.addCapability('meter_power.consumed.t1').catch(this.error);
-    }
-
-    if (!this.hasCapability('measure_power.l1')) {
-      await this.addCapability('measure_power.l1').catch(this.error);
-    }
-
-    if (!this.hasCapability('rssi')) {
-      await this.addCapability('rssi').catch(this.error);
-    }
-
-    if (!this.hasCapability('onoff')) {
-      await this.addCapability('onoff').catch(this.error);
-    }
-
-    if (!this.hasCapability('dim')) {
-      await this.addCapability('dim').catch(this.error);
-    }
-
-    if (!this.hasCapability('identify')) {
-      await this.addCapability('identify').catch(this.error);
-    }
-
-    if (!this.hasCapability('locked')) {
-      await this.addCapability('locked').catch(this.error);
-    }
 
   }
 
@@ -225,132 +208,103 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
 
   async onPoll() {
+      const settings = this.getSettings();
 
-    const settings = this.getSettings();
-
-    // Check if polling interval is running
-    if (!this.onPollInterval) {
-      this.log('Socket - Polling interval is not running, starting now...');
-      // Clear any possible leftover interval just in case
-      clearInterval(this.onPollInterval);
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-    }
-
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
+      // Ensure polling interval is active
+      if (!this.onPollInterval) {
+        this.log('Socket - Polling interval is not running, starting now...');
+        clearInterval(this.onPollInterval);
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       }
-      else return;
-    }
 
-    Promise.resolve().then(async () => {
-      //
-      //let res = await fetch(`${this.url}/data`);
+      // Ensure URL is set
+      if (!this.url) {
+        if (settings.url) {
+          this.url = settings.url;
+        } else {
+          return;
+        }
+      }
 
-      const res = await fetch(`${this.url}/data`, {
+      // Guard against deleted device
+      if (!this.getData()) {
+        this.error('Device no longer exists — skipping poll');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${this.url}/data`, {
           agent,
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          headers: { 'Content-Type': 'application/json' }
         });
 
-      if (!res || !res.ok) {
-          //await this.setCapabilityValue('connection_error',res.code);
-          throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
-      }
-
-      const data = await res.json();
-
-      const offset_socket = this.getSetting('offset_socket');
-
-      const temp_socket_watt = data.active_power_w + offset_socket;
-
-      // Update values
-      // if (this.getCapabilityValue('measure_power') != data.active_power_w)
-      // await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
-
-      // Use temp_socket_watt with the compensated value
-      if (this.getCapabilityValue('measure_power') != temp_socket_watt)
-      { await this.setCapabilityValue('measure_power', temp_socket_watt).catch(this.error); }
-
-      if (this.getCapabilityValue('meter_power.consumed.t1') != data.total_power_import_t1_kwh)
-      { await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error); }
-      if (this.getCapabilityValue('measure_power.l1') != data.active_power_l1_w)
-      { await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error); }
-      if (this.getCapabilityValue('rssi') != data.wifi_strength)
-      { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
-
-      // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-      if (data.total_power_export_t1_kwh > 1) {
-        if (!this.hasCapability('meter_power.produced.t1')) {
-          // add production meters
-          await this.addCapability('meter_power.produced.t1').catch(this.error);
+        if (!res || !res.ok) {
+          throw new Error(res ? res.statusText : 'Unknown error during fetch');
         }
-        // update values for solar production
-        if (this.getCapabilityValue('meter_power.produced.t1') != data.total_power_export_t1_kwh)
-								  { await this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh).catch(this.error); }
-      }
-      else if (data.total_power_export_t1_kwh < 1) {
-        await this.removeCapability('meter_power.produced.t1').catch(this.error);
-      }
 
-      // aggregated meter for Power by the hour support
-      if (!this.hasCapability('meter_power')) {
-        await this.addCapability('meter_power').catch(this.error);
-      }
-      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      if (this.getCapabilityValue('meter_power') != (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh))
-      { await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh)).catch(this.error); }
+        const data = await res.json();
+        const offset_socket = this.getSetting('offset_socket') || 0;
+        const temp_socket_watt = data.active_power_w + offset_socket;
 
-      // active_voltage_l1_v
-      if (data.active_voltage_v !== undefined) {
-        if (!this.hasCapability('measure_voltage')) {
-          await this.addCapability('measure_voltage').catch(this.error);
+        // Update capabilities using helper
+        await updateCapability(this, 'measure_power', temp_socket_watt);
+        await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
+        await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
+        await updateCapability(this, 'rssi', data.wifi_strength);
+
+        // Solar export logic
+        const solarExport = data.total_power_export_t1_kwh;
+        await updateCapability(this, 'meter_power.produced.t1', solarExport > 1 ? solarExport : null);
+
+        // Aggregated meter
+        const netImport = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
+        await updateCapability(this, 'meter_power', netImport);
+
+        // Voltage
+        await updateCapability(this, 'measure_voltage', data.active_voltage_v ?? null);
+
+        // Amp
+        await updateCapability(this, 'measure_current', data.active_current_a ?? null);
+
+        // Update stored URL if changed
+        if (this.url !== settings.url) {
+          this.log('Socket - Updating settings url');
+          await this.setSettings({ url: this.url });
         }
-        if (this.getCapabilityValue('measure_voltage') != data.active_voltage_v)
-        { await this.setCapabilityValue('measure_voltage', data.active_voltage_v).catch(this.error); }
-      }
-      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
-        await this.removeCapability('measure_voltage').catch(this.error);
-      }
 
-      if (this.url != settings.url) {
-            this.log("Socket - Updating settings url");
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
-      }
+        await this.setAvailable().catch(this.error);
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch(async (err) => {
+      } catch (err) {
         if (err.code === 'ECONNRESET') {
-          console.log('Socket - Connection was reset');
-          await this.setCapabilityValue('connection_error', 'Connection reset');
+          this.log('Socket - Connection was reset');
+          await updateCapability(this, 'connection_error', 'Connection reset');
         } else if (err.code === 'EHOSTUNREACH') {
-          await this.setCapabilityValue('connection_error', 'Socket unreachable');
+          await updateCapability(this, 'connection_error', 'Socket unreachable');
         } else {
+          await updateCapability(this, 'connection_error', err.message || 'Polling error');
           this.error(err);
         }
 
         await this.setUnavailable(err).catch(this.error);
-      });
-  }
+      }
+}
+
 
 async onPollState() {
   if (!this.url) return;
+
+  // Guard against deleted device
+  if (!this.getData()) {
+    this.error('Device no longer exists — skipping state poll');
+    return;
+  }
 
   try {
     const res = await fetch(`${this.url}/state`, {
       agent,
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
     if (!res.ok) {
@@ -364,34 +318,28 @@ async onPollState() {
       throw new Error('Invalid response format');
     }
 
-    // Update values
-    if (this.getCapabilityValue('onoff') !== data.power_on) {
-      await this.setCapabilityValue('onoff', data.power_on).catch(this.error);
-    }
-    if (this.getCapabilityValue('dim') !== data.brightness) {
-      await this.setCapabilityValue('dim', data.brightness * (1 / 255)).catch(this.error);
-    }
-    if (this.getCapabilityValue('locked') !== data.switch_lock) {
-      await this.setCapabilityValue('locked', data.switch_lock).catch(this.error);
-    }
-
-    await this.setCapabilityValue('connection_error', 'No error');
+    // Update capabilities using helper
+    await updateCapability(this, 'onoff', data.power_on);
+    await updateCapability(this, 'dim', data.brightness * (1 / 255));
+    await updateCapability(this, 'locked', data.switch_lock);
+    await updateCapability(this, 'connection_error', 'No error');
 
   } catch (err) {
     if (err.code === 'ECONNRESET') {
       this.log('Socket - Connection was reset');
-      await this.setCapabilityValue('connection_error', 'Connection reset');
+      await updateCapability(this, 'connection_error', 'Connection reset');
     } else if (err.code === 'EHOSTUNREACH') {
       this.log('Socket unreachable');
-      await this.setCapabilityValue('connection_error', 'Device unreachable');
+      await updateCapability(this, 'connection_error', 'Device unreachable');
     } else {
-      await this.setCapabilityValue('connection_error', err.message || 'Polling error');
+      await updateCapability(this, 'connection_error', err.message || 'Polling error');
       this.error(err);
     }
 
     await this.setUnavailable(err).catch(this.error);
   }
 }
+
 
 
 

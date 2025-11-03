@@ -2,6 +2,9 @@
 
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
+const WebSocketManager = require('../../includes/v2/Ws')
+//const fetch = require('node-fetch');
+
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -112,24 +115,26 @@ function getWifiQuality(strength) {
 }
 
 async function updateCapability(device, capability, value) {
+  const current = device.getCapabilityValue(capability);
+
   if (value == null) {
-    if (device.hasCapability(capability) && device.getCapabilityValue(capability) !== null) {
+    if (device.hasCapability(capability) && current !== null) {
       await device.removeCapability(capability).catch(device.error);
+      device.log(`🗑️ Removed capability "${capability}"`);
     }
     return;
   }
 
   if (!device.hasCapability(capability)) {
-    device.log(`⚠️ Capability "${capability}" missing — skipping update`);
-    return;
+    await device.addCapability(capability).catch(device.error);
+    device.log(`➕ Added capability "${capability}"`);
   }
 
-  const current = device.getCapabilityValue(capability);
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
+    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
-
 
 
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
@@ -138,15 +143,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+
     this.previousChargingState = null;
     this.previousTimeToEmpty = null;
     this.previousStateOfCharge = null;
-
-    //websocket
-    this.ws = null;
-    this.wsActive = false;
-    this.reconnecting = false; 
-    this.pollingInterval = null;
 
     this.token = await this.getStoreValue('token');
     console.log('PIB Token:', this.token);
@@ -167,47 +168,43 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     
     //this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
-    this.startWebSocket(); // WebSocket first
+    //this.startWebSocket(); // WebSocket first
+
+    this.wsManager = new WebSocketManager({
+      url: this.url,
+      token: this.token,
+      log: this.log.bind(this),
+      error: this.error.bind(this),
+      setAvailable: this.setAvailable.bind(this),
+      getSetting: this.getSetting.bind(this),
+      handleMeasurement: this._handleMeasurement.bind(this),
+      handleSystem: this._handleSystem.bind(this),
+      //handleBatteries: this._handleBatteries.bind(this)
+    });
+    this.wsManager.start();
+
 
   }
 
-  onDeleted() {
-    if (this.onPollInterval) {
-      clearInterval(this.onPollInterval);
-      this.onPollInterval = null;
-    }
-
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-      this.wsActive = false;
-    }
-
-    const batteryId = this.getData().id;
-    const group = this.homey.settings.get('pluginBatteryGroup') || {};
-
-    if (group[batteryId]) {
-      delete group[batteryId];
-      this.homey.settings.set('pluginBatteryGroup', group);
-      this.log(`Battery ${batteryId} removed from pluginBatteryGroup`);
-    }
+onDeleted() {
+  if (this.onPollInterval) {
+    clearInterval(this.onPollInterval);
+    this.onPollInterval = null;
   }
 
-  _resetWebSocket() {
-      if (this.ws) {
-        try {
-          if (this.ws.readyState === this.ws.CONNECTING || this.ws.readyState === this.ws.OPEN) {
-            this.ws.terminate();
-          } else {
-            this.ws.close();
-          }
-        } catch (err) {
-          this.error('❌ Failed to reset WebSocket:', err);
-        }
-        this.ws = null;
-        this.wsActive = false;
-      }
+  if (this.wsManager) {
+    this.wsManager.stop(); // Cleanly shuts down the WebSocket
   }
+
+  const batteryId = this.getData().id;
+  const group = this.homey.settings.get('pluginBatteryGroup') || {};
+
+  if (group[batteryId]) {
+    delete group[batteryId];
+    this.homey.settings.set('pluginBatteryGroup', group);
+    this.log(`Battery ${batteryId} removed from pluginBatteryGroup`);
+  }
+}
 
 
 async onDiscoveryAvailable(discoveryResult) {
@@ -238,8 +235,9 @@ async onDiscoveryAvailable(discoveryResult) {
       }
 
       this.log('✅ Discovery: device reachable — restarting WebSocket');
-      this._resetWebSocket();
-      this.startWebSocket();
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
 
     } catch (err) {
       this.error(`❌ Discovery: preflight check failed — ${err.message}`);
@@ -248,24 +246,28 @@ async onDiscoveryAvailable(discoveryResult) {
 }
 
 
-  async onDiscoveryAddressChanged(discoveryResult) {
+async onDiscoveryAddressChanged(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
   this.log(`🌐 Address changed — new URL: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
-  // Optional: debounce reconnects
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
-    this._resetWebSocket();     // clean up old socket if needed
-    this.startWebSocket();      // reconnect with new address
-  }, 500); // wait 500ms before reconnecting
+    if (!this.getSettings().use_polling) {
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
+    } else {
+      this.log('🔁 Address change: polling is active, skipping WebSocket reconnect');
+    }
+  }, 500);
 }
 
 async onDiscoveryLastSeenChanged(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
   this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
-  this.setAvailable();
+  await this.setAvailable();
 
   const settings = this.getSettings();
 
@@ -273,8 +275,9 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
   this._wsReconnectTimeout = setTimeout(() => {
     if (!settings.use_polling) {
       this.log('🔁 Reconnecting WebSocket due to last seen update...');
-      this._resetWebSocket();
-      this.startWebSocket();
+      if (this.wsManager) {
+        this.wsManager.restartWebSocket();
+      }
     } else {
       this.log('🔁 Device seen again: polling is active, skipping WebSocket reconnect');
     }
@@ -282,202 +285,7 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
 }
 
 
-_startHeartbeatMonitor() {
-  if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-  this.heartbeatTimer = setInterval(() => {
-    const now = Date.now();
-    if (now - this.lastMeasurementAt > 60000) {
-      this.log('💤 No measurement in 60s — reconnecting WebSocket');
-      this._reconnectWebSocket();
-    }
-  }, 30000);
-}
-
-_reconnectWebSocket() {
-  if (this.ws) {
-    this.ws.removeAllListeners();
-
-    const state = this.ws.readyState;
-    this.log(`🔄 Reconnecting WebSocket — current state: ${state}`);
-
-    try {
-      if (state === WebSocket.CONNECTING && this.ws.readyState === WebSocket.CONNECTING) {
-        this.log(`🕓 WebSocket still connecting — skipping close()`);
-        // Optionally wait or retry later
-      } else if (state === WebSocket.OPEN || state === WebSocket.CLOSING) {
-        this.log(`❌ Terminating WebSocket`);
-        this.ws.terminate();
-      }
-
-    } catch (err) {
-      this.error(`⚠️ Error during WebSocket cleanup:`, err);
-    }
-
-    this.ws = null;
-  }
-
-  this.wsActive = false;
-
-  // Optional: add delay to avoid hammering
-  setTimeout(() => {
-    this.startWebSocket();
-  }, 2000);
-}
-
-
-
-async startWebSocket() {
-  this.reconnectAttempts = this.reconnectAttempts || 0;
-
-  if (this.ws) {
-    try {
-      switch (this.ws.readyState) {
-        case this.ws.OPEN:
-          this.ws.terminate();
-          break;
-        case this.ws.CONNECTING:
-          this.log('⚠️ WebSocket still connecting — skipping termination');
-          return;
-        case this.ws.CLOSING:
-        case this.ws.CLOSED:
-          this.ws.close();
-          break;
-      }
-    } catch (err) {
-      this.error('❌ Failed to clean up WebSocket:', err);
-    }
-
-    this.ws = null;
-    this.wsActive = false;
-  }
-
-  const settingsUrl = this.getSetting('url');
-  if (!this.url && settingsUrl) {
-    this.url = settingsUrl;
-  }
-
-  if (!this.token || !this.url) {
-    this.error('❌ Missing token or URL — cannot start WebSocket');
-    return;
-  }
-
-  const agent = new (require('https')).Agent({ rejectUnauthorized: false });
-  const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
-
-  // 🔍 Preflight reachability check
-  try {
-    const res = await fetchWithTimeout(`${this.url}/api/system`, {
-      headers: { Authorization: `Bearer ${this.token}` },
-      agent
-    }, 3000);
-    if (!res || typeof res.cloud_enabled === 'undefined') {
-      this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
-      return;
-    }
-  } catch (err) {
-    this.error(`❌ Preflight check failed: ${err.message}`);
-    return;
-  }
-
-  // 🔌 Create WebSocket
-  try {
-    this.ws = new (require('ws'))(wsUrl, { agent });
-  } catch (err) {
-    this.error('❌ Failed to create WebSocket:', err);
-    this.wsActive = false;
-    return;
-  }
-
-  this.ws.on('open', () => {
-    this.wsActive = true;
-    this.lastMeasurementAt = Date.now();
-    this.reconnectAttempts = 0; // ✅ Reset backoff
-    this._startHeartbeatMonitor();
-    this.log('🔌 WebSocket opened — waiting to authorize...');
-
-    // ✅ Enable TCP keep-alive
-    if (this.ws._socket) {
-      this.ws._socket.setKeepAlive(true, 30000);
-    }
-
-    const maxRetries = 30;
-    let retries = 0;
-    let retryTimer;
-
-    const tryAuthorize = () => {
-      if (!this.ws) return;
-
-      if (this.ws.readyState === this.ws.OPEN) {
-        this.log('🔐 Sending WebSocket authorization');
-        this.ws.send(JSON.stringify({ type: 'authorization', data: this.token }));
-        clearTimeout(retryTimer);
-      } else if (retries < maxRetries) {
-        retries++;
-        retryTimer = setTimeout(tryAuthorize, 100);
-      } else {
-        this.error('❌ WebSocket failed to open after timeout — giving up');
-        this.ws.terminate();
-        this.wsActive = false;
-      }
-    };
-
-    tryAuthorize();
-  });
-
-  this.ws.on('message', (msg) => {
-    let data;
-    try {
-      data = JSON.parse(msg.toString());
-    } catch (err) {
-      this.error('❌ Failed to parse WebSocket message:', err);
-      return;
-    }
-
-    if (data.type === 'authorization_requested') {
-      //this.log('🔐 Press the button on your HomeWizard device to authorize WebSocket access');
-    } else if (data.type === 'authorized') {
-      ['system', 'measurement', 'batteries'].forEach(topic => {
-        this.ws.send(JSON.stringify({ type: 'subscribe', data: topic }));
-      });
-      this.wsActive = true;
-    } else if (data.type === 'measurement') {
-      this._handleMeasurement(data.data);
-    } else if (data.type === 'system') {
-      this._handleSystem(data.data);
-    } else if (data.type === 'batteries') {
-      this._handleBatteries(data.data);
-    }
-  });
-
-  const reconnect = () => {
-    if (this.reconnecting) return;
-    this.reconnecting = true;
-
-    this.reconnectAttempts++;
-    const delay = Math.min(30000, 5000 * this.reconnectAttempts); // exponential backoff
-
-    setTimeout(() => {
-      this.reconnecting = false;
-      this._reconnectWebSocket();
-    }, delay);
-  };
-
-  this.ws.on('error', (err) => {
-    this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-    this.wsActive = false;
-    reconnect();
-  });
-
-  this.ws.on('close', () => {
-    this.log('🔌 WebSocket closed — retrying');
-    this.wsActive = false;
-    reconnect();
-  });
-}
-
-
-
-  async _handleMeasurement(data) {
+async _handleMeasurement(data) {
 
 
     this.lastMeasurementAt = Date.now();
