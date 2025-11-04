@@ -670,5 +670,8 @@
   },
   "3.7.9": {
     "en": "Capability update fix (avoid removal check)"
+  },
+  "3.8.0": {
+    "en": "Removed node-fetch for Homey 12.9.x (nodejs v22 - native fetch). Moved websocket functions to include to clean up P1 and plugin_battery code."
   }
 }
