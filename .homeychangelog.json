@@ -676,5 +676,8 @@
   },
   "3.8.3": {
     "en": "Force Homey firmware 12.9.0 version check"
+  },
+  "3.8.4": {
+    "en": "Conditional require (node-fetch) it will try to use native fetch with a fallback to take the node-fetch module instead"
   }
 }
