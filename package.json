@@ -5,6 +5,7 @@
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
+    "node-fetch": "^3.3.2",
     "npm": "^10.8.3",
     "ws": "^8.18.3"
   },
@@ -25,7 +26,7 @@
   "homepage": "https://github.com/jtebbens/com.homewizard#readme",
   "devDependencies": {
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.3",
-    "eslint": "^8.57.0",
+    "eslint": "^7.32.0",
     "eslint-config-athom": "^3.1.5"
   }
 }

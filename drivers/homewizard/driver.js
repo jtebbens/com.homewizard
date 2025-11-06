@@ -4,6 +4,13 @@ const Homey = require('homey');
 // const request = require('request');
 //const fetch = require('node-fetch');
 
+let fetch;
+try {
+  fetch = global.fetch || require('node-fetch');
+} catch (e) {
+  console.error('Fetch is not available. Please install node-fetch.');
+}
+
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
 

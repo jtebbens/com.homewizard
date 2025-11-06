@@ -6,6 +6,15 @@ const Homey = require('homey');
 
 const http = require('http');
 
+
+let fetch;
+try {
+  fetch = global.fetch || require('node-fetch');
+} catch (e) {
+  console.error('Fetch is not available. Please install node-fetch.');
+}
+
+
 const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
