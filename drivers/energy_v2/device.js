@@ -3,7 +3,14 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws')
-//const fetch = require('node-fetch');
+
+let fetch;
+try {
+  fetch = global.fetch || require('node-fetch');
+} catch (e) {
+  console.error('Fetch is not available. Please install node-fetch.');
+}
+
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -788,6 +795,17 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
       await this.removeCapability('measure_power.power_w').catch(this.error);
       console.log(`removed capability measure_power.power_w for ${this.getName()}`);
     }
+
+    if (this.hasCapability('meter_power.returned.t1')) {
+      await this.removeCapability('meter_power.returned.t1').catch(this.error);
+      console.log(`removed capability meter_power.returned.t1 for ${this.getName()}`);
+    }
+
+    if (this.hasCapability('meter_power.returned.t2')) {
+      await this.removeCapability('meter_power.returned.t2').catch(this.error);
+      console.log(`removed capability meter_power.returned.t2 for ${this.getName()}`);
+    }
+
   }
 
   /**

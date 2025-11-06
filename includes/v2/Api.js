@@ -3,6 +3,13 @@
 //const fetch = require('node-fetch');
 const https = require('https');
 
+let fetch;
+try {
+  fetch = global.fetch || require('node-fetch');
+} catch (e) {
+  console.error('Fetch is not available. Please install node-fetch.');
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);

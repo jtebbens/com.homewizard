@@ -4,8 +4,8 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.8.0
-* Removed node-fetch for Homey 12.9.x (nodejs v22 - native fetch)
+v3.8.4
+* Conditional require (node-fetch) it will try to use native fetch with a fallback to take the node-fetch module instead
 * Moved Websocket functions to include to clean up P1 and plugin_battery code
 
 v3.7.9

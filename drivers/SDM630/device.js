@@ -7,6 +7,13 @@ const Homey = require('homey');
 
 //const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
+let fetch;
+try {
+  fetch = global.fetch || require('node-fetch');
+} catch (e) {
+  console.error('Fetch is not available. Please install node-fetch.');
+}
+
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
