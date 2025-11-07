@@ -1,15 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-//const fetch = require('node-fetch');
+const fetch = require('node-fetch');
 const https = require('https');
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
 
 /**
  * Helper method to request a token from the HomeWizard Energy device
