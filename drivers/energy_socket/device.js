@@ -1,16 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-//const fetch = require('node-fetch');
+const fetch = require('node-fetch');
 const http = require('http');
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
-
 
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds

@@ -1,19 +1,10 @@
 'use strict';
 
-//const fetch = require('node-fetch');
+const fetch = require('node-fetch');
 const Homey = require('homey');
-//const AbortController = require('abort-controller');
+const AbortController = require('abort-controller');
 
 const http = require('http');
-
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
-
 
 const cache = {}; // Cache object to store the callnew responses
 

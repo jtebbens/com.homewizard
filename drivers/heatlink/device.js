@@ -171,7 +171,7 @@ class HomeWizardHeatlink extends Homey.Device {
         }
 		  } catch (error) {
         console.log('Heatlink data error', error);
-        this.setUnavailable().catch(this.error);
+        this.setUnavailable(error).catch(this.error);
 		  }
     } else {
 		  console.log('HW ID not found');

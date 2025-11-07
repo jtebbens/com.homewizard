@@ -12,9 +12,9 @@ const devices = {};
 
 class HomeWizardWattcher extends Homey.Device {
 
-  onInit() {
+  async onInit() {
 
-    await this.setUnavailable(err).catch(this.error);
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     console.log(`HomeWizard Wattcher ${this.getName()} has been inited`);
 
@@ -71,7 +71,7 @@ class HomeWizardWattcher extends Homey.Device {
               // console.log('Wattcher Daytotal- ' + energy_daytotal_cons);
             } catch (err) {
               console.log('ERROR Wattcher getStatus ', err);
-              this.setUnavailable();
+              this.setUnavailable(err);
             }
           }
         } else {

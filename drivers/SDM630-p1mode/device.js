@@ -1,19 +1,11 @@
 'use strict';
 
 const Homey = require('homey');
-//const fetch = require('node-fetch');
+const fetch = require('node-fetch');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 //const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
-
 
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
@@ -40,7 +32,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
 async onInit() {
-    await this.setUnavailable(err).catch(this.error);
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
 

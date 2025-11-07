@@ -12,7 +12,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
   async onInit() {
     
-    await this.setUnavailable(err).catch(this.error);
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.startPolling();
 
@@ -399,7 +399,7 @@ class HomeWizardEnergylink extends Homey.Device {
 		  }
     } catch (err) {
 		  console.log('ERROR Energylink getStatus ', err);
-		  this.setUnavailable().catch(this.error);
+		  this.setUnavailable(err).catch(this.error);
     }
 	  }
 

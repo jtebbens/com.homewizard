@@ -1,12 +1,6 @@
 const https = require('https');
 const WebSocket = require('ws');
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
+const fetch = require('node-fetch');
 
 /**
  * Perform a fetch with a timeout using AbortController.

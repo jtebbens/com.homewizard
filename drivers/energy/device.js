@@ -2,14 +2,8 @@
 
 const Homey = require('homey');
 const http = require('http');
+const fetch = require('node-fetch');
 
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
 
 /**
  * Helper function to add, remove or update a capability

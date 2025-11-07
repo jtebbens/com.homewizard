@@ -3,14 +3,7 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
-//const fetch = require('node-fetch');
-
-let fetch;
-try {
-  fetch = global.fetch || require('node-fetch');
-} catch (e) {
-  console.error('Fetch is not available. Please install node-fetch.');
-}
+const fetch = require('node-fetch');
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
