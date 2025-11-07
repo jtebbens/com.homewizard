@@ -682,5 +682,8 @@
   },
   "3.8.5": {
     "en": "global.fetch not working for nodejs v12, adjusted code to cover this"
+  },
+  "3.8.6": {
+    "en": "Fetch attempt"
   }
 }
