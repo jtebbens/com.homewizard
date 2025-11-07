@@ -679,5 +679,8 @@
   },
   "3.8.4": {
     "en": "Conditional require (node-fetch) it will try to use native fetch with a fallback to take the node-fetch module instead"
+  },
+  "3.8.5": {
+    "en": "global.fetch not working for nodejs v12, adjusted code to cover this"
   }
 }
