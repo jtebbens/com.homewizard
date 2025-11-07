@@ -58,6 +58,6 @@
     "en": "Use polling instead of WebSocket",
     "nl": "Gebruik polling in plaats van WebSocket"
   },
-  "value": false
+  "value": true
  }
 ]
