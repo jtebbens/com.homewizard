@@ -694,5 +694,8 @@
   },
   "3.8.9": {
     "en": "Roll back energy dongle code v3.7.0"
+  },
+  "3.8.10": {
+    "en": "Strange SD630 problem on older Homey's"
   }
 }
