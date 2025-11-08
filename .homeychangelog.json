@@ -697,5 +697,8 @@
   },
   "3.8.10": {
     "en": "Strange SD630 problem on older Homey's"
+  },
+  "3.8.11": {
+    "en": "Extra verbose logging in urls to expose mDNS problems for older Homeys (url)"
   }
 }
