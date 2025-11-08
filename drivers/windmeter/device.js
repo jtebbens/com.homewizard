@@ -15,7 +15,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     console.log(`HomeWizard Windmeter ${this.getName()} has been inited`);
 

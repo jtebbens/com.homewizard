@@ -11,7 +11,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const settings = this.getSettings();
     console.log('Settings for SDM230: ',settings.polling_interval);
@@ -125,8 +125,11 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        return;
       }
-      else return;
     }
 
     // Check if polling interval is running)

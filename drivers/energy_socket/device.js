@@ -38,7 +38,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     
     await this.setCapabilityValue('connection_error', 'No errors');
 
@@ -209,20 +209,22 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   async onPoll() {
       const settings = this.getSettings();
 
+      // Ensure URL is set
+      if (!this.url) {
+        if (settings.url) {
+          this.url = settings.url;
+          this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+        } else {
+          this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+          return;
+        }
+      }
+
       // Ensure polling interval is active
       if (!this.onPollInterval) {
         this.log('Socket - Polling interval is not running, starting now...');
         clearInterval(this.onPollInterval);
         this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-      }
-
-      // Ensure URL is set
-      if (!this.url) {
-        if (settings.url) {
-          this.url = settings.url;
-        } else {
-          return;
-        }
       }
 
       // Guard against deleted device

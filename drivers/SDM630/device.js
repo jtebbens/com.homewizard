@@ -7,11 +7,32 @@ const fetch = require('node-fetch');
 
 //const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
+async function updateCapability(device, capability, value) {
+  if (value == null) {
+    if (device.hasCapability(capability) && device.getCapabilityValue(capability) !== null) {
+      await device.removeCapability(capability).catch(device.error);
+    }
+    return;
+  }
+
+  if (!device.hasCapability(capability)) {
+    //device.log(`⚠️ Capability "${capability}" missing — skipping update`);
+    //return;
+    await device.addCapability(capability).catch(device.error);
+    device.log(`➕ Added capability "${capability}"`);
+  }
+
+  const current = device.getCapabilityValue(capability);
+  if (current !== value) {
+    await device.setCapabilityValue(capability, value).catch(device.error);
+  }
+}
+
+
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     const settings = this.getSettings();
     console.log('Settings for SDM630: ',settings.polling_interval);
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -114,194 +135,79 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        return;
       }
-      else return;
     }
 
 
-    // Check if polling interval is running)
+    // Ensure polling interval is running
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
-    Promise.resolve().then(async () => {
+    try {
       let res = await fetch(`${this.url}/data`);
-
       if (!res || !res.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s to avoid false reports due to bad wifi from users
-        // try again
+        await new Promise(resolve => setTimeout(resolve, 60000)); // wait 60s
         res = await fetch(`${this.url}/data`);
-        if (!res || !res.ok)
-        { throw new Error(res ? res.statusText : 'Unknown error during fetch'); }
+        if (!res || !res.ok) throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
+
       const data = await res.json();
 
-      // Save export data check if capabilities are present first
-      if (!this.hasCapability('measure_power')) {
-        await this.addCapability('measure_power').catch(this.error);
-      }
+      // Core capabilities
+      await updateCapability(this, 'measure_power', data.active_power_w);
+      await updateCapability(this, 'measure_power.active_power_w', data.active_power_w);
+      await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
+      await updateCapability(this, 'rssi', data.wifi_strength);
 
-      if (!this.hasCapability('measure_power.active_power_w')) {
-        await this.addCapability('measure_power.active_power_w').catch(this.error);
-      }
-
-      if (!this.hasCapability('meter_power.consumed.t1')) {
-        await this.addCapability('meter_power.consumed.t1').catch(this.error);
-      //  await this.addCapability('meter_power.consumed.t2').catch(this.error);
-      }
-
-      if (!this.hasCapability('rssi')) {
-        await this.addCapability('rssi').catch(this.error);
-      }
-
-      if (this.getCapabilityValue('rssi') != data.wifi_strength)
-      { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
-
-      // Update values 3phase kwh
-      // KWH 1 fase
-      // total_power_import_t1_kwh *
-      // total_power_export_t1_kwh *
-      // active_power_w
-      // active_power_l1_w
-      // active_power_l2_w
-      // active_power_l3_w
-
-      await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
-      await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
-      await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
-      // await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
-
-      // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
+      // Solar export
       if (data.total_power_export_t1_kwh > 1) {
-        if (!this.hasCapability('meter_power.produced.t1')) {
-          // add production meters
-          await this.addCapability('meter_power.produced.t1').catch(this.error);
-        }
-        // update values for solar production
-        await this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh).catch(this.error);
-      }
-      else if (data.total_power_export_t1_kwh < 1) {
-        await this.removeCapability('meter_power.produced.t1').catch(this.error);
+        await updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh);
+      } else {
+        await updateCapability(this, 'meter_power.produced.t1', null);
       }
 
-      // aggregated meter for Power by the hour support
-      if (!this.hasCapability('meter_power')) {
-        await this.addCapability('meter_power').catch(this.error);
-      }
-      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh)).catch(this.error);
+      // Aggregated meter
+      await updateCapability(
+        this,
+        'meter_power',
+        data.total_power_import_t1_kwh - data.total_power_export_t1_kwh
+      );
 
-      // Phase 3 support when meter has values active_power_l2_w will be valid else ignore ie the power grid is a Phase1 household connection
-      if (data.active_power_l2_w !== null) {
-        if (!this.hasCapability('measure_power.l2')) {
-          await this.addCapability('measure_power.l1').catch(this.error);
-          await this.addCapability('measure_power.l2').catch(this.error);
-          await this.addCapability('measure_power.l3').catch(this.error);
-        }
-        await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
-        await this.setCapabilityValue('measure_power.l2', data.active_power_l2_w).catch(this.error);
-        await this.setCapabilityValue('measure_power.l3', data.active_power_l3_w).catch(this.error);
-      }
-      else if (data.active_power_l2_w == null) {
-        if (this.hasCapability('measure_power.l2')) {
-          await this.removeCapability('measure_power.l1').catch(this.error);
-          await this.removeCapability('measure_power.l2').catch(this.error);
-          await this.removeCapability('measure_power.l3').catch(this.error);
-          await this.removeCapability('measure_power.active_power_w').catch(this.error);
-        }
-      }
+      // Always update 3‑phase values
+      await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
+      await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
+      await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
 
-      // active_voltage_l1_v
-      if (data.active_voltage_l1_v !== undefined) {
-        if (!this.hasCapability('measure_voltage.l1')) {
-          await this.addCapability('measure_voltage.l1').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_voltage.l1') != data.active_voltage_l1_v)
-        { await this.setCapabilityValue('measure_voltage.l1', data.active_voltage_l1_v).catch(this.error); }
-      }
-      else if ((data.active_voltage_l1_v == undefined) && (this.hasCapability('measure_voltage.l1'))) {
-        await this.removeCapability('measure_voltage.l1').catch(this.error);
+      // Voltage per phase
+      await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
+      await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v);
+      await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v);
+
+      // Current per phase
+      await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+      await updateCapability(this, 'measure_current.l2', data.active_current_l2_a);
+      await updateCapability(this, 'measure_current.l3', data.active_current_l3_a);
+
+      // Update settings URL if changed
+      if (this.url !== settings.url) {
+        this.log('SDM630 - Updating settings url');
+        await this.setSettings({ url: this.url });
       }
 
-      // active_voltage_l2_v
-      if (data.active_voltage_l2_v !== undefined) {
-        if (!this.hasCapability('measure_voltage.l2')) {
-          await this.addCapability('measure_voltage.l2').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_voltage.l2') != data.active_voltage_l2_v)
-        { await this.setCapabilityValue('measure_voltage.l2', data.active_voltage_l2_v).catch(this.error); }
-      }
-      else if ((data.active_voltage_l2_v == undefined) && (this.hasCapability('measure_voltage.l2'))) {
-        await this.removeCapability('measure_voltage.l2').catch(this.error);
-      }
+      await this.setAvailable().catch(this.error);
 
-      // active_voltage_l3_v
-      if (data.active_voltage_l3_v !== undefined) {
-        if (!this.hasCapability('measure_voltage.l3')) {
-          await this.addCapability('measure_voltage.l3').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_voltage.l3') != data.active_voltage_l3_v)
-        { await this.setCapabilityValue('measure_voltage.l3', data.active_voltage_l3_v).catch(this.error); }
-      }
-      else if ((data.active_voltage_l3_v == undefined) && (this.hasCapability('measure_voltage.l3'))) {
-        await this.removeCapability('measure_voltage.l3').catch(this.error);
-      }
+    } catch (err) {
+      this.error(err);
+      await this.setUnavailable(err).catch(this.error);
+    }
+}
 
-      // active_current_a  Amp's L1
-      if (data.active_current_l1_a !== undefined) {
-        if (!this.hasCapability('measure_current.l1')) {
-          await this.addCapability('measure_current.l1').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_current.l1') != data.active_current_l1_a)
-        { await this.setCapabilityValue('measure_current.l1', data.active_current_l1_a).catch(this.error); }
-      }
-      else if ((data.active_current_l1_a == undefined) && (this.hasCapability('measure_current.l1'))) {
-        await this.removeCapability('measure_current.l1').catch(this.error);
-      }
-
-      // active_current_a  Amp's L2
-      if (data.active_current_l2_a !== undefined) {
-        if (!this.hasCapability('measure_current.l2')) {
-          await this.addCapability('measure_current.l2').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_current.l2') != data.active_current_l2_a)
-        { await this.setCapabilityValue('measure_current.l2', data.active_current_l2_a).catch(this.error); }
-      }
-      else if ((data.active_current_l2_a == undefined) && (this.hasCapability('measure_current.l2'))) {
-        await this.removeCapability('measure_current.l2').catch(this.error);
-      }
-
-      // active_current_a  Amp's L3
-      if (data.active_current_l3_a !== undefined) {
-        if (!this.hasCapability('measure_current.l3')) {
-          await this.addCapability('measure_current.l3').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_current.l3') != data.active_current_l3_a)
-        { await this.setCapabilityValue('measure_current.l3', data.active_current_l3_a).catch(this.error); }
-      }
-      else if ((data.active_current_l3_a == undefined) && (this.hasCapability('measure_current.l3'))) {
-        await this.removeCapability('measure_current.l3').catch(this.error);
-      }
-
-      if (this.url != settings.url) {
-            this.log("SDM630 - Updating settings url");
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
-      }
-
-
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
-  }
 
   onSettings(MySettings) {
     this.log('Settings updated');

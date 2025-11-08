@@ -193,7 +193,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.previousChargingState = null;
     this.previousTimeToEmpty = null;

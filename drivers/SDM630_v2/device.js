@@ -9,7 +9,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
     this.log('Token:', this.token);

@@ -15,7 +15,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const settings = this.getSettings();
     console.log('Offset polling for Watermeter: ',settings.offset_polling);
