@@ -4,8 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.8.9
+v3.8.11
 * Rollback energy dongle code from earlier version v3.7.0
+* Strange SD630 problem on older Homey's
+* Extra verbose logging in urls to expose mDNS problems for older Homeys (url)
 
 v3.8.8
 * After attempting conditional fetch, roll back to node-fetch until 12.9.x releases (Homey Pro 2016 - 2019)

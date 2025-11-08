@@ -151,7 +151,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
 
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     if (!this.hasCapability('connection_error')) {
         await this.addCapability('connection_error').catch(this.error);

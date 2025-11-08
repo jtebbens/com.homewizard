@@ -150,9 +150,11 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        return;
       }
-      else return;
-      this.log("No URL found for SDM230, please check your device settings.");
     }
 
     // Check if polling interval is running)

@@ -32,7 +32,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
 async onInit() {
-    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
 
@@ -84,8 +84,13 @@ async onInit() {
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
-      } else return;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        return;
+      }
     }
+
 
     if (!this.onPollInterval) {
       this.log('Polling interval is not running, starting now...');
@@ -102,38 +107,42 @@ async onInit() {
 
       const data = await res.json();
 
+      // Core capabilities
       await updateCapability(this, 'rssi', data.wifi_strength);
       await updateCapability(this, 'measure_power', data.active_power_w);
       await updateCapability(this, 'measure_power.active_power_w', data.active_power_w);
       await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
 
+      // Solar export
       if (data.total_power_export_t1_kwh > 1) {
         await updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh);
       } else {
         await updateCapability(this, 'meter_power.produced.t1', null);
       }
 
-      await updateCapability(this, 'meter_power', data.total_power_import_t1_kwh - data.total_power_export_t1_kwh);
+      // Aggregated meter
+      await updateCapability(
+        this,
+        'meter_power',
+        data.total_power_import_t1_kwh - data.total_power_export_t1_kwh
+      );
 
-      if (data.active_power_l2_w !== null) {
-        await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
-        await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
-        await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
-      } else {
-        await updateCapability(this, 'measure_power.l1', null);
-        await updateCapability(this, 'measure_power.l2', null);
-        await updateCapability(this, 'measure_power.l3', null);
-        await updateCapability(this, 'measure_power.active_power_w', null);
-      }
+      // Always update 3‑phase values
+      await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
+      await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
+      await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
 
+      // Voltage per phase
       await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
       await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v);
       await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v);
 
+      // Current per phase
       await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
       await updateCapability(this, 'measure_current.l2', data.active_current_l2_a);
       await updateCapability(this, 'measure_current.l3', data.active_current_l3_a);
 
+      // Update settings URL if changed
       if (this.url !== settings.url) {
         this.log("SDM630-p1mode - Updating settings url");
         await this.setSettings({ url: this.url });
@@ -146,6 +155,7 @@ async onInit() {
       this.setUnavailable(err).catch(this.error);
     }
 }
+
 
 
   async onSettings(MySettings) {
