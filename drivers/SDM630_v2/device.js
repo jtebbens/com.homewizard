@@ -285,10 +285,19 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onPoll() {
 
-    // URL may be undefined if the device is not available
-    if (!this.url) return;
-
     const settings = this.getSettings();
+
+    // URL may be undefined if the device is not available
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        await this.setUnavailable().catch(this.error);
+        return;
+      }
+    }
 
     // Check if polling interval is running)
     if (!this.onPollInterval) {

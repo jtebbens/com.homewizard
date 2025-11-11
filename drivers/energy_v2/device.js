@@ -100,6 +100,7 @@ async function applyMeasurementCapabilities(device,m) {
       'meter_power.consumed': m.energy_import_kwh,
       'meter_power.returned': m.energy_export_kwh,
       'tariff': m.tariff,
+      'measure_frequency' : m.frequency_hz,
   
       // Per phase
       'measure_power.l1': m.power_l1_w,
@@ -153,11 +154,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    if (!this.hasCapability('connection_error')) {
-        await this.addCapability('connection_error').catch(this.error);
-    }
-    await this.setCapabilityValue('connection_error', 'No errors');
-
+    await updateCapability(this, 'connection_error', 'No errors').catch(this.error);
 
     this.token = await this.getStoreValue('token');
     console.log('P1 Token:', this.token);
@@ -388,6 +385,12 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 
 async _handleMeasurement(m) {
+  // Skip if device has been deleted or no ID
+  if (!this.getData() || !this.getData().id) {
+      this.log('⚠️ Ignoring measurement: device no longer exists');
+      return;
+  }
+
   this.lastMeasurementAt = Date.now();
 
   //this.log('📊 Measurement data received:', m);
@@ -395,11 +398,11 @@ async _handleMeasurement(m) {
 
   // Power & voltage
   if (typeof m.power_w === 'number') {
-  await updateCapability(this, 'measure_power', m.power_w);
+  await updateCapability(this, 'measure_power', m.power_w).catch(this.error);
   }
   //await updateCapability(this, 'measure_power', m.power_w ?? null);
 
-  await applyMeasurementCapabilities(this, m);
+  await applyMeasurementCapabilities(this, m).catch(this.error);
 
 
   // await updateCapability(this, 'measure_voltage', m.voltage_v ?? null);
@@ -430,10 +433,10 @@ async _handleMeasurement(m) {
 
 
   // Net power
-  if (m.energy_import_kwh !== undefined) {
+  if ((m.energy_import_kwh !== undefined) &&  (m.energy_export_kwh !== undefined)) {
     const net = m.energy_import_kwh - m.energy_export_kwh;
     if (this.getCapabilityValue('meter_power') !== net) {
-      this.setCapabilityValue('meter_power', net);
+      await updateCapability(this, 'meter_power', net).catch(this.error);
     }
   }
 
@@ -519,7 +522,7 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   const meterStart = await this.getStoreValue('meter_start_day');
   if (meterStart != null) {
     const dailyImport = m.energy_import_kwh - meterStart;
-    await this.setCapabilityValue('meter_power.daily', dailyImport).catch(this.error);
+    await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
   }
 
   const gasStart = await this.getStoreValue('gasmeter_start_day');
@@ -557,49 +560,43 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
 
 _handleSystem(data) {
   //this.log('⚙️ System data received:', data);
-
-  // Example: cloud_enabled status
-  if (typeof data.cloud_enabled !== 'undefined') {
-    if (this.hasCapability('cloud_enabled')) {
-      this.setCapabilityValue('cloud_enabled', !!data.cloud_enabled);
-    }
+  if (!this.getData() || !this.getData().id) {
+    this.log('⚠️ Ignoring system event: device no longer exists');
+    return;
   }
 
-  // Example: status LED brightness (if you expose this as a capability)
+  // Update wifi rssi and wifi text
   if (typeof data.wifi_rssi_db === 'number') {
     if (this.hasCapability('rssi')) {
-      this.setCapabilityValue('rssi', data.wifi_rssi_db);
+      updateCapability(this, 'rssi', data.wifi_rssi_db).catch(this.error);
+      const wifiQuality = getWifiQuality(data.wifi_rssi_db);
+      updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
     }
 
   }
 
-  const wifiQuality = getWifiQuality(data.wifi_rssi_db);
-  updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
-
-  if (typeof data.status_led_brightness_pct === 'number') {
-    if (this.hasCapability('led_brightness')) {
-      this.setCapabilityValue('led_brightness', data.status_led_brightness_pct);
-    }
-
-  }
-
-  // Add more mappings here as needed
+  
 }
 
 
 async _handleBatteries(data) {
+
+  if (!this.getData() || !this.getData().id) {
+    this.log('⚠️ Ignoring batteries event: device no longer exists');
+    return;
+  }
   //if (typeof data.mode === 'undefined') return;
   
   //this.log('🔋 Battery payload:', JSON.stringify(data));
 
   // Capability updates
 
-  await updateCapability(this, 'measure_power.battery_group_power_w', data.power_w ?? null);
+  await updateCapability(this, 'measure_power.battery_group_power_w', data.power_w ?? null).catch(this.error);
 
   //this.log('Target Power W: ', data.target_power_w);
-  await updateCapability(this, 'measure_power.battery_group_target_power_w', data.target_power_w ?? null);
-  await updateCapability(this, 'measure_power.battery_group_max_consumption_w', data.max_consumption_w ?? null);
-  await updateCapability(this, 'measure_power.battery_group_max_production_w', data.max_production_w ?? null);
+  await updateCapability(this, 'measure_power.battery_group_target_power_w', data.target_power_w ?? null).catch(this.error);
+  await updateCapability(this, 'measure_power.battery_group_max_consumption_w', data.max_consumption_w ?? null).catch(this.error);
+  await updateCapability(this, 'measure_power.battery_group_max_production_w', data.max_production_w ?? null).catch(this.error);
 
   const settings = this.getSettings();
 

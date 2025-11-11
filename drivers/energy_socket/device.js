@@ -216,6 +216,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
           this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
         } else {
           this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+          await this.setUnavailable(err).catch(this.error);
           return;
         }
       }
@@ -249,24 +250,24 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         const temp_socket_watt = data.active_power_w + offset_socket;
 
         // Update capabilities using helper
-        await updateCapability(this, 'measure_power', temp_socket_watt);
-        await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
-        await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
-        await updateCapability(this, 'rssi', data.wifi_strength);
+        await updateCapability(this, 'measure_power', temp_socket_watt).catch(this.error);
+        await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
+        await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
+        await updateCapability(this, 'rssi', data.wifi_strength).catch(this.error);
 
         // Solar export logic
         const solarExport = data.total_power_export_t1_kwh;
-        await updateCapability(this, 'meter_power.produced.t1', solarExport > 1 ? solarExport : null);
+        await updateCapability(this, 'meter_power.produced.t1', solarExport > 1 ? solarExport : null).catch(this.error);
 
         // Aggregated meter
         const netImport = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
-        await updateCapability(this, 'meter_power', netImport);
+        await updateCapability(this, 'meter_power', netImport).catch(this.error);
 
         // Voltage
-        await updateCapability(this, 'measure_voltage', data.active_voltage_v ?? null);
+        await updateCapability(this, 'measure_voltage', data.active_voltage_v ?? null).catch(this.error);
 
         // Amp
-        await updateCapability(this, 'measure_current', data.active_current_a ?? null);
+        await updateCapability(this, 'measure_current', data.active_current_a ?? null).catch(this.error);
 
         // Update stored URL if changed
         if (this.url !== settings.url) {
@@ -279,11 +280,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       } catch (err) {
         if (err.code === 'ECONNRESET') {
           this.log('Socket - Connection was reset');
-          await updateCapability(this, 'connection_error', 'Connection reset');
+          await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
         } else if (err.code === 'EHOSTUNREACH') {
-          await updateCapability(this, 'connection_error', 'Socket unreachable');
+          await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
         } else {
-          await updateCapability(this, 'connection_error', err.message || 'Polling error');
+          await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
           this.error(err);
         }
 
@@ -320,20 +321,20 @@ async onPollState() {
     }
 
     // Update capabilities using helper
-    await updateCapability(this, 'onoff', data.power_on);
-    await updateCapability(this, 'dim', data.brightness * (1 / 255));
-    await updateCapability(this, 'locked', data.switch_lock);
-    await updateCapability(this, 'connection_error', 'No error');
+    await updateCapability(this, 'onoff', data.power_on).catch(this.error);
+    await updateCapability(this, 'dim', data.brightness * (1 / 255)).catch(this.error);
+    await updateCapability(this, 'locked', data.switch_lock).catch(this.error);
+    await updateCapability(this, 'connection_error', 'No error').catch(this.error);
 
   } catch (err) {
     if (err.code === 'ECONNRESET') {
       this.log('Socket - Connection was reset');
-      await updateCapability(this, 'connection_error', 'Connection reset');
+      await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
     } else if (err.code === 'EHOSTUNREACH') {
       this.log('Socket unreachable');
-      await updateCapability(this, 'connection_error', 'Device unreachable');
+      await updateCapability(this, 'connection_error', 'Device unreachable').catch(this.error);
     } else {
-      await updateCapability(this, 'connection_error', err.message || 'Polling error');
+      await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
       this.error(err);
     }
 

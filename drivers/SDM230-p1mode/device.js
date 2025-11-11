@@ -128,6 +128,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
       } else {
         this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        await this.setUnavailable().catch(this.error);
         return;
       }
     }
