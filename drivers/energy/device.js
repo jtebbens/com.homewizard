@@ -257,6 +257,7 @@ async onPoll() {
         this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
       } else {
         this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        await this.setUnavailable().catch(this.error);
         return;
       }
     }
@@ -287,7 +288,7 @@ async onPoll() {
 
           if (!res || !res.ok) {
              
-              await updateCapability(this, 'connection_error', 'Fetch error');
+              await updateCapability(this, 'connection_error', 'Fetch error').catch(this.error);
               throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
           }
 
@@ -332,7 +333,7 @@ async onPoll() {
               if (prevReading != null) {
                 const gasDelta = data.total_gas_m3 - prevReading;
                 if (gasDelta >= 0) {
-                  await updateCapability(this, 'measure_gas', gasDelta);
+                  await updateCapability(this, 'measure_gas', gasDelta).catch(this.error);
                 }
               }
 
@@ -347,7 +348,7 @@ async onPoll() {
           const meterStart = await this.getStoreValue('meter_start_day');
           if (meterStart != null && data.total_power_import_kwh != null) {
             const dailyImport = data.total_power_import_kwh - meterStart;
-            await updateCapability(this, 'meter_power.daily', dailyImport);
+            await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
           }
 
           // Update the capability meter_gas.daily
@@ -356,19 +357,19 @@ async onPoll() {
             ? data.total_gas_m3 - gasStart
             : null;
 
-          await updateCapability(this, 'meter_gas.daily', gasDiff);
+          await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
 
           // Save export data check if capabilities are present first
-          await updateCapability(this, 'measure_power', data.active_power_w);
-          await updateCapability(this, 'rssi', data.wifi_strength);
-          await updateCapability(this, 'tariff', data.active_tariff);
+          await updateCapability(this, 'measure_power', data.active_power_w).catch(this.error);
+          await updateCapability(this, 'rssi', data.wifi_strength).catch(this.error);
+          await updateCapability(this, 'tariff', data.active_tariff).catch(this.error);
           await updateCapability(this, 'identify', 'identify'); // or another placeholder value if needed
-          await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
-          await updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh);
-          await updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh);
+          await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
+          await updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
+          await updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh).catch(this.error);
 
           const wifiQuality = await getWifiQuality(data.wifi_strength);
-          await updateCapability(this, 'wifi_quality', wifiQuality);
+          await updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
 
           // Trigger tariff
           const lastTariff = await this.getStoreValue('last_active_tariff');
@@ -384,11 +385,11 @@ async onPoll() {
           }
 
 
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
 
           // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
 
-          await updateCapability(this, 'meter_gas', data.total_gas_m3);
+          await updateCapability(this, 'meter_gas', data.total_gas_m3).catch(this.error);
 
           // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
           await updateCapability(
@@ -397,7 +398,7 @@ async onPoll() {
             (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
               ? data.total_power_export_t1_kwh
               : null
-          );
+          ).catch(this.error);
 
           await updateCapability(
             this,
@@ -405,7 +406,7 @@ async onPoll() {
             (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
               ? data.total_power_export_t2_kwh
               : null
-          );
+          ).catch(this.error);
 
 
 
@@ -416,11 +417,11 @@ async onPoll() {
               ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) - (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
               : data.total_power_import_kwh - data.total_power_export_kwh;
 
-          await updateCapability(this, 'meter_power', netImport);
+          await updateCapability(this, 'meter_power', netImport).catch(this.error);
 
           // Also update returned power if firmware supports it
           if (data.total_power_import_kwh !== undefined) {
-            await updateCapability(this, 'meter_power.returned', data.total_power_export_kwh);
+            await updateCapability(this, 'meter_power.returned', data.total_power_export_kwh).catch(this.error);
           }
 
 
@@ -444,43 +445,43 @@ async onPoll() {
 
 
           // Belgium
-          await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w);
+          await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w).catch(this.error);
 
 
           // active_voltage_l1_v Some P1 meters do have voltage data
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
+          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
 
 
           // active_current_l1_a Some P1 meters do have amp data
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
 
 
           // Power failure count - long_power_fail_count
-          await updateCapability(this, 'long_power_fail_count', data.long_power_fail_count);
+          await updateCapability(this, 'long_power_fail_count', data.long_power_fail_count).catch(this.error);
 
 
           // voltage_sag_l1_count - Net L1 dip
-          await updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count);
+          await updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count).catch(this.error);
 
           // voltage_swell_l1_count - Net L1 peak
-          await updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count);
+          await updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count).catch(this.error);
 
           
 
           
           // Rewrite of L1/L2/L3 Voltage/Amp
-          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
+          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
+          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
           
 
 
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
+          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
 
           //
           if (data.active_current_l1_a !== undefined) {
             const tempCurrentPhase1Load = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
 
-            await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load);
+            await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load).catch(this.error);
 
             if (tempCurrentPhase1Load > 97) {
                 if (homey_lang == "nl") {
@@ -512,34 +513,34 @@ async onPoll() {
                 console.error('Failed to update number_of_phases:', err.message, err.stack);
               }
               // voltage_sag_l2_count - Net L2 dip
-              await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count);
+              await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count).catch(this.error);
               
               // voltage_sag_l3_count - Net L3 dip
-              await updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count);
+              await updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count).catch(this.error);
               
               // voltage_swell_l2_count - Net L2 peak
-              await updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count);
+              await updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count).catch(this.error);
               
               // voltage_swell_l3_count - Net L3 peak
-              await updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count);
+              await updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count).catch(this.error);
 
 
-              await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
-              await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
+              await updateCapability(this, 'measure_power.l2', data.active_power_l2_w).catch(this.error);
+              await updateCapability(this, 'measure_power.l3', data.active_power_l3_w).catch(this.error);
               
-              await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v);
-              await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v);
+              await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v).catch(this.error);
+              await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v).catch(this.error);
 
 
 
-              await updateCapability(this, 'measure_current.l2', data.active_current_l2_a);
+              await updateCapability(this, 'measure_current.l2', data.active_current_l2_a).catch(this.error);
 
 
               if (data.active_current_l2_a !== undefined) {
                 const tempCurrentPhase2Load = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
 
                 
-                await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load);
+                await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load).catch(this.error);
                 
 
                 if (tempCurrentPhase2Load > 97) {
@@ -555,14 +556,14 @@ async onPoll() {
                 }
               }
 
-              await updateCapability(this, 'measure_current.l3', data.active_current_l3_a);
+              await updateCapability(this, 'measure_current.l3', data.active_current_l3_a).catch(this.error);
 
 
               if (data.active_current_l3_a !== undefined) {
                 const tempCurrentPhase3Load = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
 
                 
-                await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load);
+                await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load).catch(this.error);
                 
 
                 if (tempCurrentPhase3Load > 97) {
@@ -581,24 +582,24 @@ async onPoll() {
           } // END OF PHASE 2 and 3 Capabilities
 
           // T3 meter request import and export
-          await updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh);
-          await updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh);
+          await updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh).catch(this.error);
+          await updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh).catch(this.error);
 
       
           // Always update 3‑phase values 
-          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
-          await updateCapability(this, 'measure_power.l2', data.active_power_l2_w);
-          await updateCapability(this, 'measure_power.l3', data.active_power_l3_w);
+          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
+          await updateCapability(this, 'measure_power.l2', data.active_power_l2_w).catch(this.error);
+          await updateCapability(this, 'measure_power.l3', data.active_power_l3_w).catch(this.error);
 
           // Voltage per phase
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v);
-          await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v);
-          await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v);
+          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
+          await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v).catch(this.error);
+          await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v).catch(this.error);
 
           // Current per phase
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a);
-          await updateCapability(this, 'measure_current.l2', data.active_current_l2_a);
-          await updateCapability(this, 'measure_current.l3', data.active_current_l3_a);
+          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
+          await updateCapability(this, 'measure_current.l2', data.active_current_l2_a).catch(this.error);
+          await updateCapability(this, 'measure_current.l3', data.active_current_l3_a).catch(this.error);
 
 
 
@@ -614,7 +615,7 @@ async onPoll() {
           }, null);
 
           // Update or remove meter_water capability
-          await updateCapability(this, 'meter_water', latestWaterData?.value ?? null);
+          await updateCapability(this, 'meter_water', latestWaterData?.value ?? null).catch(this.error);
 
           // Log if the water meter capability was removed due to no valid source
           if (!latestWaterData && this.hasCapability('meter_water')) {

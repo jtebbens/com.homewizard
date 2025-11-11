@@ -164,12 +164,16 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   async onPoll() {
 
     const settings = this.getSettings();
-
+    
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
+        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+      } else {
+        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+        await this.setUnavailable().catch(this.error);
+        return;
       }
-      else return;
     }
 
     if (!this.onPollInterval) {

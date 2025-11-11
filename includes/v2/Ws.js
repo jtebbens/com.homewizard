@@ -214,7 +214,6 @@ class WebSocketManager {
         if (this.ws.readyState === this.ws.OPEN) {
           this._subscribeTopics();
         } else {
-          // If not open yet, poll until open and subscribe
           this.log('⚠️ WebSocket not open yet — delaying subscription');
           const waitForOpen = setInterval(() => {
             if (this.ws && this.ws.readyState === this.ws.OPEN) {
@@ -225,15 +224,21 @@ class WebSocketManager {
         }
 
       } else if (data.type === 'measurement') {
-        // Update lastMeasurementAt and hand over payload to device handler
         this.lastMeasurementAt = Date.now();
-        this._handleMeasurement(data.data);
+        if (typeof this._handleMeasurement === 'function') {
+          this._handleMeasurement(data.data);
+        }
       } else if (data.type === 'system') {
-        this._handleSystem(data.data);
+        if (typeof this._handleSystem === 'function') {
+          this._handleSystem(data.data);
+        }
       } else if (data.type === 'batteries') {
-        this._handleBatteries(data.data);
+        if (typeof this._handleBatteries === 'function') {
+          this._handleBatteries(data.data);
+        }
       }
     });
+
 
     // Reconnect logic with exponential-ish backoff, capped to 30s
     const reconnect = () => {

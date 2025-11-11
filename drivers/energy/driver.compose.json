@@ -53,7 +53,8 @@
     "voltage_swell_l1",
     "voltage_swell_l2",
     "voltage_swell_l3",
-    "connection_error"
+    "connection_error",
+    "measure_frequency"
   ],
   "energy": {
     "cumulative": true,
@@ -228,6 +229,13 @@
       "title": {
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh"
+      }
+    },
+    "measure_frequency": {
+      "decimals": 3,
+      "title": {
+        "en": "Current Frequency",
+        "nl": "Huidige Frequentie"
       }
     },
     "measure_power.montly_power_peak": {

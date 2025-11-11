@@ -359,6 +359,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    * @returns {Promise<void>}
    */
   async _handleMeasurement(data) {
+    // Skip if device has been deleted or no ID
+    if (!this.getData() || !this.getData().id) {
+      this.log('⚠️ Ignoring measurement: device no longer exists');
+      return;
+    }
+
     this.lastMeasurementAt = Date.now();
 
     let time_to_empty = null;
@@ -407,15 +413,17 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       if (data.power_w > 10) {
         let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
         time_to_full = (BATTERY_CAPACITY_WH - current_battery_capacity) / data.power_w * 60;
-        await this.setCapabilityValue('time_to_full', Math.round(time_to_full)).catch(this.error);
-        await this.setCapabilityValue('time_to_empty', 0).catch(this.error);
+        await updateCapability(this, 'time_to_full', Math.round(time_to_full)).catch(this.error);
+        await updateCapability(this, 'time_to_empty', 0).catch(this.error);
+
       }
 
       if (data.power_w < -10) {
         let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
         time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
-        await this.setCapabilityValue('time_to_empty', Math.round(time_to_empty)).catch(this.error);
-        await this.setCapabilityValue('time_to_full', 0).catch(this.error);
+        await updateCapability(this, 'time_to_empty', Math.round(time_to_empty)).catch(this.error);
+        await updateCapability(this, 'time_to_full', 0).catch(this.error);
+        
       }
     }
 
@@ -462,7 +470,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       : 0.75; // fallback default
 
     const estimate_kwh = estimateBatteryKWh(data.state_of_charge_pct, data.cycles, inverterEfficiency);
-    await this.setCapabilityValue('estimate_kwh', Math.round(estimate_kwh * 100) / 100).catch(this.error);
+    await updateCapability(this, 'estimate_kwh', Math.round(estimate_kwh * 100) / 100).catch(this.error);
 
     // Initialize drift state if not already set
     if (this.driftActive === undefined) {
@@ -505,32 +513,27 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    * @param {object} data System payload from device.
    * @returns {void}
    */
-  _handleSystem(data) {
-    // Example: cloud_enabled status
-    if (typeof data.cloud_enabled !== 'undefined') {
-      if (this.hasCapability('cloud_enabled')) {
-        this.setCapabilityValue('cloud_enabled', !!data.cloud_enabled);
+    _handleSystem(data) {
+
+      // Skip if device has been deleted or no ID
+      if (!this.getData() || !this.getData().id) {
+        this.log('⚠️ Ignoring system event: device no longer exists');
+        return;
+      }
+
+      try {
+        
+        if (typeof data.wifi_rssi_db === 'number') {
+          updateCapability(this, 'rssi', data.wifi_rssi_db).catch(this.error);
+          const wifiQuality = getWifiQuality(data.wifi_rssi_db);
+          updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
+        }
+        
+      } catch (err) {
+        this.error(`System handler failed: ${err.message}`);
       }
     }
 
-    // Example: status LED brightness (if you expose this as a capability)
-    if (typeof data.wifi_rssi_db === 'number') {
-      if (this.hasCapability('rssi')) {
-        this.setCapabilityValue('rssi', data.wifi_rssi_db);
-      }
-    }
-
-    const wifiQuality = getWifiQuality(data.wifi_rssi_db);
-    updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
-
-    if (typeof data.status_led_brightness_pct === 'number') {
-      if (this.hasCapability('led_brightness')) {
-        this.setCapabilityValue('led_brightness', data.status_led_brightness_pct);
-      }
-    }
-
-    // Add more mappings here as needed
-  }
 
   /**
    * Ensure required capabilities exist on the device.
@@ -671,5 +674,4 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     return true;
   }
 
-  // ...existing code...
 };
