@@ -700,5 +700,8 @@
   },
   "3.8.11": {
     "en": "Extra verbose logging in urls to expose mDNS problems for older Homeys (url)"
+  },
+  "3.8.12": {
+    "en": "Extra error handling (updateCapability) based on received crashreports"
   }
 }

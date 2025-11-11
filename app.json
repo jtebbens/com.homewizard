@@ -4,13 +4,13 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.8.11",
+  "version": "3.8.12",
   "platforms": [
     "local"
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
-  "compatibility": ">=12.7.1",
+  "compatibility": ">=12.8.1",
   "description": {
     "en": "Helps you understand and save"
   },
@@ -2007,7 +2007,8 @@
         "voltage_swell_l1",
         "voltage_swell_l2",
         "voltage_swell_l3",
-        "connection_error"
+        "connection_error",
+        "measure_frequency"
       ],
       "energy": {
         "cumulative": true,
@@ -2182,6 +2183,13 @@
           "title": {
             "en": "Total usage KWh",
             "nl": "Totaal verbruik KWh"
+          }
+        },
+        "measure_frequency": {
+          "decimals": 3,
+          "title": {
+            "en": "Current Frequency",
+            "nl": "Huidige Frequentie"
           }
         },
         "measure_power.montly_power_peak": {
