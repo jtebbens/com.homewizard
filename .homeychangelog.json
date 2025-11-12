@@ -703,5 +703,8 @@
   },
   "3.8.12": {
     "en": "Extra error handling (updateCapability) based on received crashreports"
+  },
+  "3.8.13": {
+    "en": "Bugfix: ReferenceError: err is not defined (energy_socket)"
   }
 }
