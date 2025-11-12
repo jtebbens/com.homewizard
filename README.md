@@ -4,8 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.8.12
+v3.8.13
 * Extra error handling (updateCapability) based on received crashreports
+* Bugfix: ReferenceError: err is not defined (energy_socket)
+
 
 v3.8.11
 * Rollback energy dongle code from earlier version v3.7.0
