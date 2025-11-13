@@ -709,5 +709,8 @@
   },
   "3.8.14": {
     "en": "Updated APIv2 to add more text upon fetch failed"
+  },
+  "3.8.15": {
+    "en": "Websocket based battery mode settings added (both condition and action)"
   }
 }
