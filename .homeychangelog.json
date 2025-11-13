@@ -712,5 +712,8 @@
   },
   "3.8.15": {
     "en": "Websocket based battery mode settings added (both condition and action)"
+  },
+  "3.8.16": {
+    "en": "Websocket enhancements (heartbeat for plugin battery), P1 and Energy Socket agent tuning (ETIMEOUT and ECONNRESET)"
   }
 }
