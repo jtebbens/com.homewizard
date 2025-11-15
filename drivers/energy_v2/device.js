@@ -185,97 +185,121 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     
 
     //Condition Card
-    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
+    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
+
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
-      //this.log('CheckBatteryModeCard');
-        
-      return new Promise(async (resolve, reject) => {
+      this.log('ConditionCard: Check Battery Mode');
+
+      return new Promise(async (resolve) => {
         try {
-          const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH P1 and BATTERY
-  
+          // Prefer WebSocket if connected
+          if (this.wsManager && this.wsManager.isConnected()) {
+            this.log('Checking battery mode via WebSocket cache');
+            // Use last known mode from store or trigger
+            const lastBatteryMode = await this.getStoreValue('last_battery_mode');
+            if (!lastBatteryMode) {
+              this.log('No cached battery mode available, falling back to HTTP');
+            } else {
+              this.log('Retrieved cached mode:', lastBatteryMode);
+              return resolve(args.mode === lastBatteryMode);
+            }
+          }
+
+          // Fallback: HTTP fetch
+          const response = await api.getMode(this.url, this.token);
           if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
+            this.log('Invalid response, returning false');
             return resolve(false);
           }
-  
-          //console.log('Retrieved mode:', response.mode);
-          return resolve(args.mode == response.mode); // Returns the mode value
-          
+
+          this.log('Retrieved mode via HTTP:', response.mode);
+          return resolve(args.mode === response.mode);
+
         } catch (error) {
-          console.log('Error retrieving mode:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          this.error('Error retrieving mode:', error);
+          return resolve(false);
         }
       });
     });
 
+
     this.homey.flow.getActionCard('set-battery-to-zero-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Zero Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-       return new Promise(async (resolve, reject) => {
+      return new Promise(async (resolve) => {
         try {
-          const response = await api.setMode(this.url, this.token, 'zero'); 
-
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
+          if (this.wsManager && this.wsManager.isConnected()) {
+            this.wsManager.setBatteryMode('zero');
+            this.log('Set mode to zero via WebSocket');
+            return resolve('zero');
+          } else {
+            const response = await api.setMode(this.url, this.token, 'zero');
+            if (!response || typeof response.mode === 'undefined') {
+              this.log('Invalid response, returning false');
+              return resolve(false);
+            }
+            this.log('Set mode to zero via HTTP:', response.mode);
+            return resolve(response.mode);
           }
-
-          console.log('Set mode to zero:', response.mode);
-          return resolve(response.mode); // Returns the mode value
         } catch (error) {
-          console.log('Error set mode to zero:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          this.error('Error set mode to zero:', error);
+          return resolve(false);
         }
       });
-    })
+    });
+
 
     this.homey.flow.getActionCard('set-battery-to-full-charge-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Full Charge Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-      return new Promise(async (resolve, reject) => {
-      try {
-          const response = await api.setMode(this.url, this.token, 'to_full');
-
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
+      return new Promise(async (resolve) => {
+        try {
+          if (this.wsManager && this.wsManager.isConnected()) {
+            this.wsManager.setBatteryMode('to_full');
+            this.log('Set mode to full charge via WebSocket');
+            return resolve('to_full');
+          } else {
+            const response = await api.setMode(this.url, this.token, 'to_full');
+            if (!response || typeof response.mode === 'undefined') {
+              this.log('Invalid response, returning false');
+              return resolve(false);
+            }
+            this.log('Set mode to full charge via HTTP:', response.mode);
+            return resolve(response.mode);
           }
-
-          console.log('Set mode to full charge:', response.mode);
-          return resolve(response.mode); // Returns the mode value
         } catch (error) {
-          console.log('Error set mode to full charge:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          this.error('Error set mode to full charge:', error);
+          return resolve(false);
         }
-        });
-    })
+      });
+    });
+
 
     this.homey.flow.getActionCard('set-battery-to-standby-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Standby Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-      return new Promise(async (resolve, reject) => {
-      try {
-          const response = await api.setMode(this.url, this.token, 'standby');
-
-          if (!response || typeof response.mode === 'undefined') {
-            this.log('set-battery-to-standby-mode : Invalid response, returning false');
-            return resolve(false);
+      return new Promise(async (resolve) => {
+        try {
+          if (this.wsManager && this.wsManager.isConnected()) {
+            this.wsManager.setBatteryMode('standby');
+            this.log('Set mode to standby via WebSocket');
+            return resolve('standby');
+          } else {
+            const response = await api.setMode(this.url, this.token, 'standby');
+            if (!response || typeof response.mode === 'undefined') {
+              this.log('Invalid response, returning false');
+              return resolve(false);
+            }
+            this.log('Set mode to standby via HTTP:', response.mode);
+            return resolve(response.mode);
           }
-
-          this.log('Set mode to standby:', response.mode);
-          return resolve(response.mode); // Returns the mode value
         } catch (error) {
           this.error('Error set mode to standby:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          return resolve(false);
         }
-        });
-    })
+      });
+    });
+
 
     //this.flowTriggerBatteryMode
     

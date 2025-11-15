@@ -233,6 +233,7 @@ class WebSocketManager {
           this._handleSystem(data.data);
         }
       } else if (data.type === 'batteries') {
+        //this.log(`🔋 Device acknowledged battery mode change: ${data.data.mode}`);
         if (typeof this._handleBatteries === 'function') {
           this._handleBatteries(data.data);
         }
@@ -299,29 +300,35 @@ class WebSocketManager {
   }
 
 
-  /**
-   * Start a heartbeat monitor that checks if measurements arrive frequently.
-   * If no measurement arrives within threshold, restart the connection.
-   * @private
-   */
-  _startHeartbeatMonitor() {
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-    this.heartbeatTimer = setInterval(() => {
-      const now = Date.now();
+/**
+ * Start a heartbeat monitor that checks if measurements arrive frequently.
+ * If no measurement arrives within threshold, restart the connection.
+ * Also requests battery status periodically to refresh target_power_w.
+ * @private
+ */
+_startHeartbeatMonitor() {
+  if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+  this.heartbeatTimer = setInterval(() => {
+    const now = Date.now();
 
-      // If connecting/open, skip restart checks; lastMeasurementAt will be updated on messages
-      if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
-        //this.log(`⏸️ Heartbeat skipped — WebSocket state: ${this.ws.readyState}`);
-        return;
+    // If WebSocket is open, request battery status refresh
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      //this.log('🔋 Heartbeat: requesting battery status via WebSocket');
+      try {
+        this.ws.send(JSON.stringify({ type: 'batteries' }));
+      } catch (err) {
+        this.error('❌ Failed to request battery status:', err);
       }
+    }
 
-      // If no measurement for more than 60s, attempt restart
-      if (now - this.lastMeasurementAt > 60000) {
-        this.log('💤 No measurement in 60s — reconnecting WebSocket');
-        this.restartWebSocket();
-      }
-    }, 30000);
-  }
+    // If no measurement for more than 60s, attempt restart
+    if (now - this.lastMeasurementAt > 60000) {
+      this.log('💤 No measurement in 60s — reconnecting WebSocket');
+      this.restartWebSocket();
+    }
+  }, 30000); // every 30s battery status (websocket only updates when mode changes)
+}
+
 
   /**
    * Returns true if the WebSocket is currently open.
@@ -386,6 +393,66 @@ class WebSocketManager {
     this.ws = null;
     this.wsActive = false;
   }
+
+/**
+ * Set battery mode via WebSocket with verbose logging
+ * @param {string} mode - e.g. "to_full", "zero", "standby"
+ */
+setBatteryMode(mode) {
+  // Check connection state
+  if (!this.isConnected()) {
+    const errMsg = `❌ Cannot set battery mode to "${mode}" — WebSocket not connected`;
+    this.error(errMsg);
+    throw new Error(errMsg);
+  }
+
+  // Build the payload
+  const payload = {
+    type: 'batteries',
+    data: { mode }
+  };
+
+  try {
+    // Log before sending
+    this.log(`🔋 Sending battery mode change request: ${JSON.stringify(payload)}`);
+
+    // Send the command
+    this.ws.send(JSON.stringify(payload));
+
+    // Log after sending
+    this.log(`✅ Battery mode command "${mode}" sent successfully via WebSocket`);
+
+  } catch (err) {
+    this.error(`❌ Failed to send battery mode "${mode}" via WebSocket:`, err);
+    throw err;
+  }
+}
+
+requestBatteryStatus() {
+  if (!this.isConnected()) {
+    this.log('⚠️ Cannot request battery status — WebSocket not connected');
+    return;
+  }
+  this.log('🔋 Requesting battery status via WebSocket');
+  this.ws.send(JSON.stringify({ type: 'batteries' }));
+}
+
+
+
+/**
+ * Set cloud state via WebSocket
+ * @param {boolean} enabled
+ */
+setCloud(enabled) {
+  if (!this.isConnected()) {
+    throw new Error('WebSocket not connected');
+  }
+  this.ws.send(JSON.stringify({
+    type: 'system',
+    data: { cloud_enabled: enabled }
+  }));
+}
+
 
 }
 

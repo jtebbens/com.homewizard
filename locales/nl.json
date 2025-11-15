@@ -1,32 +1,39 @@
 {
-    "settings": {
-        "title": "HomeWizard instellingen",
-        "intro": "Om verbinding te kunnen maken met uw HomeWizard zijn onderstaande gegevens benodigd.",
-        "heatlink_intro": "Om verbinding te kunnen maken met uw Heatlink dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "energylink_intro": "Om verbinding te kunnen maken met uw Energylink dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "wattcher_intro": "Om verbinding te kunnen maken met uw Wattcher dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "thermometer_intro": "Om verbinding te kunnen maken met uw thermometer dient u aan te geven op welke HomeWizard deze is aangesloten.",
-        "password": "Wachtwoord",
-        "use_ledring": "Gebruik ledring",
-        "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
-        "save": "Opslaan"
+  "settings": {
+    "title": "HomeWizard instellingen",
+    "intro": "Om verbinding te kunnen maken met uw HomeWizard zijn onderstaande gegevens benodigd.",
+    "heatlink_intro": "Om verbinding te kunnen maken met uw Heatlink dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "energylink_intro": "Om verbinding te kunnen maken met uw Energylink dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "wattcher_intro": "Om verbinding te kunnen maken met uw Wattcher dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "thermometer_intro": "Om verbinding te kunnen maken met uw thermometer dient u aan te geven op welke HomeWizard deze is aangesloten.",
+    "password": "Wachtwoord",
+    "use_ledring": "Gebruik ledring",
+    "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
+    "save": "Opslaan",
+    "changelog": {
+      "label": "📜 Bekijk Changelog"
     },
-    "pair": {
-        "authorize_title": "Authorizeren",
-        "autorize_instruction": "Druk op de knop van het apparaat om de koppeling te voltooien",
-        "button_label_waiting": "Wachten op indrukken knop...",
-        "button_label_retry": "Opnieuw proberen",
-        "authorize_failed_no_button_pressed": "Koppeling mislukt, de knop is niet ingedrukt. Zorg er voor dat de knop binnen 60 seconden wordt ingedrukt.",
-        "something_went_wrong": "Er is iets misgegaan, probeer het opnieuw: ",
-        "energy_v2": {
-            "autorize_instruction": "Druk op de knop van het de P1 Meter om de koppeling te voltooien"
-        },
-        "plugin_battery": {
-            "autorize_instruction": "Druk op de knop van de plugin batterij om de koppeling te voltooien"
-        }
-    },
-    "device": {
-        "init": "Apparaat initialiseren...",
-        "unreachable": "Apparaat onbereikbaar"
+    "support": {
+      "link": "https://community.homey.app/t/app-pro-nl-homewizard/71211",
+      "label": "🛠️ Support pagina"
     }
+  },
+  "pair": {
+    "authorize_title": "Authorizeren",
+    "authorize_instruction": "Druk op de knop van het apparaat om de koppeling te voltooien",
+    "button_label_waiting": "Wachten op indrukken knop...",
+    "button_label_retry": "Opnieuw proberen",
+    "authorize_failed_no_button_pressed": "Koppeling mislukt, de knop is niet ingedrukt. Zorg er voor dat de knop binnen 60 seconden wordt ingedrukt.",
+    "something_went_wrong": "Er is iets misgegaan, probeer het opnieuw: ",
+    "energy_v2": {
+      "authorize_instruction": "Druk op de knop van de P1 Meter om de koppeling te voltooien"
+    },
+    "plugin_battery": {
+      "authorize_instruction": "Druk op de knop van de plugin batterij om de koppeling te voltooien"
+    }
+  },
+  "device": {
+    "init": "Apparaat initialiseren...",
+    "unreachable": "Apparaat onbereikbaar"
+  }
 }

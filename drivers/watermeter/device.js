@@ -208,12 +208,12 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       //console.log('Offset for Watermeter: ',settings.offset_water);
 
 
-      if (data.total_liter_offset_m3 = '0') {
+      if (data.total_liter_offset_m3 === 0 || data.total_liter_offset_m3 === '0') {
         offset_water_m3 = settings.offset_water;
-      }
-      else if (data.total_liter_offset_m3 != '0') {
+      } else {
         offset_water_m3 = data.total_liter_offset_m3;
       }
+
 
 
 

@@ -54,9 +54,10 @@ async function getWifiQuality(percent) {
 // KeepAlive to true to reuse connections
 // KeepAliveMsecs to 1 second to keep connections alive
 // maxSockets to 5 to limit the number of concurrent sockets
-const agent = new http.Agent({
+let agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs : 11000
+  keepAliveMsecs: 10000,  // avoids stale sockets
+  maxSockets: 1          // only one active connection per host
 });
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
@@ -635,10 +636,31 @@ async onPoll() {
       .then(() => {
         this.setAvailable().catch(this.error);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         this.error(err);
-        this.setUnavailable(err).catch(this.error);
+        await this.setUnavailable(err).catch(this.error);
+
+        if (err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET') {
+          this.log('⚠️ Timeout detected — recreating HTTP agent and restarting poll');
+
+          try {
+            // Recreate a brand‑new agent with tuned settings
+            agent = new http.Agent({
+              keepAlive: true,
+              keepAliveMsecs: 10000, // matches your 10s poll cycle
+              maxSockets: 1
+            });
+          } catch (createErr) {
+            this.error('Failed to recreate agent:', createErr);
+          }
+
+          // Backoff before retrying to avoid hammering
+          setTimeout(() => {
+            this.onPoll();
+          }, 2000);
+        }
       });
+
   }
 
     // Catch offset updates
