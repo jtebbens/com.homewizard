@@ -715,5 +715,8 @@
   },
   "3.8.16": {
     "en": "Websocket enhancements (heartbeat for plugin battery), P1 and Energy Socket agent tuning (ETIMEOUT and ECONNRESET)"
+  },
+  "3.8.17": {
+    "en": "Bugfix: Failed to recreate agent: TypeError: Assignment to constant variable (energy)"
   }
 }
