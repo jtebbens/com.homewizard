@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Homewizard Settings</title>
+  <script
+    type="text/javascript"
+    src="/homey.js"
+    data-origin="settings">
+  </script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; text-align: center; }
+    img { width: 400px; height: auto; margin-bottom: 20px; }  
+    a { display: block; margin: 0.5em 0; font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <!-- PNG on top -->
+  <img src="../assets/images/small.png" alt="Homewizard" />
+  <h1 id="title"></h1>
+
+  <a id="changelog" href="https://community.homey.app/t/app-pro-homewizard/19267/2" target="_blank"></a>
+  <a id="support" target="_blank"></a>
+
+
+
+  <script>
+    function onHomeyReady(Homey) {
+      // Title
+      document.getElementById('title').innerText = Homey.__('settings.title');
+
+      // Changelog
+      const changelogAnchor = document.getElementById('changelog');
+      changelogAnchor.innerText = Homey.__('settings.changelog.label');
+
+      // Support
+      const supportAnchor = document.getElementById('support');
+      supportAnchor.href = Homey.__('settings.support.link');
+      supportAnchor.innerText = Homey.__('settings.support.label');
+
+      Homey.ready();
+    }
+  </script>
+</body>
+</html>

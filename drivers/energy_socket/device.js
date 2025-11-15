@@ -7,9 +7,10 @@ const http = require('http');
 const POLL_INTERVAL = 1000 * 10; // 10 seconds
 const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds
 
-const agent = new http.Agent({
+let agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs : 11000
+  keepAliveMsecs: 10000,  // avoids stale sockets
+  maxSockets: 1          // only one active connection per host
 });
 
 async function updateCapability(device, capability, value) {
@@ -175,7 +176,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
       } catch (err) {
         this.error(err);
-        throw new Error('Network error during setCloudOn:', err);
+        throw new Error(`Network error during setCloudOn: ${err.message}`);
       }
   
       if (!res || !res.ok) {
@@ -196,7 +197,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         });
       } catch (err) {
         this.error(err);
-        throw new Error('Network error during setCloudOff:', err);
+        throw new Error(`Network error during setCloudOff: ${err.message}`);
       }
   
       if (!res || !res.ok) { 
@@ -277,19 +278,34 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
         await this.setAvailable().catch(this.error);
 
-      } catch (err) {
-        if (err.code === 'ECONNRESET') {
-          this.log('Socket - Connection was reset');
-          await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
-        } else if (err.code === 'EHOSTUNREACH') {
-          await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
-        } else {
-          await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
-          this.error(err);
+        } catch (err) {
+          if (err.code === 'ECONNRESET') {
+            this.log('Socket - Connection was reset');
+            await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
+          } else if (err.code === 'EHOSTUNREACH') {
+            await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
+          } else if (err.code === 'ETIMEDOUT') {
+            this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
+            await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
+
+            agent = new http.Agent({
+              keepAlive: true,
+              keepAliveMsecs: 10000,
+              maxSockets: 1
+            });
+
+            setTimeout(() => {
+              this.onPoll(); // or this.onPollState() depending on context
+            }, 2000);
+          } else {
+            await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+            this.error(err);
+          }
+
+          await this.setUnavailable(err).catch(this.error);
         }
 
-        await this.setUnavailable(err).catch(this.error);
-      }
+
 }
 
 
@@ -326,20 +342,33 @@ async onPollState() {
     await updateCapability(this, 'locked', data.switch_lock).catch(this.error);
     await updateCapability(this, 'connection_error', 'No error').catch(this.error);
 
-  } catch (err) {
-    if (err.code === 'ECONNRESET') {
-      this.log('Socket - Connection was reset');
-      await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
-    } else if (err.code === 'EHOSTUNREACH') {
-      this.log('Socket unreachable');
-      await updateCapability(this, 'connection_error', 'Device unreachable').catch(this.error);
-    } else {
-      await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
-      this.error(err);
+    } catch (err) {
+      if (err.code === 'ECONNRESET') {
+        this.log('Socket - Connection was reset');
+        await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
+      } else if (err.code === 'EHOSTUNREACH') {
+        await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
+      } else if (err.code === 'ETIMEDOUT') {
+        this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
+        await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
+
+        agent = new http.Agent({
+          keepAlive: true,
+          keepAliveMsecs: 10000,
+          maxSockets: 1
+        });
+
+        setTimeout(() => {
+          this.onPollState(); 
+        }, 2000);
+      } else {
+        await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+        this.error(err);
+      }
+
+      await this.setUnavailable(err).catch(this.error);
     }
 
-    await this.setUnavailable(err).catch(this.error);
-  }
 }
 
 

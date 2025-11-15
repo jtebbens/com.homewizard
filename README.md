@@ -4,10 +4,18 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.8.17
+* Bugfix: Failed to recreate agent: TypeError: Assignment to constant variable (energy)
+
+v3.8.16
+* Updated APIv2 to add more text upon fetch failed
+* Websocket based battery mode settings added (both condition and action)
+* Websocket heartbeat (30s) to keep battery mode updated (workaround as battery mode is the only realtime update when it changes)
+* P1 & EnergySocket driver (apiv1) http agent tuning (ETIMEOUT and ECONNRESET)
+
 v3.8.13
 * Extra error handling (updateCapability) based on received crashreports
 * Bugfix: ReferenceError: err is not defined (energy_socket)
-
 
 v3.8.11
 * Rollback energy dongle code from earlier version v3.7.0
