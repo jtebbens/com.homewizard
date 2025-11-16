@@ -718,5 +718,8 @@
   },
   "3.8.17": {
     "en": "Bugfix: Failed to recreate agent: TypeError: Assignment to constant variable (energy)"
+  },
+  "3.8.18": {
+    "en": "Adjustment to async/await code several drivers"
   }
 }
