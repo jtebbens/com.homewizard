@@ -162,89 +162,63 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     }
 
   async onPoll() {
+    try {
+      const settings = this.getSettings();
 
-    const settings = this.getSettings();
-    
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
-      } else {
-        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-        await this.setUnavailable().catch(this.error);
-        return;
+      if (!this.url) {
+        if (settings.url) {
+          this.url = settings.url;
+          this.log(`ℹ️ Restored URL from settings: ${this.url}`);
+        } else {
+          this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+          await this.setUnavailable().catch(this.error);
+          return;
+        }
       }
-    }
 
-    if (!this.onPollInterval) {
-        this.log('Watermeter - Polling interval is not running, starting now...');
-        // Clear any possible leftover interval just in case
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-    }
-
-    Promise.resolve().then(async () => {
-
-      //let res = await fetch(`${this.url}/data`);
+      if (!this.onPollInterval) {
+        this.log('Watermeter - Polling interval was not running, starting now...');
+        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.offset_polling);
+      }
 
       const res = await fetch(`${this.url}/data`, {
-          agent,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+        agent,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (!res || !res.ok) {
-         throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
       const data = await res.json();
 
-      let offset_water_m3;
-
-      // if watermeter offset is set in Homewizard Energy app take that value else use the configured value in Homey Homewizard water offset
-
-      const settings = this.getSettings();
-      //console.log('Offset for Watermeter: ',settings.offset_water);
-
-
-      if (data.total_liter_offset_m3 === 0 || data.total_liter_offset_m3 === '0') {
-        offset_water_m3 = settings.offset_water;
-      } else {
-        offset_water_m3 = data.total_liter_offset_m3;
-      }
-
-
-
+      // Offset logic
+      const offset_water_m3 = (data.total_liter_offset_m3 === 0 || data.total_liter_offset_m3 === '0')
+        ? settings.offset_water
+        : data.total_liter_offset_m3;
 
       const temp_total_liter_m3 = data.total_liter_m3 + offset_water_m3;
 
       // Update values
-      if (this.getCapabilityValue('measure_water') != data.active_liter_lpm)
-      { await this.setCapabilityValue('measure_water', data.active_liter_lpm).catch(this.error); }
-      if (this.getCapabilityValue('meter_water') != temp_total_liter_m3)
-      { await this.setCapabilityValue('meter_water', temp_total_liter_m3).catch(this.error); }
-      if (this.getCapabilityValue('rssi') != data.wifi_strength)
-      { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
+      await this.setCapabilityValue('measure_water', data.active_liter_lpm).catch(this.error);
+      await this.setCapabilityValue('meter_water', temp_total_liter_m3).catch(this.error);
+      await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error);
 
-      if (this.url != settings.url) {
-            this.log("Watermeter - Updating settings url");
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
+      // Keep settings.url in sync
+      if (this.url !== settings.url) {
+        this.log("Watermeter - Updating settings url");
+        await this.setSettings({ url: this.url });
       }
 
+      await this.setAvailable();
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
-  }
+    } catch (err) {
+      this.error('Polling failed:', err);
+      await this.setUnavailable(err).catch(this.error);
+    }
+}
+
 
   // Catch offset updates
     /**

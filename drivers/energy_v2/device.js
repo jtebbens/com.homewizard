@@ -428,15 +428,6 @@ async _handleMeasurement(m) {
 
   await applyMeasurementCapabilities(this, m).catch(this.error);
 
-
-  // await updateCapability(this, 'measure_voltage', m.voltage_v ?? null);
-  // await updateCapability(this, 'measure_current', m.current_a ?? null);
-  //await updateCapability(this, 'meter_power.consumed', m.energy_import_kwh ?? null);
-  //await updateCapability(this, 'meter_power.returned', m.energy_export_kwh ?? null);
-  //await updateCapability(this, 'tariff', m.tariff ?? null);
-
-
-
   // Trigger Flows
 
   // Trigger Flows only if values changed

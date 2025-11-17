@@ -283,15 +283,15 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     flow.trigger(this, { [flow_id]: value }).catch(this.error);
   }
 
-  async onPoll() {
-
+async onPoll() {
+  try {
     const settings = this.getSettings();
 
-    // URL may be undefined if the device is not available
+    // Ensure URL is set
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
-        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+        this.log(`ℹ️ Restored URL from settings: ${this.url}`);
       } else {
         this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
         await this.setUnavailable().catch(this.error);
@@ -299,126 +299,96 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
       }
     }
 
-    // Check if polling interval is running)
+    // Ensure polling interval is running
     if (!this.onPollInterval) {
-      this.log('Polling interval is not running, starting now...');
+      this.log('Polling interval was not running, starting now...');
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
-    Promise.resolve().then(async () => {
+    // Refresh token if missing
+    if (!this.token) {
+      this.token = await this.getStoreValue('token');
+    }
 
-      if(!this.token) { 
-        this.token = await this.getStoreValue('token');
+    // --- Main API calls ---
+    const data = await api.getMeasurement(this.url, this.token);
+
+    const setCapabilityPromises = [];
+
+    // Power (total + per phase)
+    setCapabilityPromises.push(this._setCapabilityValue('measure_power', data.power_w));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_power.l1', data.power_l1_w));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_power.l2', data.power_l2_w));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_power.l3', data.power_l3_w));
+
+    // Import / Export
+    setCapabilityPromises.push(this._setCapabilityValue('meter_power.import', data.energy_import_kwh));
+    if (data.energy_export_kwh !== 0) {
+      setCapabilityPromises.push(this._setCapabilityValue('meter_power.export', data.energy_export_kwh));
+    }
+
+    // Aggregated meter_power
+    if (!this.hasCapability('meter_power')) {
+      await this.addCapability('meter_power').catch(this.error);
+    }
+    if (data.energy_import_kwh !== undefined) {
+      const calcValue = data.energy_import_kwh - data.energy_export_kwh;
+      if (this.getCapabilityValue('meter_power') !== calcValue) {
+        setCapabilityPromises.push(this._setCapabilityValue('meter_power', calcValue));
       }
+    }
 
-      const data = await api.getMeasurement(this.url, this.token);
-      //const systemInfo = await api.getSystem(this.url, this.token);
+    // Voltage per phase
+    setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l1', data.voltage_l1_v));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l2', data.voltage_l2_v));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l3', data.voltage_l3_v));
 
-      const setCapabilityPromises = [];
-      const triggerFlowPromises = [];
+    // Current (total + per phase)
+    setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_a));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_current.l1', data.current_l1_a));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_current.l2', data.current_l2_a));
+    setCapabilityPromises.push(this._setCapabilityValue('measure_current.l3', data.current_l3_a));
 
-       // Values
-      /// / Power
-      setCapabilityPromises.push(this._setCapabilityValue('measure_power', data.power_w).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_power.l1', data.power_l1_w).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_power.l2', data.power_l2_w).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_power.l3', data.power_l3_w).catch(this.error));
-      /// / Total consumption
-      setCapabilityPromises.push(this._setCapabilityValue('meter_power.import', data.energy_import_kwh).catch(this.error));
+    await Promise.allSettled(setCapabilityPromises);
 
-      /// / Total production
-      // if energy_export_kwh == 0, we assume the device does not produce energy
-      // We ignore this case
-      if (data.energy_export_kwh != 0) {
-        setCapabilityPromises.push(this._setCapabilityValue('meter_power.export', data.energy_export_kwh).catch(this.error));
-      }
+    // --- Battery mode handling ---
+    const result = await api.getInfo(this.url, this.token);
+    if (result && result.firmware_version === "5.0005") {
+      const batteryMode = await api.getMode(this.url, this.token);
 
-      // Aggregated meter for Power by the hour support 
-      if (!this.hasCapability('meter_power')) {
-        setCapabilityPromises.push(this.addCapability('meter_power').catch(this.error));
-      }
-      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      if (data.energy_import_kwh !== undefined) {
-        if (this.getCapabilityValue('meter_power') != (data.energy_import_kwh - data.energy_export_kwh))
-        { setCapabilityPromises.push(this._setCapabilityValue('meter_power', (data.energy_import_kwh - data.energy_export_kwh)).catch(this.error)); }
-      }
-
-      /// / Voltage
-      setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l1', data.voltage_l1_v).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l2', data.voltage_l2_v).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_voltage.l3', data.voltage_l3_v).catch(this.error));
-
-      /// / Current
-      setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_a).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_current.l1', data.current_l1_a).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_current.l2', data.current_l2_a).catch(this.error));
-      setCapabilityPromises.push(this._setCapabilityValue('measure_current.l3', data.current_l3_a).catch(this.error));
-      
-      // Execute all promises concurrently using Promise.all()
-      Promise.all(setCapabilityPromises);
-      Promise.all(triggerFlowPromises);
-
-      let result = await api.getInfo(this.url, this.token); // this.url is empty
-      //console.log('getInfo Result:', result);
-
-      if (result && (result.firmware_version === "5.0005")) {
-        // Battery mode here?
-        const batteryMode = await api.getMode(this.url, this.token);
-        if (batteryMode !== undefined) {
-                //console.log('Battery mode:', batteryMode);
-        }
+      if (batteryMode !== undefined) {
         if (settings.mode !== batteryMode.mode) {
           this.log('Battery mode changed to:', batteryMode.mode);
-          await this.setSettings({
-            mode: batteryMode.mode,
-          });
-        }
-        if (batteryMode.power_w) {
-          //this.log('Battery power:', batteryMode.power_w);
-          await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w).catch(this.error);
-        }
-        if (batteryMode.target_power_w) {
-          //this.log('Battery target power:', batteryMode.target_power_w);
-          await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w).catch(this.error);
-        }
-        if (batteryMode.max_consumption_w) {
-          //this.log('Battery max consumption:', batteryMode.max_consumption_w);
-          await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w).catch(this.error);
-        }
-        if (batteryMode.max_production_w) {
-          //this.log('Battery max production:', batteryMode.max_production_w);
-          await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w).catch(this.error);
-        }
-        
-        if (!batteryMode.power_w) {
-          // If power_w is not available, we assume the battery is not connected
-          // Remove the capabilities
-          if (this.hasCapability('measure_power.battery_group_power_w')) {
-            await this.removeCapability('measure_power.battery_group_power_w').catch(this.error);
-          }
-          if (this.hasCapability('measure_power.battery_group_target_power_w')) {
-            await this.removeCapability('measure_power.battery_group_target_power_w').catch(this.error);
-          }
-          if (this.hasCapability('measure_power.battery_group_max_consumption_w')) {
-            await this.removeCapability('measure_power.battery_group_max_consumption_w').catch(this.error);
-          }
-          if (this.hasCapability('measure_power.battery_group_max_production_w')) {
-            await this.removeCapability('measure_power.battery_group_max_production_w').catch(this.error);
-          }
+          await this.setSettings({ mode: batteryMode.mode });
         }
 
+        // Always set battery capabilities, falling back to null if missing
+        await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
       }
+    }
+
+    // After setting capabilities
+    await this._triggerFlowOnChange('measure_power', data.power_w);
+    await this._triggerFlowOnChange('measure_power.l1', data.power_l1_w);
+    await this._triggerFlowOnChange('measure_power.l2', data.power_l2_w);
+    await this._triggerFlowOnChange('measure_power.l3', data.power_l3_w);
+
+    // For battery mode
+    await this._triggerFlowOnChange('battery_mode', batteryMode.mode);
+    await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
 
 
-    })
-      .then(() => {
-        await this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        await this.setUnavailable(err).catch(this.error);
-      });
+    // If everything succeeded
+    await this.setAvailable();
+
+  } catch (err) {
+    this.error('Polling failed:', err);
+    await this.setUnavailable(err).catch(this.error);
   }
+}
 
   onSettings(MySettings) {
     this.log('Settings updated');

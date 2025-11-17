@@ -4,8 +4,9 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.8.17
+v3.8.18
 * Bugfix: Failed to recreate agent: TypeError: Assignment to constant variable (energy)
+* Adjustment to async/await code several drivers
 
 v3.8.16
 * Updated APIv2 to add more text upon fetch failed
