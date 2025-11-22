@@ -724,5 +724,8 @@
   },
   "3.8.19": {
     "en": "Websocket finetuning (energy_v2 and Plugin Battery), Centralized fetch queue for all fetch calls. Removed internal interval check"
+  },
+  "3.8.20": {
+    "en": "WebsocketManager tuning"
   }
 }
