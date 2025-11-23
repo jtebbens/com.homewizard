@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
 
 /**
@@ -271,12 +272,7 @@ async onPoll() {
         const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
 
         const homey_lang = this.homey.i18n.getLanguage();
-             
-        // Check if polling interval is running)
-        if (!this.onPollInterval) {
-          this.log('Polling interval is not running, starting now...');
-          this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
-        }
+            
 
         //const res = await fetch(`${this.url}/data`);
         const res = await fetch(`${this.url}/data`, {
@@ -624,27 +620,30 @@ async onPoll() {
             console.log('Removed meter as there is no water meter in P1.');
           }
           
-          if (this.url != settings.url) {
-            this.log("P1 - Updating settings url");
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
+        // Update settings.url when changed
+        if (this.url && this.url !== settings.url) {
+          this.log(`Energy - Updating settings url from ${settings.url} → ${this.url}`);
+          try {
+            await this.setSettings({ url: this.url });
+          } catch (err) {
+            this.error('Energy - Failed to update settings url', err);
           }
+        }
 
       })
       .then(() => {
         this.setAvailable().catch(this.error);
       })
       .catch(async (err) => {
-        this.error(err);
-        await this.setUnavailable(err).catch(this.error);
+        this.error('❌ Poll failed:', err.message || err);
+        await this.setUnavailable(err.message || 'Polling error').catch(this.error);
 
-        if (err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET') {
+        if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
           this.log('⚠️ Timeout detected — recreating HTTP agent and restarting poll');
 
           try {
             // Recreate a brand‑new agent with tuned settings
+            agent.destroy?.(); // clean up old sockets if possible
             agent = new http.Agent({
               keepAlive: true,
               keepAliveMsecs: 10000, // matches your 10s poll cycle

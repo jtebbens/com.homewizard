@@ -4,6 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.8.21
+* Websocket finetuning (energy_v2 and plugin battery)
+* Centralized fetch queue for all fetch calls to spread all queries
+* Removed interval check in onPoll loop
+* Restore custom polling sockets (got removed by accident rollback)
+
 v3.8.18
 * Bugfix: Failed to recreate agent: TypeError: Assignment to constant variable (energy)
 * Adjustment to async/await code several drivers

@@ -46,6 +46,15 @@ class HomeWizardDevice extends Homey.Device {
 
   }
 
+  async onUninit() {
+      homewizard.stoppoll();
+      if (this.refreshIntervalId) {
+        clearInterval(this.refreshIntervalId);
+        this.refreshIntervalId = null;
+      }
+  }
+
+
   flowTriggerPresetChanged(device, tokens) {
     this._flowTriggerPresetChanged.trigger(device, tokens).catch(this.error);
   }
@@ -57,8 +66,6 @@ class HomeWizardDevice extends Homey.Device {
     }
     this.refreshIntervalId = setInterval(() => {
       if (debug) { console.log('--Start HomeWizard Polling-- '); }
-      if (debug) { console.log('--Start HomeWizard Polling-- '); }
-
       this.getStatus(devices);
 
     }, 1000 * 20);

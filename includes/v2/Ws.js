@@ -1,6 +1,16 @@
 const https = require('https');
 const WebSocket = require('ws');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
+
+const SHARED_AGENT = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 11000,
+  maxSockets: 4,
+  maxFreeSockets: 2,
+  rejectUnauthorized: false,
+  timeout: 10000
+});
 
 /**
  * Perform a fetch with a timeout using AbortController.
@@ -11,14 +21,13 @@ const fetch = require('node-fetch');
  * @returns {Promise<any>} - Parsed JSON response.
  * @throws Will throw if the request times out or fetch fails.
  */
+
+
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
+    const res = await fetch(url, { ...options, signal: controller.signal });
     clearTimeout(id);
     return await res.json();
   } catch (err) {
@@ -48,7 +57,7 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
  *  - handleMeasurement, handleSystem, handleBatteries: callbacks to process incoming data
  */
 class WebSocketManager {
-  /**
+    /**
    * @param {object} opts
    * @param {string} opts.url
    * @param {string} opts.token
@@ -71,7 +80,7 @@ class WebSocketManager {
     this._handleMeasurement = handleMeasurement;
     this._handleSystem = handleSystem;
     this._handleBatteries = handleBatteries;
-
+    
     // WebSocket instance and state flags
     this.ws = null;
     this.wsActive = false;
@@ -79,66 +88,75 @@ class WebSocketManager {
     this.lastMeasurementAt = Date.now();
 
     // Internal reconnect / restart guards
+
     this.reconnecting = false;
     this._restartCooldown = 0;
-    this.heartbeatTimer = null;
+
+    this._timers = new Set();
+    this.pongReceived = true;
   }
 
+  _safeSetTimeout(fn, ms) {
+    const id = setTimeout(() => {
+      this._timers.delete(id);
+      fn();
+    }, ms);
+    this._timers.add(id);
+    return id;
+  }
 
+  _safeSetInterval(fn, ms) {
+    const id = setInterval(fn, ms);
+    this._timers.add(id);
+    return id;
+  }
+
+  _clearTimers() {
+    for (const id of this._timers) {
+      clearTimeout(id);
+      clearInterval(id);
+    }
+    this._timers.clear();
+  }
+
+  
   /**
    * Start or restart the WebSocket connection.
    * Performs a small preflight check to ensure the device is reachable
    * and expects the system response structure before opening the WS.
    */
-  async start() {
 
+  async start() {
+    let pendingMeasurement = null;
     // If an existing socket is in CONNECTING state, skip starting again
+
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
       this.log('⏸️ WebSocket is already connecting — skipping start');
       return;
     }
 
-    this.reconnectAttempts = this.reconnectAttempts || 0;
-    
-    // Clean up existing websocket if present
     if (this.ws) {
       try {
-        switch (this.ws.readyState) {
-          case this.ws.OPEN:
-            this.ws.terminate();
-            break;
-          case this.ws.CONNECTING:
-            this.log('⚠️ WebSocket still connecting — skipping termination');
-            return;
-          case this.ws.CLOSING:
-          case this.ws.CLOSED:
-            this.ws.close();
-            break;
-        }
+        if (this.ws.readyState === WebSocket.OPEN) this.ws.terminate();
+        else this.ws.close();
       } catch (err) {
         this.error('❌ Failed to clean up WebSocket:', err);
       }
-
       this.ws = null;
       this.wsActive = false;
     }
-
     // Allow URL to be obtained from settings if not provided initially
-    const settingsUrl = this.getSetting('url');
-    if (!this.url && settingsUrl) {
-      this.url = settingsUrl;
-    }
 
+    const settingsUrl = this.getSetting('url');
+    if (!this.url && settingsUrl) this.url = settingsUrl;
     if (!this.token || !this.url) {
       this.error('❌ Missing token or URL — cannot start WebSocket');
       return;
     }
 
-    // For legacy devices we may skip TLS verification; agent is used for fetch and ws
-    const agent = new (require('https')).Agent({ rejectUnauthorized: false });
+    const agent = SHARED_AGENT;
     const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
 
-    // Preflight: ensure device responds to /api/system and has expected fields
     try {
       const res = await fetchWithTimeout(`${this.url}/api/system`, {
         headers: { Authorization: `Bearer ${this.token}` },
@@ -152,15 +170,37 @@ class WebSocketManager {
       this.error(`❌ Preflight check failed: ${err.message}`);
       return;
     }
-
+    
     // Create WebSocket instance
     try {
-      this.ws = new WebSocket(wsUrl, { agent });
+      this.ws = new WebSocket(wsUrl, {
+        agent,
+        perMessageDeflate: false,
+        maxPayload: 512 * 1024,
+        handshakeTimeout: 5000
+      });
     } catch (err) {
       this.error('❌ Failed to create WebSocket:', err);
       this.wsActive = false;
       return;
     }
+
+    this._safeSend = (obj) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+      try {
+        const buffered = this.ws._socket?.bufferSize || this.ws.bufferedAmount || 0;
+        const MAX_BUFFERED = 512 * 1024;
+        if (buffered > MAX_BUFFERED) {
+          this.log(`⚠️ Skipping send - buffered ${buffered} > ${MAX_BUFFERED}`);
+          return false;
+        }
+        this.ws.send(JSON.stringify(obj));
+        return true;
+      } catch (err) {
+        this.error('❌ safeSend failed:', err);
+        return false;
+      }
+    };
 
     // WS open handler: authorize and setup heartbeat monitor
     this.ws.on('open', () => {
@@ -170,187 +210,140 @@ class WebSocketManager {
       this._startHeartbeatMonitor();
       this.log('🔌 WebSocket opened — waiting to authorize...');
 
-      // Ensure socket keep-alive is enabled
-      if (this.ws._socket) {
-        this.ws._socket.setKeepAlive(true, 30000);
-      }
+      if (this.ws._socket) this.ws._socket.setKeepAlive(true, 30000);
 
-      // Authorize: retry a short number of times while waiting for OPEN state
+      this.pongReceived = true;
+      this.ws.on('pong', () => {
+        this.pongReceived = true;
+        this.lastMeasurementAt = Date.now();
+      });
+
+      this._safeSetInterval(() => {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (!this.pongReceived) {
+          this.log('⚠️ No pong received — restarting WebSocket');
+          this.restartWebSocket();
+          return;
+        }
+        this.pongReceived = false;
+        try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
+      }, 30000);
+
+      // ⬇️ Add this block for 2s measurement flush
+      const updateInterval = this.getSetting('update_interval') || 2000;
+      this._safeSetInterval(() => {
+        if (pendingMeasurement) {
+          this.lastMeasurementAt = Date.now();
+          this._handleMeasurement?.(pendingMeasurement);
+          pendingMeasurement = null;
+        }
+      }, updateInterval);
+      // ⬆️
+
       const maxRetries = 30;
       let retries = 0;
-      let retryTimer;
-
       const tryAuthorize = () => {
         if (!this.ws) return;
-
         if (this.ws.readyState === this.ws.OPEN) {
           this.log('🔐 Sending WebSocket authorization');
-          this.ws.send(JSON.stringify({ type: 'authorization', data: this.token }));
-          clearTimeout(retryTimer);
+          this._safeSend({ type: 'authorization', data: this.token });
         } else if (retries < maxRetries) {
           retries++;
-          retryTimer = setTimeout(tryAuthorize, 100);
+          this._safeSetTimeout(tryAuthorize, 100);
         } else {
           this.error('❌ WebSocket failed to open after timeout — giving up');
           this.ws.terminate();
           this.wsActive = false;
         }
       };
-
       tryAuthorize();
     });
 
-    // WS message handler: parse and dispatch to appropriate handlers
+
     this.ws.on('message', (msg) => {
       let data;
-      try {
-        data = JSON.parse(msg.toString());
-      } catch (err) {
-        this.error('❌ Failed to parse WebSocket message:', err);
-        return;
-      }
+      try { data = JSON.parse(msg.toString()); }
+      catch (err) { this.error('❌ Failed to parse WebSocket message:', err); return; }
 
-      if (data.type === 'authorized') {
-        if (this.ws.readyState === this.ws.OPEN) {
-          this._subscribeTopics();
-        } else {
-          this.log('⚠️ WebSocket not open yet — delaying subscription');
-          const waitForOpen = setInterval(() => {
-            if (this.ws && this.ws.readyState === this.ws.OPEN) {
-              clearInterval(waitForOpen);
-              this._subscribeTopics();
-            }
-          }, 100);
-        }
-
-      } else if (data.type === 'measurement') {
-        this.lastMeasurementAt = Date.now();
-        if (typeof this._handleMeasurement === 'function') {
-          this._handleMeasurement(data.data);
-        }
-      } else if (data.type === 'system') {
-        if (typeof this._handleSystem === 'function') {
-          this._handleSystem(data.data);
-        }
-      } else if (data.type === 'batteries') {
-        //this.log(`🔋 Device acknowledged battery mode change: ${data.data.mode}`);
-        if (typeof this._handleBatteries === 'function') {
-          this._handleBatteries(data.data);
-        }
-      }
+      if (data.type === 'authorized') this._subscribeTopics();
+      else if (data.type === 'measurement') {
+        pendingMeasurement = data.data;   // keep latest only
+      } else if (data.type === 'system') this._handleSystem?.(data.data);
+      else if (data.type === 'batteries') this._handleBatteries?.(data.data);
     });
 
 
-    // Reconnect logic with exponential-ish backoff, capped to 30s
-    const reconnect = () => {
-      if (this.reconnecting) return;
-      this.reconnecting = true;
-
-      this.reconnectAttempts++;
-      const delay = Math.min(30000, 5000 * this.reconnectAttempts);
-
-      setTimeout(() => {
-        this.reconnecting = false;
-        this.restartWebSocket();
-      }, delay);
-    };
-
-    // Error and close handlers trigger reconnect attempts
     this.ws.on('error', (err) => {
       this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
       this.wsActive = false;
-      reconnect();
+      this._scheduleReconnect();
     });
 
     this.ws.on('close', () => {
       this.log('🔌 WebSocket closed — retrying');
       this.wsActive = false;
-      reconnect();
+      this._scheduleReconnect();
     });
   }
 
-  /**
-   * Stop the WebSocket manager: clear timers and terminate the socket.
-   * Safe to call multiple times.
-   */
+  _scheduleReconnect() {
+    if (this.reconnecting) return;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      this.log('⏸️ reconnect suppressed — socket is OPEN or CONNECTING');
+      return;
+    }
+    this.reconnecting = true;
+    this.reconnectAttempts++;
+    const delay = Math.min(30000, 5000 * this.reconnectAttempts);
+    this._safeSetTimeout(() => {
+      this.reconnecting = false;
+      this.restartWebSocket();
+    }, delay);
+  }
+
   stop() {
-    if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+    this._clearTimers();
     if (this.ws) {
       try {
-        this.ws.terminate();
+        if (this.ws.readyState === WebSocket.OPEN) this.ws.close();
+        else this.ws.terminate();
       } catch (err) {
-        this.error('❌ Error during WebSocket termination:', err);
+        this.error('❌ Error closing WebSocket:', err);
       }
       this.ws = null;
       this.wsActive = false;
     }
   }
 
-  /**
-   * Subscribe to the desired topics on the WS after authorization.
-   * Marks the device as available once subscriptions are sent.
-   * @private
-   */
   _subscribeTopics() {
     ['system', 'measurement', 'batteries'].forEach(topic => {
-      this.ws.send(JSON.stringify({ type: 'subscribe', data: topic }));
+      this._safeSend({ type: 'subscribe', data: topic });
     });
     this.wsActive = true;
     this.setAvailable().catch(this.error);
   }
 
-
-/**
- * Start a heartbeat monitor that checks if measurements arrive frequently.
- * If no measurement arrives within threshold, restart the connection.
- * Also requests battery status periodically to refresh target_power_w.
- * @private
- */
-_startHeartbeatMonitor() {
-  if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
-  this.heartbeatTimer = setInterval(() => {
-    const now = Date.now();
-
-    // If WebSocket is open, request battery status refresh
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      //this.log('🔋 Heartbeat: requesting battery status via WebSocket');
-      try {
-        this.ws.send(JSON.stringify({ type: 'batteries' }));
-      } catch (err) {
-        this.error('❌ Failed to request battery status:', err);
+  _startHeartbeatMonitor() {
+    this._safeSetInterval(() => {
+      const now = Date.now();
+      if (this.ws?.readyState === WebSocket.OPEN) this._safeSend({ type: 'batteries' });
+      if (now - this.lastMeasurementAt > 60000) {
+        this.log('💤 No measurement in 60s — reconnecting WebSocket');
+        this.restartWebSocket();
       }
-    }
+    }, 30000);
+  }
 
-    // If no measurement for more than 60s, attempt restart
-    if (now - this.lastMeasurementAt > 60000) {
-      this.log('💤 No measurement in 60s — reconnecting WebSocket');
-      this.restartWebSocket();
-    }
-  }, 30000); // every 30s battery status (websocket only updates when mode changes)
-}
-
-
-  /**
-   * Returns true if the WebSocket is currently open.
-   * @returns {boolean}
-   */
   isConnected() {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
-
-
-
-  /**
-   * Restart the WebSocket connection while preventing rapid repeated restarts.
-   */
   restartWebSocket() {
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      this.log('⏸️ Already connecting — skipping restart');
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      this.log('⏸️ Socket is OPEN or still CONNECTING — skipping restart');
       return;
     }
 
-    this._restartCooldown = this._restartCooldown || 0;
     const now = Date.now();
     if (now - this._restartCooldown < 3000) {
       this.log('⏸️ Skipping restart — cooldown active');
@@ -358,26 +351,18 @@ _startHeartbeatMonitor() {
     }
 
     this._restartCooldown = now;
+    this._clearTimers();
     this._resetWebSocket();
     this.start();
   }
 
-
-  /**
-   * Reset/close/terminate the underlying WebSocket instance safely.
-   * Leaves manager in a clean state ready for start().
-   * @private
-   */
   _resetWebSocket() {
     if (!this.ws) return;
-
     const state = this.ws.readyState;
-
     if (state === WebSocket.CONNECTING) {
-      this.log(`⏸️ WebSocket is still connecting — skipping termination`);
+      this.log('⏸️ WebSocket is still connecting — skipping termination');
       return;
     }
-
     try {
       if (state === WebSocket.OPEN) {
         this.log(`🔄 Terminating active WebSocket (state: ${state})`);
@@ -389,71 +374,35 @@ _startHeartbeatMonitor() {
     } catch (err) {
       this.error('❌ Failed to reset WebSocket:', err);
     }
-
     this.ws = null;
     this.wsActive = false;
   }
 
-/**
- * Set battery mode via WebSocket with verbose logging
- * @param {string} mode - e.g. "to_full", "zero", "standby"
- */
-setBatteryMode(mode) {
-  // Check connection state
-  if (!this.isConnected()) {
-    const errMsg = `❌ Cannot set battery mode to "${mode}" — WebSocket not connected`;
-    this.error(errMsg);
-    throw new Error(errMsg);
-  }
-
-  // Build the payload
-  const payload = {
-    type: 'batteries',
-    data: { mode }
-  };
-
-  try {
-    // Log before sending
+  setBatteryMode(mode) {
+    if (!this.isConnected()) {
+      const errMsg = `❌ Cannot set battery mode to "${mode}" — WebSocket not connected`;
+      this.error(errMsg);
+      throw new Error(errMsg);
+    }
+    const payload = { type: 'batteries', data: { mode } };
     this.log(`🔋 Sending battery mode change request: ${JSON.stringify(payload)}`);
-
-    // Send the command
-    this.ws.send(JSON.stringify(payload));
-
-    // Log after sending
-    this.log(`✅ Battery mode command "${mode}" sent successfully via WebSocket`);
-
-  } catch (err) {
-    this.error(`❌ Failed to send battery mode "${mode}" via WebSocket:`, err);
-    throw err;
+    this._safeSend(payload);
+    this.log(`✅ Battery mode command "${mode}" sent (attempted)`);
   }
-}
 
-requestBatteryStatus() {
-  if (!this.isConnected()) {
-    this.log('⚠️ Cannot request battery status — WebSocket not connected');
-    return;
+  requestBatteryStatus() {
+    if (!this.isConnected()) {
+      this.log('⚠️ Cannot request battery status — WebSocket not connected');
+      return;
+    }
+    this.log('🔋 Requesting battery status via WebSocket');
+    this._safeSend({ type: 'batteries' });
   }
-  this.log('🔋 Requesting battery status via WebSocket');
-  this.ws.send(JSON.stringify({ type: 'batteries' }));
-}
 
-
-
-/**
- * Set cloud state via WebSocket
- * @param {boolean} enabled
- */
-setCloud(enabled) {
-  if (!this.isConnected()) {
-    throw new Error('WebSocket not connected');
+  setCloud(enabled) {
+    if (!this.isConnected()) throw new Error('WebSocket not connected');
+    this._safeSend({ type: 'system', data: { cloud_enabled: enabled } });
   }
-  this.ws.send(JSON.stringify({
-    type: 'system',
-    data: { cloud_enabled: enabled }
-  }));
-}
-
-
 }
 
 module.exports = WebSocketManager;

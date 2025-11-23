@@ -299,12 +299,6 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         }
       }
 
-      // Ensure polling interval is running
-      if (!this.onPollInterval) {
-        this.log('Polling interval was not running, starting now...');
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-      }
-
       // Refresh token if missing
       if (!this.token) {
         this.token = await this.getStoreValue('token');
