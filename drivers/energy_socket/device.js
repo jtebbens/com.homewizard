@@ -1,11 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
-
-const POLL_INTERVAL = 1000 * 10; // 10 seconds
-const POLL_STATE_INTERVAL = 1000 * 10; // 10 seconds
 
 let agent = new http.Agent({
   keepAlive: true,
@@ -39,18 +37,28 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
-    
     await this.setCapabilityValue('connection_error', 'No errors');
 
-    const custom_interval = this.getSetting('offset_polling');
+    // Pull custom polling interval, if not set default is 10s with minimum of 2s
+    const custom_interval = Math.max(this.getSetting('offset_polling') || 10, 2);
 
-    this.log('offset_polling', custom_interval); // print the value of offset_polling
-    
-    this.onPollInterval = setInterval(this.onPoll.bind(this), POLL_INTERVAL);
-    
-    this.onPollStateInterval = setInterval(this.onPollState.bind(this), POLL_STATE_INTERVAL);
+    const offset = Math.floor(Math.random() * custom_interval * 1000);
 
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+    if (this.onPollStateInterval) clearInterval(this.onPollStateInterval);
+    
+    setTimeout(() => {
+      this.onPoll(); // run once after offset
+      this.onPollInterval = setInterval(this.onPoll.bind(this), custom_interval * 1000);
+    }, offset);
+
+      // stagger state poll separately (small extra offset)
+    setTimeout(() => {
+      this.onPollState(); // run once
+      this.onPollStateInterval = setInterval(this.onPollState.bind(this), custom_interval * 1000);
+    }, offset + 500); // adjust as needed
+
+    
     if (this.getClass() == 'sensor') {
       this.setClass('socket');
     }
@@ -222,13 +230,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         }
       }
 
-      // Ensure polling interval is active
-      if (!this.onPollInterval) {
-        this.log('Socket - Polling interval is not running, starting now...');
-        clearInterval(this.onPollInterval);
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-      }
-
       // Guard against deleted device
       if (!this.getData()) {
         this.error('Device no longer exists — skipping poll');
@@ -270,10 +271,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         // Amp
         await updateCapability(this, 'measure_current', data.active_current_a ?? null).catch(this.error);
 
-        // Update stored URL if changed
-        if (this.url !== settings.url) {
-          this.log('Socket - Updating settings url');
-          await this.setSettings({ url: this.url });
+        // Update settings.url when changed
+        if (this.url && this.url !== settings.url) {
+          this.log(`Socket - Updating settings url from ${settings.url} → ${this.url}`);
+          try {
+            await this.setSettings({ url: this.url });
+          } catch (err) {
+            this.error('Socket - Failed to update settings url', err);
+          }
         }
 
         await this.setAvailable().catch(this.error);
@@ -281,8 +286,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         } catch (err) {
           if (err.code === 'ECONNRESET') {
             this.log('Socket - Connection was reset');
+            this.log('Socket polling with reset error:', settings.offset_polling); // print the value of offset_polling
             await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
           } else if (err.code === 'EHOSTUNREACH') {
+            this.log('Socket polling with unreachable error:', settings.offset_polling); // print the value of offset_polling
             await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
           } else if (err.code === 'ETIMEDOUT') {
             this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
@@ -310,7 +317,19 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
 
 async onPollState() {
-  if (!this.url) return;
+  const settings = this.getSettings();
+
+  // Ensure URL is set
+  if (!this.url) {
+    if (settings.url) {
+      this.url = settings.url;
+      this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+    } else {
+      this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
+      await this.setUnavailable().catch(this.error);
+      return;
+    }
+  }
 
   // Guard against deleted device
   if (!this.getData()) {
@@ -342,32 +361,43 @@ async onPollState() {
     await updateCapability(this, 'locked', data.switch_lock).catch(this.error);
     await updateCapability(this, 'connection_error', 'No error').catch(this.error);
 
+    await this.setAvailable().catch(this.error);
+
     } catch (err) {
-      if (err.code === 'ECONNRESET') {
-        this.log('Socket - Connection was reset');
-        await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
-      } else if (err.code === 'EHOSTUNREACH') {
-        await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
-      } else if (err.code === 'ETIMEDOUT') {
-        this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
-        await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
-
-        agent = new http.Agent({
-          keepAlive: true,
-          keepAliveMsecs: 10000,
-          maxSockets: 1
-        });
-
-        setTimeout(() => {
-          this.onPollState(); 
-        }, 2000);
-      } else {
-        await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
-        this.error(err);
+      switch (err.code) {
+        case 'ECONNRESET':
+          this.log('Socket - Connection was reset');
+          await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
+          this.log('Socket polling with reset error:', settings.offset_polling); // print the value of offset_polling
+          break;
+        case 'EHOSTUNREACH':
+          await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
+          this.log('Socket polling with unreachable error:', settings.offset_polling); // print the value of offset_polling
+          break;
+        case 'ETIMEDOUT':
+          this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
+          await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
+          agent.destroy?.(); // clean up old sockets
+          agent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 1 });
+          setTimeout(() => this.onPoll(), 2000);
+          break;
+        case 'ECONNREFUSED':
+          await updateCapability(this, 'connection_error', 'Connection refused').catch(this.error);
+          break;
+        case 'EPIPE':
+          await updateCapability(this, 'connection_error', 'Broken pipe').catch(this.error);
+          break;
+        case 'ENOTFOUND':
+          await updateCapability(this, 'connection_error', 'Host not found').catch(this.error);
+          break;
+        default:
+          await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+          this.error(err);
       }
 
-      await this.setUnavailable(err).catch(this.error);
+      await this.setUnavailable(err.message || 'Polling error').catch(this.error);
     }
+
 
 }
 

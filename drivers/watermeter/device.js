@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 
 const http = require('http');
 
@@ -174,11 +175,6 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
           await this.setUnavailable().catch(this.error);
           return;
         }
-      }
-
-      if (!this.onPollInterval) {
-        this.log('Watermeter - Polling interval was not running, starting now...');
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.offset_polling);
       }
 
       const res = await fetch(`${this.url}/data`, {

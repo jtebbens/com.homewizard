@@ -3,12 +3,9 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws')
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 
-
-
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -148,7 +145,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
 
-    this.pollingInterval = null;
+    this.onPollInterval = null;
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
 
@@ -502,9 +499,13 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   }
 
   // Gas delta every 5 minutes
-  if (nowLocal.getMinutes() % 5 === 0) {
+  const currentMinute = nowLocal.getMinutes();
+  const lastMinute = await this.getStoreValue('last_gas_delta_minute');
+
+  if (currentMinute % 5 === 0 && lastMinute !== currentMinute) {
+    await this.setStoreValue('last_gas_delta_minute', currentMinute).catch(this.error);
+
     if (!gas || typeof gas.value !== 'number') {
-      //this.log('⚠️ Skipping gas update — reading not available or invalid');
       return;
     }
 
@@ -677,27 +678,31 @@ async _handleBatteries(data) {
 }
 
 
-    startPolling() {
-      if (this.wsActive || this.onPollInterval) return;
+  startPolling() {
+    if (this.wsActive || this.onPollInterval) return;
 
-      const interval = this.getSettings().polling_interval || 10;
-      this.log(`⏱️ Polling gestart met interval: ${interval}s`);
+    const interval = this.getSettings().polling_interval || 10;
+    this.log(`⏱️ Polling gestart met interval: ${interval}s`);
 
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * interval);
+    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * interval);
+  }
+
+
+
+  onDeleted() {
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
     }
-
-
-
-    onDeleted() {
-      if (this.onPollInterval) {
-        clearInterval(this.onPollInterval);
-        this.onPollInterval = null;
-      }
-
-      if (this.wsManager) {
-        this.wsManager.stop();
-      }
+    if (this._wsReconnectTimeout) {
+      clearTimeout(this._wsReconnectTimeout);
+      this._wsReconnectTimeout = null;
     }
+    if (this.wsManager) {
+      this.wsManager.stop();
+    }
+  }
+
 
 async onDiscoveryAvailable(discoveryResult) {
   this.url = `https://${discoveryResult.address}`;
@@ -979,9 +984,9 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
         this.wsManager?.stop(); // cleanly stop WebSocket
         this.startPolling();
       } else {
-        if (this.pollingInterval) {
-          clearInterval(this.pollingInterval);
-          this.pollingInterval = null;
+        if (this.onPollInterval) {
+          clearInterval(this.onPollInterval);
+          this.onPollInterval = null;
         }
 
         if (!this.wsManager) {

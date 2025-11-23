@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
 
 const agent = new http.Agent({
@@ -158,13 +159,6 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       }
     }
 
-    // Check if polling interval is running)
-      if (!this.onPollInterval) {
-        this.log('Polling interval is not running, starting now...');
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
-    }
-
-
     Promise.resolve().then(async () => {
 
       //let res = await fetch(`${this.url}/data`);
@@ -247,12 +241,14 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         await this.removeCapability('measure_current').catch(this.error);
       }
 
-      if (this.url != settings.url) {
-            this.log("SDM230 - Updating settings url");
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
+      // Update settings.url when changed
+      if (this.url && this.url !== settings.url) {
+        this.log(`SDM230 - Updating settings url from ${settings.url} → ${this.url}`);
+        try {
+          await this.setSettings({ url: this.url });
+        } catch (err) {
+          this.error('SDM230 - Failed to update settings url', err);
+        }
       }
 
     await Promise.allSettled(promises);

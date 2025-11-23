@@ -2,7 +2,8 @@
 
 const Homey = require('homey');
 // const request = require('request');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');

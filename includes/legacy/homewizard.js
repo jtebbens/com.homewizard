@@ -1,12 +1,13 @@
 'use strict';
 
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 const Homey = require('homey');
 const AbortController = require('abort-controller');
 
 const http = require('http');
 
-const cache = {}; // Cache object to store the callnew responses
+//const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
@@ -47,16 +48,16 @@ module.exports = (function() {
   };
 
   homewizard.callnew = async function(device_id, uri_part, callback) {
-    const cacheKey = `${device_id}${uri_part}`;
-    const cachedResponse = cache[cacheKey]; // Check if cached response exists
-    const currentTime = Date.now();
-    const timeoutDuration = 18000; // Timeout duration in milliseconds
+//    const cacheKey = `${device_id}${uri_part}`;
+//    const cachedResponse = cache[cacheKey]; // Check if cached response exists
+//    const currentTime = Date.now();
+      const timeoutDuration = 8000; // Timeout duration in milliseconds
 
-    if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
-      if (debug) { console.log('Using cached response for device:', device_id, 'endpoint:', uri_part); }
-      callback(null, cachedResponse.response); // Use the cached response
-      return; // Return early
-    }
+//    if (cachedResponse && currentTime - cachedResponse.timestamp < 20000) {
+//      if (debug) { console.log('Using cached response for device:', device_id, 'endpoint:', uri_part); }
+//      callback(null, cachedResponse.response); // Use the cached response
+//      return; // Return early
+//    }
 
     try {
       if (debug) {
@@ -101,10 +102,10 @@ module.exports = (function() {
           ) {
             if (typeof callback === 'function') {
               // Cache the response with timestamp
-              cache[cacheKey] = {
-                response: jsonData.response,
-                timestamp: currentTime,
-              };
+              //cache[cacheKey] = {
+              //  response: jsonData.response,
+              //  timestamp: currentTime,
+             // };
 
               callback(null, jsonData.response);
             } else {
@@ -162,7 +163,7 @@ module.exports = (function() {
       } catch (error) {
         console.error('Error occurred during polling:', error);
       }
-    }, 1000 * 20);
+    }, 1000 * 30);
   };
 
   homewizard.poll = async function() {

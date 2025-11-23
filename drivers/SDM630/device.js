@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
@@ -141,13 +142,6 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
         await this.setUnavailable().catch(this.error);
         return;
       }
-    }
-
-
-    // Ensure polling interval is running
-    if (!this.onPollInterval) {
-      this.log('Polling interval is not running, starting now...');
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
     }
 
     try {

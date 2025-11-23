@@ -1,6 +1,7 @@
 'use strict';
 
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 const https = require('https');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
