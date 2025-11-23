@@ -727,5 +727,8 @@
   },
   "3.8.20": {
     "en": "WebsocketManager tuning"
+  },
+  "3.8.21": {
+    "en": "Restore custom polling sockets (got removed by accident rollback)"
   }
 }
