@@ -23,7 +23,10 @@ function processQueue() {
       console.error(`[fetchQueue] error on ${url}: ${err.message}`);
       if (!retry) {
         console.log(`[fetchQueue] retrying once: ${url}`);
-        queue.push({ url, opts, resolve, reject, retry: true });
+        setTimeout(() => {
+          queue.push({ url, opts, resolve, reject, retry: true });
+          processQueue();
+        }, 1000); // 1s backoff
       } else {
         console.error(`[fetchQueue] final fail: ${url}`);
         reject(err);

@@ -14,7 +14,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-const WebSocket = require('ws');
 const https = require('https');
 
 // Create an agent that skips TLS verification
@@ -230,6 +229,16 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       //handleBatteries: this._handleBatteries.bind(this)
     });
     this.wsManager.start();
+  
+    // 🕒 Driver-side watchdog
+    this._wsWatchdog = setInterval(() => {
+      const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
+      if (!this.getSettings().use_polling && staleMs > 190000) { // just over 3min
+        this.log(`🕒 Driver watchdog: stale >3min (${staleMs}ms), restarting WS`);
+        this.wsManager?.restartWebSocket();
+      }
+    }, 60000); // check every minute
+    
   }
 
   /**
@@ -237,24 +246,34 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    * @returns {void}
    */
   onDeleted() {
+    // Clear watchdog timer
+    if (this._wsWatchdog) {
+      clearInterval(this._wsWatchdog);
+      this._wsWatchdog = null;
+    }
+
+    // Clear polling interval
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
     }
 
+    // Stop WebSocket manager once
     if (this.wsManager) {
       this.wsManager.stop(); // Cleanly shuts down the WebSocket
+      this.wsManager = null;
     }
 
+    // Remove battery from shared group
     const batteryId = this.getData().id;
     const group = this.homey.settings.get('pluginBatteryGroup') || {};
-
     if (group[batteryId]) {
       delete group[batteryId];
       this.homey.settings.set('pluginBatteryGroup', group);
       this.log(`Battery ${batteryId} removed from pluginBatteryGroup`);
     }
   }
+
 
   /**
    * Handle discovery available event from Homey MDNS discovery.

@@ -176,7 +176,7 @@ module.exports = (function() {
         self.devices[device_id].polldata = [];
       }
 
-      const response = await new Promise((resolve, reject) => {
+      let response = await new Promise((resolve, reject) => {
         homewizard.callnew(device_id, '/get-sensors', (err, response) => {
           if (err === null || err == null) {
             resolve(response);
@@ -197,7 +197,7 @@ module.exports = (function() {
         self.devices[device_id].polldata.kakusensors = response.kakusensors;
 
         if (Object.keys(response.energylinks).length !== 0) {
-          const response2 = await new Promise((resolve, reject) => {
+          let response2 = await new Promise((resolve, reject) => {
             new Promise((resolve) => setTimeout(resolve, 1000));
             homewizard.callnew(device_id, '/el/get/0/readings', (err2, response2) => {
               if (err2 === null || err2 == null) {
@@ -211,8 +211,10 @@ module.exports = (function() {
           if (response2) {
             self.devices[device_id].polldata.energylink_el = response2;
           }
+          response2 = null;
         }
       }
+      response = null;
     }
   };
 

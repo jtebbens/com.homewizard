@@ -206,7 +206,7 @@ class WebSocketManager {
     this.ws.on('open', () => {
       this.wsActive = true;
       this.lastMeasurementAt = Date.now();
-      this.reconnectAttempts = 0;
+      this.reconnectAttempts = 0; // reset backoff after successful connect
       this._startHeartbeatMonitor();
       this.log('🔌 WebSocket opened — waiting to authorize...');
 
@@ -294,12 +294,17 @@ class WebSocketManager {
     }
     this.reconnecting = true;
     this.reconnectAttempts++;
-    const delay = Math.min(30000, 5000 * this.reconnectAttempts);
+    const base = 5000 * this.reconnectAttempts;
+    const delay = Math.min(base, 180000); // cap at 3 minutes
+    const jitter = delay * (0.9 + Math.random() * 0.2);
+    this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter/1000)}s`);
     this._safeSetTimeout(() => {
       this.reconnecting = false;
       this.restartWebSocket();
-    }, delay);
+    }, jitter);
   }
+
+
 
   stop() {
     this._clearTimers();
@@ -326,13 +331,17 @@ class WebSocketManager {
   _startHeartbeatMonitor() {
     this._safeSetInterval(() => {
       const now = Date.now();
-      if (this.ws?.readyState === WebSocket.OPEN) this._safeSend({ type: 'batteries' });
-      if (now - this.lastMeasurementAt > 60000) {
-        this.log('💤 No measurement in 60s — reconnecting WebSocket');
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this._safeSend({ type: 'batteries' });
+      }
+      // Increase threshold from 60s → 180s
+      if (now - this.lastMeasurementAt > 180000) {
+        this.log('💤 No measurement in 3min — reconnecting WebSocket');
         this.restartWebSocket();
       }
-    }, 30000);
+    }, 30000); // still check every 30s
   }
+
 
   isConnected() {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
