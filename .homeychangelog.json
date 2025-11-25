@@ -730,5 +730,8 @@
   },
   "3.8.21": {
     "en": "Restore custom polling sockets (got removed by accident rollback)"
+  },
+  "3.8.22": {
+    "en": "Additional watchdog code to reconnect energy_v2 and plugin_battery upon firmware up/downgrades"
   }
 }
