@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.8.22
+* Additional watchdog code to reconnect energy_v2 and plugin_battery upon firmware up/downgrades
+* Finetune energy_v2 updates primary values are updated instant, other lesser values once every 10s
+
 v3.8.21
 * Websocket finetuning (energy_v2 and plugin battery)
 * Centralized fetch queue for all fetch calls to spread all queries

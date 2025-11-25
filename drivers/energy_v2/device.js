@@ -15,8 +15,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-
-const WebSocket = require('ws');
 const https = require('https');
 
 // Create an agent that skips TLS verification
@@ -148,6 +146,7 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     this.onPollInterval = null;
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
+    this._lastFullUpdate = 0;
 
     //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
@@ -328,8 +327,16 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       });
 
       this.wsManager.start();
-}
+    }
 
+    // 🕒 Driver-side watchdog
+    this._wsWatchdog = setInterval(() => {
+      const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
+      if (!this.getSettings().use_polling && staleMs > 190000) { // just over 3min
+        this.log(`🕒 P1 watchdog: stale >3min (${staleMs}ms), restarting WS`);
+        this.wsManager?.restartWebSocket();
+      }
+    }, 60000); // check every minute
     
     
   }
@@ -417,13 +424,19 @@ async _handleMeasurement(m) {
   //this.log('📊 Measurement data received:', m);
   //this.log(`📊 Raw import value:`, m.energy_import_kwh);
 
-  // Power & voltage
-  if (typeof m.power_w === 'number') {
-  await updateCapability(this, 'measure_power', m.power_w).catch(this.error);
+  const currentPower = this.getCapabilityValue('measure_power');
+  if (currentPower !== m.power_w) {
+    await updateCapability(this, 'measure_power', m.power_w).catch(this.error);
+    await updateCapability(this, 'measure_power.l1', m.power_l1_w).catch(this.error);
+    await updateCapability(this, 'measure_power.l2', m.power_l2_w).catch(this.error);
+    await updateCapability(this, 'measure_power.l3', m.power_l3_w).catch(this.error);
   }
-  //await updateCapability(this, 'measure_power', m.power_w ?? null);
 
-  await applyMeasurementCapabilities(this, m).catch(this.error);
+  // Every 10s, refresh the rest
+  if (!this._lastFullUpdate || Date.now() - this._lastFullUpdate > 10000) {
+    await applyMeasurementCapabilities(this, m).catch(this.error);
+    this._lastFullUpdate = Date.now();
+  }
 
   // Trigger Flows
 
@@ -698,8 +711,13 @@ async _handleBatteries(data) {
       clearTimeout(this._wsReconnectTimeout);
       this._wsReconnectTimeout = null;
     }
+    if (this._wsWatchdog) {
+      clearInterval(this._wsWatchdog);
+      this._wsWatchdog = null;
+    }
     if (this.wsManager) {
       this.wsManager.stop();
+      this.wsManager = null;
     }
   }
 
