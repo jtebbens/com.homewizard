@@ -733,5 +733,8 @@
   },
   "3.8.22": {
     "en": "Additional watchdog code to reconnect energy_v2 and plugin_battery upon firmware up/downgrades"
+  },
+  "3.9.0": {
+    "en": "New Plugin Battery mode support (zero_charge_only & zero_discharge_only) - dynamic tariff capabilities"
   }
 }
