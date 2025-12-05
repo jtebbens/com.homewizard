@@ -4,13 +4,13 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.8.22",
+  "version": "3.9.0",
   "platforms": [
     "local"
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
-  "compatibility": ">=12.7.1",
+  "compatibility": ">=12.9.0",
   "description": {
     "en": "Helps you understand and save"
   },
@@ -756,6 +756,20 @@
                   "en": "Standby",
                   "nl": "Standby"
                 }
+              },
+              {
+                "id": "zero_charge_only",
+                "label": {
+                  "en": "Zero mode, Charge Only",
+                  "nl": "Nul op de Meter, Alleen laden"
+                }
+              },
+              {
+                "id": "zero_discharge_only",
+                "label": {
+                  "en": "Zero mode, Discharge Only",
+                  "nl": "Nul op de Meter, Alleen ontladen"
+                }
               }
             ]
           }
@@ -969,6 +983,42 @@
         "titleFormatted": {
           "en": "Set battery to Standby mode",
           "nl": "Zet batterij in Standby modus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
+        "id": "set-battery-to-zero-charge-only-mode",
+        "title": {
+          "en": "Set battery to Zero Charge Only mode",
+          "nl": "Zet batterij in Alleen Opladen modus"
+        },
+        "titleFormatted": {
+          "en": "Set battery to Zero Charge Only mode",
+          "nl": "Zet batterij in Alleen Opladen modus"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
+        "id": "set-battery-to-zero-discharge-only-mode",
+        "title": {
+          "en": "Set battery to Zero Discharge Only mode",
+          "nl": "Zet batterij in Alleen Ontladen modus"
+        },
+        "titleFormatted": {
+          "en": "Set battery to Zero Discharge Only mode",
+          "nl": "Zet batterij in Alleen Ontladen modus"
         },
         "args": [
           {
@@ -2269,6 +2319,15 @@
             "en": "url",
             "nl": "url"
           }
+        },
+        {
+          "id": "show_gas",
+          "type": "checkbox",
+          "label": {
+            "en": "Show gas meter",
+            "nl": "Gas meter weergeven"
+          },
+          "value": true
         }
       ]
     },
@@ -2772,6 +2831,18 @@
               "id": "standby",
               "label": {
                 "en": "Standby"
+              }
+            },
+            {
+              "id": "zero_charge_only",
+              "label": {
+                "en": "Zero mode, Charge allowed"
+              }
+            },
+            {
+              "id": "zero_discharge_only",
+              "label": {
+                "en": "Zero mode,Discharge allowed"
               }
             }
           ]
