@@ -739,5 +739,8 @@
   },
   "3.9.1": {
     "en": "Checkbox show gasmeter (P1, apiv1 and apiv2). Belgium datapoint (avarage_power_15m_w) - P1apiv2"
+  },
+  "3.9.2": {
+    "en": "Plugin Battery - Bugfix setMode for to_full (PUT)"
   }
 }
