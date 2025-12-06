@@ -736,5 +736,8 @@
   },
   "3.9.0": {
     "en": "New Plugin Battery mode support (zero_charge_only & zero_discharge_only) - dynamic tariff capabilities"
+  },
+  "3.9.1": {
+    "en": "Checkbox show gasmeter (P1, apiv1 and apiv2). Belgium datapoint (avarage_power_15m_w) - P1apiv2"
   }
 }
