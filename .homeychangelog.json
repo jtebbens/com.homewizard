@@ -742,5 +742,8 @@
   },
   "3.9.2": {
     "en": "Plugin Battery - Bugfix setMode for to_full (PUT)"
+  },
+  "3.9.3": {
+    "en": "Bugfix - Updated P1apiv2 check-battery-mode condition card"
   }
 }
