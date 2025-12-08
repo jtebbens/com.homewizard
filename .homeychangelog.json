@@ -751,5 +751,8 @@
   },
   "3.9.5": {
     "en": "Bugfix - Websocket payload battery mode adjustment"
+  },
+  "3.9.6": {
+    "en": "Bugfixes condition and action cards for battery mode and permissions"
   }
 }
