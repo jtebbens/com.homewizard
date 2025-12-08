@@ -1,7 +1,7 @@
 'use strict';
 
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+//const fetch = require('../../includes/utils/fetchQueue');
 const https = require('https');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
@@ -110,7 +110,7 @@ module.exports = (function() {
     return res.json();
   };
 
-  // Mode
+  // getMode
   api.getMode = async function(url, token) {
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
@@ -125,49 +125,120 @@ module.exports = (function() {
         const errorText = await res.text();
         throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
       }
-      return res.json();
+
+      const data = await res.json();
+      //console.log ('getMode: ', data, 'url: ', url);
+
+      // --- New firmware path ---
+      if (Array.isArray(data.permissions)) {
+        const perms = [...data.permissions].sort().join(',');
+        if (data.mode === 'to_full') {
+          return 'to_full';
+        }
+        switch (perms) {
+          case '': return 'standby';
+          case 'charge_allowed,discharge_allowed': return 'zero';
+          case 'charge_allowed': return 'zero_charge_only';
+          case 'discharge_allowed': return 'zero_discharge_only';
+          default:
+            // Defensive: unknown combo
+            throw new Error(`Unknown permissions combination: ${JSON.stringify(data.permissions)}`);
+        }
+      }
+
+      // --- Legacy fallback path ---
+      // If permissions not present at all, just return the mode string
+      return data.mode;
+
     } catch (err) {
       throw new Error(`getMode failed: ${err.message}`);
     }
   };
 
+
   // Set Mode with improved retry
   api.setMode = async function(url, token, selectedMode) {
-    let retries = 4;
-    let lastError;
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
-    if (!selectedMode) throw new Error('Mode is not defined');
+  let retries = 4;
+  let lastError;
+  if (!url) throw new Error('URL is not defined');
+  if (!token) throw new Error('Token is not defined');
+  if (!selectedMode) throw new Error('Mode is not defined');
 
-    console.log('api.setMode: Sending mode:', selectedMode);
+  console.log('api.setMode: Sending mode:', selectedMode);
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const res = await fetchWithTimeout(`${url}/api/batteries`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          agent: http_agent,
-          body: JSON.stringify({ mode: selectedMode })
-        }, 5000);
+  // Map selectedMode to payload + method
+  let body, method = 'PUT';
 
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
-        }
-        return res.json();
-      } catch (err) {
-        lastError = err;
-        console.warn(`Attempt ${attempt} failed: ${err.message}`);
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+  switch (selectedMode) {
+    case 'standby':
+      body = {
+        mode: "standby",
+        permissions: []
+      };
+      break;
+
+    case 'zero':
+      body = {
+        mode: "zero",
+        permissions: ["charge_allowed", "discharge_allowed"]
+      };
+      break;
+
+    case 'zero_charge_only':
+      body = {
+        mode: "zero",
+        permissions: ["charge_allowed"]
+      };
+      break;
+
+    case 'zero_discharge_only':
+      body = {
+        mode: "zero",
+        permissions: ["discharge_allowed"]
+      };
+      break;
+
+    case 'to_full':
+      body = { mode: "to_full" };
+      break;
+
+    default:
+      body = { mode: selectedMode };
+      break;
+  }
+
+
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(`${url}/api/batteries`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        agent: http_agent,
+        body: JSON.stringify(body)
+      }, 5000);
+
+      console.log('setMode body sent: ', body);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`HTTP ${res.status}: ${res.statusText} - ${errorText}`);
+      }
+      return res.json();
+    } catch (err) {
+      lastError = err;
+      console.warn(`Attempt ${attempt} failed: ${err.message}`);
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
-    throw new Error(`Fetch failed after ${retries} attempts: ${lastError.message}`);
-  };
+  }
+  throw new Error(`Fetch failed after ${retries} attempts: ${lastError.message}`);
+};
+
 
   // Cloud On
   api.setCloudOn = async function(url, token) {

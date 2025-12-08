@@ -1,8 +1,10 @@
 'use strict';
 
 const Homey = require('homey');
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+
+//const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+
 const http = require('http');
 
 /**
@@ -96,6 +98,16 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         // Update settings in Homey
         number_of_phases: 1,
       });
+    }
+
+    // Remove gasmeter if disabled in settings
+    if (!settings.show_gas) {
+      if (this.hasCapability('meter_gas'))
+      { await this.removeCapability('meter_gas'); }
+      if (this.hasCapability('measure_gas'))
+      {await this.removeCapability('measure_gas'); }
+      if (this.hasCapability('meter_gas'))
+      {await this.removeCapability('meter_gas.daily');}
     }
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -296,25 +308,29 @@ async onPoll() {
             if (data.total_power_import_kwh !== undefined) {
               await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
             }
-            if (data.total_gas_m3 !== undefined) {
+            if (data.total_gas_m3 !== undefined && settings.show_gas) {
               await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
             }
           } else {
             // First-time setup fallback
             const meterStartDay = await this.getStoreValue('meter_start_day');
-            const gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
-
+            let gasmeterStartDay = null; 
+            if (settings.show_gas) {
+              gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
+            }
+            
+            
             if (!meterStartDay && data.total_power_import_kwh !== undefined) {
               await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
             }
-            if (!gasmeterStartDay && data.total_gas_m3 !== undefined) {
+            if (!gasmeterStartDay && data.total_gas_m3 !== undefined && settings.show_gas) {
               await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
             }
           }
 
 
           // Check if it is 5 minutes
-          if (nowLocal.getMinutes() % 5 === 0) {
+          if ((nowLocal.getMinutes() % 5 === 0) && settings.show_gas) {
             const prevReadingTimeStamp = await this.getStoreValue('gasmeter_previous_reading_timestamp');
 
             // First-time setup
@@ -339,22 +355,24 @@ async onPoll() {
             }
           }
 
+          // Update is show gasmeter is enabled
+          if (settings.show_gas) {
+            // Update the capability meter_power.daily
+            const meterStart = await this.getStoreValue('meter_start_day');
+            if (meterStart != null && data.total_power_import_kwh != null) {
+              const dailyImport = data.total_power_import_kwh - meterStart;
+              await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
+            }
 
-          
-          // Update the capability meter_power.daily
-          const meterStart = await this.getStoreValue('meter_start_day');
-          if (meterStart != null && data.total_power_import_kwh != null) {
-            const dailyImport = data.total_power_import_kwh - meterStart;
-            await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
+            // Update the capability meter_gas.daily
+            const gasStart = await this.getStoreValue('gasmeter_start_day');
+            const gasDiff = (data.total_gas_m3 != null && gasStart != null)
+              ? data.total_gas_m3 - gasStart
+              : null;
+
+            await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
           }
 
-          // Update the capability meter_gas.daily
-          const gasStart = await this.getStoreValue('gasmeter_start_day');
-          const gasDiff = (data.total_gas_m3 != null && gasStart != null)
-            ? data.total_gas_m3 - gasStart
-            : null;
-
-          await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
 
           // Save export data check if capabilities are present first
           await updateCapability(this, 'measure_power', data.active_power_w).catch(this.error);
@@ -386,7 +404,9 @@ async onPoll() {
 
           // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
 
-          await updateCapability(this, 'meter_gas', data.total_gas_m3).catch(this.error);
+          if (settings.show_gas) {
+            await updateCapability(this, 'meter_gas', data.total_gas_m3).catch(this.error);
+          }
 
           // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
           await updateCapability(
@@ -443,6 +463,7 @@ async onPoll() {
 
           // Belgium
           await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w).catch(this.error);
+          
 
 
           // active_voltage_l1_v Some P1 meters do have voltage data

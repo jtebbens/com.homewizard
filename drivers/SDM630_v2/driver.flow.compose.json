@@ -1,42 +1,64 @@
 {
-      
-"actions": [
+  "actions": [
     {
-        "id": "sdm630-set-battery-to-full-charge-mode",
-        "title": {
-            "en": "Set battery to Full Charge mode",
-            "nl": "Zet batterij in Volledig Oplaad modus"
-        },
-        "titleFormatted": {
-            "en": "Set battery to Full Charge mode",
-            "nl": "Zet batterij in Volledig Oplaad modus"
-        },
-        "args": []
+      "id": "sdm630-set-battery-to-full-charge-mode",
+      "title": {
+        "en": "Set battery to Full Charge mode",
+        "nl": "Zet batterij in Volledig Oplaad modus"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Full Charge mode",
+        "nl": "Zet batterij in Volledig Oplaad modus"
+      },
+      "args": []
     },
     {
-        "id": "sdm630-set-battery-to-zero-mode",
-        "title": {
-            "en": "Set battery to Zero mode",
-            "nl": "Zet batterij in Zero modus"
-        },
-        "titleFormatted": {
-            "en": "Set battery to Zero mode",
-            "nl": "Zet batterij in Zero modus"
-        },
-        "args": []
+      "id": "sdm630-set-battery-to-zero-mode",
+      "title": {
+        "en": "Set battery to Zero mode",
+        "nl": "Zet batterij in Zero modus"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Zero mode",
+        "nl": "Zet batterij in Zero modus"
+      },
+      "args": []
     },
     {
-        "id": "sdm630-set-battery-to-standby-mode",
-        "title": {
-            "en": "Set battery to Standby mode",
-            "nl": "Zet batterij in Standby modus"
-        },
-          "titleFormatted": {
-            "en": "Set battery to Standby mode",
-            "nl": "Zet batterij in Standby modus"
-        },
-        "args": []
+      "id": "sdm630-set-battery-to-standby-mode",
+      "title": {
+        "en": "Set battery to Standby mode",
+        "nl": "Zet batterij in Standby modus"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Standby mode",
+        "nl": "Zet batterij in Standby modus"
+      },
+      "args": []
+    },
+    {
+      "id": "sdm630-set-battery-to-zero-charge-only-mode",
+      "title": {
+        "en": "Set battery to Zero Charge Only mode",
+        "nl": "Zet batterij in Alleen Opladen modus"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Zero Charge Only mode",
+        "nl": "Zet batterij in Alleen Opladen modus"
+      },
+      "args": []
+    },
+    {
+      "id": "sdm630-set-battery-to-zero-discharge-only-mode",
+      "title": {
+        "en": "Set battery to Zero Discharge Only mode",
+        "nl": "Zet batterij in Alleen Ontladen modus"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Zero Discharge Only mode",
+        "nl": "Zet batterij in Alleen Ontladen modus"
+      },
+      "args": []
     }
-
-    ]
+  ]
 }

@@ -1,14 +1,16 @@
 'use strict';
 
 const Homey = require('homey');
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+
+//const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+
 const http = require('http');
 
 let agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 10000,  // avoids stale sockets
-  maxSockets: 1          // only one active connection per host
+  maxSockets: 2          // only one active connection per host
 });
 
 async function updateCapability(device, capability, value) {
@@ -32,6 +34,20 @@ async function updateCapability(device, capability, value) {
     //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
+
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
@@ -215,7 +231,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
 
 
-  async onPoll() {
+    async onPoll() {
       const settings = this.getSettings();
 
       // Ensure URL is set
@@ -236,12 +252,20 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         return;
       }
 
+      // Prevent overlapping polls
+      if (this.pollingActive) {
+        this.log('⏸️ Skipping poll — previous request still active');
+        return;
+      }
+      this.pollingActive = true;
+
       try {
-        const res = await fetch(`${this.url}/data`, {
+        // Use timeout wrapper to avoid hanging requests
+        const res = await fetchWithTimeout(`${this.url}/data`, {
           agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        });
+        }, 5000); // 5s timeout
 
         if (!res || !res.ok) {
           throw new Error(res ? res.statusText : 'Unknown error during fetch');
@@ -251,27 +275,22 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         const offset_socket = this.getSetting('offset_socket') || 0;
         const temp_socket_watt = data.active_power_w + offset_socket;
 
-        // Update capabilities using helper
+        // Update capabilities
         await updateCapability(this, 'measure_power', temp_socket_watt).catch(this.error);
         await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
         await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
         await updateCapability(this, 'rssi', data.wifi_strength).catch(this.error);
 
-        // Solar export logic
         const solarExport = data.total_power_export_t1_kwh;
         await updateCapability(this, 'meter_power.produced.t1', solarExport > 1 ? solarExport : null).catch(this.error);
 
-        // Aggregated meter
         const netImport = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
         await updateCapability(this, 'meter_power', netImport).catch(this.error);
 
-        // Voltage
         await updateCapability(this, 'measure_voltage', data.active_voltage_v ?? null).catch(this.error);
-
-        // Amp
         await updateCapability(this, 'measure_current', data.active_current_a ?? null).catch(this.error);
 
-        // Update settings.url when changed
+        // Update settings.url if changed
         if (this.url && this.url !== settings.url) {
           this.log(`Socket - Updating settings url from ${settings.url} → ${this.url}`);
           try {
@@ -282,125 +301,139 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         }
 
         await this.setAvailable().catch(this.error);
+        this.failCount = 0; // reset on success
 
-        } catch (err) {
-          if (err.code === 'ECONNRESET') {
-            this.log('Socket - Connection was reset');
-            this.log('Socket polling with reset error:', settings.offset_polling); // print the value of offset_polling
-            await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
-          } else if (err.code === 'EHOSTUNREACH') {
-            this.log('Socket polling with unreachable error:', settings.offset_polling); // print the value of offset_polling
-            await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
-          } else if (err.code === 'ETIMEDOUT') {
-            this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
-            await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
-
-            agent = new http.Agent({
-              keepAlive: true,
-              keepAliveMsecs: 10000,
-              maxSockets: 1
-            });
-
-            setTimeout(() => {
-              this.onPoll(); // or this.onPollState() depending on context
-            }, 2000);
-          } else {
-            await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
-            this.error(err);
-          }
-
-          await this.setUnavailable(err).catch(this.error);
-        }
-
-
-}
-
-
-async onPollState() {
-  const settings = this.getSettings();
-
-  // Ensure URL is set
-  if (!this.url) {
-    if (settings.url) {
-      this.url = settings.url;
-      this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
-    } else {
-      this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-      await this.setUnavailable().catch(this.error);
-      return;
-    }
-  }
-
-  // Guard against deleted device
-  if (!this.getData()) {
-    this.error('Device no longer exists — skipping state poll');
-    return;
-  }
-
-  try {
-    const res = await fetch(`${this.url}/state`, {
-      agent,
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (!res.ok) {
-      this.error(`Polling failed with status ${res.status}: ${res.statusText}`);
-      throw new Error(res.statusText);
-    }
-
-    const data = await res.json();
-
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid response format');
-    }
-
-    // Update capabilities using helper
-    await updateCapability(this, 'onoff', data.power_on).catch(this.error);
-    await updateCapability(this, 'dim', data.brightness * (1 / 255)).catch(this.error);
-    await updateCapability(this, 'locked', data.switch_lock).catch(this.error);
-    await updateCapability(this, 'connection_error', 'No error').catch(this.error);
-
-    await this.setAvailable().catch(this.error);
-
-    } catch (err) {
-      switch (err.code) {
-        case 'ECONNRESET':
+      } catch (err) {
+        if (err.code === 'ECONNRESET') {
           this.log('Socket - Connection was reset');
           await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
-          this.log('Socket polling with reset error:', settings.offset_polling); // print the value of offset_polling
-          break;
-        case 'EHOSTUNREACH':
+        } else if (err.code === 'EHOSTUNREACH') {
+          this.log('Socket polling with unreachable error:', settings.offset_polling);
           await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
-          this.log('Socket polling with unreachable error:', settings.offset_polling); // print the value of offset_polling
-          break;
-        case 'ETIMEDOUT':
+        } else if (err.code === 'ETIMEDOUT') {
           this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
           await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
-          agent.destroy?.(); // clean up old sockets
           agent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 1 });
           setTimeout(() => this.onPoll(), 2000);
-          break;
-        case 'ECONNREFUSED':
-          await updateCapability(this, 'connection_error', 'Connection refused').catch(this.error);
-          break;
-        case 'EPIPE':
-          await updateCapability(this, 'connection_error', 'Broken pipe').catch(this.error);
-          break;
-        case 'ENOTFOUND':
-          await updateCapability(this, 'connection_error', 'Host not found').catch(this.error);
-          break;
-        default:
+        } else {
           await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
           this.error(err);
-      }
+        }
 
-      await this.setUnavailable(err.message || 'Polling error').catch(this.error);
+        this.failCount = (this.failCount || 0) + 1;
+        if (this.failCount > 3) {
+          this.log('❌ Too many failures, stopping poll until rediscovery');
+          clearInterval(this.onPollInterval);
+          clearInterval(this.onPollStateInterval);
+          await this.setUnavailable('Device unreachable');
+        } else {
+          await this.setUnavailable(err.message || 'Polling error').catch(this.error);
+        }
+      } finally {
+        this.pollingActive = false;
+      }
     }
 
 
-}
 
+    async onPollState() {
+      const settings = this.getSettings();
+
+      // Ensure URL is set
+      if (!this.url) {
+        if (settings.url) {
+          this.url = settings.url;
+          this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+        } else {
+          this.error('❌ this.url is empty and no fallback settings.url found — aborting state poll');
+          await this.setUnavailable().catch(this.error);
+          return;
+        }
+      }
+
+      // Guard against deleted device
+      if (!this.getData()) {
+        this.error('Device no longer exists — skipping state poll');
+        return;
+      }
+
+      // Prevent overlapping polls
+      if (this.pollingStateActive) {
+        this.log('⏸️ Skipping state poll — previous request still active');
+        return;
+      }
+      this.pollingStateActive = true;
+
+      try {
+        // Use timeout wrapper
+        const res = await fetchWithTimeout(`${this.url}/state`, {
+          agent,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }, 5000); // 5s timeout
+
+        if (!res.ok) {
+          this.error(`Polling failed with status ${res.status}: ${res.statusText}`);
+          throw new Error(res.statusText);
+        }
+
+        const data = await res.json();
+        if (!data || typeof data !== 'object') {
+          throw new Error('Invalid response format');
+        }
+
+        // Update capabilities
+        await updateCapability(this, 'onoff', data.power_on).catch(this.error);
+        await updateCapability(this, 'dim', data.brightness * (1 / 255)).catch(this.error);
+        await updateCapability(this, 'locked', data.switch_lock).catch(this.error);
+        await updateCapability(this, 'connection_error', 'No error').catch(this.error);
+
+        await this.setAvailable().catch(this.error);
+        this.failCount = 0; // reset on success
+
+      } catch (err) {
+        switch (err.code) {
+          case 'ECONNRESET':
+            this.log('Socket - Connection was reset');
+            await updateCapability(this, 'connection_error', 'Connection reset').catch(this.error);
+            break;
+          case 'EHOSTUNREACH':
+            await updateCapability(this, 'connection_error', 'Socket unreachable').catch(this.error);
+            break;
+          case 'ETIMEDOUT':
+            this.log('⚠️ Socket - Timeout detected, recreating HTTP agent');
+            await updateCapability(this, 'connection_error', 'Timeout').catch(this.error);
+            agent.destroy?.();
+            agent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 1 });
+            setTimeout(() => this.onPollState(), 2000);
+            break;
+          case 'ECONNREFUSED':
+            await updateCapability(this, 'connection_error', 'Connection refused').catch(this.error);
+            break;
+          case 'EPIPE':
+            await updateCapability(this, 'connection_error', 'Broken pipe').catch(this.error);
+            break;
+          case 'ENOTFOUND':
+            await updateCapability(this, 'connection_error', 'Host not found').catch(this.error);
+            break;
+          default:
+            await updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+            this.error(err);
+        }
+
+        this.failCount = (this.failCount || 0) + 1;
+        if (this.failCount > 3) {
+          this.log('❌ Too many failures, stopping state poll until rediscovery');
+          clearInterval(this.onPollInterval);
+          clearInterval(this.onPollStateInterval);
+          await this.setUnavailable('Device unreachable');
+        } else {
+          await this.setUnavailable(err.message || 'Polling error').catch(this.error);
+        }
+      } finally {
+        this.pollingStateActive = false;
+      }
+    }
 
 
 

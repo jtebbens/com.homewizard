@@ -36,7 +36,32 @@
             "nl": "Zet batterij in Standby modus"
         },
         "args": []
+    },
+    {
+        "id": "sdm230-set-battery-to-zero-charge-only-mode",
+        "title": {
+            "en": "Set battery to Zero Charge Only mode",
+            "nl": "Zet batterij in Alleen Opladen modus"
+        },
+        "titleFormatted": {
+            "en": "Set battery to Zero Charge Only mode",
+            "nl": "Zet batterij in Alleen Opladen modus"
+        },
+        "args": []
+    },
+    {
+        "id": "sdm230-set-battery-to-zero-discharge-only-mode",
+        "title": {
+            "en": "Set battery to Zero Discharge Only mode",
+            "nl": "Zet batterij in Alleen Ontladen modus"
+        },
+        "titleFormatted": {
+            "en": "Set battery to Zero Discharge Only mode",
+            "nl": "Zet batterij in Alleen Ontladen modus"
+        },
+        "args": []
     }
+
 
     ]
 }

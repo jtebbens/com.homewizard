@@ -4,11 +4,19 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.8.22
-* Additional watchdog code to reconnect energy_v2 and plugin_battery upon firmware up/downgrades
-* Finetune energy_v2 updates primary values are updated instant, other lesser values once every 10s
+v3.9.5
+* New Plugin Battery mode support (zero_charge_only & zero_discharge_only) - dynamic tariff capabilities
+* Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
+* Added 15min power datapoint for Belgium (average_power_15m_w) P1(apiv2) (user request)
+* Plugin Battery - Bugfix setMode for to_full (PUT)
+* Updated SDM230_v2 and SDM630_v2 drivers
+* Bugfix - Updated P1apiv2 check-battery-mode condition card
+* Backward compatibilty fix for the new battery mode applied to older P1 firmware.
+* Bugfix - Websocket payload battery mode adjustment
 
-v3.8.21
+v3.8.22
+* Finetune energy_v2 updates primary values are updated instant, other lesser values once every 10s
+* Additional watchdog code to reconnect energy_v2 and plugin_battery upon firmware up/downgrades
 * Websocket finetuning (energy_v2 and plugin battery)
 * Centralized fetch queue for all fetch calls to spread all queries
 * Removed interval check in onPoll loop

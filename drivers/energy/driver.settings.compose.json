@@ -36,5 +36,14 @@
     "label": { "en": "url",
                 "nl": "url"
    }
-  }  
+  },
+  {
+  "id": "show_gas",
+  "type": "checkbox",
+  "label": {
+    "en": "Show gas meter",
+    "nl": "Gas meter weergeven"
+  },
+  "value": true
+ }  
 ]
