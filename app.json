@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.5",
+  "version": "3.9.6",
   "platforms": [
     "local"
   ],
@@ -183,13 +183,17 @@
         "title": {
           "en": "Battery mode changed"
         },
+        "titleFormatted": {
+          "en": "Battery mode changed"
+        },
         "args": [
           {
             "type": "device",
             "name": "device",
             "filter": "driver_id=energy_v2"
           }
-        ]
+        ],
+        "tokens": []
       },
       {
         "id": "battery_error_detected",
