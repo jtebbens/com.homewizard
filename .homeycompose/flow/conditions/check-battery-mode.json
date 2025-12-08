@@ -37,6 +37,20 @@
             "en": "Standby",
             "nl": "Standby"
           }
+        },
+        {
+          "id": "zero_charge_only",
+          "label": {
+            "en": "Zero mode, Charge Only",
+            "nl": "Nul op de Meter, Alleen laden"
+          }
+        },
+        {
+          "id": "zero_discharge_only",
+          "label": {
+            "en": "Zero mode, Discharge Only",
+            "nl": "Nul op de Meter, Alleen ontladen"
+          }
         }
       ]
     }

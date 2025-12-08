@@ -1,7 +1,7 @@
 const https = require('https');
 const WebSocket = require('ws');
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+//const fetch = require('../../includes/utils/fetchQueue');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -261,6 +261,10 @@ class WebSocketManager {
 
 
     this.ws.on('message', (msg) => {
+      
+      // ✅ RAW message log (exact bytes from device)
+      //this.log(`📡 WS RAW: ${msg.toString()}`);
+
       let data;
       try { data = JSON.parse(msg.toString()); }
       catch (err) { this.error('❌ Failed to parse WebSocket message:', err); return; }
@@ -393,11 +397,56 @@ class WebSocketManager {
       this.error(errMsg);
       throw new Error(errMsg);
     }
-    const payload = { type: 'batteries', data: { mode } };
-    this.log(`🔋 Sending battery mode change request: ${JSON.stringify(payload)}`);
-    this._safeSend(payload);
-    this.log(`✅ Battery mode command "${mode}" sent (attempted)`);
+
+    // Map Homey mode → API mode + permissions
+    let payloadData;
+
+    switch (mode) {
+      case 'standby':
+        payloadData = { mode: 'standby', permissions: [] };
+        break;
+
+      case 'zero':
+        payloadData = { mode: 'zero', permissions: ['charge_allowed', 'discharge_allowed'] };
+        break;
+
+      case 'zero_charge_only':
+        payloadData = { mode: 'zero', permissions: ['charge_allowed'] };
+        break;
+
+      case 'zero_discharge_only':
+        payloadData = { mode: 'zero', permissions: ['discharge_allowed'] };
+        break;
+
+      case 'to_full':
+        payloadData = { mode: 'to_full' };
+        break;
+
+      default:
+        this.error(`❌ Unknown battery mode: "${mode}"`);
+        throw new Error(`Unknown battery mode: "${mode}"`);
+    }
+
+    const payload = {
+      type: 'batteries',
+      data: {
+        ...payloadData
+      }
+    };
+
+
+    this.log(`🔋 WS → setBatteryMode("${mode}")`);
+    this.log(`   Payload: ${JSON.stringify(payload)}`);
+
+    try {
+      this._safeSend(payload);
+      this.log(`✅ Battery mode command sent`);
+    } catch (err) {
+      this.error(`❌ Failed to send battery mode command: ${err.message}`);
+      throw err;
+    }
   }
+
 
   requestBatteryStatus() {
     if (!this.isConnected()) {

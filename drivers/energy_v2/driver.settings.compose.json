@@ -9,15 +9,23 @@
         "id": "zero",
         "label": { "en": "Zero mode" }
       },
-    {
-      "id": "to_full",
-      "label": { "en": "Full charge" }
-    },
-    {
-      "id": "standby",
-      "label": { "en": "Standby" }
-    }
-  ] 
+      {
+        "id": "to_full",
+        "label": { "en": "Full charge" }
+      },
+      {
+        "id": "standby",
+        "label": { "en": "Standby" }
+      },
+      {
+        "id": "zero_charge_only",
+        "label": { "en": "Zero mode, Charge allowed" } 
+      },
+      {
+        "id": "zero_discharge_only",
+        "label": { "en": "Zero mode,Discharge allowed" } 
+      }
+    ] 
   },
   {
     "id": "polling_interval",
@@ -59,5 +67,14 @@
     "nl": "Gebruik polling in plaats van WebSocket"
   },
   "value": true
- }
+ },
+  {
+  "id": "show_gas",
+  "type": "checkbox",
+  "label": {
+    "en": "Show gas meter",
+    "nl": "Gas meter weergeven"
+  },
+  "value": true
+  } 
 ]

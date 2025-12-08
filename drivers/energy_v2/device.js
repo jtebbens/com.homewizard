@@ -3,8 +3,9 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws')
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+
+//const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
 
 
 process.on('uncaughtException', (err) => {
@@ -126,8 +127,10 @@ async function applyMeasurementCapabilities(device,m) {
       'voltage_swell_l1': m.voltage_swell_l1_count,
       'voltage_swell_l2': m.voltage_swell_l2_count,
       'voltage_swell_l3': m.voltage_swell_l3_count,
+      // Belgium
       'measure_power.montly_power_peak': m.monthly_power_peak_w,
-  
+      'measure_power.average_power_15m_w': m.average_power_15m_w,
+
     };
   
     for (const [capability, value] of Object.entries(mappings)) {
@@ -138,6 +141,58 @@ async function applyMeasurementCapabilities(device,m) {
     throw error;
   }
 }
+
+/**
+ * Normalize battery mode from raw payload
+ * @param {Object} data - battery payload { mode, permissions }
+ * @returns {string} normalized mode string
+ */
+function normalizeBatteryMode(data) {
+  const knownModes = [
+    'zero',
+    'standby',
+    'to_full',
+    'zero_charge_only',
+    'zero_discharge_only'
+  ];
+
+  let rawMode = data.mode;
+
+  // If it's a string, sanitize it
+  if (typeof rawMode === 'string') {
+    rawMode = rawMode.trim();
+
+    // Handle cases like "\"zero\"" or "'zero'"
+    try {
+      rawMode = JSON.parse(rawMode);
+    } catch {
+      rawMode = rawMode.replace(/^["']+|["']+$/g, '');
+    }
+  }
+
+  // Now check against known modes
+  if (knownModes.includes(rawMode)) {
+    return rawMode;
+  }
+
+  // Permissions fallback
+  if (Array.isArray(data.permissions)) {
+    const perms = [...data.permissions].sort().join(',');
+    if (perms === '') return 'standby';
+    if (perms === 'charge_allowed,discharge_allowed') return 'zero';
+    if (perms === 'charge_allowed') return 'zero_charge_only';
+    if (perms === 'discharge_allowed') return 'zero_discharge_only';
+  }
+
+  console.log(`⚠️ Unmapped battery mode payload: ${JSON.stringify(data)}`);
+  return 'standby';
+}
+
+
+
+
+
+
 
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
@@ -188,28 +243,30 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
       return new Promise(async (resolve) => {
         try {
-          // Prefer WebSocket if connected
+          // Prefer WebSocket cache
           if (this.wsManager && this.wsManager.isConnected()) {
             this.log('Checking battery mode via WebSocket cache');
-            // Use last known mode from store or trigger
             const lastBatteryMode = await this.getStoreValue('last_battery_mode');
-            if (!lastBatteryMode) {
-              this.log('No cached battery mode available, falling back to HTTP');
-            } else {
+
+            if (lastBatteryMode) {
               this.log('Retrieved cached mode:', lastBatteryMode);
               return resolve(args.mode === lastBatteryMode);
             }
+
+            this.log('No cached battery mode available, falling back to HTTP');
           }
 
-          // Fallback: HTTP fetch
+          // Fallback: HTTP
           const response = await api.getMode(this.url, this.token);
-          if (!response || typeof response.mode === 'undefined') {
+          if (!response) {
             this.log('Invalid response, returning false');
             return resolve(false);
           }
 
-          this.log('Retrieved mode via HTTP:', response.mode);
-          return resolve(args.mode === response.mode);
+          const normalized = normalizeBatteryMode(response);
+          this.log('Retrieved mode via HTTP (normalized):', normalized);
+
+          return resolve(args.mode === normalized);
 
         } catch (error) {
           this.error('Error retrieving mode:', error);
@@ -219,82 +276,144 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     });
 
 
+
     this.homey.flow.getActionCard('set-battery-to-zero-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Zero Mode');
-      return new Promise(async (resolve) => {
+      .registerRunListener(async (args, state) => {
+        const device = args.device; // the device the card was triggered for
+        device.log('ActionCard: Set Battery to Zero Mode');
+
         try {
-          if (this.wsManager && this.wsManager.isConnected()) {
-            this.wsManager.setBatteryMode('zero');
-            this.log('Set mode to zero via WebSocket');
-            return resolve('zero');
+          if (device.wsManager && device.wsManager.isConnected()) {
+            device.wsManager.setBatteryMode('zero');
+            device.log('Set mode to zero via WebSocket');
+            return 'zero';
           } else {
-            const response = await api.setMode(this.url, this.token, 'zero');
-            if (!response || typeof response.mode === 'undefined') {
-              this.log('Invalid response, returning false');
-              return resolve(false);
+            const response = await api.setMode(device.url, device.token, 'zero');
+            if (response) {
+              await device._handleBatteries(response);
+              device.log('Set mode to zero via HTTP');
+              return 'zero';
             }
-            this.log('Set mode to zero via HTTP:', response.mode);
-            return resolve(response.mode);
+            return false;
           }
         } catch (error) {
-          this.error('Error set mode to zero:', error);
-          return resolve(false);
+          device.error('Error set mode to zero:', error);
+          return false;
         }
       });
-    });
+
+
+
+      this.homey.flow.getActionCard('set-battery-to-standby-mode')
+        .registerRunListener(async (args, state) => {
+          const device = args.device; // the device the card was triggered for
+          device.log('ActionCard: Set Battery to Standby Mode');
+
+          try {
+            if (device.wsManager && device.wsManager.isConnected()) {
+              device.wsManager.setBatteryMode('standby');
+              device.log('Set mode to standby via WebSocket');
+              return 'standby';
+            } else {
+              const response = await api.setMode(device.url, device.token, 'standby');
+              if (!response) {
+                device.log('Invalid response, returning false');
+                return false;
+              }
+              await device._handleBatteries(response);
+              device.log('Set mode to standby via HTTP');
+              return 'standby';
+            }
+          } catch (error) {
+            device.error('Error set mode to standby:', error);
+            return false;
+          }
+        });
 
 
     this.homey.flow.getActionCard('set-battery-to-full-charge-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Full Charge Mode');
-      return new Promise(async (resolve) => {
+      .registerRunListener(async (args, state) => {
+        const device = args.device; // the device the card was triggered for
+        device.log('ActionCard: Set Battery to Full Charge Mode');
+
         try {
-          if (this.wsManager && this.wsManager.isConnected()) {
-            this.wsManager.setBatteryMode('to_full');
-            this.log('Set mode to full charge via WebSocket');
-            return resolve('to_full');
+          if (device.wsManager && device.wsManager.isConnected()) {
+            device.wsManager.setBatteryMode('to_full');
+            device.log('Set mode to full charge via WebSocket');
+            return 'to_full';
           } else {
-            const response = await api.setMode(this.url, this.token, 'to_full');
-            if (!response || typeof response.mode === 'undefined') {
-              this.log('Invalid response, returning false');
-              return resolve(false);
+            const response = await api.setMode(device.url, device.token, 'to_full');
+            if (!response) {
+              device.log('Invalid response, returning false');
+              return false;
             }
-            this.log('Set mode to full charge via HTTP:', response.mode);
-            return resolve(response.mode);
+            await device._handleBatteries(response);
+            device.log('Set mode to full charge via HTTP');
+            return 'to_full';
           }
         } catch (error) {
-          this.error('Error set mode to full charge:', error);
-          return resolve(false);
+          device.error('Error set mode to full charge:', error);
+          return false;
         }
       });
-    });
 
 
-    this.homey.flow.getActionCard('set-battery-to-standby-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Standby Mode');
-      return new Promise(async (resolve) => {
-        try {
-          if (this.wsManager && this.wsManager.isConnected()) {
-            this.wsManager.setBatteryMode('standby');
-            this.log('Set mode to standby via WebSocket');
-            return resolve('standby');
-          } else {
-            const response = await api.setMode(this.url, this.token, 'standby');
-            if (!response || typeof response.mode === 'undefined') {
-              this.log('Invalid response, returning false');
-              return resolve(false);
-            }
-            this.log('Set mode to standby via HTTP:', response.mode);
-            return resolve(response.mode);
-          }
-        } catch (error) {
-          this.error('Error set mode to standby:', error);
-          return resolve(false);
+    this.homey.flow.getActionCard('set-battery-to-zero-charge-only-mode')
+  .registerRunListener(async (args, state) => {
+    const device = args.device; // the device the card was triggered for
+    device.log('ActionCard: Set Battery to Zero Charge Only Mode');
+
+    try {
+      if (device.wsManager && device.wsManager.isConnected()) {
+        device.wsManager.setBatteryMode('zero_charge_only');
+        device.log('Set mode to zero_charge_only via WebSocket');
+        return 'zero_charge_only';
+      } else {
+        const response = await api.setMode(device.url, device.token, 'zero_charge_only');
+        if (!response) {
+          device.log('Invalid response, returning false');
+          return false;
         }
-      });
-    });
+        await device._handleBatteries(response);
+        device.log('Set mode to zero_charge_only via HTTP');
+        return 'zero_charge_only';
+      }
+    } catch (error) {
+      device.error('Error set mode to zero_charge_only:', error);
+      return false;
+    }
+  });
+
+
+this.homey.flow.getActionCard('set-battery-to-zero-discharge-only-mode')
+  .registerRunListener(async (args, state) => {
+    const device = args.device; // the device the card was triggered for
+    device.log('ActionCard: Set Battery to Zero Discharge Only Mode');
+
+    try {
+      if (device.wsManager && device.wsManager.isConnected()) {
+        device.wsManager.setBatteryMode('zero_discharge_only');
+        device.log('Set mode to zero_discharge_only via WebSocket');
+        return 'zero_discharge_only';
+      } else {
+        const response = await api.setMode(device.url, device.token, 'zero_discharge_only');
+        if (!response) {
+          device.log('Invalid response, returning false');
+          return false;
+        }
+        await device._handleBatteries(response);
+        device.log('Set mode to zero_discharge_only via HTTP');
+        return 'zero_discharge_only';
+      }
+    } catch (error) {
+      device.error('Error set mode to zero_discharge_only:', error);
+      return false;
+    }
+  });
+
+
+
+
 
 
     //this.flowTriggerBatteryMode
@@ -413,6 +532,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 
 async _handleMeasurement(m) {
+  const settings = this.getSettings();
+  const showGas = settings.show_gas === true;
   // Skip if device has been deleted or no ID
   if (!this.getData() || !this.getData().id) {
       this.log('⚠️ Ignoring measurement: device no longer exists');
@@ -489,6 +610,17 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   await this.setStoreValue('external_last_result', result).catch(this.error);
 }
 
+// ✅ GAS DISABLED — remove all gas capabilities and skip all gas logic
+if (!showGas) {
+  if (this.hasCapability('meter_gas')) await this.removeCapability('meter_gas').catch(this.error);
+  if (this.hasCapability('measure_gas')) await this.removeCapability('measure_gas').catch(this.error);
+  if (this.hasCapability('meter_gas.daily')) await this.removeCapability('meter_gas.daily').catch(this.error);
+
+  // Prevent any gas logic below from running
+  gas = null;
+}
+
+
 
   const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Brussels' }));
 
@@ -515,7 +647,7 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   const currentMinute = nowLocal.getMinutes();
   const lastMinute = await this.getStoreValue('last_gas_delta_minute');
 
-  if (currentMinute % 5 === 0 && lastMinute !== currentMinute) {
+  if (showGas && currentMinute % 5 === 0 && lastMinute !== currentMinute) {
     await this.setStoreValue('last_gas_delta_minute', currentMinute).catch(this.error);
 
     if (!gas || typeof gas.value !== 'number') {
@@ -533,7 +665,7 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
       if (typeof prevReading === 'number') {
         const delta = gas.value - prevReading;
         if (delta >= 0) {
-          this.log(`📈 Gas delta: ${delta} m³`);
+          //this.log(`📈 Gas delta: ${delta} m³`);
           await updateCapability(this, 'measure_gas', delta).catch(this.error);
         }
       } else {
@@ -554,9 +686,12 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
     await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
   }
 
-  const gasStart = await this.getStoreValue('gasmeter_start_day');
-  const gasDiff = (gas?.value != null && gasStart != null) ? gas.value - gasStart : null;
-  await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
+  if (showGas) {
+    const gasStart = await this.getStoreValue('gasmeter_start_day');
+    const gasDiff = (gas?.value != null && gasStart != null) ? gas.value - gasStart : null;
+    await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
+  }
+
 
   // 🔋 Battery Group
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
@@ -609,57 +744,72 @@ _handleSystem(data) {
 
 
 async _handleBatteries(data) {
-
   if (!this.getData() || !this.getData().id) {
     this.log('⚠️ Ignoring batteries event: device no longer exists');
     return;
   }
-  //if (typeof data.mode === 'undefined') return;
-  
-  //this.log('🔋 Battery payload:', JSON.stringify(data));
 
-  // Capability updates
+  //this.log('🔋 Raw batteries payload:', JSON.stringify(data));
 
-  await updateCapability(this, 'measure_power.battery_group_power_w', data.power_w ?? null).catch(this.error);
+  // If data is an array, pick the first element or iterate
+  const battery = Array.isArray(data) ? data[0] : data;
 
-  //this.log('Target Power W: ', data.target_power_w);
-  await updateCapability(this, 'measure_power.battery_group_target_power_w', data.target_power_w ?? null).catch(this.error);
-  await updateCapability(this, 'measure_power.battery_group_max_consumption_w', data.max_consumption_w ?? null).catch(this.error);
-  await updateCapability(this, 'measure_power.battery_group_max_production_w', data.max_production_w ?? null).catch(this.error);
+  // If the element is just a string, merge with outer data
+  const payload = typeof battery === 'string'
+    ? { ...data, mode: battery, permissions: [] }
+    : battery;
+
+  // Normalize mode
+  const normalizedMode = normalizeBatteryMode(payload);
+  //this.log('Battery mode changed to:', normalizedMode);
+
+  // Update settings
+  if (normalizedMode) {
+    try {
+      await this.setSettings({ mode: normalizedMode });
+    } catch (err) {
+      this.error('❌ Failed to update setting "mode":', err);
+    }
+  }
+
+  // Use payload for capability updates
+  await updateCapability(this, 'measure_power.battery_group_power_w', payload.power_w ?? 0).catch(this.error);
+  await updateCapability(this, 'measure_power.battery_group_target_power_w', payload.target_power_w ?? 0).catch(this.error);
+  await updateCapability(this, 'measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0).catch(this.error);
+  await updateCapability(this, 'measure_power.battery_group_max_production_w', payload.max_production_w ?? 0).catch(this.error);
 
   const settings = this.getSettings();
 
   // Update settings if mode changed
-  if (settings.mode !== data.mode) {
-    this.log('Battery mode changed to:', data.mode);
+  if (settings.mode !== normalizedMode) {
+    this.log('Battery mode changed to:', normalizedMode);
     try {
-      await this.setSettings({ mode: data.mode });
+      await this.setSettings({ mode: normalizedMode });
     } catch (err) {
       this.error('❌ Failed to update setting "mode":', err);
     }
   }
 
   // Trigger flow if mode changed
-  if (this._triggerFlowPrevious.mode !== data.mode) {
-    this._triggerFlowPrevious.mode = data.mode;
-    this._flowTriggerBatteryMode.trigger(this, { mode: data.mode }).catch(this.error);
+  if (this._triggerFlowPrevious.mode !== normalizedMode) {
+    this._triggerFlowPrevious.mode = normalizedMode;
+    this._flowTriggerBatteryMode.trigger(this, { mode: normalizedMode }).catch(this.error);
   }
 
-  //trigger battery_mode_change
-  
+  // Trigger battery_mode_change
   const lastBatteryMode = await this.getStoreValue('last_battery_mode');
-  if (data.mode !== lastBatteryMode) {
-    this.flowTriggerBatteryMode(this, { battery_mode_changed: data.mode });
-    await this.setStoreValue('last_battery_mode', data.mode).catch(this.error);
+  if (normalizedMode !== lastBatteryMode) {
+    this.flowTriggerBatteryMode(this, { battery_mode_changed: normalizedMode });
+    await this.setStoreValue('last_battery_mode', normalizedMode).catch(this.error);
   }
 
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
   const batteries = Object.values(group);
 
-  const isGridReturn = data.power_w < -400;
+  const isGridReturn = (payload.power_w ?? 0) < -400;
   const batteriesPresent = batteries.length > 0;
-  const shouldBeCharging = data.target_power_w > 0;
-  const isNotStandby = data.mode !== 'standby';
+  const shouldBeCharging = (payload.target_power_w ?? 0) > 0;
+  const isNotStandby = normalizedMode !== 'standby';
 
   const now = Date.now();
 
@@ -676,9 +826,9 @@ async _handleBatteries(data) {
       this.homey.flow
         .getDeviceTriggerCard('battery_error_detected')
         .trigger(this, {}, {
-          power: data.power_w,
-          target: data.target_power_w,
-          mode: data.mode,
+          power: payload.power_w,
+          target: payload.target_power_w,
+          mode: normalizedMode,
           batteryCount: batteries.length
         })
         .catch(this.error);
@@ -687,8 +837,8 @@ async _handleBatteries(data) {
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
   }
-
 }
+
 
 
   startPolling() {

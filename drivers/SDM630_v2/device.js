@@ -5,6 +5,38 @@ const api = require('../../includes/v2/Api');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
+function normalizeBatteryMode(data) {
+  const knownModes = [
+    'zero',
+    'standby',
+    'to_full',
+    'zero_charge_only',
+    'zero_discharge_only'
+  ];
+
+  let rawMode = data.mode;
+
+  if (typeof rawMode === 'string') {
+    rawMode = rawMode.trim();
+    try { rawMode = JSON.parse(rawMode); }
+    catch { rawMode = rawMode.replace(/^["']+|["']+$/g, ''); }
+  }
+
+  if (knownModes.includes(rawMode)) return rawMode;
+
+  if (Array.isArray(data.permissions)) {
+    const perms = [...data.permissions].sort().join(',');
+    if (perms === '') return 'standby';
+    if (perms === 'charge_allowed,discharge_allowed') return 'zero';
+    if (perms === 'charge_allowed') return 'zero_charge_only';
+    if (perms === 'discharge_allowed') return 'zero_discharge_only';
+  }
+
+  return 'standby';
+}
+
+
+
 module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onInit() {
@@ -38,13 +70,15 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
         try {
           const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH SDM230 and BATTERY
   
-          if (!response || typeof response.mode === 'undefined') {
+          if (!response) {
             console.log('Invalid response, returning false');
             return resolve(false);
           }
   
           console.log('Retrieved mode:', response.mode);
-          return resolve(args.mode == response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          return resolve(args.mode === normalized);
+
           
         } catch (error) {
           console.log('Error retrieving mode:', error);
@@ -53,74 +87,129 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
       });
     });
 
-    this.homey.flow.getActionCard('sdm630-set-battery-to-zero-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Zero Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-       return new Promise(async (resolve, reject) => {
-        try {
-          const response = await api.setMode(this.url, this.token, 'zero'); 
+    //
+    // ✅ SDM630 Battery Mode Action Cards
+    //
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
+    // Zero mode
+    this.homey.flow.getActionCard('sdm630-set-battery-to-zero-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Zero Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero');
+
+          if (!response) {
+            this.log('Invalid response, returning false');
+            return false;
           }
 
-          console.log('Set mode to zero:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          this.log('Set mode to zero:', normalized);
+          return normalized;
+
         } catch (error) {
-          console.log('Error set mode to zero:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          this.error('Error set mode to zero:', error);
+          return false;
         }
       });
-    })
 
-    this.homey.flow.getActionCard('sdm630-set-battery-to-full-charge-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Full Charge Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-      return new Promise(async (resolve, reject) => {
-      try {
-          const response = await api.setMode(this.url, this.token, 'to_full');
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
-
-          console.log('Set mode to full charge:', response.mode);
-          return resolve(response.mode); // Returns the mode value
-        } catch (error) {
-          console.log('Error set mode to full charge:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
-        }
-        });
-    })
-
+    // Standby mode
     this.homey.flow.getActionCard('sdm630-set-battery-to-standby-mode')
-    .registerRunListener(async () => {
-      this.log('ActionCard: Set Battery to Standby Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-      return new Promise(async (resolve, reject) => {
-      try {
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Standby Mode');
+
+        try {
           const response = await api.setMode(this.url, this.token, 'standby');
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
+          if (!response) {
+            this.log('Invalid response, returning false');
+            return false;
           }
 
-          console.log('Set mode to standby:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          this.log('Set mode to standby:', normalized);
+          return normalized;
+
         } catch (error) {
-          console.log('Error set mode to standby:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
+          this.error('Error set mode to standby:', error);
+          return false;
         }
-        });
-    })
+      });
+
+
+    // Full charge mode
+    this.homey.flow.getActionCard('sdm630-set-battery-to-full-charge-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Full Charge Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'to_full');
+
+          if (!response) {
+            this.log('Invalid response, returning false');
+            return false;
+          }
+
+          const normalized = normalizeBatteryMode(response);
+          this.log('Set mode to full charge:', normalized);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to full charge:', error);
+          return false;
+        }
+      });
+
+
+    // Zero charge only
+    this.homey.flow.getActionCard('sdm630-set-battery-to-zero-charge-only-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Zero Charge Only Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero_charge_only');
+
+          if (!response) {
+            this.log('Invalid response, returning false');
+            return false;
+          }
+
+          const normalized = normalizeBatteryMode(response);
+          this.log('Set mode to zero_charge_only:', normalized);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to zero_charge_only:', error);
+          return false;
+        }
+      });
+
+
+    // Zero discharge only
+    this.homey.flow.getActionCard('sdm630-set-battery-to-zero-discharge-only-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Zero Discharge Only Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero_discharge_only');
+
+          if (!response) {
+            this.log('Invalid response, returning false');
+            return false;
+          }
+
+          const normalized = normalizeBatteryMode(response);
+          this.log('Set mode to zero_discharge_only:', normalized);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to zero_discharge_only:', error);
+          return false;
+        }
+      });
+
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
@@ -345,25 +434,6 @@ async onPoll() {
 
     await Promise.allSettled(setCapabilityPromises);
 
-    // --- Battery mode handling ---
-    const result = await api.getInfo(this.url, this.token);
-    if (result && result.firmware_version === "5.0005") {
-      const batteryMode = await api.getMode(this.url, this.token);
-
-      if (batteryMode !== undefined) {
-        if (settings.mode !== batteryMode.mode) {
-          this.log('Battery mode changed to:', batteryMode.mode);
-          await this.setSettings({ mode: batteryMode.mode });
-        }
-
-        // Always set battery capabilities, falling back to null if missing
-        await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
-      }
-    }
-
     // After setting capabilities
     await this._triggerFlowOnChange('measure_power', data.power_w);
     await this._triggerFlowOnChange('measure_power.l1', data.power_l1_w);
@@ -371,9 +441,25 @@ async onPoll() {
     await this._triggerFlowOnChange('measure_power.l3', data.power_l3_w);
 
     // For battery mode
-    await this._triggerFlowOnChange('battery_mode', batteryMode.mode);
-    await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+    
+    const batteryMode = await api.getMode(this.url, this.token);
 
+    if (batteryMode !== undefined) {
+      const normalized = normalizeBatteryMode(batteryMode);
+
+      if (settings.mode !== normalized) {
+        await this.setSettings({ mode: normalized });
+      }
+
+      await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+      await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
+      await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
+      await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
+
+      // ✅ Flow triggers MUST be inside this block
+      await this._triggerFlowOnChange('battery_mode', normalized);
+      await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+    }
 
     // If everything succeeded
     await this.setAvailable();

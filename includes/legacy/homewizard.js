@@ -1,10 +1,9 @@
 'use strict';
 
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
 const Homey = require('homey');
-const AbortController = require('abort-controller');
 
+const fetch = require('../../includes/utils/fetchQueue');
+//const fetch = require('node-fetch');
 const http = require('http');
 
 //const cache = {}; // Cache object to store the callnew responses

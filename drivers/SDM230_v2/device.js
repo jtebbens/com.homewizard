@@ -5,6 +5,36 @@ const api = require('../../includes/v2/Api');
 
 //const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
+function normalizeBatteryMode(data) {
+  const knownModes = [
+    'zero',
+    'standby',
+    'to_full',
+    'zero_charge_only',
+    'zero_discharge_only'
+  ];
+
+  let rawMode = data.mode;
+
+  if (typeof rawMode === 'string') {
+    rawMode = rawMode.trim();
+    try { rawMode = JSON.parse(rawMode); }
+    catch { rawMode = rawMode.replace(/^["']+|["']+$/g, ''); }
+  }
+
+  if (knownModes.includes(rawMode)) return rawMode;
+
+  if (Array.isArray(data.permissions)) {
+    const perms = [...data.permissions].sort().join(',');
+    if (perms === '') return 'standby';
+    if (perms === 'charge_allowed,discharge_allowed') return 'zero';
+    if (perms === 'charge_allowed') return 'zero_charge_only';
+    if (perms === 'discharge_allowed') return 'zero_discharge_only';
+  }
+
+  return 'standby';
+}
+
 module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
   async onInit() {
@@ -38,13 +68,13 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         try {
           const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH SDM230 and BATTERY
   
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
+          if (!response) {
             return resolve(false);
           }
-  
-          console.log('Retrieved mode:', response.mode);
-          return resolve(args.mode == response.mode); // Returns the mode value
+
+          const normalized = normalizeBatteryMode(response);
+          return resolve(args.mode === normalized);
+
           
         } catch (error) {
           console.log('Error retrieving mode:', error);
@@ -62,13 +92,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         try {
           const response = await api.setMode(this.url, this.token, 'zero'); 
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
+          if (!response) return resolve(false);
 
-          console.log('Set mode to zero:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          return resolve(normalized);
+
         } catch (error) {
           console.log('Error set mode to zero:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
@@ -85,13 +113,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       try {
           const response = await api.setMode(this.url, this.token, 'to_full');
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
+          if (!response) return resolve(false);
 
-          console.log('Set mode to full charge:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          return resolve(normalized);
+
         } catch (error) {
           console.log('Error set mode to full charge:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
@@ -108,13 +134,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       try {
           const response = await api.setMode(this.url, this.token, 'standby');
 
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
+          if (!response) return resolve(false);
 
-          console.log('Set mode to standby:', response.mode);
-          return resolve(response.mode); // Returns the mode value
+          const normalized = normalizeBatteryMode(response);
+          return resolve(normalized);
+
         } catch (error) {
           console.log('Error set mode to standby:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
@@ -122,37 +146,47 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         });
     })
 
+    // Zero Charge Only
+    this.homey.flow.getActionCard('sdm230-set-battery-to-zero-charge-only-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Zero Charge Only Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero_charge_only');
+          if (!response) return false;
+
+          const normalized = normalizeBatteryMode(response);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to zero_charge_only:', error);
+          return false;
+        }
+      });
+
+    // Zero Discharge Only
+    this.homey.flow.getActionCard('sdm230-set-battery-to-zero-discharge-only-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Zero Discharge Only Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'zero_discharge_only');
+          if (!response) return false;
+
+          const normalized = normalizeBatteryMode(response);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to zero_discharge_only:', error);
+          return false;
+        }
+      });
+
+
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     this._triggerFlowPrevious = {};
-
-    /*
-    const ActionCardChangeBatteryMode = this.homey.flow.getActionCard('change-battery-mode')
-    ActionCardChangeBatteryMode.registerRunListener(async (args, state) => {
-      this.log('ChangeBatteryModeCard change to:', args);
-
-      if (!this.url) {
-        return false;
-      }
-
-      return new Promise(async (resolve, reject) => {
-        try {
-          const response = await api.setMode(this.url, this.token, args.mode); // NEEDS TESTING WITH P1 and BATTERY
-  
-          if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
-            return resolve(false);
-          }
-  
-          console.log('Set mode:', response.mode);
-          return resolve(response.mode); // Returns the mode value
-        } catch (error) {
-          console.log('Error set mode:', error);
-          return resolve(false); // Or reject(error), depending on your error-handling approach
-        }
-      });
-    });
-    */
+    
 
   }
 
@@ -338,24 +372,28 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       await Promise.allSettled(setCapabilityPromises);
 
       // --- Battery mode handling ---
-      const result = await api.getInfo(this.url, this.token);
-      if (result && result.firmware_version === "5.0005") {
-        const batteryMode = await api.getMode(this.url, this.token);
+      const batteryMode = await api.getMode(this.url, this.token);
 
-        if (batteryMode !== undefined) {
-          if (settings.mode !== batteryMode.mode) {
-            this.log('Battery mode changed to:', batteryMode.mode);
-            await this.setSettings({ mode: batteryMode.mode });
-          }
+      if (batteryMode) {
+        const normalized = normalizeBatteryMode(batteryMode);
 
-          // Add/update battery capabilities
-          await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
-          await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
-          await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
-          await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
-          
+        // Update settings if changed
+        if (settings.mode !== normalized) {
+          await this.setSettings({ mode: normalized });
         }
+
+        // Update capabilities
+        await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
+        await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
+
+        // Flow triggers
+        await this._triggerFlowOnChange('battery_mode', normalized);
+        await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
       }
+
+    
 
       // Trigger flows when values change
       await this._triggerFlowOnChange('measure_power', data.power_w);
@@ -363,13 +401,6 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       await this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh);
       await this._triggerFlowOnChange('measure_voltage', data.voltage_v);
       await this._triggerFlowOnChange('measure_current', data.current_a);
-
-      // Battery mode
-      if (batteryMode !== undefined) {
-        await this._triggerFlowOnChange('battery_mode', batteryMode.mode);
-        await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
-      }
-
 
       // If everything succeeded
       await this.setAvailable();

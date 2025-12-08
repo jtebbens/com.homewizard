@@ -3,8 +3,8 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
-//const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+//const fetch = require('../../includes/utils/fetchQueue');
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
