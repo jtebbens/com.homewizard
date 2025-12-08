@@ -745,5 +745,8 @@
   },
   "3.9.3": {
     "en": "Bugfix - Updated P1apiv2 check-battery-mode condition card"
+  },
+  "3.9.4": {
+    "en": "Backward compatibilty fix for the new battery mode applied to older P1 firmware."
   }
 }
