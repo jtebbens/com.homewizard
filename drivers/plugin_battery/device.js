@@ -93,13 +93,17 @@ function checkSoCDrift({
   currentSoC,
   currentPowerW,
   batteryCapacityWh = 2470,
-  driftMargin = 5
+  driftMargin = 0.5
 }) {
   if (previousSoC === undefined || previousTimestamp === undefined) return { drift: false };
 
   const now = Date.now();
   // Number of minutes between readings 60000ms is 60s
   const deltaTimeMin = (now - previousTimestamp) / 60000;
+  
+  // Ignore intervals shorter than 12 seconds
+  if (deltaTimeMin < 0.2) return { drift: false, timestamp: now };
+  
   // Calculate rate of SoC change in % per minute
   const deltaSoC = currentSoC - previousSoC;
   const rateOfChange = deltaSoC / deltaTimeMin;
@@ -388,6 +392,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     let time_to_empty = null;
     let time_to_full  = null;
     const BATTERY_CAPACITY_WH = 2470;
+
+    //this.log('🔎 WS measurement payload:', JSON.stringify(data));
 
     // Power and measurement capabilities (use updateCapability helper)
     await updateCapability(this, 'meter_power.import', data.energy_import_kwh ?? null).catch(this.error);

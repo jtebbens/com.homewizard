@@ -69,7 +69,8 @@ class WebSocketManager {
    * @param {function} opts.handleSystem
    * @param {function} opts.handleBatteries
    */
-  constructor({ url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
+ constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
+    this.device = device;
     this.url = url;
     this.token = token;
     this.log = log;
@@ -441,10 +442,15 @@ class WebSocketManager {
     try {
       this._safeSend(payload);
       this.log(`✅ Battery mode command sent`);
+
+      // ✅ Ensure Homey sees the mode change immediately
+      this.device._handleBatteries(payload.data);
+
     } catch (err) {
       this.error(`❌ Failed to send battery mode command: ${err.message}`);
       throw err;
     }
+
   }
 
 

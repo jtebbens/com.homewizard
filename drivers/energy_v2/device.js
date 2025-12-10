@@ -148,45 +148,49 @@ async function applyMeasurementCapabilities(device,m) {
  * @returns {string} normalized mode string
  */
 function normalizeBatteryMode(data) {
-  const knownModes = [
-    'zero',
-    'standby',
-    'to_full',
-    'zero_charge_only',
-    'zero_discharge_only'
-  ];
+  // ✅ Already normalized (string)
+  if (typeof data === 'string') {
+    return data;
+  }
 
-  let rawMode = data.mode;
+  let mode = typeof data.mode === 'string'
+    ? data.mode.trim().replace(/^["']+|["']+$/g, '')
+    : data.mode;
 
-  // If it's a string, sanitize it
-  if (typeof rawMode === 'string') {
-    rawMode = rawMode.trim();
+  const perms = Array.isArray(data.permissions)
+    ? [...data.permissions].sort().join(',')
+    : null;
 
-    // Handle cases like "\"zero\"" or "'zero'"
-    try {
-      rawMode = JSON.parse(rawMode);
-    } catch {
-      rawMode = rawMode.replace(/^["']+|["']+$/g, '');
+  if (mode === 'standby') return 'standby';
+  if (mode === 'to_full') return 'to_full';
+
+  if (mode === 'zero_charge_only' || mode === 'zero_discharge_only') {
+    mode = 'zero';
+  }
+
+  if (mode === 'zero') {
+    switch (perms) {
+      case 'charge_allowed,discharge_allowed':
+        return 'zero';
+      case 'charge_allowed':
+        return 'zero_charge_only';
+      case 'discharge_allowed':
+        return 'zero_discharge_only';
+      case '':
+      case null:
+        return 'zero';
+      default:
+        console.log(`⚠️ Unknown permissions mode=zero: ${perms}`);
+        return 'zero';
     }
   }
 
-  // Now check against known modes
-  if (knownModes.includes(rawMode)) {
-    return rawMode;
-  }
-
-  // Permissions fallback
-  if (Array.isArray(data.permissions)) {
-    const perms = [...data.permissions].sort().join(',');
-    if (perms === '') return 'standby';
-    if (perms === 'charge_allowed,discharge_allowed') return 'zero';
-    if (perms === 'charge_allowed') return 'zero_charge_only';
-    if (perms === 'discharge_allowed') return 'zero_discharge_only';
-  }
-
-  console.log(`⚠️ Unmapped battery mode payload: ${JSON.stringify(data)}`);
+  console.log(`⚠️ Unknown mode+permissions combination: ${JSON.stringify(data)}`);
   return 'standby';
 }
+
+
+
 
 
 
@@ -239,41 +243,48 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
 
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
-      this.log('ConditionCard: Check Battery Mode');
+      const device = args.device; // ✅ The actual device instance
+      device.log('ConditionCard: Check Battery Mode');
 
       return new Promise(async (resolve) => {
         try {
           // Prefer WebSocket cache
-          if (this.wsManager && this.wsManager.isConnected()) {
-            this.log('Checking battery mode via WebSocket cache');
-            const lastBatteryMode = await this.getStoreValue('last_battery_mode');
+          if (device.wsManager && device.wsManager.isConnected()) {
+            device.log('Checking battery mode via WebSocket cache');
 
-            if (lastBatteryMode) {
-              this.log('Retrieved cached mode:', lastBatteryMode);
-              return resolve(args.mode === lastBatteryMode);
+            const lastBatteryState = await device.getStoreValue('last_battery_state');
+
+            if (lastBatteryState) {
+              device.log('Retrieved cached raw state:', lastBatteryState);
+
+              const normalized = normalizeBatteryMode(lastBatteryState);
+              device.log('Normalized cached mode:', normalized);
+
+              return resolve(args.mode === normalized);
             }
 
-            this.log('No cached battery mode available, falling back to HTTP');
+            device.log('No cached battery state available, falling back to HTTP');
           }
 
           // Fallback: HTTP
-          const response = await api.getMode(this.url, this.token);
+          const response = await api.getMode(device.url, device.token);
           if (!response) {
-            this.log('Invalid response, returning false');
+            device.log('Invalid response, returning false');
             return resolve(false);
           }
 
           const normalized = normalizeBatteryMode(response);
-          this.log('Retrieved mode via HTTP (normalized):', normalized);
+          device.log('Retrieved mode via HTTP (normalized):', normalized);
 
           return resolve(args.mode === normalized);
 
         } catch (error) {
-          this.error('Error retrieving mode:', error);
+          device.error('Error retrieving mode:', error);
           return resolve(false);
         }
       });
     });
+
 
 
 
@@ -434,6 +445,7 @@ this.homey.flow.getActionCard('set-battery-to-zero-discharge-only-mode')
       this.startPolling();
     } else {
       this.wsManager = new WebSocketManager({
+        device: this,
         url: this.url,
         token: this.token,
         log: this.log.bind(this),
@@ -761,7 +773,18 @@ async _handleBatteries(data) {
 
   // Normalize mode
   const normalizedMode = normalizeBatteryMode(payload);
-  //this.log('Battery mode changed to:', normalizedMode);
+
+  // ✅ Retrieve previous normalized mode
+  const lastBatteryMode = await this.getStoreValue('last_battery_mode');
+
+  // ✅ Trigger only when normalized mode changes
+  if (normalizedMode !== lastBatteryMode) {
+    this.flowTriggerBatteryMode(this);
+    await this.setStoreValue('last_battery_mode', normalizedMode).catch(this.error);
+  }
+
+
+
 
   // Update settings
   if (normalizedMode) {
@@ -790,18 +813,11 @@ async _handleBatteries(data) {
     }
   }
 
-  // Trigger flow if mode changed
-  if (this._triggerFlowPrevious.mode !== normalizedMode) {
-    this._triggerFlowPrevious.mode = normalizedMode;
-    this._flowTriggerBatteryMode.trigger(this, { mode: normalizedMode }).catch(this.error);
-  }
-
-  // Trigger battery_mode_change
-  const lastBatteryMode = await this.getStoreValue('last_battery_mode');
-  if (normalizedMode !== lastBatteryMode) {
-    this.flowTriggerBatteryMode(this, { battery_mode_changed: normalizedMode });
-    await this.setStoreValue('last_battery_mode', normalizedMode).catch(this.error);
-  }
+  // ✅ Store raw WS state for condition card
+  await this.setStoreValue('last_battery_state', {
+    mode: payload.mode,
+    permissions: payload.permissions
+  });
 
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
   const batteries = Object.values(group);
