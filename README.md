@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.5
+v3.9.6
 * New Plugin Battery mode support (zero_charge_only & zero_discharge_only) - dynamic tariff capabilities
 * Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
 * Added 15min power datapoint for Belgium (average_power_15m_w) P1(apiv2) (user request)

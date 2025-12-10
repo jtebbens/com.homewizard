@@ -64,7 +64,10 @@
   "triggers": [
     {
       "id": "battery_mode_changed",
-      "title": { "en": "Battery mode changed" }
+      "title": { "en": "Battery mode changed" },
+      "titleFormatted": { "en": "Battery mode changed" },
+      "args": [],
+      "tokens": []
     },
     {
       "id": "battery_error_detected",
