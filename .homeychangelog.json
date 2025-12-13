@@ -754,5 +754,8 @@
   },
   "3.9.6": {
     "en": "Bugfixes condition and action cards for battery mode and permissions"
+  },
+  "3.9.7": {
+    "en": "Fixed: rare crash when _handleBatteries() ran after a device was deleted"
   }
 }
