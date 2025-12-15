@@ -1,7 +1,7 @@
 'use strict';
 
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 const https = require('https');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
@@ -45,7 +45,7 @@ module.exports = (function() {
         Authorization: `Bearer ${token}`,
       },
       agent: http_agent,
-    }).catch(err => {
+    }).catch((err) => {
       throw new Error(`Network error: ${err.message}`);
     });
 
@@ -102,7 +102,7 @@ module.exports = (function() {
     const res = await fetch(`${url}/api`, {
       headers: { Authorization: `Bearer ${token}` },
       agent: http_agent,
-    }).catch(err => {
+    }).catch((err) => {
       throw new Error(`Network error: ${err.message}`);
     });
 
@@ -127,7 +127,7 @@ module.exports = (function() {
       }
 
       const data = await res.json();
-      //console.log ('getMode: ', data, 'url: ', url);
+      // console.log ('getMode: ', data, 'url: ', url);
 
       // --- New firmware path ---
       if (Array.isArray(data.permissions)) {
@@ -158,7 +158,7 @@ module.exports = (function() {
 
   // Set Mode with improved retry
   api.setMode = async function(url, token, selectedMode) {
-  let retries = 4;
+  const retries = 4;
   let lastError;
   if (!url) throw new Error('URL is not defined');
   if (!token) throw new Error('Token is not defined');
@@ -167,7 +167,8 @@ module.exports = (function() {
   console.log('api.setMode: Sending mode:', selectedMode);
 
   // Map selectedMode to payload + method
-  let body, method = 'PUT';
+  let body;
+  const method = 'PUT';
 
   switch (selectedMode) {
     case 'standby':
@@ -232,7 +233,7 @@ module.exports = (function() {
       lastError = err;
       console.warn(`Attempt ${attempt} failed: ${err.message}`);
       if (attempt < retries) {
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     }
   }
@@ -242,7 +243,7 @@ module.exports = (function() {
 
   // Cloud On
   api.setCloudOn = async function(url, token) {
-    let retries = 3;
+    const retries = 3;
     let lastError;
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
@@ -270,7 +271,7 @@ module.exports = (function() {
         lastError = err;
         console.warn(`Attempt ${attempt} failed: ${err.message}`);
         if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
     }
@@ -279,7 +280,7 @@ module.exports = (function() {
 
   // Cloud Off
   api.setCloudOff = async function(url, token) {
-    let retries = 3;
+    const retries = 3;
     let lastError;
     if (!url) throw new Error('URL is not defined');
     if (!token) throw new Error('Token is not defined');
@@ -307,7 +308,7 @@ module.exports = (function() {
         lastError = err;
         console.warn(`Attempt ${attempt} failed: ${err.message}`);
         if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
     }

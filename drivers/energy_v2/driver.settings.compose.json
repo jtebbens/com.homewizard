@@ -76,5 +76,14 @@
     "nl": "Gas meter weergeven"
   },
   "value": true
+  },
+  {
+    "id": "phase_overload_notifications",
+    "type": "checkbox",
+    "label": {
+      "en": "Phase overload notifications",
+      "nl": "Fase-overbelasting meldingen"
+    },
+    "value": true
   } 
 ]

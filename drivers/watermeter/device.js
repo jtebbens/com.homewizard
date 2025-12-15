@@ -2,13 +2,13 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs : 11000
+  keepAliveMsecs: 11000
 });
 
 
@@ -16,10 +16,10 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const settings = this.getSettings();
-    console.log('Offset polling for Watermeter: ',settings.offset_polling);
+    console.log('Offset polling for Watermeter: ', settings.offset_polling);
 
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -203,7 +203,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
       // Keep settings.url in sync
       if (this.url !== settings.url) {
-        this.log("Watermeter - Updating settings url");
+        this.log('Watermeter - Updating settings url');
         await this.setSettings({ url: this.url });
       }
 
@@ -226,7 +226,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
    * @returns {Promise<string|void>} return a custom message that will be displayed
    */
   async onSettings(oldSettings) {
-    this.log('Settings updated')
+    this.log('Settings updated');
     // Update display values if offset has changed
         // Retrieve changedKeys from oldSettings
     const changedKeys = oldSettings.changedKeys || [];
@@ -268,7 +268,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
 
 
-    //return true;
+    // return true;
   }
   
 

@@ -15,9 +15,9 @@ class HomeWizardHeatlink extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    //console.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
+    // console.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
     devices.forEach((device) => {
@@ -45,16 +45,16 @@ class HomeWizardHeatlink extends Homey.Device {
 
       return new Promise(async (resolve) => { // async
         const url = `/hl/0/settarget/${temperature}`;
-        console.log(url); // Console log url
+        this.log(url); // Console log url
         const homewizard_id = this.getSetting('homewizard_id');
 			    	await homewizard.callnew(homewizard_id, `/hl/0/settarget/${temperature}`, (err) => { // await, maybe a timestamp for log?
           if (err) {
             // console.log('ERR settarget target_temperature -> returned false');
-            console.log('ERR settarget target_temperature -> returned false');
+            this.log('ERR settarget target_temperature -> returned false');
             return resolve(false);
           }
           // console.log('settarget target_temperature - returned true');
-          console.log('settarget target_temperature - returned true');
+          this.log('settarget target_temperature - returned true');
           return resolve(true);
         });
       });

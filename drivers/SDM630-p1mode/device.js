@@ -2,11 +2,11 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 
-//const POLL_INTERVAL = 1000 * 1; // 1 seconds
+// const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
-//const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+// const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
@@ -26,14 +26,14 @@ async function updateCapability(device, capability, value) {
 
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
-    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    // device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
 async onInit() {
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
 
@@ -96,7 +96,7 @@ async onInit() {
     try {
       let res = await fetch(`${this.url}/data`);
       if (!res || !res.ok) {
-        await new Promise(resolve => setTimeout(resolve, 60000));
+        await new Promise((resolve) => setTimeout(resolve, 60000));
         res = await fetch(`${this.url}/data`);
         if (!res || !res.ok) throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
@@ -140,7 +140,7 @@ async onInit() {
 
       // Update settings URL if changed
       if (this.url !== settings.url) {
-        this.log("SDM630-p1mode - Updating settings url");
+        this.log('SDM630-p1mode - Updating settings url');
         await this.setSettings({ url: this.url });
       }
 
@@ -159,12 +159,12 @@ async onInit() {
     this.log('Settings:', MySettings);
     // Update interval polling
     if (
-      'polling_interval' in MySettings.oldSettings &&
-      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+      'polling_interval' in MySettings.oldSettings 
+      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for SDM630-p1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
-      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
     // return true;

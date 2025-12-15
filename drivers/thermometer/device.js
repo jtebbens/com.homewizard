@@ -15,7 +15,7 @@ class HomeWizardThermometer extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const devices = this.homey.drivers.getDriver('thermometer').getDevices();
 
@@ -26,7 +26,7 @@ class HomeWizardThermometer extends Homey.Device {
     });
 
     if (Object.keys(devices).length > 0) {
-		  this.startPolling(devices);
+	    this.startPolling(devices);
     }
   }
 

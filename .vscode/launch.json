@@ -1,41 +1,16 @@
 {
-"version": "0.2.0",
-"configurations": [{
-        "name": "Launch app Remote",
-        "type": "node",
-        "request": "launch",
-        "cwd": "${workspaceFolder}",
-        "runtimeExecutable": "homey",
-        "args": ["app", "run", "--remote"],
-        "outputCapture": "std",
-        "serverReadyAction": {
-            "pattern": "Debugger listening on",
-            "action": "startDebugging",
-            "name": "Attach to Homey"
-        }
-    },
+  "version": "0.2.0",
+  "configurations": [
     {
-        "name": "Launch app Local",
-        "type": "node",
-        "request": "launch",
-        "cwd": "${workspaceFolder}",
-        "runtimeExecutable": "homey",
-        "args": ["app", "run"],
-        "outputCapture": "std",
-        "serverReadyAction": {
-            "pattern": "Debugger listening on",
-            "action": "startDebugging",
-            "name": "Attach to Homey"
-        }
-    },
-    {
-        "name": "Attach to Homey",
-        "type": "node",
-        "request": "attach",
-        "address": "192.168.1.12",
-        "port": 9222,
-        "localRoot": "${workspaceFolder}",
-        "remoteRoot": "/app/"
+      "name": "Attach to Homey (Host)",
+      "type": "node",
+      "request": "attach",
+      "address": "192.168.1.12",
+      "port": 9225,
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "${workspaceFolder}",
+      "restart": true,
+      "skipFiles": ["<node_internals>/**"]
     }
-]
+  ]
 }
