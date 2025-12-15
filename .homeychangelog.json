@@ -757,5 +757,8 @@
   },
   "3.9.7": {
     "en": "Fixed: rare crash when _handleBatteries() ran after a device was deleted"
+  },
+  "3.9.8": {
+    "en": "New Feature: Baseload (sluipverbruik) detection (experimental)"
   }
 }
