@@ -2,11 +2,11 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 
-//const POLL_INTERVAL = 1000 * 1; // 1 seconds
+// const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
-//const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+// const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 async function updateCapability(device, capability, value) {
   if (value == null) {
@@ -17,8 +17,8 @@ async function updateCapability(device, capability, value) {
   }
 
   if (!device.hasCapability(capability)) {
-    //device.log(`⚠️ Capability "${capability}" missing — skipping update`);
-    //return;
+    // device.log(`⚠️ Capability "${capability}" missing — skipping update`);
+    // return;
     await device.addCapability(capability).catch(device.error);
     device.log(`➕ Added capability "${capability}"`);
   }
@@ -35,7 +35,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
   async onInit() {
 
     const settings = this.getSettings();
-    console.log('Settings for SDM630: ',settings.polling_interval);
+    console.log('Settings for SDM630: ', settings.polling_interval);
     // Check if polling interval is set in settings, if not set default to 10 seconds
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
       settings.polling_interval = 10; // Default to 10 second if not set
@@ -147,7 +147,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     try {
       let res = await fetch(`${this.url}/data`);
       if (!res || !res.ok) {
-        await new Promise(resolve => setTimeout(resolve, 60000)); // wait 60s
+        await new Promise((resolve) => setTimeout(resolve, 60000)); // wait 60s
         res = await fetch(`${this.url}/data`);
         if (!res || !res.ok) throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
@@ -209,17 +209,17 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     this.log('Settings:', MySettings);
     // Update interval polling
     if (
-      'polling_interval' in MySettings.oldSettings &&
-      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+      'polling_interval' in MySettings.oldSettings
+      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for SDM630 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
-      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
 
-    if ('cloud' in MySettings.oldSettings &&
-        MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+    if ('cloud' in MySettings.oldSettings
+        && MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
       ) {
         this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
   

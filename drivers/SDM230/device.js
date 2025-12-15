@@ -2,17 +2,17 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
 
 const agent = new http.Agent({
   keepAlive: true,
-  keepAliveMsecs : 11000
+  keepAliveMsecs: 11000
 });
 
-//const POLL_INTERVAL = 1000 * 1; // 1 seconds
+// const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
-//const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+// const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
@@ -21,7 +21,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
       const settings = this.getSettings();
-      console.log('Settings for SDM230: ',settings.polling_interval);
+      console.log('Settings for SDM230: ', settings.polling_interval);
 
 
       // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -161,7 +161,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
     Promise.resolve().then(async () => {
 
-      //let res = await fetch(`${this.url}/data`);
+      // let res = await fetch(`${this.url}/data`);
 
       const res = await fetch(`${this.url}/data`, {
           agent,
@@ -268,17 +268,17 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     this.log('Settings:', MySettings);
     // Update interval polling
     if (
-      'polling_interval' in MySettings.oldSettings &&
-      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+      'polling_interval' in MySettings.oldSettings
+      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for SDM230 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
-      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
 
-      if ('cloud' in MySettings.oldSettings &&
-        MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+      if ('cloud' in MySettings.oldSettings 
+        && MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
       ) {
         this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
 

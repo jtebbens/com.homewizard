@@ -1,7 +1,9 @@
+'use strict';
+
 const https = require('https');
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -264,7 +266,7 @@ class WebSocketManager {
     this.ws.on('message', (msg) => {
       
       // ✅ RAW message log (exact bytes from device)
-      //this.log(`📡 WS RAW: ${msg.toString()}`);
+      // this.log(`📡 WS RAW: ${msg.toString()}`);
 
       let data;
       try { data = JSON.parse(msg.toString()); }
@@ -302,7 +304,7 @@ class WebSocketManager {
     const base = 5000 * this.reconnectAttempts;
     const delay = Math.min(base, 180000); // cap at 3 minutes
     const jitter = delay * (0.9 + Math.random() * 0.2);
-    this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter/1000)}s`);
+    this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter / 1000)}s`);
     this._safeSetTimeout(() => {
       this.reconnecting = false;
       this.restartWebSocket();
@@ -326,7 +328,7 @@ class WebSocketManager {
   }
 
   _subscribeTopics() {
-    ['system', 'measurement', 'batteries'].forEach(topic => {
+    ['system', 'measurement', 'batteries'].forEach((topic) => {
       this._safeSend({ type: 'subscribe', data: topic });
     });
     this.wsActive = true;

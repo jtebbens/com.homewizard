@@ -2,8 +2,10 @@
 
 const Homey = require('homey');
 
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 const fetch = require('node-fetch');
+const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
+
 
 const http = require('http');
 
@@ -25,8 +27,8 @@ async function updateCapability(device, capability, value) {
   }
 
   if (!device.hasCapability(capability)) {
-    //device.log(`⚠️ Capability "${capability}" missing — skipping update`);
-    //return;
+    // device.log(`⚠️ Capability "${capability}" missing — skipping update`);
+    // return;
     await device.addCapability(capability).catch(device.error);
     device.log(`➕ Added capability "${capability}"`);
   }
@@ -88,7 +90,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       await this.setSettings({ polling_interval: 10 });
     }
 
-    this.log('Polling settings for P1 apiv1: ',settings.polling_interval);
+    this.log('Polling settings for P1 apiv1: ', settings.polling_interval);
     
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
@@ -105,9 +107,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       if (this.hasCapability('meter_gas'))
       { await this.removeCapability('meter_gas'); }
       if (this.hasCapability('measure_gas'))
-      {await this.removeCapability('measure_gas'); }
+      { await this.removeCapability('measure_gas'); }
       if (this.hasCapability('meter_gas'))
-      {await this.removeCapability('meter_gas.daily');}
+      { await this.removeCapability('meter_gas.daily'); }
     }
 
     // Check if polling interval is set in settings, if not set default to 10 seconds
@@ -127,6 +129,38 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.registerCapabilityListener('identify', async (value) => {
       await this.onIdentify();
     });
+
+
+    // --- Baseload Monitor Integration (v1 only) ---
+    this._baseloadNotificationsEnabled = this.getSetting('baseload_notifications') ?? true;
+    const app = this.homey.app;
+
+    // Create the monitor if it doesn't exist yet
+    if (!app.baseloadMonitor) {
+      app.baseloadMonitor = new BaseloadMonitor(this.homey);
+    }
+
+    // Register this device with the monitor
+    app.baseloadMonitor.registerP1Device(this);
+
+    // Attempt to become the master P1 source (first device wins)
+    app.baseloadMonitor.trySetMaster(this);
+
+    // Notifications
+    app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+
+    // Overload notification true/false
+    this._phaseOverloadNotificationsEnabled = this.getSetting('phase_overload_notifications') ?? true;
+
+    this._phaseOverloadState = {
+      l1: { highCount: 0, notified: false },
+      l2: { highCount: 0, notified: false },
+      l3: { highCount: 0, notified: false }
+    };
+
+
+
+
   }
 
   flowTriggerTariff(device, tokens) {
@@ -139,6 +173,19 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   flowTriggerExport(device, tokens) {
     this._flowTriggerExport.trigger(device, tokens).catch(this.error);
+  }
+
+    /**
+   * Called whenever a new P1 power value is received.
+   * Integrate this into your existing polling logic.
+   */
+  _onNewPowerValue(power) {
+    const app = this.homey.app;
+
+    // Forward to baseload monitor (only if this device is master)
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.updatePowerFromDevice(this, power);
+    }
   }
 
   async onIdentify() {
@@ -164,6 +211,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   
 
   onDeleted() {
+    const app = this.homey.app;
+
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.unregisterP1Device(this);
+    }
+
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -263,7 +316,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
 async onPoll() {
 
-    let settings = this.getSettings();
+    const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
@@ -286,7 +339,7 @@ async onPoll() {
         const homey_lang = this.homey.i18n.getLanguage();
             
 
-        //const res = await fetch(`${this.url}/data`);
+        // const res = await fetch(`${this.url}/data`);
         const res = await fetch(`${this.url}/data`, {
             agent,
             method: 'GET',
@@ -376,6 +429,9 @@ async onPoll() {
 
           // Save export data check if capabilities are present first
           await updateCapability(this, 'measure_power', data.active_power_w).catch(this.error);
+          // Forward the power sample to the baseload monitor
+          this._onNewPowerValue(data.active_power_w);
+
           await updateCapability(this, 'rssi', data.wifi_strength).catch(this.error);
           await updateCapability(this, 'tariff', data.active_tariff).catch(this.error);
           await updateCapability(this, 'identify', 'identify'); // or another placeholder value if needed
@@ -429,9 +485,9 @@ async onPoll() {
 
           // aggregated meter for Power by the hour support
           // Ensure meter_power exists and update value based on firmware
-          const netImport =
-            data.total_power_import_kwh === undefined
-              ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) - (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
+          const netImport = data.total_power_import_kwh === undefined
+              ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) 
+                - (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
               : data.total_power_import_kwh - data.total_power_export_kwh;
 
           await updateCapability(this, 'meter_power', netImport).catch(this.error);
@@ -497,22 +553,11 @@ async onPoll() {
 
           //
           if (data.active_current_l1_a !== undefined) {
-            const tempCurrentPhase1Load = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
-
-            await updateCapability(this, 'net_load_phase1_pct', tempCurrentPhase1Load).catch(this.error);
-
-            if (tempCurrentPhase1Load > 97) {
-                if (homey_lang == "nl") {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Fase 1 overbelast 97%`
-                });  
-                } else {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Phase 1 overloaded 97%`
-                    });
-                }
-            }
+            const load1 = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
+            await updateCapability(this, 'net_load_phase1_pct', load1).catch(this.error);
+            this._handlePhaseOverload('l1', load1, homey_lang);
           }
+
 
           // Rewrite Voltage/Amp Phase 2 and 3 (this part will be skipped if netgrid is only 1 phase)
 
@@ -520,9 +565,9 @@ async onPoll() {
 
               try {
                 if (
-                  settings.number_of_phases === undefined ||
-                  settings.number_of_phases === null ||
-                  Number(settings.number_of_phases) === 1
+                  settings.number_of_phases === undefined
+                  || settings.number_of_phases === null
+                  || Number(settings.number_of_phases) === 1
                 ) {
                   await this.setSettings({ number_of_phases: 3 });
                   console.log('number_of_phases successfully updated to 3');
@@ -555,47 +600,20 @@ async onPoll() {
 
 
               if (data.active_current_l2_a !== undefined) {
-                const tempCurrentPhase2Load = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
-
-                
-                await updateCapability(this, 'net_load_phase2_pct', tempCurrentPhase2Load).catch(this.error);
-                
-
-                if (tempCurrentPhase2Load > 97) {
-                  if (homey_lang == "nl") {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Fase 2 overbelast 97%`
-                });  
-                } else {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Phase 2 overloaded 97%`
-                    });
-                }
-                }
+                const load2 = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
+                await updateCapability(this, 'net_load_phase2_pct', load2).catch(this.error);
+                this._handlePhaseOverload('l2', load2, homey_lang);
               }
 
               await updateCapability(this, 'measure_current.l3', data.active_current_l3_a).catch(this.error);
 
 
               if (data.active_current_l3_a !== undefined) {
-                const tempCurrentPhase3Load = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
-
-                
-                await updateCapability(this, 'net_load_phase3_pct', tempCurrentPhase3Load).catch(this.error);
-                
-
-                if (tempCurrentPhase3Load > 97) {
-                  if (homey_lang == "nl") {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Fase 3 overbelast 97%`
-                });  
-                } else {
-                    await this.homey.notifications.createNotification({
-                    excerpt: `Phase 3 overloaded 97%`
-                    });
-                }
-                }
+                const load3 = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
+                await updateCapability(this, 'net_load_phase3_pct', load3).catch(this.error);
+                this._handlePhaseOverload('l3', load3, homey_lang);
               }
+
 
           } // END OF PHASE 2 and 3 Capabilities
 
@@ -683,24 +701,50 @@ async onPoll() {
 
   }
 
+  _handlePhaseOverload(phaseKey, loadPct, lang) {
+  const state = this._phaseOverloadState[phaseKey];
+
+  // Debounce: 3 opeenvolgende samples boven 97%
+  if (loadPct > 97) {
+    state.highCount++;
+
+    if (!state.notified && state.highCount >= 3 && this._phaseOverloadNotificationsEnabled) {
+      const phaseNum = phaseKey.replace('l', ''); // l1 → 1
+      const msg = lang === 'nl'
+        ? `Fase ${phaseNum} overbelast (${loadPct.toFixed(0)}%)`
+        : `Phase ${phaseNum} overloaded (${loadPct.toFixed(0)}%)`;
+
+      this.homey.notifications.createNotification({ excerpt: msg }).catch(this.error);
+      state.notified = true;
+    }
+  } else {
+    // Hysterese: reset pas onder 85%
+    if (loadPct < 85) {
+      state.highCount = 0;
+      state.notified = false;
+    }
+  }
+}
+
+
     // Catch offset updates
     async onSettings(MySettings) {
       this.log('Settings updated');
       this.log('Settings:', MySettings);
       // Update interval polling
       if (
-        'polling_interval' in MySettings.oldSettings &&
-        MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+        'polling_interval' in MySettings.oldSettings
+        && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
       ) {
         this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
         clearInterval(this.onPollInterval);
-        //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+        // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
         const settings = this.getSettings();
         this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
       }
 
-      if ('cloud' in MySettings.oldSettings &&
-        MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
+      if ('cloud' in MySettings.oldSettings 
+        && MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
       ) {
         this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
   
@@ -715,7 +759,21 @@ async onPoll() {
             this.error('Failed to update cloud connection:', err);
         }
       }
-      // return true;
+
+      if ('baseload_notifications' in MySettings.newSettings) {
+        this._baseloadNotificationsEnabled = MySettings.newSettings.baseload_notifications;
+        const app = this.homey.app;
+        if (app.baseloadMonitor) {
+          app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+        }
+        this.log('Baseload notifications changed to:', this._baseloadNotificationsEnabled);
+      }
+
+      if ('phase_overload_notifications' in MySettings.newSettings) {
+        this._phaseOverloadNotificationsEnabled = MySettings.newSettings.phase_overload_notifications;
+        this.log('Phase overload notifications changed to:', this._phaseOverloadNotificationsEnabled);
+      }
+
     }
      
 

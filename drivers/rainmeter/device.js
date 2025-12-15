@@ -13,9 +13,9 @@ class HomeWizardRainmeter extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    //console.log(`HomeWizard Rainmeter ${this.getName()} has been inited`);
+    // console.log(`HomeWizard Rainmeter ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('rainmeter').getDevices();
     devices.forEach((device) => {

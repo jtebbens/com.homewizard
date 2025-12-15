@@ -1,5 +1,8 @@
 {
-  "extends": "athom",
+  "env": {
+    "node": true,
+    "es2021": true
+  },
   "rules": {
     "brace-style": "off",
     "camelcase": "off",
@@ -14,17 +17,30 @@
     "no-cond-assign": "off",
     "no-console": "off",
     "no-const-assign": "off",
-    "no-const-assignt": "off",
     "no-constant-condition": "off",
     "no-mixed-spaces-and-tabs": "off",
     "no-new": "off",
+    "no-trailing-spaces": "off",
     "no-restricted-syntax": "off",
     "no-tabs": "off",
     "no-undef": "off",
+    "comma-dangle": "off",
     "no-unused-vars": "off",
+    "no-multi-spaces": "off",
     "node/no-unsupported-features/node-builtins": "off",
+    "no-multiple-empty-lines": "off",
+    "padding-line-between-statements": "off",
     "radix": "off",
+    "indent": "off",
     "valid-typeof": "off",
-    "linebreak-style":0
+    "import/no-commonjs": "off",
+    "no-useless-concat": "off",
+    "linebreak-style": 0,
+    "object-curly-newline": "off",
+    "object-property-newline": "off",
+    "quote-props": "off",
+    "node/no-commonjs": "off",
+    "quotes": "off",
+    "prefer-template": "off"
   }
 }

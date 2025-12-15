@@ -10,7 +10,7 @@ let homewizard_devices;
 class HomeWizardKakusensors extends Homey.Driver {
 
   onInit() {
-    //console.log('HomeWizard Kakusensors has been inited');
+    // console.log('HomeWizard Kakusensors has been inited');
   }
 
   async onPair(socket) {

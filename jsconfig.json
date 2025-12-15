@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es2020",
-    "checkJs": true,
+    "target": "esnext",
+    "checkJs": false,
     "allowJs": true,
     "noEmit": true,
     "strict": false,               // disables strict type checks
     "baseUrl": ".",                // enables relative imports
-    "typeRoots": ["./types"]       // optional: for custom Homey types
+    "types": ["node"],
+    "sourceMap": true
   },
   "exclude": ["node_modules"]
 }

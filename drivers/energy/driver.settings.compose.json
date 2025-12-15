@@ -27,7 +27,7 @@
     "type": "number",
     "label": { "en": "Cloud connection 1=on 0=off",
                 "nl": "Cloud verbinding 1=actief 0=uit"
-   },
+    },
     "value": 1
   },
   {
@@ -35,7 +35,7 @@
     "type": "text",
     "label": { "en": "url",
                 "nl": "url"
-   }
+    }
   },
   {
   "id": "show_gas",
@@ -45,5 +45,24 @@
     "nl": "Gas meter weergeven"
   },
   "value": true
- }  
+  },
+  {
+    "id": "baseload_notifications",
+    "type": "checkbox",
+    "label": {
+      "en": "Enable baseload notifications",
+      "nl": "Sluipverbruik meldingen inschakelen"
+    },
+    "value": true
+  },
+  {
+    "id": "phase_overload_notifications",
+    "type": "checkbox",
+    "label": {
+      "en": "Phase overload notifications",
+      "nl": "Fase-overbelasting meldingen"
+    },
+    "value": true
+  }
+  
 ]

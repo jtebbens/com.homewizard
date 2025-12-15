@@ -9,7 +9,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 class HomeWizardThermometer extends Homey.Driver {
 
   onInit() {
-    //console.log('HomeWizard Thermometer has been inited');
+    // console.log('HomeWizard Thermometer has been inited');
   }
 
   async onPair(socket) {
@@ -18,13 +18,13 @@ class HomeWizardThermometer extends Homey.Driver {
     await socket.showView('start');
 
     // Show the next view
-    //await socket.nextView();
+    // await socket.nextView();
 
     // Show the previous view
-    //await socket.prevView();
+    // await socket.prevView();
 
     // Close the pair session
-    //await socket.done();
+    // await socket.done();
 
     // Received when a view has changed
     await socket.setHandler('showView', (viewId) => {

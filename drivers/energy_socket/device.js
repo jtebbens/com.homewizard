@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
 const fetch = require('node-fetch');
 
 const http = require('http');
@@ -31,7 +31,7 @@ async function updateCapability(device, capability, value) {
 
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
-    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    // device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
@@ -162,7 +162,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         }
 
         attempt++;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Optional backoff
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Optional backoff
       }
     }
   }

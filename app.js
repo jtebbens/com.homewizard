@@ -1,24 +1,26 @@
 'use strict';
 
 const Homey = require('homey');
-//const v8 = require('v8');
+// const v8 = require('v8');
 
 const Testing = false;
 
 class HomeWizardApp extends Homey.App {
   onInit() {
     this.log('HomeWizard app ready!');
+    this.baseloadMonitor = null;
+    this.p1Source = null;
 
       if (process.env.DEBUG === '1' && Testing) {
-        try{ 
+        try { 
           require('inspector').waitForDebugger();
         }
-        catch(error){
+        catch (error) {
           require('inspector').open(9225, '0.0.0.0', true);
       }
     
     // Only enable memory monitor when running locally (CLI dev mode)
-    /*if (Homey.platform === 'local') {
+    /* if (Homey.platform === 'local') {
       this._memInterval = setInterval(() => {
         try {
           const hs = v8.getHeapStatistics();

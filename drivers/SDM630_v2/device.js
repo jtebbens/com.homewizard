@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
-//const POLL_INTERVAL = 1000 * 1; // 1 seconds
+// const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 function normalizeBatteryMode(data) {
   const knownModes = [
@@ -41,7 +41,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
     this.log('Token:', this.token);
@@ -50,7 +50,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     await this._registerCapabilityListeners();
 
     const settings = this.getSettings();
-    console.log('Settings for SDM630 apiv2: ',settings.polling_interval);
+    console.log('Settings for SDM630 apiv2: ', settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
@@ -61,10 +61,10 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
       });
     }
 
-    //Condition Card
-    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
+    // Condition Card
+    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
-      //this.log('CheckBatteryModeCard');
+      // this.log('CheckBatteryModeCard');
         
       return new Promise(async (resolve, reject) => {
         try {
@@ -474,16 +474,16 @@ async onPoll() {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling
-    if ('polling_interval' in MySettings.oldSettings &&
-      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+    if ('polling_interval' in MySettings.oldSettings
+      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
-      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
-    if ('mode' in MySettings.oldSettings &&
-      MySettings.oldSettings.mode !== MySettings.newSettings.mode
+    if ('mode' in MySettings.oldSettings
+      && MySettings.oldSettings.mode !== MySettings.newSettings.mode
     ) {
       this.log('Mode for Plugin Battery via SDM230 advanced settings changed to:', MySettings.newSettings.mode);
       api.setMode(this.url, this.token, MySettings.newSettings.mode);

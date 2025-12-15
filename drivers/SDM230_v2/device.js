@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const api = require('../../includes/v2/Api');
 
-//const POLL_INTERVAL = 1000 * 1; // 1 seconds
+// const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 function normalizeBatteryMode(data) {
   const knownModes = [
@@ -39,7 +39,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
   async onInit() {
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
     this.log('Token:', this.token);
@@ -48,7 +48,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     await this._registerCapabilityListeners();
 
     const settings = this.getSettings();
-    console.log('Settings for SDM230 apiv2: ',settings.polling_interval);
+    console.log('Settings for SDM230 apiv2: ', settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
@@ -59,10 +59,10 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       });
     }
 
-    //Condition Card
-    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode')
+    // Condition Card
+    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
-      //this.log('CheckBatteryModeCard');
+      // this.log('CheckBatteryModeCard');
         
       return new Promise(async (resolve, reject) => {
         try {
@@ -86,9 +86,9 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     this.homey.flow.getActionCard('sdm230-set-battery-to-zero-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Zero Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
-       return new Promise(async (resolve, reject) => {
+      // this.log('This url:', this.url);
+      // this.log('This token:', this.token);
+        return new Promise(async (resolve, reject) => {
         try {
           const response = await api.setMode(this.url, this.token, 'zero'); 
 
@@ -102,13 +102,13 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
       });
-    })
+    });
 
     this.homey.flow.getActionCard('sdm230-set-battery-to-full-charge-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Full Charge Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
+      // this.log('This url:', this.url);
+      // this.log('This token:', this.token);
       return new Promise(async (resolve, reject) => {
       try {
           const response = await api.setMode(this.url, this.token, 'to_full');
@@ -123,13 +123,13 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
         });
-    })
+    });
 
     this.homey.flow.getActionCard('sdm230-set-battery-to-standby-mode')
     .registerRunListener(async () => {
       this.log('ActionCard: Set Battery to Standby Mode');
-      //this.log('This url:', this.url);
-      //this.log('This token:', this.token);
+      // this.log('This url:', this.url);
+      // this.log('This token:', this.token);
       return new Promise(async (resolve, reject) => {
       try {
           const response = await api.setMode(this.url, this.token, 'standby');
@@ -144,7 +144,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
         });
-    })
+    });
 
     // Zero Charge Only
     this.homey.flow.getActionCard('sdm230-set-battery-to-zero-charge-only-mode')
@@ -416,16 +416,16 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     this.log('Settings updated');
     this.log('Settings:', MySettings);
     // Update interval polling
-    if ('polling_interval' in MySettings.oldSettings &&
-      MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
+    if ('polling_interval' in MySettings.oldSettings
+      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
     ) {
       this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
-      //this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
+      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
       this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
     }
-    if ('mode' in MySettings.oldSettings &&
-      MySettings.oldSettings.mode !== MySettings.newSettings.mode
+    if ('mode' in MySettings.oldSettings
+      && MySettings.oldSettings.mode !== MySettings.newSettings.mode
     ) {
       this.log('Mode for Plugin Battery via SDM230 advanced settings changed to:', MySettings.newSettings.mode);
       api.setMode(this.url, this.token, MySettings.newSettings.mode);

@@ -1,10 +1,12 @@
 'use strict';
 
 const Homey = require('homey');
-const api = require('../../includes/v2/Api');
-const WebSocketManager = require('../../includes/v2/Ws');
 const fetch = require('node-fetch');
-//const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('../../includes/utils/fetchQueue');
+const https = require('https');
+const WebSocketManager = require('../../includes/v2/Ws');
+
+const api = require('../../includes/v2/Api');
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -13,8 +15,6 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
 });
-
-const https = require('https');
 
 // Create an agent that skips TLS verification
 const agent = new https.Agent({
@@ -172,7 +172,7 @@ async function updateCapability(device, capability, value) {
 
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
-    //device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    //  device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
@@ -195,7 +195,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    //await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    //  await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.previousChargingState = null;
     this.previousTimeToEmpty = null;
@@ -204,7 +204,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.token = await this.getStoreValue('token');
     console.log('PIB Token:', this.token);
 
-    let settings = this.getSettings();
+    const settings = this.getSettings();
     this.log('Settings for Plugin Battery: ', settings.polling_interval);
 
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
@@ -230,7 +230,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       getSetting: this.getSetting.bind(this),
       handleMeasurement: this._handleMeasurement.bind(this),
       handleSystem: this._handleSystem.bind(this),
-      //handleBatteries: this._handleBatteries.bind(this)
+      // handleBatteries: this._handleBatteries.bind(this)
     });
     this.wsManager.start();
   
@@ -390,10 +390,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.lastMeasurementAt = Date.now();
 
     let time_to_empty = null;
-    let time_to_full  = null;
+    let time_to_full = null;
     const BATTERY_CAPACITY_WH = 2470;
 
-    //this.log('🔎 WS measurement payload:', JSON.stringify(data));
+    // this.log('🔎 WS measurement payload:', JSON.stringify(data));
 
     // Power and measurement capabilities (use updateCapability helper)
     await updateCapability(this, 'meter_power.import', data.energy_import_kwh ?? null).catch(this.error);
@@ -435,15 +435,15 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // Time to full / empty calculations (guard against divide-by-zero)
     if (typeof data.state_of_charge_pct === 'number' && typeof data.power_w === 'number') {
       if (data.power_w > 10) {
-        let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
-        time_to_full = (BATTERY_CAPACITY_WH - current_battery_capacity) / data.power_w * 60;
+        const current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
+        time_to_full = (BATTERY_CAPACITY_WH - current_battery_capacity) / (data.power_w * 60);
         await updateCapability(this, 'time_to_full', Math.round(time_to_full)).catch(this.error);
         await updateCapability(this, 'time_to_empty', 0).catch(this.error);
 
       }
 
       if (data.power_w < -10) {
-        let current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
+        const current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
         time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
         await updateCapability(this, 'time_to_empty', Math.round(time_to_empty)).catch(this.error);
         await updateCapability(this, 'time_to_full', 0).catch(this.error);
@@ -527,7 +527,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     if (!driftResult.drift && this.driftActive) {
       this.driftActive = false;
-      this.log(`✅ SoC drift resolved.`);
+      this.log('✅ SoC drift resolved.');
     }
   }
 

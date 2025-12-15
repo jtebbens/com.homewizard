@@ -1,12 +1,10 @@
 'use strict';
 
 const Homey = require('homey');
-
-const fetch = require('../../includes/utils/fetchQueue');
-//const fetch = require('node-fetch');
 const http = require('http');
-
-//const cache = {}; // Cache object to store the callnew responses
+const fetch = require('../utils/fetchQueue');
+// const fetch = require('node-fetch');
+// const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
@@ -101,7 +99,7 @@ module.exports = (function() {
           ) {
             if (typeof callback === 'function') {
               // Cache the response with timestamp
-              //cache[cacheKey] = {
+              // cache[cacheKey] = {
               //  response: jsonData.response,
               //  timestamp: currentTime,
              // };

@@ -35,6 +35,9 @@
     "measure_current.l1",
     "measure_current.l2",
     "measure_current.l3",
+    "net_load_phase1_pct",
+    "net_load_phase2_pct",
+    "net_load_phase3_pct",
     "measure_voltage.l1",
     "measure_voltage.l2",
     "measure_voltage.l3",
@@ -125,6 +128,24 @@
       "title": {
         "en": "Current Amp phase 3",
         "nl": "Huidig Amp fase 3"
+      }
+    },
+    "net_load_phase1_pct" :{
+      "title": {
+        "en": "Phase 1 load %",
+        "nl": "Fase 1 belasting %"
+      }
+    },
+    "net_load_phase2_pct" :{
+      "title": {
+    "en": "Phase 2 load %",
+    "nl": "Fase 2 belasting %"
+      }
+    },
+    "net_load_phase3_pct" :{
+      "title": {
+    "en": "Phase 3 load %",
+    "nl": "Fase 3 belasting %"
       }
     },
     "measure_voltage": {

@@ -1,0 +1,18 @@
+{
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.validate": ["javascript"],
+  "eslint.options": {
+    "overrideConfig": {
+      "rules": {
+        "node/no-commonjs": "off",
+        "import/no-commonjs": "off",
+        "no-useless-concat": "off",
+        "prefer-template": "off"
+      }
+    }
+  },
+  "javascript.validate.enable": false,
+  "typescript.validate.enable": false,
+  "typescript.disableAutomaticTypeAcquisition": true,
+  "eslint.run": "onSave"
+}
