@@ -760,5 +760,8 @@
   },
   "3.9.8": {
     "en": "New Feature: Baseload (sluipverbruik) detection (experimental)"
+  },
+  "3.9.9": {
+    "en": "Bugfix: energy_socket connection_error capability fix"
   }
 }
