@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.9",
+  "version": "3.9.10",
   "platforms": [
     "local"
   ],
@@ -102,6 +102,79 @@
             "example": 15
           }
         ]
+      },
+      {
+        "id": "meter_power.import",
+        "title": {
+          "en": "Import power changed",
+          "nl": "Importvermogen gewijzigd"
+        },
+        "titleFormatted": {
+          "en": "Import power changed",
+          "nl": "Importvermogen gewijzigd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=SDM230_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "import_power",
+            "type": "number",
+            "title": {
+              "en": "Import Power (W)",
+              "nl": "Importvermogen (W)"
+            }
+          }
+        ]
+      },
+      {
+        "id": "meter_power.export",
+        "title": {
+          "en": "Export power changed",
+          "nl": "Exportvermogen gewijzigd"
+        },
+        "titleFormatted": {
+          "en": "Export power changed",
+          "nl": "Exportvermogen gewijzigd"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=SDM230_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "export_power",
+            "type": "number",
+            "title": {
+              "en": "Export Power (W)",
+              "nl": "Exportvermogen (W)"
+            }
+          }
+        ]
+      },
+      {
+        "id": "battery_mode_changed_SDM230_v2",
+        "title": {
+          "en": "Battery mode changed"
+        },
+        "titleFormatted": {
+          "en": "Battery mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=SDM230_v2"
+          }
+        ],
+        "tokens": []
       },
       {
         "id": "tariff_changed",
@@ -2924,6 +2997,14 @@
           "id": "authorize",
           "navigation": {
             "prev": "list_devices"
+          }
+        }
+      ],
+      "repair": [
+        {
+          "id": "authorize",
+          "navigation": {
+            "prev": null
           }
         }
       ],
