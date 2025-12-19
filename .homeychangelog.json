@@ -763,5 +763,8 @@
   },
   "3.9.9": {
     "en": "Bugfix: energy_socket connection_error capability fix"
+  },
+  "3.9.10": {
+    "en": "Multiple bugfixes (energy_socket, energy_v2, sdm230_v2, pair token with new SHS"
   }
 }
