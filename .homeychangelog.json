@@ -769,5 +769,8 @@
   },
   "3.9.11": {
     "en": "Bugfix: APIv2 pairing"
+  },
+  "3.9.12": {
+    "en": "Rollback random username to something easy"
   }
 }
