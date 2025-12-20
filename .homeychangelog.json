@@ -772,5 +772,8 @@
   },
   "3.9.12": {
     "en": "Rollback random username to something easy"
+  },
+  "3.9.13": {
+    "en": "Bugfix: APIv2 pairing -> local/homey_xxxxxx"
   }
 }
