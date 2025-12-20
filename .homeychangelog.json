@@ -766,5 +766,8 @@
   },
   "3.9.10": {
     "en": "Multiple bugfixes (energy_socket, energy_v2, sdm230_v2, pair token with new SHS"
+  },
+  "3.9.11": {
+    "en": "Bugfix: APIv2 pairing"
   }
 }

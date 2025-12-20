@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.10",
+  "version": "3.9.11",
   "platforms": [
     "local"
   ],
@@ -2997,14 +2997,6 @@
           "id": "authorize",
           "navigation": {
             "prev": "list_devices"
-          }
-        }
-      ],
-      "repair": [
-        {
-          "id": "authorize",
-          "navigation": {
-            "prev": null
           }
         }
       ],
