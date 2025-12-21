@@ -44,7 +44,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
-    this.log('Token:', this.token);
+    //this.log('Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -434,12 +434,6 @@ async onPoll() {
 
     await Promise.allSettled(setCapabilityPromises);
 
-    // After setting capabilities
-    await this._triggerFlowOnChange('measure_power', data.power_w);
-    await this._triggerFlowOnChange('measure_power.l1', data.power_l1_w);
-    await this._triggerFlowOnChange('measure_power.l2', data.power_l2_w);
-    await this._triggerFlowOnChange('measure_power.l3', data.power_l3_w);
-
     // For battery mode
     
     const batteryMode = await api.getMode(this.url, this.token);
@@ -457,8 +451,9 @@ async onPoll() {
       await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
 
       // ✅ Flow triggers MUST be inside this block
-      await this._triggerFlowOnChange('battery_mode', normalized);
-      await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+      // await this._triggerFlowOnChange('battery_mode', normalized);
+      await this._triggerFlowOnChange('battery_mode_changed_SDM630_v2', normalized);
+      // await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
     }
 
     // If everything succeeded

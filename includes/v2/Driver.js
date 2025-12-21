@@ -14,7 +14,7 @@ const https = require('https');
  */
 async function requestToken(address) {
   const payload = {
-    name: 'local/homey_user',
+    name: `local/homey_${Math.random().toString(16).substr(2, 6)}`,
   };
 
   console.log('Trying to get token...');

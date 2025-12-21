@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 
-// const fetch = require('../../includes/utils/fetchQueue');
-const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
+
 
 const http = require('http');
 
@@ -36,24 +36,39 @@ async function updateCapability(device, capability, value) {
 }
 
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return res;
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Fetch timeout'));
+    }, timeout);
+
+    fetch(url, options)
+      .then(async res => {
+        clearTimeout(timer);
+
+        const text = await res.text();
+        try {
+          resolve(JSON.parse(text));
+        } catch {
+          resolve(text);
+        }
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
+
+
+
+
 
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
-    await this.setCapabilityValue('connection_error', 'No errors');
+    await updateCapability(this, 'connection_error', 'No errors').catch(this.error);
 
     // Pull custom polling interval, if not set default is 10s with minimum of 2s
     const custom_interval = Math.max(this.getSetting('offset_polling') || 10, 2);
@@ -157,7 +172,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         this.error(`Attempt ${attempt + 1} failed:`, err);
 
         if (attempt === maxRetries) {
-          await this.setCapabilityValue('connection_error', 'fetch failed');
+          await updateCapability(this, 'connection_error', 'fetch failed').catch(this.error);
+          
           throw new Error('Network error during onRequest');
         }
 
@@ -183,7 +199,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     }
 
     if (!res || !res.ok) {
-      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
+      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed').catch(this.error);
+      
       throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
   }
@@ -261,17 +278,15 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       try {
         // Use timeout wrapper to avoid hanging requests
-        const res = await fetchWithTimeout(`${this.url}/data`, {
+        const data = await fetchWithTimeout(`${this.url}/data`, {
           agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         }, 5000); // 5s timeout
 
-        if (!res || !res.ok) {
-          throw new Error(res ? res.statusText : 'Unknown error during fetch');
-        }
+        if (!data || typeof data !== 'object') { throw new Error('Invalid response format'); }
 
-        const data = await res.json();
+        // const data = await res.json();
         const offset_socket = this.getSetting('offset_socket') || 0;
         const temp_socket_watt = data.active_power_w + offset_socket;
 
@@ -366,18 +381,15 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       try {
         // Use timeout wrapper
-        const res = await fetchWithTimeout(`${this.url}/state`, {
+        const data = await fetchWithTimeout(`${this.url}/state`, {
           agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         }, 5000); // 5s timeout
 
-        if (!res.ok) {
-          this.error(`Polling failed with status ${res.status}: ${res.statusText}`);
-          throw new Error(res.statusText);
-        }
+        if (!data || typeof data !== 'object') { throw new Error('Invalid response format'); }
 
-        const data = await res.json();
+        //const data = await res.json();
         if (!data || typeof data !== 'object') {
           throw new Error('Invalid response format');
         }

@@ -1,4 +1,12 @@
-{
+{"triggers": [
+    {
+      "id": "battery_mode_changed_SDM630_v2",
+      "title": { "en": "Battery mode changed" },
+      "titleFormatted": { "en": "Battery mode changed" },
+      "args": [],
+      "tokens": []
+    }
+  ],
   "actions": [
     {
       "id": "sdm630-set-battery-to-full-charge-mode",

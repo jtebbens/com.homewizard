@@ -1,12 +1,12 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+//const fetch = require('node-fetch');
 const https = require('https');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
 
-// const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('../../includes/utils/fetchQueue');
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -32,42 +32,86 @@ const agent = new https.Agent({
  * @returns {Promise<void>} 
  */
 async function updateCapability(device, capability, value) {
-  const current = device.getCapabilityValue(capability);
+  try {
+    const current = device.getCapabilityValue(capability);
 
-  if (value == null) {
-    if (device.hasCapability(capability) && current !== null) {
-      await device.removeCapability(capability).catch(device.error);
-      device.log(`🗑️ Removed capability "${capability}"`);
+    if (value == null) {
+      if (device.hasCapability(capability) && current !== null) {
+        await device.removeCapability(capability);
+        device.log(`🗑️ Removed capability "${capability}"`);
+      }
+      return;
     }
-    return;
-  }
 
-  if (!device.hasCapability(capability)) {
-    await device.addCapability(capability).catch(device.error);
-    device.log(`➕ Added capability "${capability}"`);
-  }
+    if (!device.hasCapability(capability)) {
+      await device.addCapability(capability);
+      device.log(`➕ Added capability "${capability}"`);
+    }
 
-  if (current !== value) {
-    await device.setCapabilityValue(capability, value).catch(device.error);
-    // device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    if (current !== value) {
+      await device.setCapabilityValue(capability, value);
+    }
+  } catch (err) {
+    if (err.message === 'device_not_found') {
+      device.log(`⚠️ Skipping capability "${capability}" — device not found`);
+      return;
+    }
+    device.error(`❌ Failed updateCapability("${capability}")`, err);
   }
 }
+
+async function setStoreValueSafe(device, key, value) {
+  try {
+    return await device.setStoreValue(key, value);
+  } catch (err) {
+    if (err.message === 'device_not_found') {
+      device.log(`⚠️ Skipping setStoreValue("${key}") — device not found`);
+      return null;
+    }
+    device.error(`❌ Failed setStoreValue("${key}")`, err);
+    return null;
+  }
+}
+
+async function getStoreValueSafe(device, key) {
+  try {
+    return await device.getStoreValue(key);
+  } catch (err) {
+    if (err.message === 'device_not_found') {
+      device.log(`⚠️ Skipping getStoreValue("${key}") — device not found`);
+      return null;
+    }
+    device.error(`❌ Failed getStoreValue("${key}")`, err);
+    return null;
+  }
+}
+
 
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return await res.json();
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Fetch timeout'));
+    }, timeout);
+
+    fetch(url, options)
+      .then(async res => {
+        clearTimeout(timer);
+
+        // Safely parse JSON or return text
+        const text = await res.text();
+        try {
+          resolve(JSON.parse(text));
+        } catch {
+          resolve(text);
+        }
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
+
 
 
 /**
@@ -209,8 +253,8 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
     await updateCapability(this, 'connection_error', 'No errors').catch(this.error);
 
-    this.token = await this.getStoreValue('token');
-    console.log('P1 Token:', this.token);
+    this.token = await getStoreValueSafe(this, 'token');
+    //console.log('P1 Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -495,7 +539,7 @@ this.homey.flow
       l3: { highCount: 0, notified: false }
     };
     
-  }
+  } 
 
   flowTriggerBatteryMode(device, tokens) {
     this._flowTriggerBatteryMode.trigger(device, tokens).catch(this.error);
@@ -601,21 +645,20 @@ async _handleMeasurement(m) {
     await updateCapability(this, 'measure_power.l3', m.power_l3_w).catch(this.error);
   }
 
-
   if (m.current_l1_a !== undefined) {
-    const load1 = Math.abs((m.current_l1_a / settings.phase_capacity) * 100);
+    const load1 = Math.abs((m.current_l1_a / settings.grid_phase_amps) * 100);
     await updateCapability(this, 'net_load_phase1_pct', load1).catch(this.error);
     this._handlePhaseOverload('l1', load1, homey_lang);
   }
 
   if (m.current_l2_a !== undefined) {
-    const load2 = Math.abs((m.current_l2_a / settings.phase_capacity) * 100);
+    const load2 = Math.abs((m.current_l2_a / settings.grid_phase_amps) * 100);
     await updateCapability(this, 'net_load_phase2_pct', load2).catch(this.error);
     this._handlePhaseOverload('l2', load2, homey_lang);
   }
 
   if (m.current_l3_a !== undefined) {
-    const load3 = Math.abs((m.current_l3_a / settings.phase_capacity) * 100);
+    const load3 = Math.abs((m.current_l3_a / settings.grid_phase_amps) * 100);
     await updateCapability(this, 'net_load_phase3_pct', load3).catch(this.error);
     this._handlePhaseOverload('l3', load3, homey_lang);
   }
@@ -658,12 +701,12 @@ async _handleMeasurement(m) {
 let gas = null;
 let water = null;
 
-const previousExternal = await this.getStoreValue('external_last_payload');
+const previousExternal = await getStoreValueSafe(this, 'external_last_payload');
 
 if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   // this.log('⏸️ External meter payload unchanged — skipping capability updates');
 
-  const lastResult = await this.getStoreValue('external_last_result');
+  const lastResult = await getStoreValueSafe(this, 'external_last_result');
   gas = lastResult?.gas ?? null;
   water = lastResult?.water ?? null;
 } else {
@@ -673,8 +716,8 @@ if (JSON.stringify(previousExternal) === JSON.stringify(m.external)) {
   gas = result.gas;
   water = result.water;
 
-  await this.setStoreValue('external_last_payload', m.external).catch(this.error);
-  await this.setStoreValue('external_last_result', result).catch(this.error);
+  await setStoreValueSafe(this, 'external_last_payload', m.external);
+  await setStoreValueSafe(this, 'external_last_result', result);
 }
 
 // ✅ GAS DISABLED — remove all gas capabilities and skip all gas logic
@@ -694,41 +737,41 @@ if (!showGas) {
   // Daily reset at midnight
   if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
     if (typeof m.energy_import_kwh === 'number') {
-      await this.setStoreValue('meter_start_day', m.energy_import_kwh).catch(this.error);
+      await setStoreValueSafe(this, 'meter_start_day', m.energy_import_kwh);
     }
     if (typeof gas?.value === 'number') {
-      await this.setStoreValue('gasmeter_start_day', gas.value).catch(this.error);
+      await setStoreValueSafe(this, 'gasmeter_start_day', gas.value);
     }
   } else {
-    const meterStartDay = await this.getStoreValue('meter_start_day');
-    const gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
+    const meterStartDay = await getStoreValueSafe(this, 'meter_start_day');
+    const gasmeterStartDay = await getStoreValueSafe(this, 'gasmeter_start_day');
     if (!meterStartDay && typeof m.energy_import_kwh === 'number') {
-      await this.setStoreValue('meter_start_day', m.energy_import_kwh).catch(this.error);
+      await setStoreValueSafe(this, 'meter_start_day', m.energy_import_kwh);
     }
     if (!gasmeterStartDay && typeof gas?.value === 'number') {
-      await this.setStoreValue('gasmeter_start_day', gas.value).catch(this.error);
+      await setStoreValueSafe(this, 'gasmeter_start_day', gas.value);
     }
   }
 
   // Gas delta every 5 minutes
   const currentMinute = nowLocal.getMinutes();
-  const lastMinute = await this.getStoreValue('last_gas_delta_minute');
+  const lastMinute = await getStoreValueSafe(this, 'last_gas_delta_minute');
 
   if (showGas && currentMinute % 5 === 0 && lastMinute !== currentMinute) {
-    await this.setStoreValue('last_gas_delta_minute', currentMinute).catch(this.error);
+    await setStoreValueSafe(this, 'last_gas_delta_minute', currentMinute);
 
     if (!gas || typeof gas.value !== 'number') {
       return;
     }
 
-    const prevTimestamp = await this.getStoreValue('gasmeter_previous_reading_timestamp');
+    const prevTimestamp = await getStoreValueSafe(this, 'gasmeter_previous_reading_timestamp');
     if (gas.timestamp != null && prevTimestamp == null) {
-      await this.setStoreValue('gasmeter_previous_reading_timestamp', gas.timestamp).catch(this.error);
+      await setStoreValueSafe(this, 'gasmeter_previous_reading_timestamp', gas.timestamp);
       return;
     }
 
     if (gas.timestamp !== prevTimestamp) {
-      const prevReading = await this.getStoreValue('gasmeter_previous_reading');
+      const prevReading = await getStoreValueSafe(this, 'gasmeter_previous_reading');
       if (typeof prevReading === 'number') {
         const delta = gas.value - prevReading;
         if (delta >= 0) {
@@ -739,22 +782,22 @@ if (!showGas) {
         this.log('🆕 No previous gas reading — storing current value');
       }
 
-      await this.setStoreValue('gasmeter_previous_reading', gas.value).catch(this.error);
-      await this.setStoreValue('gasmeter_previous_reading_timestamp', gas.timestamp).catch(this.error);
+      await setStoreValueSafe(this, 'gasmeter_previous_reading', gas.value);
+      await setStoreValueSafe(this, 'gasmeter_previous_reading_timestamp', gas.timestamp);
     } else {
       // this.log(`⏸️ Skipping gas delta — timestamp unchanged (${gas.timestamp})`);
     }
   }
 
   // Daily usage
-  const meterStart = await this.getStoreValue('meter_start_day');
+  const meterStart = await getStoreValueSafe(this, 'meter_start_day');
   if (meterStart != null) {
     const dailyImport = m.energy_import_kwh - meterStart;
     await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
   }
 
   if (showGas) {
-    const gasStart = await this.getStoreValue('gasmeter_start_day');
+    const gasStart = await getStoreValueSafe(this, 'gasmeter_start_day');
     const gasDiff = (gas?.value != null && gasStart != null) ? gas.value - gasStart : null;
     await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
   }
@@ -785,7 +828,7 @@ if (!showGas) {
   ]);
 
 
-  await this.setStoreValue('external_last_payload', m.external).catch(this.error);
+  await setStoreValueSafe(this, 'external_last_payload', m.external);
 }
 
 
@@ -819,11 +862,23 @@ async _handleBatteries(data) {
   }
 
   // Hard guard — correct Homey registry check
-  const driver = this.homey.drivers.getDriver('energy_v2');
-  if (!driver || !driver.getDevice(dataObj)) {
+  let deviceInstance;
+  try {
+    const driver = this.homey.drivers.getDriver('energy_v2');
+    deviceInstance = driver?.getDevice(dataObj);
+  } catch (err) {
+    if (err.message?.includes('Could not get device')) {
+      this.log('⚠️ Ignoring batteries event: device lookup failed');
+      return;
+    }
+    throw err;
+  }
+
+  if (!deviceInstance) {
     this.log('⚠️ Ignoring batteries event: device was deleted (driver lookup)');
     return;
   }
+
 
   // If data is an array, pick the first element
   const battery = Array.isArray(data) ? data[0] : data;
@@ -837,12 +892,12 @@ async _handleBatteries(data) {
   const normalizedMode = normalizeBatteryMode(payload);
 
   // Retrieve previous normalized mode
-  const lastBatteryMode = await this.getStoreValue('last_battery_mode');
+  const lastBatteryMode = await getStoreValueSafe(this, 'last_battery_mode');
 
   // Trigger only when normalized mode changes
   if (normalizedMode !== lastBatteryMode) {
     this.flowTriggerBatteryMode(this);
-    await this.setStoreValue('last_battery_mode', normalizedMode).catch(this.error);
+    await setStoreValueSafe(this, 'last_battery_mode', normalizedMode);
   }
 
   // Update settings
@@ -873,7 +928,7 @@ async _handleBatteries(data) {
   }
 
   // ✅ Store raw WS state for condition card
-  await this.setStoreValue('last_battery_state', {
+  await setStoreValueSafe(this, 'last_battery_state', {
     mode: payload.mode,
     permissions: payload.permissions
   });
@@ -1122,7 +1177,7 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
 
     if (this._triggerFlowPrevious[flow_id] === undefined) {
       this._triggerFlowPrevious[flow_id] = value;
-      await this.setStoreValue(`last_${flow_id}`, value).catch(this.error);
+      await setStoreValueSafe(this, `last_${flow_id}`, value);
       return;
     }
 
@@ -1142,7 +1197,7 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
     this.log(`📦 Token payload:`, { [flow_id]: value });
 
     await card.trigger(this, {}, { [flow_id]: value }).catch(this.error);
-    await this.setStoreValue(`last_${flow_id}`, value).catch(this.error);
+    await setStoreValueSafe(this, `last_${flow_id}`, value);
   }
 
 

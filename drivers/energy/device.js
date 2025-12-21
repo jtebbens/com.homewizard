@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 
-// const fetch = require('../../includes/utils/fetchQueue');
-const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('node-fetch');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 
 
