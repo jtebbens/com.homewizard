@@ -775,5 +775,8 @@
   },
   "3.9.13": {
     "en": "Bugfix: APIv2 pairing -> local/homey_xxxxxx"
+  },
+  "3.9.14": {
+    "en": "Bugfix: SDM630v2 trigger cards removed (obsolete as these are default Homey)"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.13",
+  "version": "3.9.14",
   "platforms": [
     "local"
   ],
@@ -172,6 +172,23 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=SDM230_v2"
+          }
+        ],
+        "tokens": []
+      },
+      {
+        "id": "battery_mode_changed_SDM630_v2",
+        "title": {
+          "en": "Battery mode changed"
+        },
+        "titleFormatted": {
+          "en": "Battery mode changed"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=SDM630_v2"
           }
         ],
         "tokens": []
