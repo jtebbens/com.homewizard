@@ -31,20 +31,29 @@ const agent = new https.Agent({
  * @throws {Error} If the request times out or fetch fails.
  */
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return await res.json();
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Fetch timeout'));
+    }, timeout);
+
+    fetch(url, options)
+      .then(async res => {
+        clearTimeout(timer);
+
+        const text = await res.text();
+        try {
+          resolve(JSON.parse(text));
+        } catch {
+          resolve(text);
+        }
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
+
 
 /**
  * Estimate battery kWh capacity left based on state of charge, cycles and inverter efficiency.
@@ -202,7 +211,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousStateOfCharge = null;
 
     this.token = await this.getStoreValue('token');
-    console.log('PIB Token:', this.token);
+    //console.log('PIB Token:', this.token);
 
     const settings = this.getSettings();
     this.log('Settings for Plugin Battery: ', settings.polling_interval);

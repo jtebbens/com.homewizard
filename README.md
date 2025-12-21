@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.8
+v3.9.14
 
 * New Plugin Battery mode support (zero_charge_only & zero_discharge_only)
 * Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
@@ -17,6 +17,12 @@ v3.9.8
 * Fixed: rare crash when _handleBatteries() ran after a device was deleted, causing Not Found: Device with ID … errors during setStoreValue.
 * Phase overload notification setting added and a limiter to avoid notification flooding
 * New Feature: Baseload (sluipverbruik) detection (experimental)
+* Bugfix: energy_socket connection_error capability fix
+* Bugfix: energy_v2 (handleBatteries) - device_not_found crash
+* Bugfix: trigger cards for SDM230_v2
+* APIv2 change pairing: Modified the username that is used during pair made it unique per homey
+* Bugfix: APIv2 pairing -> local/homey_xxxxxx
+* Bugfix: SDM630v2 trigger cards removed (obsolete as these are default Homey)
 
 v3.8.22
 
@@ -198,4 +204,4 @@ v3.5.1
 
 **You can sponsor my work by donating via paypal.**
 
-[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme2/jtebbens)
+[![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme2/jtebbens)

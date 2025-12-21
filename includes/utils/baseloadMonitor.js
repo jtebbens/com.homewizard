@@ -25,7 +25,7 @@ class BaseloadMonitor {
     //
     // Configuration
     //
-    this.nightStartHour = 2;
+    this.nightStartHour = 1;
     this.nightEndHour = 5;
     this.maxNights = 30;
     this.sampleIntervalMs = 10000;
@@ -76,6 +76,22 @@ class BaseloadMonitor {
     // Load persisted state
     this._loadState();
   }
+
+  _logTime(prefix) {
+  const now = new Date();
+
+  // UTC
+  const utc = now.toISOString();
+
+  // Local time (Homey timezone)
+  const tz = this.homey.clock.getTimezone();
+  const local = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+
+  this.homey.log(
+    `${prefix} | Local: ${local.toISOString()} | UTC: ${utc} | TZ: ${tz}`
+  );
+}
+
 
   //
   // Device registration
@@ -176,6 +192,8 @@ class BaseloadMonitor {
   }
 
   _onNightStart() {
+    // this._logTime('NightStart');
+
     if (!this.enabled) {
       this._scheduleNightWindow();
       return;
@@ -191,6 +209,8 @@ class BaseloadMonitor {
   }
 
   _onNightEnd() {
+    // this._logTime('NightEnd');
+    
     this.homey.clearTimeout(this._nightEndTimer);
     this._nightEndTimer = null;
 

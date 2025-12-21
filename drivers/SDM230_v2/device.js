@@ -42,7 +42,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
-    this.log('Token:', this.token);
+    //this.log('Token:', this.token);
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -389,18 +389,18 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
 
         // Flow triggers
-        await this._triggerFlowOnChange('battery_mode', normalized);
-        await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+        await this._triggerFlowOnChange('battery_mode_changed_SDM230_v2', normalized);
+        //await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
       }
 
     
 
       // Trigger flows when values change
-      await this._triggerFlowOnChange('measure_power', data.power_w);
+      //await this._triggerFlowOnChange('measure_power', data.power_w);
       await this._triggerFlowOnChange('meter_power.import', data.energy_import_kwh);
       await this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh);
-      await this._triggerFlowOnChange('measure_voltage', data.voltage_v);
-      await this._triggerFlowOnChange('measure_current', data.current_a);
+      //await this._triggerFlowOnChange('measure_voltage', data.voltage_v);
+      //await this._triggerFlowOnChange('measure_current', data.current_a);
 
       // If everything succeeded
       await this.setAvailable();

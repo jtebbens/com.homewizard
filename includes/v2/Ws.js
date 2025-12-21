@@ -2,8 +2,8 @@
 
 const https = require('https');
 const WebSocket = require('ws');
-const fetch = require('node-fetch');
-// const fetch = require('../../includes/utils/fetchQueue');
+// const fetch = require('node-fetch');
+const fetch = require('../../includes/utils/fetchQueue');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -26,16 +26,27 @@ const SHARED_AGENT = new https.Agent({
 
 
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  try {
-    const res = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(id);
-    return await res.json();
-  } catch (err) {
-    clearTimeout(id);
-    throw err;
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Fetch timeout'));
+    }, timeout);
+
+    fetch(url, options)
+      .then(async res => {
+        clearTimeout(timer);
+
+        const text = await res.text();
+        try {
+          resolve(JSON.parse(text));
+        } catch {
+          resolve(text);
+        }
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
 }
 
 /**
