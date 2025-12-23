@@ -22,12 +22,12 @@ class HomeWizardDevice extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    if (debug) { console.log('HomeWizard Appliance has been inited'); }
+    if (debug) { this.log('HomeWizard Appliance has been inited'); }
 
     const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       homeWizard_devices[device.getData().id] = {};
       homeWizard_devices[device.getData().id].name = device.getName();
@@ -65,7 +65,7 @@ class HomeWizardDevice extends Homey.Device {
       clearInterval(this.refreshIntervalId);
     }
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { console.log('--Start HomeWizard Polling-- '); }
+      if (debug) { this.log('--Start HomeWizard Polling-- '); }
       this.getStatus(devices);
 
     }, 1000 * 20);
@@ -118,8 +118,8 @@ class HomeWizardDevice extends Homey.Device {
               }
 					  }
           } catch (err) {
-					  console.log('HomeWizard data corrupt');
-					  console.log(err);
+					  this.log('HomeWizard data corrupt');
+					  this.log(err);
           }
 				  }
       })
@@ -165,8 +165,8 @@ class HomeWizardDevice extends Homey.Device {
 						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
 					}
 				} catch(err) {
-					console.log ("HomeWizard data corrupt");
-					console.log(err);
+					this.log ("HomeWizard data corrupt");
+					this.log(err);
 				};
 			});
 

@@ -72,7 +72,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     await updateCapability(this, 'connection_error', 'No errors');
 
     if (this.hasCapability('net_load_phase1')) {
-         await this.removeCapability('net_load_phase1').catch(this.error);
+      await this.removeCapability('net_load_phase1').catch(this.error);
     }
 
     if (this.hasCapability('net_load_phase2')) {
@@ -570,10 +570,10 @@ async onPoll() {
                   || Number(settings.number_of_phases) === 1
                 ) {
                   await this.setSettings({ number_of_phases: 3 });
-                  console.log('number_of_phases successfully updated to 3');
+                  this.log('number_of_phases successfully updated to 3');
                 }
               } catch (err) {
-                console.error('Failed to update number_of_phases:', err.message, err.stack);
+                this.error('Failed to update number_of_phases:', err.message, err.stack);
               }
               // voltage_sag_l2_count - Net L2 dip
               await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count).catch(this.error);
@@ -656,7 +656,7 @@ async onPoll() {
           // Log if the water meter capability was removed due to no valid source
           if (!latestWaterData && this.hasCapability('meter_water')) {
             await this.removeCapability('meter_water').catch(this.error);
-            console.log('Removed meter as there is no water meter in P1.');
+            this.log('Removed meter as there is no water meter in P1.');
           }
           
         // Update settings.url when changed

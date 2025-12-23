@@ -21,7 +21,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
       const settings = this.getSettings();
-      console.log('Settings for SDM230: ', settings.polling_interval);
+      this.log('Settings for SDM230: ', settings.polling_interval);
 
 
       // Check if polling interval is set in settings, if not set default to 10 seconds

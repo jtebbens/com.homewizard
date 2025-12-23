@@ -14,7 +14,7 @@ let homewizard_devices;
 class HomeWizardWattcher extends Homey.Driver {
 
   onInit() {
-    // console.log('HomeWizard Wattcher has been inited');
+    // this.log('HomeWizard Wattcher has been inited');
   }
 
   async onPair(socket) {
@@ -33,7 +33,7 @@ class HomeWizardWattcher extends Homey.Driver {
 
     // Received when a view has changed
     socket.setHandler('showView', (viewId) => {
-      console.log(`View: ${viewId}`);
+      this.log(`View: ${viewId}`);
       this.log('data', viewId);
     });
 
@@ -50,7 +50,7 @@ class HomeWizardWattcher extends Homey.Driver {
           hw_devices[key] = homewizard_devices[key];
         });
 
-        console.log(hw_devices);
+        this.log(hw_devices);
         socket.emit('hw_devices', hw_devices);
 
       });
@@ -60,7 +60,7 @@ class HomeWizardWattcher extends Homey.Driver {
 
       if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
         // true
-        console.log(`Wattcher added ${device.data.id}`);
+        this.log(`Wattcher added ${device.data.id}`);
         devices[device.data.id] = {
           id: device.data.id,
           name: device.name,
@@ -75,7 +75,7 @@ class HomeWizardWattcher extends Homey.Driver {
     });
 
     socket.setHandler('disconnect', () => {
-      console.log('User aborted pairing, or pairing is finished');
+      this.log('User aborted pairing, or pairing is finished');
     });
   }
 }

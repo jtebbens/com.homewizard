@@ -1,23 +1,17 @@
 'use strict';
 
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
 const https = require('https');
 
-// Unified timeout wrapper — returns parsed JSON or text
+// Unified timeout wrapper — returns Response
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('Fetch timeout')), timeout);
 
     fetch(url, options)
-      .then(async res => {
+      .then(res => {
         clearTimeout(timer);
-
-        const text = await res.text();
-        try {
-          resolve(JSON.parse(text));
-        } catch {
-          resolve(text);
-        }
+        resolve(res);
       })
       .catch(err => {
         clearTimeout(timer);
@@ -35,28 +29,36 @@ module.exports = (function () {
     rejectUnauthorized: false,
   });
 
+  async function fetchJSON(url, opts, timeout = 5000) {
+    const res = await fetchWithTimeout(url, opts, timeout);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
+  }
+
   // -------------------------
   // IDENTIFY
   // -------------------------
   api.identify = async function (url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
+    const data = await fetchJSON(`${url}/api/system/identify`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      agent: http_agent,
+    });
 
-    try {
-      const data = await fetchWithTimeout(`${url}/api/system/identify`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        agent: http_agent,
-      });
-
-      if (typeof data !== 'object') {
-        throw new Error('Invalid response format');
-      }
-    } catch (err) {
-      throw new Error(`identify failed: ${err.message}`);
+    if (typeof data !== 'object') {
+      throw new Error('Invalid response format');
     }
   };
 
@@ -64,108 +66,61 @@ module.exports = (function () {
   // MEASUREMENT
   // -------------------------
   api.getMeasurement = async function (url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
-
-    try {
-      const data = await fetchWithTimeout(`${url}/api/measurement`, {
-        headers: { Authorization: `Bearer ${token}` },
-        agent: http_agent,
-      });
-
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format');
-      }
-
-      return data;
-    } catch (err) {
-      throw new Error(`getMeasurement failed: ${err.message}`);
-    }
+    return fetchJSON(`${url}/api/measurement`, {
+      headers: { Authorization: `Bearer ${token}` },
+      agent: http_agent,
+    });
   };
 
   // -------------------------
   // SYSTEM
   // -------------------------
   api.getSystem = async function (url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
-
-    try {
-      const data = await fetchWithTimeout(`${url}/api/system`, {
-        headers: { Authorization: `Bearer ${token}` },
-        agent: http_agent,
-      });
-
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format');
-      }
-
-      return data;
-    } catch (err) {
-      throw new Error(`getSystem failed: ${err.message}`);
-    }
+    return fetchJSON(`${url}/api/system`, {
+      headers: { Authorization: `Bearer ${token}` },
+      agent: http_agent,
+    });
   };
 
   // -------------------------
-  // INFO (still uses raw fetch)
+  // INFO
   // -------------------------
   api.getInfo = async function (url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
-
-    const res = await fetch(`${url}/api`, {
+    return fetchJSON(`${url}/api`, {
       headers: { Authorization: `Bearer ${token}` },
       agent: http_agent,
-    }).catch(err => {
-      throw new Error(`Network error: ${err.message}`);
     });
-
-    if (!res.ok) throw new Error(res.statusText);
-    return res.json();
   };
 
   // -------------------------
   // GET MODE
   // -------------------------
   api.getMode = async function (url, token) {
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
+    const data = await fetchJSON(`${url}/api/batteries`, {
+      headers: { Authorization: `Bearer ${token}` },
+      agent: http_agent,
+    });
 
-    try {
-      const data = await fetchWithTimeout(`${url}/api/batteries`, {
-        headers: { Authorization: `Bearer ${token}` },
-        agent: http_agent,
-      });
+    if (Array.isArray(data.permissions)) {
+      const perms = [...data.permissions].sort().join(',');
 
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format');
+      if (data.mode === 'to_full') return 'to_full';
+
+      switch (perms) {
+        case '':
+          return 'standby';
+        case 'charge_allowed,discharge_allowed':
+          return 'zero';
+        case 'charge_allowed':
+          return 'zero_charge_only';
+        case 'discharge_allowed':
+          return 'zero_discharge_only';
+        default:
+          throw new Error(`Unknown permissions combination: ${JSON.stringify(data.permissions)}`);
       }
-
-      // New firmware path
-      if (Array.isArray(data.permissions)) {
-        const perms = [...data.permissions].sort().join(',');
-
-        if (data.mode === 'to_full') return 'to_full';
-
-        switch (perms) {
-          case '':
-            return 'standby';
-          case 'charge_allowed,discharge_allowed':
-            return 'zero';
-          case 'charge_allowed':
-            return 'zero_charge_only';
-          case 'discharge_allowed':
-            return 'zero_discharge_only';
-          default:
-            throw new Error(`Unknown permissions combination: ${JSON.stringify(data.permissions)}`);
-        }
-      }
-
-      // Legacy fallback
-      return data.mode;
-    } catch (err) {
-      throw new Error(`getMode failed: ${err.message}`);
     }
+
+    return data.mode;
   };
 
   // -------------------------
@@ -175,12 +130,7 @@ module.exports = (function () {
     const retries = 4;
     let lastError;
 
-    if (!url) throw new Error('URL is not defined');
-    if (!token) throw new Error('Token is not defined');
-    if (!selectedMode) throw new Error('Mode is not defined');
-
     let body;
-
     switch (selectedMode) {
       case 'standby':
         body = { mode: 'standby', permissions: [] };
@@ -203,7 +153,7 @@ module.exports = (function () {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const data = await fetchWithTimeout(`${url}/api/batteries`, {
+        return await fetchJSON(`${url}/api/batteries`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -211,13 +161,7 @@ module.exports = (function () {
           },
           agent: http_agent,
           body: JSON.stringify(body),
-        }, 5000);
-
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid response format');
-        }
-
-        return data;
+        });
       } catch (err) {
         lastError = err;
         if (attempt < retries) await new Promise(r => setTimeout(r, 3000));
@@ -244,7 +188,7 @@ module.exports = (function () {
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const data = await fetchWithTimeout(`${url}/api/system`, {
+        return await fetchJSON(`${url}/api/system`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -252,13 +196,7 @@ module.exports = (function () {
           },
           agent: http_agent,
           body: JSON.stringify({ cloud_enabled: enabled }),
-        }, 5000);
-
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid response format');
-        }
-
-        return data;
+        });
       } catch (err) {
         lastError = err;
         if (attempt < retries) await new Promise(r => setTimeout(r, 2000));

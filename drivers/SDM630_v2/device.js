@@ -50,7 +50,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     await this._registerCapabilityListeners();
 
     const settings = this.getSettings();
-    console.log('Settings for SDM630 apiv2: ', settings.polling_interval);
+    this.log('Settings for SDM630 apiv2: ', settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
@@ -71,17 +71,17 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
           const response = await api.getMode(this.url, this.token); // NEEDS TESTING WITH SDM230 and BATTERY
   
           if (!response) {
-            console.log('Invalid response, returning false');
+            this.log('Invalid response, returning false');
             return resolve(false);
           }
   
-          console.log('Retrieved mode:', response.mode);
+          this.log('Retrieved mode:', response.mode);
           const normalized = normalizeBatteryMode(response);
           return resolve(args.mode === normalized);
 
           
         } catch (error) {
-          console.log('Error retrieving mode:', error);
+          this.log('Error retrieving mode:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
       });
@@ -229,14 +229,14 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
           const response = await api.setMode(this.url, this.token, args.mode); // NEEDS TESTING WITH P1 and BATTERY
   
           if (!response || typeof response.mode === 'undefined') {
-            console.log('Invalid response, returning false');
+            this.log('Invalid response, returning false');
             return resolve(false);
           }
   
-          console.log('Set mode:', response.mode);
+          this.log('Set mode:', response.mode);
           return resolve(response.mode); // Returns the mode value
         } catch (error) {
-          console.log('Error set mode:', error);
+          this.log('Error set mode:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
       });
@@ -279,13 +279,13 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
   async _updateCapabilities() {
     if (!this.hasCapability('identify')) {
       await this.addCapability('identify').catch(this.error);
-      console.log(`created capability identify for ${this.getName()}`);
+      this.log(`created capability identify for ${this.getName()}`);
     }
 
     // Remove capabilities that are not needed
     if (this.hasCapability('measure_power.power_w')) {
       await this.removeCapability('measure_power.power_w').catch(this.error);
-      console.log(`removed capability measure_power.power_w for ${this.getName()}`);
+      this.log(`removed capability measure_power.power_w for ${this.getName()}`);
     }
   }
 

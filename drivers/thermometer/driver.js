@@ -9,7 +9,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 class HomeWizardThermometer extends Homey.Driver {
 
   onInit() {
-    // console.log('HomeWizard Thermometer has been inited');
+    // this.log('HomeWizard Thermometer has been inited');
   }
 
   async onPair(socket) {
@@ -28,7 +28,7 @@ class HomeWizardThermometer extends Homey.Driver {
 
     // Received when a view has changed
     await socket.setHandler('showView', (viewId) => {
-      console.log(`View: ${viewId}`);
+      this.log(`View: ${viewId}`);
       // this.log("data", viewId);
     });
 
@@ -52,7 +52,7 @@ await socket.setHandler('get_homewizards', async () => {
       }
     });
 
-    console.log('[PAIRING] Emitting thermometer list:', thermometerList);
+    this.log('[PAIRING] Emitting thermometer list:', thermometerList);
     socket.emit('thermometer_list', thermometerList);
   });
 });
@@ -61,7 +61,7 @@ await socket.setHandler('get_homewizards', async () => {
     await socket.setHandler('manual_add', (device) => {
       if (typeof device.settings.homewizard_id == 'string' && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
         // true
-        console.log(`Thermometer added ${device.data.id}`);
+        this.log(`Thermometer added ${device.data.id}`);
         devices[device.data.id] = {
           id: device.data.id,
           name: device.name,
@@ -76,7 +76,7 @@ await socket.setHandler('get_homewizards', async () => {
     });
 
     await socket.setHandler('disconnect', () => {
-      console.log('User aborted pairing, or pairing is finished');
+      this.log('User aborted pairing, or pairing is finished');
     });
   }
 

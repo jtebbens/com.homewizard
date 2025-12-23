@@ -17,11 +17,11 @@ class HomeWizardWindmeter extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    console.log(`HomeWizard Windmeter ${this.getName()} has been inited`);
+    this.log(`HomeWizard Windmeter ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('windmeter').getDevices();
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
@@ -66,7 +66,7 @@ class HomeWizardWindmeter extends Homey.Device {
 
     // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { console.log('--Start Windmeter Polling-- '); }
+      if (debug) { this.log('--Start Windmeter Polling-- '); }
 
       // this.getStatus(devices);
       this.getStatus();
@@ -96,7 +96,7 @@ class HomeWizardWindmeter extends Homey.Device {
             const lowBattery_status = lowBattery_temp == 'yes';
 
             if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
-					  if (debug) { console.log(`New status - ${lowBattery_status}`); }
+					  if (debug) { this.log(`New status - ${lowBattery_status}`); }
 					  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
             }
 				  } else if (this.hasCapability('alarm_battery')) {
@@ -153,11 +153,11 @@ class HomeWizardWindmeter extends Homey.Device {
           }
         }
 		  } catch (err) {
-        console.log('ERROR WindMeter getStatus', err);
+        this.log('ERROR WindMeter getStatus', err);
         this.setUnavailable(err);
 		  }
     } else {
-		  console.log('Windmeter settings not found, stop polling set unavailable');
+		  this.log('Windmeter settings not found, stop polling set unavailable');
 		  this.setUnavailable();
     }
 	  }
@@ -166,10 +166,10 @@ class HomeWizardWindmeter extends Homey.Device {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);
-      console.log('--Stopped Polling--');
+      this.log('--Stopped Polling--');
     }
 
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log(`deleted: ${JSON.stringify(this)}`);
   }
 
 }

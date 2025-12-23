@@ -23,6 +23,8 @@ v3.9.14
 * APIv2 change pairing: Modified the username that is used during pair made it unique per homey
 * Bugfix: APIv2 pairing -> local/homey_xxxxxx
 * Bugfix: SDM630v2 trigger cards removed (obsolete as these are default Homey)
+* Finetune: P1(apiv2) websocket + polling, capability updates
+* Finetune: energy_sockets (fetch / timeout) centralized
 
 v3.8.22
 

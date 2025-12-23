@@ -16,11 +16,11 @@ class HomeWizardWattcher extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    console.log(`HomeWizard Wattcher ${this.getName()} has been inited`);
+    this.log(`HomeWizard Wattcher ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('wattcher').getDevices();
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
@@ -38,7 +38,7 @@ class HomeWizardWattcher extends Homey.Device {
 
     // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      console.log('--Start Wattcher Polling-- ');
+      this.log('--Start Wattcher Polling-- ');
 
       this.getStatus();
 
@@ -56,7 +56,7 @@ class HomeWizardWattcher extends Homey.Device {
 
           if (Object.keys(callback).length > 0) {
             try {
-              // console.log('Start capturing data');
+              // this.log('Start capturing data');
 
               const energy_current_cons = callback[0].po; // WATTS Energy used JSON $energymeters[0]['po']
               const energy_daytotal_cons = callback[0].dayTotal; // KWH Energy used JSON $energymeters[0]['dayTotal']
@@ -67,15 +67,15 @@ class HomeWizardWattcher extends Homey.Device {
               this.setCapabilityValue('meter_power', energy_daytotal_cons).catch(this.error);
 
               // this.log('End capturing data');
-              // console.log('Wattcher usage- ' + energy_current_cons);
-              // console.log('Wattcher Daytotal- ' + energy_daytotal_cons);
+              // this.log('Wattcher usage- ' + energy_current_cons);
+              // this.log('Wattcher Daytotal- ' + energy_daytotal_cons);
             } catch (err) {
-              console.log('ERROR Wattcher getStatus ', err);
+              this.log('ERROR Wattcher getStatus ', err);
               this.setUnavailable(err);
             }
           }
         } else {
-          console.log('Wattcher settings not found, stop polling set unavailable');
+          this.log('Wattcher settings not found, stop polling set unavailable');
           this.setUnavailable();
           clearInterval(this.refreshIntervalId);
 
@@ -98,10 +98,10 @@ class HomeWizardWattcher extends Homey.Device {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(this.refreshIntervalId);
-      console.log('--Stopped Polling--');
+      this.log('--Stopped Polling--');
     }
 
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log(`deleted: ${JSON.stringify(this)}`);
   }
 
 }

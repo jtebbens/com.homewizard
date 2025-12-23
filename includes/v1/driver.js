@@ -1,8 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
@@ -21,7 +21,7 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
     const numberOfDiscoveryResults = Object.keys(discoveryResults).length;
-    console.log('Discovered devices:', discoveryResults);
+    Homey.app.log('Discovered devices:', discoveryResults);
         
     const devices = [];
     await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {

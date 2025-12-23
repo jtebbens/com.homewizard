@@ -15,11 +15,11 @@ class HomeWizardRainmeter extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    // console.log(`HomeWizard Rainmeter ${this.getName()} has been inited`);
+    // this.log(`HomeWizard Rainmeter ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('rainmeter').getDevices();
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
@@ -44,7 +44,7 @@ class HomeWizardRainmeter extends Homey.Device {
 
     // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      // console.log("--Start Rainmeter Polling-- ");
+      // this.log("--Start Rainmeter Polling-- ");
 
       this.getStatus();
 
@@ -76,7 +76,7 @@ class HomeWizardRainmeter extends Homey.Device {
                 const lowBattery_status = lowBattery_temp == 'yes';
 
                 if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
-                  // if (debug) { console.log("New status - " + lowBattery_status); }
+                  // if (debug) { this.log("New status - " + lowBattery_status); }
                   await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(me.error);
                 }
               } else if (this.hasCapability('alarm_battery')) {
@@ -98,12 +98,12 @@ class HomeWizardRainmeter extends Homey.Device {
                 await me.setStoreValue('last_raintotal', rain_daytotal).catch(me.error); // Update last_raintotal
               }
             } catch (err) {
-              console.log('ERROR RainMeter getStatus ', err);
+              this.log('ERROR RainMeter getStatus ', err);
               me.setUnavailable();
             }
           }
         } else {
-          console.log('Rainmeter settings not found, stop polling set unavailable');
+          this.log('Rainmeter settings not found, stop polling set unavailable');
           // this.setUnavailable();
 
           // Only clear interval when the unavailable device is the only device on this driver
@@ -142,19 +142,19 @@ class HomeWizardRainmeter extends Homey.Device {
 
 						// Trigger flows
 						if (rain_daytotal != me.getStoreValue("last_raintotal") && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
-							//console.log("Current Total Rainfall - "+ rain_daytotal);
+							//this.log("Current Total Rainfall - "+ rain_daytotal);
 							me.flowTriggerValueChanged(me, {rainmeter_changed: rain_daytotal})
 						  me.setStoreValue("last_raintotal",rain_daytotal); // Update last_raintotal
 						}
 
 					} catch (err) {
-						console.log('ERROR RainMeter getStatus ', err);
+						this.log('ERROR RainMeter getStatus ', err);
 						me.setUnavailable();
 					}
 				}
 			});
 		} else {
-			console.log('Rainmeter settings not found, stop polling set unavailable');
+			this.log('Rainmeter settings not found, stop polling set unavailable');
 			this.setUnavailable();
 
 			// Only clear interval when the unavailable device is the only device on this driver
@@ -169,10 +169,10 @@ class HomeWizardRainmeter extends Homey.Device {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);
-      console.log('--Stopped Polling--');
+      this.log('--Stopped Polling--');
     }
 
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log(`deleted: ${JSON.stringify(this)}`);
   }
 
 }

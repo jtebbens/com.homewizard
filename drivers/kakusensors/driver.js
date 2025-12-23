@@ -10,7 +10,7 @@ let homewizard_devices;
 class HomeWizardKakusensors extends Homey.Driver {
 
   onInit() {
-    // console.log('HomeWizard Kakusensors has been inited');
+    // this.log('HomeWizard Kakusensors has been inited');
   }
 
   async onPair(socket) {
@@ -28,7 +28,7 @@ class HomeWizardKakusensors extends Homey.Driver {
 
     // Received when a view has changed
     socket.setHandler('showView', (viewId) => {
-      console.log(`View: ${viewId}`);
+      this.log(`View: ${viewId}`);
       // this.log("data", viewId);
     });
 
@@ -49,7 +49,7 @@ class HomeWizardKakusensors extends Homey.Driver {
           hw_devices[key].kakusensors = kakusensors;
         });
 
-        console.log(hw_devices);
+        this.log(hw_devices);
         socket.emit('hw_devices', hw_devices);
 
       });
@@ -58,10 +58,10 @@ class HomeWizardKakusensors extends Homey.Driver {
     socket.setHandler('manual_add', (device) => {
       if (typeof device.settings.homewizard_id == 'string' && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
         // true
-        console.log(`Kakusensor added ${device.data.id}`);
-        // console.log(device);
-        // console.log(device.kakusensors);
-        // console.log(device.kakusensors[device.settings.kakusensors_id].type);
+        this.log(`Kakusensor added ${device.data.id}`);
+        // this.log(device);
+        // this.log(device.kakusensors);
+        // this.log(device.kakusensors[device.settings.kakusensors_id].type);
 
         devices[device.data.id] = {
           id: device.data.id,
@@ -81,7 +81,7 @@ class HomeWizardKakusensors extends Homey.Driver {
     });
 
     socket.setHandler('disconnect', () => {
-      console.log('User aborted pairing, or pairing is finished');
+      this.log('User aborted pairing, or pairing is finished');
     });
   }
 
