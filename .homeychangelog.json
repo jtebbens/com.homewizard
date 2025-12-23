@@ -462,7 +462,7 @@
     "en": "Moved temp setting to oninit"
   },
   "3.6.25": {
-    "en": "console.log dump"
+    "en": "this.log dump"
   },
   "3.6.26": {
     "en": "redo oninit token P1"
@@ -778,5 +778,8 @@
   },
   "3.9.14": {
     "en": "Bugfix: SDM630v2 trigger cards removed (obsolete as these are default Homey)"
+  },
+  "3.9.15": {
+    "en": "Finetune: P1(apiv2) websocket + polling, capability updates"
   }
 }
