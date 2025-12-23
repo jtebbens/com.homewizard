@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-// const fetch = require('../../includes/utils/fetchQueue');
+
 const https = require('https');
 const WebSocketManager = require('../../includes/v2/Ws');
 
@@ -211,7 +211,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousStateOfCharge = null;
 
     this.token = await this.getStoreValue('token');
-    //console.log('PIB Token:', this.token);
+    //this.log('PIB Token:', this.token);
 
     const settings = this.getSettings();
     this.log('Settings for Plugin Battery: ', settings.polling_interval);
@@ -577,67 +577,67 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   async _updateCapabilities() {
     if (!this.hasCapability('identify')) {
       await this.addCapability('identify').catch(this.error);
-      console.log(`created capability identify for ${this.getName()}`);
+      this.log(`created capability identify for ${this.getName()}`);
     }
 
     if (!this.hasCapability('meter_power.import')) {
       await this.addCapability('meter_power.import').catch(this.error);
-      console.log(`created capability meter_power.import for ${this.getName()}`);
+      this.log(`created capability meter_power.import for ${this.getName()}`);
     }
 
     if (!this.hasCapability('meter_power.export')) {
       await this.addCapability('meter_power.export').catch(this.error);
-      console.log(`created capability meter_power.export for ${this.getName()}`);
+      this.log(`created capability meter_power.export for ${this.getName()}`);
     }
 
     if (!this.hasCapability('measure_power')) {
       await this.addCapability('measure_power').catch(this.error);
-      console.log(`created capability measure_power for ${this.getName()}`);
+      this.log(`created capability measure_power for ${this.getName()}`);
     }
 
     if (!this.hasCapability('measure_voltage')) {
       await this.addCapability('measure_voltage').catch(this.error);
-      console.log(`created capability measure_voltage for ${this.getName()}`);
+      this.log(`created capability measure_voltage for ${this.getName()}`);
     }
 
     if (!this.hasCapability('measure_current')) {
       await this.addCapability('measure_current').catch(this.error);
-      console.log(`created capability measure_current for ${this.getName()}`);
+      this.log(`created capability measure_current for ${this.getName()}`);
     }
 
     if (!this.hasCapability('measure_battery')) {
       await this.addCapability('measure_battery').catch(this.error);
-      console.log(`created capability measure_battery for ${this.getName()}`);
+      this.log(`created capability measure_battery for ${this.getName()}`);
     }
 
     if (!this.hasCapability('battery_charging_state')) {
       await this.addCapability('battery_charging_state').catch(this.error);
-      console.log(`created capability battery_charging_state for ${this.getName()}`);
+      this.log(`created capability battery_charging_state for ${this.getName()}`);
     }
 
     if (!this.hasCapability('cycles')) {
       await this.addCapability('cycles').catch(this.error);
-      console.log(`created capability cycles for ${this.getName()}`);
+      this.log(`created capability cycles for ${this.getName()}`);
     }
 
     if (!this.hasCapability('time_to_empty')) {
       await this.addCapability('time_to_empty').catch(this.error);
-      console.log(`created capability time_to_empty for ${this.getName()}`);
+      this.log(`created capability time_to_empty for ${this.getName()}`);
     }
 
     if (!this.hasCapability('time_to_full')) {
       await this.addCapability('time_to_full').catch(this.error);
-      console.log(`created capability time_to_full for ${this.getName()}`);
+      this.log(`created capability time_to_full for ${this.getName()}`);
     }
 
     if (!this.hasCapability('rssi')) {
       await this.addCapability('rssi').catch(this.error);
-      console.log(`created capability rssi for ${this.getName()}`);
+      this.log(`created capability rssi for ${this.getName()}`);
     }
 
     if (!this.hasCapability('estimate_kwh')) {
       await this.addCapability('estimate_kwh').catch(this.error);
-      console.log(`created capability estimate_kwh for ${this.getName()}`);
+      this.log(`created capability estimate_kwh for ${this.getName()}`);
     }
   }
 

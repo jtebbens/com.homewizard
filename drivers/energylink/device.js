@@ -79,10 +79,10 @@ class HomeWizardEnergylink extends Homey.Device {
 
     this.refreshIntervalId = setInterval(() => {
 
-      if (debug) { console.log('--Start Energylink Polling-- '); }
-      if (debug) { console.log(this.getSetting('homewizard_id')); }
+      if (debug) { this.log('--Start Energylink Polling-- '); }
+      if (debug) { this.log(this.getSetting('homewizard_id')); }
       if (this.getSetting('homewizard_id') !== undefined) {
-        if (debug) { console.log(`Poll for ${this.getName()}`); }
+        if (debug) { this.log(`Poll for ${this.getName()}`); }
 
         this.getStatus();
       }
@@ -95,10 +95,10 @@ class HomeWizardEnergylink extends Homey.Device {
     }
 
     this.refreshIntervalIdReadings = setInterval(() => {
-      if (debug) { console.log('--Start Energylink Readings Polling-- '); }
+      if (debug) { this.log('--Start Energylink Readings Polling-- '); }
 
       if (this.getSetting('homewizard_id') !== undefined) {
-        if (debug) { console.log(`Poll for ${this.getName()}`); }
+        if (debug) { this.log(`Poll for ${this.getName()}`); }
 
         this.getReadings();
 
@@ -127,8 +127,8 @@ class HomeWizardEnergylink extends Homey.Device {
 
         const value_s1 = (callback[0].t1); // Read t1 from energylink (solar/water/null)
         const value_s2 = (callback[0].t2); // Read t2 from energylink (solar/water/null)
-        if (debug) { console.log(`t1- ${value_s1}`); }
-        if (debug) { console.log(`t2- ${value_s2}`); }
+        if (debug) { this.log(`t1- ${value_s1}`); }
+        if (debug) { this.log(`t2- ${value_s2}`); }
 
         // Common Energylink data
         const energy_current_cons = (callback[0].used.po); // WATTS Energy used JSON $energylink[0]['used']['po']
@@ -144,7 +144,7 @@ class HomeWizardEnergylink extends Homey.Device {
         }
         catch (err) {
           // Error with Energylink no data in Energylink
-          console.log('No Gas information found');
+          this.log('No Gas information found');
         }
 
         // Consumed elec current
@@ -214,7 +214,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s1 == 'water') {
           water_current_cons = (callback[0].s1.po); // Water used via S1 $energylink[0]['s1']['po']
           water_daytotal_cons = (callback[0].s1.dayTotal / 1000); // Water used via S1 $energylink[0]['s1']['dayTotal']
-          // console.log("Water- " + water_daytotal_cons);
+          // this.log("Water- " + water_daytotal_cons);
           // Used water m3
           promises.push(me.setCapabilityValue('meter_water', water_daytotal_cons).catch(me.error));
           promises.push(me.setCapabilityValue('measure_water', water_current_cons).catch(me.error));
@@ -228,7 +228,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s2 == 'water') {
           water_current_cons = (callback[0].s2.po); // Water used via S2 $energylink[0]['s1']['po']
           water_daytotal_cons = (callback[0].s2.dayTotal / 1000); // Water used via S1 $energylink[0]['s2']['dayTotal']
-          // console.log("Water- " + water_daytotal_cons);
+          // this.log("Water- " + water_daytotal_cons);
           // Used water m3
           promises.push(me.setCapabilityOptions('meter_water', { decimals: 3 }).catch(me.error));
           promises.push(me.setCapabilityValue('meter_water', water_daytotal_cons).catch(me.error));
@@ -242,7 +242,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s1 == 'other' || value_s1 == 'car') {
           const other_current_cons_s1 = (callback[0].s1.po); // Other used via S1 $energylink[0]['s1']['po']
           const other_daytotal_cons_s1 = (callback[0].s1.dayTotal); // Other used via S1 $energylink[0]['s1']['dayTotal']
-          // console.log("Other- " + other_daytotal_cons_s1);
+          // this.log("Other- " + other_daytotal_cons_s1);
           // Used power
           promises.push(me.setCapabilityValue('meter_power.s1other', other_daytotal_cons_s1).catch(me.error));
           promises.push(me.setCapabilityValue('measure_power.s1other', other_current_cons_s1).catch(me.error));
@@ -251,7 +251,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s2 == 'other' || value_s2 == 'car') {
           const other_current_cons_s2 = (callback[0].s2.po); // Other used via S2 $energylink[0]['s1']['po']
           const other_daytotal_cons_s2 = (callback[0].s2.dayTotal); // Other used via S1 $energylink[0]['s2']['dayTotal']
-          // console.log("Other- " + other_daytotal_cons_s2);
+          // this.log("Other- " + other_daytotal_cons_s2);
           // Used power
           promises.push(me.setCapabilityValue('meter_power.s2other', other_daytotal_cons_s2).catch(me.error));
           promises.push(me.setCapabilityValue('measure_power.s2other', other_current_cons_s2).catch(me.error));
@@ -259,19 +259,19 @@ class HomeWizardEnergylink extends Homey.Device {
 
         // Trigger flows
         if (energy_current_cons != me.getStoreValue('last_measure_power_used') && energy_current_cons != undefined && energy_current_cons != null) {
-          // console.log("Current Power - "+ energy_current_cons);
+          // this.log("Current Power - "+ energy_current_cons);
           promises.push(me.flowTriggerPowerUsed(me, { power_used: energy_current_cons }));
           me.setStoreValue('last_measure_power_used', energy_current_cons);
         }
         if (energy_current_netto != me.getStoreValue('last_measure_power_netto') && energy_current_netto != undefined && energy_current_netto != null) {
-					    // console.log("Current Netto Power - "+ energy_current_netto);
+					    // this.log("Current Netto Power - "+ energy_current_netto);
           promises.push(me.flowTriggerPowerNetto(me, { netto_power_used: energy_current_netto }));
           me.setStoreValue('last_measure_power_netto', energy_current_netto);
         }
 
         if (value_s1 != 'other' || value_s1 != 'car') {
           if (energy_current_prod != me.getStoreValue('last_measure_power_s1') && energy_current_prod != undefined && energy_current_prod != null) {
-					        // console.log("Current S1 Solar- "+ solar_current_prod);
+					        // this.log("Current S1 Solar- "+ solar_current_prod);
             promises.push(me.flowTriggerPowerS1(me, { power_s1: solar_current_prod }));
             me.setStoreValue('last_measure_power_s1', solar_current_prod);
 
@@ -280,7 +280,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s1 == 'other' || value_s1 == 'car') {
           const other_current_cons_s1 = (callback[0].s1.po); // Other used via S1 $energylink[0]['s1']['po']
           if (other_current_cons_s1 != me.getStoreValue('last_measure_power_s1') && other_current_cons_s1 != undefined && other_current_cons_s1 != null) {
-            // console.log("Current S1 - "+ other_current_cons_s1);
+            // this.log("Current S1 - "+ other_current_cons_s1);
             promises.push(me.flowTriggerPowerS1(me, { power_s1: other_current_cons_s1 }));
             me.setStoreValue('last_measure_power_s1', other_current_cons_s1);
 
@@ -290,7 +290,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s2 == 'other' || value_s2 == 'car') {
           const other_current_cons_s2 = (callback[0].s2.po); // Other used via S2 $energylink[0]['s1']['po']
           if (other_current_cons_s2 != me.getStoreValue('last_measure_power_s2') && other_current_cons_s2 != undefined && other_current_cons_s2 != null) {
-            // console.log("Current S2 - "+ other_current_cons_s2);
+            // this.log("Current S2 - "+ other_current_cons_s2);
             promises.push(me.flowTriggerPowerS2(me, { power_s2: other_current_cons_s2 }));
             me.setStoreValue('last_measure_power_s2', other_current_cons_s2);
 
@@ -298,14 +298,14 @@ class HomeWizardEnergylink extends Homey.Device {
         }
 
         if (energy_daytotal_cons != me.getStoreValue('last_meter_power_used') && energy_daytotal_cons != undefined && energy_daytotal_cons != null) {
-					    // console.log("Used Daytotal- "+ energy_daytotal_cons);
+					    // this.log("Used Daytotal- "+ energy_daytotal_cons);
           promises.push(me.flowTriggerMeterPowerUsed(me, { power_daytotal_used: energy_current_prod }));
           me.setStoreValue('last_meter_power_used', energy_daytotal_cons);
         }
 
           			if (value_s1 != 'other' || value_s1 != 'car') {
           if (energy_daytotal_prod != me.getStoreValue('last_meter_power_s1') && energy_daytotal_prod != undefined && energy_daytotal_prod != null) {
-					    	// console.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
+					    	// this.log("S1 Daytotal Solar- "+ solar_daytotal_prod);
             promises.push(me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: solar_daytotal_prod }));
             me.setStoreValue('last_meter_power_s1', solar_daytotal_prod);
           }
@@ -314,7 +314,7 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s1 == 'other' || value_s1 == 'car') {
           const other_daytotal_cons_s1 = (callback[0].s1.dayTotal); // Other used via S1 $energylink[0]['s1']['dayTotal']
           if (other_daytotal_cons_s1 != me.getStoreValue('last_meter_power_s1') && other_daytotal_cons_s1 != undefined && other_daytotal_cons_s1 != null) {
-					    	// console.log("S1 Daytotal- "+ other_daytotal_cons_s1);
+					    	// this.log("S1 Daytotal- "+ other_daytotal_cons_s1);
             promises.push(me.flowTriggerMeterPowerS1(me, { power_daytotal_s1: other_daytotal_cons_s1 }));
             me.setStoreValue('last_meter_power_s1', other_daytotal_cons_s1);
           }
@@ -323,14 +323,14 @@ class HomeWizardEnergylink extends Homey.Device {
         if (value_s2 == 'other' || value_s2 == 'car') {
           const other_daytotal_cons_s2 = (callback[0].s2.dayTotal); // Other used via S1 $energylink[0]['s2']['dayTotal']
           if (other_daytotal_cons_s2 != me.getStoreValue('last_meter_power_s2') && other_daytotal_cons_s2 != undefined && other_daytotal_cons_s2 != null) {
-					    	// console.log("S2 Daytotal- "+ other_daytotal_cons_s2);
+					    	// this.log("S2 Daytotal- "+ other_daytotal_cons_s2);
             promises.push(me.flowTriggerMeterPowerS2(me, { power_daytotal_s2: other_daytotal_cons_s2 }));
             me.setStoreValue('last_meter_power_s2', other_daytotal_cons_s2);
           }
         }
 
         if (energy_daytotal_aggr != me.getStoreValue('last_meter_power_aggr') && energy_daytotal_aggr != undefined && energy_daytotal_aggr != null) {
-					    // console.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
+					    // this.log("Aggregated Daytotal- "+ energy_daytotal_aggr);
           promises.push(me.flowTriggerMeterPowerAggregated(me, { power_daytotal_aggr: energy_daytotal_aggr }));
           me.setStoreValue('last_meter_power_aggr', energy_daytotal_aggr);
 
@@ -345,7 +345,7 @@ class HomeWizardEnergylink extends Homey.Device {
       }
 
     } catch (error) {
-      console.log(error);
+      this.log(error);
       me.setUnavailable();
     }
   }
@@ -398,7 +398,7 @@ class HomeWizardEnergylink extends Homey.Device {
 
 		  }
     } catch (err) {
-		  console.log('ERROR Energylink getStatus ', err);
+		  this.log('ERROR Energylink getStatus ', err);
 		  this.setUnavailable(err).catch(this.error);
     }
 	  }
@@ -407,8 +407,8 @@ class HomeWizardEnergylink extends Homey.Device {
 
     clearInterval(this.refreshIntervalId);
     clearInterval(this.refreshIntervalIdReadings);
-    console.log('--Stopped Polling--');
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log('--Stopped Polling--');
+    this.log(`deleted: ${JSON.stringify(this)}`);
 
   }
 

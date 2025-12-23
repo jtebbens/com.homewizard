@@ -2,8 +2,8 @@
 
 const https = require('https');
 const WebSocket = require('ws');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,

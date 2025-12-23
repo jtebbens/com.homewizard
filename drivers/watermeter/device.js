@@ -1,8 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 const http = require('http');
 
@@ -19,7 +19,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const settings = this.getSettings();
-    console.log('Offset polling for Watermeter: ', settings.offset_polling);
+    this.log('Offset polling for Watermeter: ', settings.offset_polling);
 
 
     // Check if polling interval is set in settings, if not set default to 10 seconds

@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-
+// const fetch = require('node-fetch');
 const fetch = require('../../includes/utils/fetchQueue');
 
 
@@ -10,19 +10,16 @@ const http = require('http');
 let agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 10000,  // avoids stale sockets
-  maxSockets: 2          // only one active connection per host
+  maxSockets: 2          // only two active connection per host
 });
 
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
 
-  if (value == null) {
-    if (device.hasCapability(capability) && current !== null) {
-      await device.removeCapability(capability).catch(device.error);
-      device.log(`🗑️ Removed capability "${capability}"`);
-    }
+  if (value === undefined || value === null) {
     return;
   }
+
 
   if (!device.hasCapability(capability)) {
     await device.addCapability(capability).catch(device.error);
@@ -34,35 +31,6 @@ async function updateCapability(device, capability, value) {
     // device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
-
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('Fetch timeout'));
-    }, timeout);
-
-    fetch(url, options)
-      .then(async res => {
-        clearTimeout(timer);
-
-        const text = await res.text();
-        try {
-          resolve(JSON.parse(text));
-        } catch {
-          resolve(text);
-        }
-      })
-      .catch(err => {
-        clearTimeout(timer);
-        reject(err);
-      });
-  });
-}
-
-
-
-
-
 
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
@@ -278,11 +246,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       try {
         // Use timeout wrapper to avoid hanging requests
-        const data = await fetchWithTimeout(`${this.url}/data`, {
+        const res = await fetch(`${this.url}/data`, {
           agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         }, 5000); // 5s timeout
+
+        const data = await res.json();
 
         if (!data || typeof data !== 'object') { throw new Error('Invalid response format'); }
 
@@ -302,8 +272,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
         const netImport = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
         await updateCapability(this, 'meter_power', netImport).catch(this.error);
 
-        await updateCapability(this, 'measure_voltage', data.active_voltage_v ?? null).catch(this.error);
-        await updateCapability(this, 'measure_current', data.active_current_a ?? null).catch(this.error);
+        await updateCapability(this, 'measure_voltage', data.active_voltage_v).catch(this.error);
+        await updateCapability(this, 'measure_current', data.active_current_a).catch(this.error);
 
         // Update settings.url if changed
         if (this.url && this.url !== settings.url) {
@@ -381,11 +351,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       try {
         // Use timeout wrapper
-        const data = await fetchWithTimeout(`${this.url}/state`, {
+        const res = await fetch(`${this.url}/state`, {
           agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         }, 5000); // 5s timeout
+
+        const data = await res.json();
 
         if (!data || typeof data !== 'object') { throw new Error('Invalid response format'); }
 

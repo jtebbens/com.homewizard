@@ -1,8 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+// const fetch = require('../../includes/utils/fetchQueue');
 
 // const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
@@ -35,7 +35,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
   async onInit() {
 
     const settings = this.getSettings();
-    console.log('Settings for SDM630: ', settings.polling_interval);
+    this.log('Settings for SDM630: ', settings.polling_interval);
     // Check if polling interval is set in settings, if not set default to 10 seconds
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
       settings.polling_interval = 10; // Default to 10 second if not set
@@ -49,7 +49,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
         
     if (this.getClass() == 'sensor') {
       this.setClass('socket');
-      console.log('Changed sensor to socket.');
+      this.log('Changed sensor to socket.');
     }
   }
 

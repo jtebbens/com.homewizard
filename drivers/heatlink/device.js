@@ -17,11 +17,11 @@ class HomeWizardHeatlink extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    // console.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
+    // this.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
 
     const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
@@ -49,11 +49,11 @@ class HomeWizardHeatlink extends Homey.Device {
         const homewizard_id = this.getSetting('homewizard_id');
 			    	await homewizard.callnew(homewizard_id, `/hl/0/settarget/${temperature}`, (err) => { // await, maybe a timestamp for log?
           if (err) {
-            // console.log('ERR settarget target_temperature -> returned false');
+            // this.log('ERR settarget target_temperature -> returned false');
             this.log('ERR settarget target_temperature -> returned false');
             return resolve(false);
           }
-          // console.log('settarget target_temperature - returned true');
+          // this.log('settarget target_temperature - returned true');
           this.log('settarget target_temperature - returned true');
           return resolve(true);
         });
@@ -71,7 +71,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
     // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { console.log('--Start Heatlink Polling-- '); }
+      if (debug) { this.log('--Start Heatlink Polling-- '); }
 
       this.getStatus();
 
@@ -97,28 +97,28 @@ class HomeWizardHeatlink extends Homey.Device {
 			  const wte = (callback[0].wte.toFixed(1) * 2) / 2;
 
 			  if (this.getStoreValue('temperature') != rte) {
-            if (debug) { console.log(`New RTE - ${rte}`); }
+            if (debug) { this.log(`New RTE - ${rte}`); }
             promises.push(this.setCapabilityValue('measure_temperature', rte).catch(this.error));
             this.setStoreValue('temperature', rte).catch(this.error);
-			  } else if (debug) { console.log('RTE: no change'); }
+			  } else if (debug) { this.log('RTE: no change'); }
 
 			  if (this.getStoreValue('thermTemperature') != rsp) {
-            if (debug) { console.log(`New RSP - ${rsp}`); }
+            if (debug) { this.log(`New RSP - ${rsp}`); }
             if (this.getStoreValue('setTemperature') === 0) {
               promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
             }
             this.setStoreValue('thermTemperature', rsp).catch(this.error);
-			  } else if (debug) { console.log('RSP: no change'); }
+			  } else if (debug) { this.log('RSP: no change'); }
 
 			  if (this.getStoreValue('setTemperature') != tte) {
-            if (debug) { console.log(`New TTE - ${tte}`); }
+            if (debug) { this.log(`New TTE - ${tte}`); }
             if (tte > 0) {
               promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
             } else {
               promises.push(this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error));
             }
             this.setStoreValue('setTemperature', tte).catch(this.error);
-			  } else if (debug) { console.log('TTE: no change'); }
+			  } else if (debug) { this.log('TTE: no change'); }
 
 			  if (!this.hasCapability('measure_temperature.boiler')) {
             promises.push(this.addCapability('measure_temperature.boiler').catch(this.error));
@@ -170,11 +170,11 @@ class HomeWizardHeatlink extends Homey.Device {
 
         }
 		  } catch (error) {
-        console.log('Heatlink data error', error);
+        this.log('Heatlink data error', error);
         this.setUnavailable(error).catch(this.error);
 		  }
     } else {
-		  console.log('HW ID not found');
+		  this.log('HW ID not found');
 		  if (Object.keys(devices).length === 1) {
         clearInterval(this.refreshIntervalId);
 		  }
@@ -185,10 +185,10 @@ class HomeWizardHeatlink extends Homey.Device {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);
-      console.log('--Stopped Polling--');
+      this.log('--Stopped Polling--');
     }
 
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log(`deleted: ${JSON.stringify(this)}`);
   }
 
 }

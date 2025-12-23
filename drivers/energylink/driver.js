@@ -13,7 +13,7 @@ const devices = {};
 class HomeWizardEnergyLink extends Homey.Driver {
 
   onInit() {
-    //console.log('HomeWizard EnergyLink has been inited');
+    //this.log('HomeWizard EnergyLink has been inited');
   }
 
   async onPair(socket) {
@@ -31,7 +31,7 @@ class HomeWizardEnergyLink extends Homey.Driver {
 
     // Received when a view has changed
     socket.setHandler('showView', (viewId) => {
-      console.log(`View: ${viewId}`);
+      this.log(`View: ${viewId}`);
       // this.log("data", viewId);
     });
 
@@ -62,15 +62,15 @@ class HomeWizardEnergyLink extends Homey.Driver {
 
     socket.setHandler('manual_add', (device) => {
 
-      console.log(device.settings.homewizard_id);
-      console.log(device.settings.homewizard_id.indexOf('HW_'));
+      this.log(device.settings.homewizard_id);
+      this.log(device.settings.homewizard_id.indexOf('HW_'));
 
-      console.log(device.settings.homewizard_id);
-      console.log(device.settings.homewizard_id.indexOf('HW'));
+      this.log(device.settings.homewizard_id);
+      this.log(device.settings.homewizard_id.indexOf('HW'));
 
       if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
         // true
-        console.log(`Energylink added ${device.data.id}`);
+        this.log(`Energylink added ${device.data.id}`);
 
         devices[device.data.id] = {
           id: device.data.id,
@@ -87,7 +87,7 @@ class HomeWizardEnergyLink extends Homey.Driver {
     });
 
     socket.setHandler('disconnect', () => {
-      console.log('User aborted pairing, or pairing is finished');
+      this.log('User aborted pairing, or pairing is finished');
     });
   }
 

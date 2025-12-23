@@ -15,12 +15,12 @@ class HomeWizardKakusensors extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    if (debug) { console.log(`HomeWizard Kakusensors ${this.getName()} has been inited`); }
+    if (debug) { this.log(`HomeWizard Kakusensors ${this.getName()} has been inited`); }
 
     const devices = this.homey.drivers.getDriver('kakusensors').getDevices();
 
     devices.forEach((device) => {
-      console.log(`add device: ${JSON.stringify(device.getName())}`);
+      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
@@ -41,7 +41,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
     // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { console.log('--Start Kakusensors Polling-- '); }
+      if (debug) { this.log('--Start Kakusensors Polling-- '); }
 
       this.getStatus(devices);
 
@@ -51,7 +51,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
   async getStatus(devices) {
     if (debug) {
-		  console.log('Start Polling');
+		  this.log('Start Polling');
     }
 
     for (const index in devices) {
@@ -77,7 +77,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 					  if (devices[index].getCapabilityValue('alarm_motion') != sensor_status) {
                     if (debug) {
-						  console.log(`New status - ${sensor_status}`);
+						  this.log(`New status - ${sensor_status}`);
                     }
 
                     await devices[index].setCapabilityValue('alarm_motion', sensor_status);
@@ -91,7 +91,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 					  if (devices[index].getCapabilityValue('alarm_smoke') != sensor_status) {
                     if (debug) {
-						  console.log(`New status - ${sensor_status}`);
+						  this.log(`New status - ${sensor_status}`);
                     }
 
                     await devices[index].setCapabilityValue('alarm_smoke', sensor_status);
@@ -105,7 +105,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 					  if (devices[index].getCapabilityValue('alarm_water') != sensor_status) {
                     if (debug) {
-						  console.log(`New status - ${sensor_status}`);
+						  this.log(`New status - ${sensor_status}`);
                     }
 
                     await devices[index].setCapabilityValue('alarm_water', sensor_status);
@@ -119,7 +119,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 					  if (devices[index].getCapabilityValue('alarm_contact') != sensor_status) {
                     if (debug) {
-						  console.log(`New status - ${sensor_status}`);
+						  this.log(`New status - ${sensor_status}`);
                     }
 
                     await devices[index].setCapabilityValue('alarm_contact', sensor_status);
@@ -133,7 +133,7 @@ class HomeWizardKakusensors extends Homey.Device {
 
 					  if (devices[index].getCapabilityValue('alarm_generic') != sensor_status) {
                     if (debug) {
-						  console.log(`New status - ${sensor_status}`);
+						  this.log(`New status - ${sensor_status}`);
                     }
 
                     await devices[index].setCapabilityValue('alarm_generic', sensor_status);
@@ -149,7 +149,7 @@ class HomeWizardKakusensors extends Homey.Device {
 					  const lowBattery_status = (lowBattery_temp == 'yes');
 
 					  if (devices[index].getCapabilityValue('alarm_battery') != lowBattery_status) {
-                    console.log(`New status - ${lowBattery_status}`);
+                    this.log(`New status - ${lowBattery_status}`);
                     await devices[index].setCapabilityValue('alarm_battery', lowBattery_status);
 					  }
                 }
@@ -157,8 +157,8 @@ class HomeWizardKakusensors extends Homey.Device {
             }
 			  }
         } catch (err) {
-			  console.log(err);
-			  console.log('Kakusensors data corrupt');
+			  this.log(err);
+			  this.log('Kakusensors data corrupt');
         }
 		  }
     }
@@ -168,10 +168,10 @@ class HomeWizardKakusensors extends Homey.Device {
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);
-      if (debug) { console.log('--Stopped Polling--'); }
+      if (debug) { this.log('--Stopped Polling--'); }
     }
 
-    console.log(`deleted: ${JSON.stringify(this)}`);
+    this.log(`deleted: ${JSON.stringify(this)}`);
   }
 
 }

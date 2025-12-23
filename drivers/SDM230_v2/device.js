@@ -48,7 +48,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     await this._registerCapabilityListeners();
 
     const settings = this.getSettings();
-    console.log('Settings for SDM230 apiv2: ', settings.polling_interval);
+    this.log('Settings for SDM230 apiv2: ', settings.polling_interval);
 
     // Check if polling interval is set in settings else set default value
     if (settings.polling_interval === undefined) {
@@ -77,7 +77,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
           
         } catch (error) {
-          console.log('Error retrieving mode:', error);
+          this.log('Error retrieving mode:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
       });
@@ -98,7 +98,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(normalized);
 
         } catch (error) {
-          console.log('Error set mode to zero:', error);
+          this.log('Error set mode to zero:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
       });
@@ -119,7 +119,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(normalized);
 
         } catch (error) {
-          console.log('Error set mode to full charge:', error);
+          this.log('Error set mode to full charge:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
         });
@@ -140,7 +140,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
           return resolve(normalized);
 
         } catch (error) {
-          console.log('Error set mode to standby:', error);
+          this.log('Error set mode to standby:', error);
           return resolve(false); // Or reject(error), depending on your error-handling approach
         }
         });
@@ -224,13 +224,13 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
   async _updateCapabilities() {
     if (!this.hasCapability('identify')) {
       await this.addCapability('identify').catch(this.error);
-      console.log(`created capability identify for ${this.getName()}`);
+      this.log(`created capability identify for ${this.getName()}`);
     }
 
     // Remove capabilities that are not needed
     if (this.hasCapability('measure_power.power_w')) {
       await this.removeCapability('measure_power.power_w').catch(this.error);
-      console.log(`removed capability measure_power.power_w for ${this.getName()}`);
+      this.log(`removed capability measure_power.power_w for ${this.getName()}`);
     }
   }
 
