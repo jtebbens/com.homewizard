@@ -7,6 +7,12 @@ const MAX_CONCURRENT = 4;
 const MIN_DELAY = 200;
 const MAX_QUEUE = 100;
 
+function log(...args) {
+  const ts = new Date().toISOString();
+  console.log(ts, '[fetchQueue]', ...args);
+}
+
+
 function processQueue() {
   if (active >= MAX_CONCURRENT) return;
   if (queue.length === 0) return;
@@ -21,20 +27,20 @@ function processQueue() {
 
   const timeout = setTimeout(() => {
     controller.abort();
-    console.error(`[fetchQueue] timeout: ${url}`);
+    log(`timeout: ${url}`);
   }, timeoutMs);
 
   fetch(url, { ...opts, signal: controller.signal })
     .then(resolve)
     .catch(err => {
       if (err.name === 'AbortError') {
-        console.error(`[fetchQueue] timeout (abort): ${url}`);
+        log(`timeout (abort): ${url}`);
       } else {
-        console.error(`[fetchQueue] error on ${url}: ${err.message}`);
+        log(`error on ${url}: ${err.message}`);
       }
 
       if (!retry) {
-        console.log(`[fetchQueue] retrying once: ${url}`);
+        log(`retrying once: ${url}`);
 
         setTimeout(() => {
           // Retry must respect MAX_QUEUE and duplicate rules
@@ -52,7 +58,7 @@ function processQueue() {
         }, 1000);
 
       } else {
-        console.error(`[fetchQueue] final fail: ${url}`);
+        log(`final fail: ${url}`);
         reject(err);
       }
     })
