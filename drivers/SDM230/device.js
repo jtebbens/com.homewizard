@@ -1,7 +1,6 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
 const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
 
@@ -10,59 +9,67 @@ const agent = new http.Agent({
   keepAliveMsecs: 11000
 });
 
-// const POLL_INTERVAL = 1000 * 1; // 1 seconds
+async function updateCapability(device, capability, value) {
+  const current = device.getCapabilityValue(capability);
 
-// const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+  // deletion-safe: never remove capabilities based on null/undefined
+  if (value === undefined || value === null) return;
+
+  if (!device.hasCapability(capability)) {
+    await device.addCapability(capability).catch(device.error);
+    device.log(`Added capability "${capability}"`);
+  }
+
+  if (current !== value) {
+    await device.setCapabilityValue(capability, value).catch(device.error);
+  }
+}
 
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-      await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    this.pollingActive = false;
+    this.failCount = 0;
 
-      const settings = this.getSettings();
-      this.log('Settings for SDM230: ', settings.polling_interval);
+    await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
+    const settings = this.getSettings();
 
-      // Check if polling interval is set in settings, if not set default to 10 seconds
-      if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
-        settings.polling_interval = 10; // Default to 10 second if not set
-        await this.setSettings({
-          // Update settings in Homey
-          polling_interval: 10,
-        });
+    // Ensure polling interval exists
+    if (settings.polling_interval == null) {
+      await this.setSettings({ polling_interval: 10 });
+    }
+
+    const interval = Math.max(settings.polling_interval, 2);
+    const offset = Math.floor(Math.random() * interval * 1000);
+
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+
+    setTimeout(() => {
+      this.onPoll();
+      this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+    }, offset);
+
+    if (this.getClass() === 'sensor') {
+      this.setClass('socket');
+      this.log('Changed class from sensor to socket');
+    }
+
+    // Ensure required capabilities exist
+    const requiredCaps = [
+      'measure_power',
+      'meter_power.consumed.t1',
+      'measure_power.l1',
+      'rssi',
+      'meter_power'
+    ];
+
+    for (const cap of requiredCaps) {
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap).catch(this.error);
       }
-
-      if (this.onPollInterval) {
-        clearInterval(this.onPollInterval);
-      }
-
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-      
-    
-      if (this.getClass() == 'sensor') {
-        this.setClass('socket');
-        this.log('Changed sensor to socket.');
-      }
-
-      if (!this.hasCapability('measure_power')) {
-          await this.addCapability('measure_power').catch(this.error);
-      }
-
-      if (!this.hasCapability('meter_power.consumed.t1')) {
-        await this.addCapability('meter_power.consumed.t1').catch(this.error);
-      }
-
-      if (!this.hasCapability('measure_power.l1')) {
-        await this.addCapability('measure_power.l1').catch(this.error);
-      }
-
-      if (!this.hasCapability('rssi')) {
-        await this.addCapability('rssi').catch(this.error);
-      }
-      if (!this.hasCapability('meter_power')) {
-        await this.addCapability('meter_power').catch(this.error);
-      }
+    }
   }
 
   onDeleted() {
@@ -80,14 +87,13 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.log('onDiscoveryAddressChanged');
+    this.log(`URL updated: ${this.url}`);
     this.onPoll();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
+    this.log(`URL restored: ${this.url}`);
     this.setAvailable();
     this.onPoll();
   }
@@ -102,21 +108,14 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         body: JSON.stringify({ cloud_enabled: true })
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-      // Optionally log success
-      this.log('Cloud enabled successfully');
+      this.log('Cloud enabled');
+
     } catch (err) {
       this.error('Failed to enable cloud:', err);
-      // Optionally set a capability or trigger a flow here
-      // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
     }
   }
-
-
-
 
   async setCloudOff() {
     if (!this.url) return;
@@ -128,168 +127,127 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
         body: JSON.stringify({ cloud_enabled: false })
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-      // Optionally log success
-      this.log('Cloud disabled successfully');
+      this.log('Cloud disabled');
+
     } catch (err) {
       this.error('Failed to disable cloud:', err);
-      // Optionally set a capability or trigger a flow here
-      // await this.setCapabilityValue('connection_error', err.message).catch(this.error);
     }
   }
 
-
   async onPoll() {
-
     const settings = this.getSettings();
-
-    const promises = [];
 
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
-        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+        this.log(`Restored URL from settings: ${this.url}`);
       } else {
-        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-        await this.setUnavailable().catch(this.error);
+        await this.setUnavailable('Missing URL');
         return;
       }
     }
 
-    Promise.resolve().then(async () => {
+    if (this.pollingActive) return;
+    this.pollingActive = true;
 
-      // let res = await fetch(`${this.url}/data`);
-
+    try {
       const res = await fetch(`${this.url}/data`, {
-          agent,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
+        agent,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
 
-
-      if (!res || !res.ok) {
-        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
       const data = await res.json();
+      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
 
-      
-      if (this.getCapabilityValue('rssi') != data.wifi_strength)
-      { promises.push((this.setCapabilityValue('rssi', data.wifi_strength)).catch(this.error)); }
+      const updates = [];
 
-      // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
-      if (this.getClass() == 'solarpanel') {
-        promises.push((this.setCapabilityValue('measure_power', data.active_power_w * -1)).catch(this.error));
-      } else {
-        promises.push((this.setCapabilityValue('measure_power', data.active_power_w)).catch(this.error));
-      }
+      // RSSI
+      updates.push(updateCapability(this, 'rssi', data.wifi_strength));
 
-      // await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
-      promises.push((this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh)).catch(this.error));
+      // Power (invert for legacy solarpanel class)
+      const power = this.getClass() === 'solarpanel'
+        ? data.active_power_w * -1
+        : data.active_power_w;
 
-      // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
-      if (this.getClass() == 'solarpanel') {
-        promises.push((this.setCapabilityValue('measure_power.l1', data.active_power_l1_w * -1)).catch(this.error));
-      } else {
-        promises.push((this.setCapabilityValue('measure_power.l1', data.active_power_l1_w)).catch(this.error));
-      }
-      // await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
+      updates.push(updateCapability(this, 'measure_power', power));
 
-      // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
+      // Total import
+      updates.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
+
+      // L1 power
+      const l1 = this.getClass() === 'solarpanel'
+        ? data.active_power_l1_w * -1
+        : data.active_power_l1_w;
+
+      updates.push(updateCapability(this, 'measure_power.l1', l1));
+
+      // Export (production)
       if (data.total_power_export_t1_kwh > 1) {
-        if (!this.hasCapability('meter_power.produced.t1')) {
-          // add production meters
-          await this.addCapability('meter_power.produced.t1').catch(this.error);
-        }
-        // update values for solar production
-        promises.push((this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh)).catch(this.error));
-      }
-      else if (data.total_power_export_t1_kwh < 1) {
-        await this.removeCapability('meter_power.produced.t1').catch(this.error);
+        updates.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
       }
 
-      
-      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      promises.push((this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh))).catch(this.error));
+      // Net power
+      const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
+      updates.push(updateCapability(this, 'meter_power', net));
 
-      // active_voltage_l1_v
-      if (data.active_voltage_v !== undefined) {
-        if (!this.hasCapability('measure_voltage')) {
-          await this.addCapability('measure_voltage').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_voltage') != data.active_voltage_v)
-        { promises.push((this.setCapabilityValue('measure_voltage', data.active_voltage_v)).catch(this.error)); }
-      }
-      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
-        await this.removeCapability('measure_voltage').catch(this.error);
-      }
+      // Voltage
+      updates.push(updateCapability(this, 'measure_voltage', data.active_voltage_v));
 
-      // active_current_a  Amp's
-      if (data.active_current_a !== undefined) {
-        if (!this.hasCapability('measure_current')) {
-          await this.addCapability('measure_current').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_current') != data.active_current_a)
-        { promises.push((this.setCapabilityValue('measure_current', data.active_current_a)).catch(this.error)); }
-      }
-      else if ((data.active_current_a == undefined) && (this.hasCapability('measure_current'))) {
-        await this.removeCapability('measure_current').catch(this.error);
+      // Current
+      updates.push(updateCapability(this, 'measure_current', data.active_current_a));
+
+      // Sync URL if changed
+      if (this.url !== settings.url) {
+        await this.setSettings({ url: this.url }).catch(this.error);
       }
 
-      // Update settings.url when changed
-      if (this.url && this.url !== settings.url) {
-        this.log(`SDM230 - Updating settings url from ${settings.url} → ${this.url}`);
-        try {
-          await this.setSettings({ url: this.url });
-        } catch (err) {
-          this.error('SDM230 - Failed to update settings url', err);
-        }
+      await Promise.allSettled(updates);
+
+      await this.setAvailable();
+      this.failCount = 0;
+
+    } catch (err) {
+      this.error('Polling failed:', err);
+      this.failCount++;
+
+      if (this.failCount > 3) {
+        if (this.onPollInterval) clearInterval(this.onPollInterval);
+        await this.setUnavailable('Device unreachable');
+      } else {
+        await this.setUnavailable(err.message || 'Polling error');
       }
 
-    await Promise.allSettled(promises);
-
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
+    } finally {
+      this.pollingActive = false;
+    }
   }
 
-  onSettings(MySettings) {
-    this.log('Settings updated');
-    this.log('Settings:', MySettings);
-    // Update interval polling
-    if (
-      'polling_interval' in MySettings.oldSettings
-      && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
-    ) {
-      this.log('Polling_interval for SDM230 changed to:', MySettings.newSettings.polling_interval);
-      clearInterval(this.onPollInterval);
-      // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
-    }
+  onSettings(event) {
+    const { oldSettings, newSettings, changedKeys } = event;
 
-      if ('cloud' in MySettings.oldSettings 
-        && MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
-      ) {
-        this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
+    for (const key of changedKeys) {
 
-        if (MySettings.newSettings.cloud == 1) {
-            this.setCloudOn();  
-        }
-        else if (MySettings.newSettings.cloud == 0) {
-            this.setCloudOff();
+      if (key === 'polling_interval') {
+        const interval = newSettings.polling_interval;
+
+        if (typeof interval === 'number' && interval > 0) {
+          if (this.onPollInterval) clearInterval(this.onPollInterval);
+          this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+        } else {
+          this.log('Invalid polling interval:', interval);
         }
       }
-    // return true;
+
+      if (key === 'cloud') {
+        if (newSettings.cloud == 1) this.setCloudOn();
+        else this.setCloudOff();
+      }
+    }
   }
 
 };

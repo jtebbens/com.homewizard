@@ -1,52 +1,44 @@
 'use strict';
 
 const Homey = require('homey');
-
 const fetch = require('../../includes/utils/fetchQueue');
-// const fetch = require('node-fetch');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
-
-
 const http = require('http');
 
-/**
- * Helper function to add, remove or update a capability
- *
- * @async
- * @param {*} device 
- * @param {*} capability 
- * @param {*} value 
- * @returns {*} 
- */
+let agent = new http.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 10000,
+  maxSockets: 1
+});
+
+// All phase‑dependent capabilities (L2/L3/T3)
+const PHASE_CAPS = [
+  'measure_power.l2', 'measure_power.l3',
+  'measure_voltage.l2', 'measure_voltage.l3',
+  'measure_current.l2', 'measure_current.l3',
+  'net_load_phase2_pct', 'net_load_phase3_pct',
+  'voltage_sag_l2', 'voltage_sag_l3',
+  'voltage_swell_l2', 'voltage_swell_l3',
+  'meter_power.consumed.t3', 'meter_power.produced.t3'
+];
+
 async function updateCapability(device, capability, value) {
-  if (value == null) {
-    if (device.hasCapability(capability) && device.getCapabilityValue(capability) !== null) {
-      await device.removeCapability(capability).catch(device.error);
-    }
-    return;
-  }
+  const current = device.getCapabilityValue(capability);
+
+  // deletion-safe: never remove capabilities based on null/undefined from payload
+  if (value === undefined || value === null) return;
 
   if (!device.hasCapability(capability)) {
-    // device.log(`⚠️ Capability "${capability}" missing — skipping update`);
-    // return;
     await device.addCapability(capability).catch(device.error);
-    device.log(`➕ Added capability "${capability}"`);
+    device.log(`Added capability "${capability}"`);
   }
 
-  const current = device.getCapabilityValue(capability);
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
   }
 }
 
-/**
- * Helper function to determine WiFi quality based on RSSI percentage
- *
- * @async
- * @param {*} percent 
- * @returns {unknown} 
- */
-async function getWifiQuality(percent) {
+function getWifiQuality(percent) {
   if (percent >= 80) return 'Excellent / Strong';
   if (percent >= 60) return 'Moderate';
   if (percent >= 40) return 'Weak';
@@ -55,112 +47,132 @@ async function getWifiQuality(percent) {
   return 'Unusable';
 }
 
-// http.agent options to improve performance
-// KeepAlive to true to reuse connections
-// KeepAliveMsecs to 1 second to keep connections alive
-// maxSockets to 5 to limit the number of concurrent sockets
-let agent = new http.Agent({
-  keepAlive: true,
-  keepAliveMsecs: 10000,  // avoids stale sockets
-  maxSockets: 1          // only one active connection per host
-});
-
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   async onInit() {
+    this.pollingActive = false;
+    this.failCount = 0;
+    this._lastSamples = {}; // mini-cache
 
     await updateCapability(this, 'connection_error', 'No errors');
 
-    if (this.hasCapability('net_load_phase1')) {
-      await this.removeCapability('net_load_phase1').catch(this.error);
-    }
-
-    if (this.hasCapability('net_load_phase2')) {
-      await this.removeCapability('net_load_phase2').catch(this.error);
-    }
-
-    if (this.hasCapability('net_load_phase3')) {
-      await this.removeCapability('net_load_phase3').catch(this.error);
+    // Remove legacy capabilities once
+    for (const cap of ['net_load_phase1', 'net_load_phase2', 'net_load_phase3']) {
+      if (this.hasCapability(cap)) {
+        await this.removeCapability(cap).catch(this.error);
+      }
     }
 
     const settings = this.getSettings();
-    // ... set defaults if needed ...
+
+    this._overloadThreshold = settings.phase_overload_threshold ?? 97;
+    this._overloadReset = settings.phase_overload_reset ?? 85;
+
     if (!settings.polling_interval) {
-      settings.polling_interval = 10;
       await this.setSettings({ polling_interval: 10 });
     }
 
-    this.log('Polling settings for P1 apiv1: ', settings.polling_interval);
-    
-    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
-
-    // Check if number of phases is set, if not default to 1
-    if (settings.number_of_phases === undefined || settings.number_of_phases === null) {
-      await this.setSettings({
-        // Update settings in Homey
-        number_of_phases: 1,
-      });
+    if (settings.phase_capacity == null) {
+      await this.setSettings({ phase_capacity: 40 });
     }
 
-    // Remove gasmeter if disabled in settings
+    if (settings.number_of_phases == null) {
+      await this.setSettings({ number_of_phases: 1 });
+    }
+
+    if (settings.show_gas === undefined || settings.show_gas === null) {
+      await this.setSettings({ show_gas: true });
+    }
+
+    // Initial phase count (user setting or autodetect later)
+    this._phases = Number(this.getSettings().number_of_phases) || 1;
+
+    // Clean slate: if 1 phase → remove all L2/L3/T3
+    if (this._phases === 1) {
+      for (const cap of PHASE_CAPS) {
+        if (this.hasCapability(cap)) {
+          await this.removeCapability(cap).catch(this.error);
+        }
+      }
+    }
+
+    // If 3 phases → ensure all L2/L3/T3 exist
+    if (this._phases === 3) {
+      for (const cap of PHASE_CAPS) {
+        if (!this.hasCapability(cap)) {
+          await this.addCapability(cap).catch(this.error);
+        }
+      }
+    }
+
+    // Autodetect counter for 1 → 3 phases promotion
+    this._phaseDetectCount = 0;
+
+    // Gas capabilities are settings-driven, not payload-driven
     if (!settings.show_gas) {
-      if (this.hasCapability('meter_gas'))
-      { await this.removeCapability('meter_gas'); }
-      if (this.hasCapability('measure_gas'))
-      { await this.removeCapability('measure_gas'); }
-      if (this.hasCapability('meter_gas'))
-      { await this.removeCapability('meter_gas.daily'); }
+      for (const cap of ['meter_gas', 'measure_gas', 'meter_gas.daily']) {
+        if (this.hasCapability(cap)) {
+          await this.removeCapability(cap).catch(this.error);
+        }
+      }
     }
 
-    // Check if polling interval is set in settings, if not set default to 10 seconds
-    if ((settings.phase_capacity === undefined) || (settings.phase_capacity === null)) {
-      settings.phase_capacity = 40; // Default to 40 Amp
-      await this.setSettings({
-        // Update settings in Homey
-        phase_capacity: 40,
-      });
-    }
+    const interval = Math.max(this.getSettings().polling_interval, 2);
+    const offset = Math.floor(Math.random() * interval * 1000);
 
-    // Initialize flow triggers
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+
+    setTimeout(() => {
+      this.onPoll();
+      this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+    }, offset);
+
     this._flowTriggerTariff = this.homey.flow.getDeviceTriggerCard('tariff_changed');
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
     this._flowTriggerExport = this.homey.flow.getDeviceTriggerCard('export_changed');
 
-    this.registerCapabilityListener('identify', async (value) => {
+    this.registerCapabilityListener('identify', async () => {
       await this.onIdentify();
     });
 
-
-    // --- Baseload Monitor Integration (v1 only) ---
+    // Baseload monitor wiring
     this._baseloadNotificationsEnabled = this.getSetting('baseload_notifications') ?? true;
-    const app = this.homey.app;
-
-    // Create the monitor if it doesn't exist yet
-    if (!app.baseloadMonitor) {
-      app.baseloadMonitor = new BaseloadMonitor(this.homey);
-    }
-
-    // Register this device with the monitor
-    app.baseloadMonitor.registerP1Device(this);
-
-    // Attempt to become the master P1 source (first device wins)
-    app.baseloadMonitor.trySetMaster(this);
-
-    // Notifications
-    app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
-
-    // Overload notification true/false
     this._phaseOverloadNotificationsEnabled = this.getSetting('phase_overload_notifications') ?? true;
 
     this._phaseOverloadState = {
       l1: { highCount: 0, notified: false },
       l2: { highCount: 0, notified: false },
-      l3: { highCount: 0, notified: false }
+      l3: { highCount: 0, notified: false },
     };
 
+    const app = this.homey.app;
+    if (!app.baseloadMonitor) {
+      app.baseloadMonitor = new BaseloadMonitor(this.homey);
+    }
 
+    app.baseloadMonitor.registerP1Device(this);
+    app.baseloadMonitor.trySetMaster(this);
+    app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+  }
 
+  // mini-cache helper
+  _hasChanged(key, value) {
+    const prev = this._lastSamples[key];
+    if (prev === value) return false;
+    this._lastSamples[key] = value;
+    return true;
+  }
 
+  onDeleted() {
+    const app = this.homey.app;
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.unregisterP1Device(this);
+    }
+
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
   }
 
   flowTriggerTariff(device, tokens) {
@@ -175,14 +187,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this._flowTriggerExport.trigger(device, tokens).catch(this.error);
   }
 
-    /**
-   * Called whenever a new P1 power value is received.
-   * Integrate this into your existing polling logic.
-   */
   _onNewPowerValue(power) {
     const app = this.homey.app;
-
-    // Forward to baseload monitor (only if this device is master)
     if (app.baseloadMonitor) {
       app.baseloadMonitor.updatePowerFromDevice(this, power);
     }
@@ -191,577 +197,536 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   async onIdentify() {
     if (!this.url) return;
 
-    let res;
     try {
-      res = await fetch(`${this.url}/identify`, {
+      const res = await fetch(`${this.url}/identify`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
+
+      if (!res || !res.ok) {
+        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+
     } catch (err) {
       this.error(err);
       throw new Error('Network error during onIdentify');
     }
-
-    if (!res || !res.ok) {
-      await this.setCapabilityValue('connection_error', res ? res.status : 'fetch failed');
-      throw new Error(res ? res.statusText : 'Unknown error during fetch');
-    }
   }
 
-  
-
-  onDeleted() {
-    const app = this.homey.app;
-
-    if (app.baseloadMonitor) {
-      app.baseloadMonitor.unregisterP1Device(this);
-    }
-
-    if (this.onPollInterval) {
-      clearInterval(this.onPollInterval);
-      this.onPollInterval = null;
-    }
-  }
-
-  
-  /**
-   * Handles a newly discovered device and starts polling.
-   *
-   * @async
-   * @param {*} discoveryResult - The result from device discovery, containing address, port, and TXT record.
-   * @returns {Promise<void>}
-   */
-   onDiscoveryAvailable(discoveryResult) {
+  onDiscoveryAvailable(discoveryResult) {
     try {
-      // Validate discovery result
       if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
         throw new Error('Invalid discovery result: missing address, port, or path');
       }
 
-      // Construct device URL
       this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
       this.log(`Discovered device URL: ${this.url}`);
-
-      // Start polling the device
       this.onPoll();
+
     } catch (err) {
       this.log(`Discovery failed: ${err.message}`);
     }
   }
 
-  
-  /**
-   * Handles mDNS address changes by updating the device URL and polling.
-   *
-   * @param {*} discoveryResult 
-   */
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.log('onDiscoveryAddressChanged');
+    this.log(`URL updated: ${this.url}`);
     this.onPoll();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.log('onDiscoveryLastSeenChanged');
+    this.log(`URL restored: ${this.url}`);
     this.setAvailable();
     this.onPoll();
   }
 
-  // Function to enable Cloud mode on the device
   async setCloudOn() {
     if (!this.url) return;
 
-    let res;
     try {
-      res = await fetch(`${this.url}/system`, {
+      const res = await fetch(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
       });
+
+      if (!res || !res.ok) {
+        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+
     } catch (err) {
       this.error(err);
       throw new Error('Network error during setCloudOn');
     }
-
-    if (!res || !res.ok) {
-      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
-      throw new Error(res ? res.statusText : 'Unknown error during fetch');
-    }
   }
 
-  // Function to disable Cloud mode on the device
   async setCloudOff() {
     if (!this.url) return;
 
-    let res;
     try {
-      res = await fetch(`${this.url}/system`, {
+      const res = await fetch(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
       });
+
+      if (!res || !res.ok) {
+        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+
     } catch (err) {
       this.error(err);
       throw new Error('Network error during setCloudOff');
     }
-
-    if (!res || !res.ok) {
-      await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
-      throw new Error(res ? res.statusText : 'Unknown error during fetch');
-    }
   }
 
-async onPoll() {
-
+  async onPoll() {
     const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
-        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
+        this.log(`Restored URL from settings: ${this.url}`);
       } else {
-        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-        await this.setUnavailable().catch(this.error);
+        await this.setUnavailable('Missing URL');
         return;
       }
     }
 
-
-    Promise.resolve().then(async () => {
-        // Get current time in the timezone of Homey
-        const now = new Date();
-        const tz = this.homey.clock.getTimezone();
-        const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-
-        const homey_lang = this.homey.i18n.getLanguage();
-            
-
-        // const res = await fetch(`${this.url}/data`);
-        const res = await fetch(`${this.url}/data`, {
-            agent,
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
-
-          if (!res || !res.ok) {
-             
-              await updateCapability(this, 'connection_error', 'Fetch error').catch(this.error);
-              throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
-          }
-
-          const data = await res.json();
-          
-          // At exactly midnight
-          if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
-            if (data.total_power_import_kwh !== undefined) {
-              await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
-            }
-            if (data.total_gas_m3 !== undefined && settings.show_gas) {
-              await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
-            }
-          } else {
-            // First-time setup fallback
-            const meterStartDay = await this.getStoreValue('meter_start_day');
-            let gasmeterStartDay = null; 
-            if (settings.show_gas) {
-              gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
-            }
-            
-            
-            if (!meterStartDay && data.total_power_import_kwh !== undefined) {
-              await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
-            }
-            if (!gasmeterStartDay && data.total_gas_m3 !== undefined && settings.show_gas) {
-              await this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error);
-            }
-          }
-
-
-          // Check if it is 5 minutes
-          if ((nowLocal.getMinutes() % 5 === 0) && settings.show_gas) {
-            const prevReadingTimeStamp = await this.getStoreValue('gasmeter_previous_reading_timestamp');
-
-            // First-time setup
-            if (prevReadingTimeStamp == null) {
-              await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error);
-              return; // Exit early to avoid calculating delta with missing timestamp
-            }
-
-            // Calculate gas usage delta
-            if (data.total_gas_m3 != null && prevReadingTimeStamp !== data.gas_timestamp) {
-              const prevReading = await this.getStoreValue('gasmeter_previous_reading');
-
-              if (prevReading != null) {
-                const gasDelta = data.total_gas_m3 - prevReading;
-                if (gasDelta >= 0) {
-                  await updateCapability(this, 'measure_gas', gasDelta).catch(this.error);
-                }
-              }
-
-              await this.setStoreValue('gasmeter_previous_reading', data.total_gas_m3).catch(this.error);
-              await this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error);
-            }
-          }
-
-          // Update is show gasmeter is enabled
-          if (settings.show_gas) {
-            // Update the capability meter_power.daily
-            const meterStart = await this.getStoreValue('meter_start_day');
-            if (meterStart != null && data.total_power_import_kwh != null) {
-              const dailyImport = data.total_power_import_kwh - meterStart;
-              await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
-            }
-
-            // Update the capability meter_gas.daily
-            const gasStart = await this.getStoreValue('gasmeter_start_day');
-            const gasDiff = (data.total_gas_m3 != null && gasStart != null)
-              ? data.total_gas_m3 - gasStart
-              : null;
-
-            await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
-          }
-
-
-          // Save export data check if capabilities are present first
-          await updateCapability(this, 'measure_power', data.active_power_w).catch(this.error);
-          // Forward the power sample to the baseload monitor
-          this._onNewPowerValue(data.active_power_w);
-
-          await updateCapability(this, 'rssi', data.wifi_strength).catch(this.error);
-          await updateCapability(this, 'tariff', data.active_tariff).catch(this.error);
-          await updateCapability(this, 'identify', 'identify'); // or another placeholder value if needed
-          await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
-          await updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
-          await updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh).catch(this.error);
-
-          const wifiQuality = await getWifiQuality(data.wifi_strength);
-          await updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
-
-          // Trigger tariff
-          const lastTariff = await this.getStoreValue('last_active_tariff');
-          const currentTariff = data.active_tariff;
-
-          if (typeof currentTariff === 'number' && currentTariff !== lastTariff) {
-            this.flowTriggerTariff(this, { tariff_changed: currentTariff });
-            try {
-              await this.setStoreValue('last_active_tariff', currentTariff);
-            } catch (err) {
-              this.error(err);
-            }
-          }
-
-
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
-
-          // Not all users have a gas meter in their system (if NULL ignore creation or even delete from view)
-
-          if (settings.show_gas) {
-            await updateCapability(this, 'meter_gas', data.total_gas_m3).catch(this.error);
-          }
-
-          // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-          await updateCapability(
-            this,
-            'meter_power.produced.t1',
-            (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
-              ? data.total_power_export_t1_kwh
-              : null
-          ).catch(this.error);
-
-          await updateCapability(
-            this,
-            'meter_power.produced.t2',
-            (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1)
-              ? data.total_power_export_t2_kwh
-              : null
-          ).catch(this.error);
-
-
-
-          // aggregated meter for Power by the hour support
-          // Ensure meter_power exists and update value based on firmware
-          const netImport = data.total_power_import_kwh === undefined
-              ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) 
-                - (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
-              : data.total_power_import_kwh - data.total_power_export_kwh;
-
-          await updateCapability(this, 'meter_power', netImport).catch(this.error);
-
-          // Also update returned power if firmware supports it
-          if (data.total_power_import_kwh !== undefined) {
-            await updateCapability(this, 'meter_power.returned', data.total_power_export_kwh).catch(this.error);
-          }
-
-
-          // Trigger import
-          const lastImport = await this.getStoreValue('last_total_import_kwh');
-          const currentImport = data.total_power_import_kwh;
-
-          if (typeof currentImport === 'number' && currentImport !== lastImport) {
-            this.flowTriggerImport(this, { import_changed: currentImport });
-            await this.setStoreValue('last_total_import_kwh', currentImport).catch(this.error);
-          }
-          
-          // Trigger export
-          const lastExport = await this.getStoreValue('last_total_export_kwh');
-          const currentExport = data.total_power_export_kwh;
-
-          if (typeof currentExport === 'number' && currentExport !== lastExport) {
-            this.flowTriggerExport(this, { export_changed: currentExport });
-            await this.setStoreValue('last_total_export_kwh', currentExport).catch(this.error);
-          }
-
-
-          // Belgium
-          await updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w).catch(this.error);
-          
-
-
-          // active_voltage_l1_v Some P1 meters do have voltage data
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
-
-
-          // active_current_l1_a Some P1 meters do have amp data
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
-
-
-          // Power failure count - long_power_fail_count
-          await updateCapability(this, 'long_power_fail_count', data.long_power_fail_count).catch(this.error);
-
-
-          // voltage_sag_l1_count - Net L1 dip
-          await updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count).catch(this.error);
-
-          // voltage_swell_l1_count - Net L1 peak
-          await updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count).catch(this.error);
-
-          
-
-          
-          // Rewrite of L1/L2/L3 Voltage/Amp
-          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
-          
-
-
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
-
-          //
-          if (data.active_current_l1_a !== undefined) {
-            const load1 = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
-            await updateCapability(this, 'net_load_phase1_pct', load1).catch(this.error);
-            this._handlePhaseOverload('l1', load1, homey_lang);
-          }
-
-
-          // Rewrite Voltage/Amp Phase 2 and 3 (this part will be skipped if netgrid is only 1 phase)
-
-          if ((data.active_current_l2_a !== undefined) || (data.active_current_l3_a !== undefined)) {
-
-              try {
-                if (
-                  settings.number_of_phases === undefined
-                  || settings.number_of_phases === null
-                  || Number(settings.number_of_phases) === 1
-                ) {
-                  await this.setSettings({ number_of_phases: 3 });
-                  this.log('number_of_phases successfully updated to 3');
-                }
-              } catch (err) {
-                this.error('Failed to update number_of_phases:', err.message, err.stack);
-              }
-              // voltage_sag_l2_count - Net L2 dip
-              await updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count).catch(this.error);
-              
-              // voltage_sag_l3_count - Net L3 dip
-              await updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count).catch(this.error);
-              
-              // voltage_swell_l2_count - Net L2 peak
-              await updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count).catch(this.error);
-              
-              // voltage_swell_l3_count - Net L3 peak
-              await updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count).catch(this.error);
-
-
-              await updateCapability(this, 'measure_power.l2', data.active_power_l2_w).catch(this.error);
-              await updateCapability(this, 'measure_power.l3', data.active_power_l3_w).catch(this.error);
-              
-              await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v).catch(this.error);
-              await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v).catch(this.error);
-
-
-
-              await updateCapability(this, 'measure_current.l2', data.active_current_l2_a).catch(this.error);
-
-
-              if (data.active_current_l2_a !== undefined) {
-                const load2 = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
-                await updateCapability(this, 'net_load_phase2_pct', load2).catch(this.error);
-                this._handlePhaseOverload('l2', load2, homey_lang);
-              }
-
-              await updateCapability(this, 'measure_current.l3', data.active_current_l3_a).catch(this.error);
-
-
-              if (data.active_current_l3_a !== undefined) {
-                const load3 = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
-                await updateCapability(this, 'net_load_phase3_pct', load3).catch(this.error);
-                this._handlePhaseOverload('l3', load3, homey_lang);
-              }
-
-
-          } // END OF PHASE 2 and 3 Capabilities
-
-          // T3 meter request import and export
-          await updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh).catch(this.error);
-          await updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh).catch(this.error);
-
-      
-          // Always update 3‑phase values 
-          await updateCapability(this, 'measure_power.l1', data.active_power_l1_w).catch(this.error);
-          await updateCapability(this, 'measure_power.l2', data.active_power_l2_w).catch(this.error);
-          await updateCapability(this, 'measure_power.l3', data.active_power_l3_w).catch(this.error);
-
-          // Voltage per phase
-          await updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v).catch(this.error);
-          await updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v).catch(this.error);
-          await updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v).catch(this.error);
-
-          // Current per phase
-          await updateCapability(this, 'measure_current.l1', data.active_current_l1_a).catch(this.error);
-          await updateCapability(this, 'measure_current.l2', data.active_current_l2_a).catch(this.error);
-          await updateCapability(this, 'measure_current.l3', data.active_current_l3_a).catch(this.error);
-
-
-
-          // Accessing external data
-          const externalData = data.external;
-
-          // Extract the most recent water meter reading
-          const latestWaterData = externalData?.reduce((prev, current) => {
-            if (current.type === 'water_meter') {
-              return !prev || current.timestamp > prev.timestamp ? current : prev;
-            }
-            return prev;
-          }, null);
-
-          // Update or remove meter_water capability
-          await updateCapability(this, 'meter_water', latestWaterData?.value ?? null).catch(this.error);
-
-          // Log if the water meter capability was removed due to no valid source
-          if (!latestWaterData && this.hasCapability('meter_water')) {
-            await this.removeCapability('meter_water').catch(this.error);
-            this.log('Removed meter as there is no water meter in P1.');
-          }
-          
-        // Update settings.url when changed
-        if (this.url && this.url !== settings.url) {
-          this.log(`Energy - Updating settings url from ${settings.url} → ${this.url}`);
-          try {
-            await this.setSettings({ url: this.url });
-          } catch (err) {
-            this.error('Energy - Failed to update settings url', err);
-          }
-        }
-
-      })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch(async (err) => {
-        this.error('❌ Poll failed:', err.message || err);
-        await this.setUnavailable(err.message || 'Polling error').catch(this.error);
-
-        if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
-          this.log('⚠️ Timeout detected — recreating HTTP agent and restarting poll');
-
-          try {
-            // Recreate a brand‑new agent with tuned settings
-            agent.destroy?.(); // clean up old sockets if possible
-            agent = new http.Agent({
-              keepAlive: true,
-              keepAliveMsecs: 10000, // matches your 10s poll cycle
-              maxSockets: 1
-            });
-          } catch (createErr) {
-            this.error('Failed to recreate agent:', createErr);
-          }
-
-          // Backoff before retrying to avoid hammering
-          setTimeout(() => {
-            this.onPoll();
-          }, 2000);
-        }
+    if (this.pollingActive) return;
+    this.pollingActive = true;
+
+    try {
+      const tz = this.homey.clock.getTimezone();
+      const now = new Date();
+      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+      const homeyLang = this.homey.i18n.getLanguage();
+
+      const res = await fetch(`${this.url}/data`, {
+        agent,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
       });
 
+      if (!res || !res.ok) {
+        await updateCapability(this, 'connection_error', 'Fetch error');
+        throw new Error(res ? res.statusText : 'Unknown error during fetch');
+      }
+
+      const data = await res.json();
+      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+
+      const tasks = [];
+
+      // Autodetect 3 phases (only promote, never demote)
+      const hasRealL2 = typeof data.active_current_l2_a === 'number' && data.active_current_l2_a !== 0;
+      const hasRealL3 = typeof data.active_current_l3_a === 'number' && data.active_current_l3_a !== 0;
+
+      if (this._phases === 1 && (hasRealL2 || hasRealL3)) {
+        this._phaseDetectCount++;
+
+        // Require 5 consecutive polls with L2/L3 activity before promoting
+        if (this._phaseDetectCount >= 5) {
+          this._phases = 3;
+          await this.setSettings({ number_of_phases: 3 }).catch(this.error);
+
+          // Add all L2/L3/T3 capabilities
+          for (const cap of PHASE_CAPS) {
+            if (!this.hasCapability(cap)) {
+              await this.addCapability(cap).catch(this.error);
+            }
+          }
+
+          this.log('Autodetect: promoted to 3 phases');
+        }
+      } else {
+        this._phaseDetectCount = 0;
+      }
+
+      // Midnight daily reset (store baseline)
+      if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
+        if (data.total_power_import_kwh !== undefined) {
+          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
+        }
+        if (settings.show_gas && data.total_gas_m3 !== undefined) {
+          tasks.push(this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error));
+        }
+      } else {
+        const meterStartDay = await this.getStoreValue('meter_start_day');
+        let gasmeterStartDay = null;
+
+        if (settings.show_gas) {
+          gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
+        }
+
+        if (!meterStartDay && data.total_power_import_kwh !== undefined) {
+          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
+        }
+        if (settings.show_gas && !gasmeterStartDay && data.total_gas_m3 !== undefined) {
+          tasks.push(this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error));
+        }
+      }
+
+      // Gas 5‑minute delta
+      if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
+        const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
+
+        if (prevTs == null) {
+          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error));
+        } else if (data.total_gas_m3 != null && prevTs !== data.gas_timestamp) {
+          const prevReading = await this.getStoreValue('gasmeter_previous_reading');
+          if (prevReading != null) {
+            const gasDelta = data.total_gas_m3 - prevReading;
+            if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
+              tasks.push(updateCapability(this, 'measure_gas', gasDelta));
+            }
+          }
+          tasks.push(this.setStoreValue('gasmeter_previous_reading', data.total_gas_m3).catch(this.error));
+          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error));
+        }
+      }
+
+      // Daily totals when gas is enabled
+      if (settings.show_gas) {
+        const meterStart = await this.getStoreValue('meter_start_day');
+        if (meterStart != null && data.total_power_import_kwh != null) {
+          const dailyImport = data.total_power_import_kwh - meterStart;
+          if (this._hasChanged('meter_power.daily', dailyImport)) {
+            tasks.push(updateCapability(this, 'meter_power.daily', dailyImport));
+          }
+        }
+
+        const gasStart = await this.getStoreValue('gasmeter_start_day');
+        if (data.total_gas_m3 != null && gasStart != null) {
+          const gasDiff = data.total_gas_m3 - gasStart;
+          if (this._hasChanged('meter_gas.daily', gasDiff)) {
+            tasks.push(updateCapability(this, 'meter_gas.daily', gasDiff));
+          }
+        }
+      }
+
+      // Core power + baseload
+      if (this._hasChanged('measure_power', data.active_power_w)) {
+        tasks.push(updateCapability(this, 'measure_power', data.active_power_w));
+        this._onNewPowerValue(data.active_power_w);
+      }
+
+      if (this._hasChanged('rssi', data.wifi_strength)) {
+        tasks.push(updateCapability(this, 'rssi', data.wifi_strength));
+      }
+
+      if (this._hasChanged('tariff', data.active_tariff)) {
+        tasks.push(updateCapability(this, 'tariff', data.active_tariff));
+      }
+
+      tasks.push(updateCapability(this, 'identify', 'identify'));
+
+      if (this._hasChanged('meter_power.consumed.t1', data.total_power_import_t1_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
+      }
+      if (this._hasChanged('meter_power.consumed.t2', data.total_power_import_t2_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh));
+      }
+      if (this._hasChanged('meter_power.consumed', data.total_power_import_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh));
+      }
+
+      const wifiQuality = getWifiQuality(data.wifi_strength);
+      if (this._hasChanged('wifi_quality', wifiQuality)) {
+        tasks.push(updateCapability(this, 'wifi_quality', wifiQuality));
+      }
+
+      // Tariff flow trigger (store‑based, not cache‑based)
+      const lastTariff = await this.getStoreValue('last_active_tariff');
+      const currentTariff = data.active_tariff;
+      if (typeof currentTariff === 'number' && currentTariff !== lastTariff) {
+        this.flowTriggerTariff(this, { tariff_changed: currentTariff });
+        tasks.push(this.setStoreValue('last_active_tariff', currentTariff).catch(this.error));
+      }
+
+      // Gas meter if enabled
+      if (settings.show_gas && data.total_gas_m3 != null && this._hasChanged('meter_gas', data.total_gas_m3)) {
+        tasks.push(updateCapability(this, 'meter_gas', data.total_gas_m3));
+      }
+
+      // Export (produced)
+      if (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1) {
+        if (this._hasChanged('meter_power.produced.t1', data.total_power_export_t1_kwh)) {
+          tasks.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
+        }
+        if (this._hasChanged('meter_power.produced.t2', data.total_power_export_t2_kwh)) {
+          tasks.push(updateCapability(this, 'meter_power.produced.t2', data.total_power_export_t2_kwh));
+        }
+      }
+
+      // Aggregated meter for Power by the hour
+      const netImport = data.total_power_import_kwh === undefined
+        ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) -
+          (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
+        : data.total_power_import_kwh - data.total_power_export_kwh;
+
+      if (this._hasChanged('meter_power', netImport)) {
+        tasks.push(updateCapability(this, 'meter_power', netImport));
+      }
+
+      if (data.total_power_import_kwh !== undefined &&
+          this._hasChanged('meter_power.returned', data.total_power_export_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.returned', data.total_power_export_kwh));
+      }
+
+      // Import flow trigger (store‑based)
+      const lastImport = await this.getStoreValue('last_total_import_kwh');
+      const currentImport = data.total_power_import_kwh;
+      if (typeof currentImport === 'number' && currentImport !== lastImport) {
+        this.flowTriggerImport(this, { import_changed: currentImport });
+        tasks.push(this.setStoreValue('last_total_import_kwh', currentImport).catch(this.error));
+      }
+
+      // Export flow trigger (store‑based)
+      const lastExport = await this.getStoreValue('last_total_export_kwh');
+      const currentExport = data.total_power_export_kwh;
+      if (typeof currentExport === 'number' && currentExport !== lastExport) {
+        this.flowTriggerExport(this, { export_changed: currentExport });
+        tasks.push(this.setStoreValue('last_total_export_kwh', currentExport).catch(this.error));
+      }
+
+      // Belgium monthly peak
+      if (this._hasChanged('measure_power.montly_power_peak', data.montly_power_peak_w)) {
+        tasks.push(updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w));
+      }
+
+      // Phase 1 voltage/current/power
+      if (data.active_voltage_l1_v !== undefined &&
+          this._hasChanged('measure_voltage.l1', data.active_voltage_l1_v)) {
+        tasks.push(updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v));
+      }
+      if (data.active_current_l1_a !== undefined &&
+          this._hasChanged('measure_current.l1', data.active_current_l1_a)) {
+        tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
+      }
+      if (data.active_power_l1_w !== undefined &&
+          this._hasChanged('measure_power.l1', data.active_power_l1_w)) {
+        tasks.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));
+      }
+
+      if (data.long_power_fail_count !== undefined &&
+          this._hasChanged('long_power_fail_count', data.long_power_fail_count)) {
+        tasks.push(updateCapability(this, 'long_power_fail_count', data.long_power_fail_count));
+      }
+
+      if (data.voltage_sag_l1_count !== undefined &&
+          this._hasChanged('voltage_sag_l1', data.voltage_sag_l1_count)) {
+        tasks.push(updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count));
+      }
+
+      if (data.voltage_swell_l1_count !== undefined &&
+          this._hasChanged('voltage_swell_l1', data.voltage_swell_l1_count)) {
+        tasks.push(updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count));
+      }
+
+      // Phase overload L1
+      if (data.active_current_l1_a !== undefined) {
+        const load1 = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
+        if (this._hasChanged('net_load_phase1_pct', load1)) {
+          tasks.push(updateCapability(this, 'net_load_phase1_pct', load1));
+          this._handlePhaseOverload('l1', load1, homeyLang);
+        }
+      }
+
+      // Phases 2 and 3 — only when we truly run 3 phases
+      if (this._phases === 3 && (data.active_current_l2_a !== undefined || data.active_current_l3_a !== undefined)) {
+
+        if (data.voltage_sag_l2_count !== undefined &&
+            this._hasChanged('voltage_sag_l2', data.voltage_sag_l2_count)) {
+          tasks.push(updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count));
+        }
+        if (data.voltage_sag_l3_count !== undefined &&
+            this._hasChanged('voltage_sag_l3', data.voltage_sag_l3_count)) {
+          tasks.push(updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count));
+        }
+        if (data.voltage_swell_l2_count !== undefined &&
+            this._hasChanged('voltage_swell_l2', data.voltage_swell_l2_count)) {
+          tasks.push(updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count));
+        }
+        if (data.voltage_swell_l3_count !== undefined &&
+            this._hasChanged('voltage_swell_l3', data.voltage_swell_l3_count)) {
+          tasks.push(updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count));
+        }
+
+        if (data.active_power_l2_w !== undefined &&
+            this._hasChanged('measure_power.l2', data.active_power_l2_w)) {
+          tasks.push(updateCapability(this, 'measure_power.l2', data.active_power_l2_w));
+        }
+        if (data.active_power_l3_w !== undefined &&
+            this._hasChanged('measure_power.l3', data.active_power_l3_w)) {
+          tasks.push(updateCapability(this, 'measure_power.l3', data.active_power_l3_w));
+        }
+
+        if (data.active_voltage_l2_v !== undefined &&
+            this._hasChanged('measure_voltage.l2', data.active_voltage_l2_v)) {
+          tasks.push(updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v));
+        }
+        if (data.active_voltage_l3_v !== undefined &&
+            this._hasChanged('measure_voltage.l3', data.active_voltage_l3_v)) {
+          tasks.push(updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v));
+        }
+
+        if (data.active_current_l2_a !== undefined) {
+          const load2 = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
+          if (this._hasChanged('measure_current.l2', data.active_current_l2_a)) {
+            tasks.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
+          }
+          if (this._hasChanged('net_load_phase2_pct', load2)) {
+            tasks.push(updateCapability(this, 'net_load_phase2_pct', load2));
+            this._handlePhaseOverload('l2', load2, homeyLang);
+          }
+        }
+
+        if (data.active_current_l3_a !== undefined) {
+          const load3 = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
+          if (this._hasChanged('measure_current.l3', data.active_current_l3_a)) {
+            tasks.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
+          }
+          if (this._hasChanged('net_load_phase3_pct', load3)) {
+            tasks.push(updateCapability(this, 'net_load_phase3_pct', load3));
+            this._handlePhaseOverload('l3', load3, homeyLang);
+          }
+        }
+      }
+
+      // T3 import/export: only relevant if we actually run 3 phases
+      if (this._phases === 3) {
+        if (this._hasChanged('meter_power.consumed.t3', data.total_power_import_t3_kwh)) {
+          tasks.push(updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh));
+        }
+        if (this._hasChanged('meter_power.produced.t3', data.total_power_export_t3_kwh)) {
+          tasks.push(updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh));
+        }
+      }
+
+      // External water (if present)
+      const externalData = data.external;
+      if (Array.isArray(externalData)) {
+        const latestWater = externalData.reduce((prev, current) => {
+          if (current.type === 'water_meter') {
+            return !prev || current.timestamp > prev.timestamp ? current : prev;
+          }
+          return prev;
+        }, null);
+
+        if (latestWater && latestWater.value != null &&
+            this._hasChanged('meter_water', latestWater.value)) {
+          tasks.push(updateCapability(this, 'meter_water', latestWater.value));
+        }
+      }
+
+      // Sync URL if changed
+      if (this.url !== settings.url) {
+        this.log(`Energy - Updating settings url from ${settings.url} → ${this.url}`);
+        tasks.push(this.setSettings({ url: this.url }).catch(this.error));
+      }
+
+      await Promise.allSettled(tasks);
+
+      await updateCapability(this, 'connection_error', 'No errors');
+      await this.setAvailable();
+      this.failCount = 0;
+
+    } catch (err) {
+      this.error('Poll failed:', err);
+
+      await updateCapability(this, 'connection_error', err.message || 'Polling error');
+      this.failCount++;
+
+      if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
+        this.log('Timeout/connection reset detected — recreating HTTP agent and retrying');
+        try {
+          agent.destroy?.();
+          agent = new http.Agent({
+            keepAlive: true,
+            keepAliveMsecs: 10000,
+            maxSockets: 1
+          });
+        } catch (createErr) {
+          this.error('Failed to recreate agent:', createErr);
+        }
+
+        setTimeout(() => {
+          this.onPoll();
+        }, 2000);
+      }
+
+      if (this.failCount > 3) {
+        if (this.onPollInterval) clearInterval(this.onPollInterval);
+        await this.setUnavailable('Device unreachable');
+      } else {
+        await this.setUnavailable(err.message || 'Polling error');
+      }
+
+    } finally {
+      this.pollingActive = false;
+    }
   }
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
-  const state = this._phaseOverloadState[phaseKey];
+    if (!this._phaseOverloadNotificationsEnabled) return;
 
-  // Debounce: 3 opeenvolgende samples boven 97%
-  if (loadPct > 97) {
-    state.highCount++;
+    const state = this._phaseOverloadState[phaseKey];
+    if (!state) return;
 
-    if (!state.notified && state.highCount >= 3 && this._phaseOverloadNotificationsEnabled) {
-      const phaseNum = phaseKey.replace('l', ''); // l1 → 1
-      const msg = lang === 'nl'
-        ? `Fase ${phaseNum} overbelast (${loadPct.toFixed(0)}%)`
-        : `Phase ${phaseNum} overloaded (${loadPct.toFixed(0)}%)`;
+    const threshold = this._overloadThreshold ?? 97;
+    const reset = this._overloadReset ?? 85;
 
-      this.homey.notifications.createNotification({ excerpt: msg }).catch(this.error);
-      state.notified = true;
-    }
-  } else {
-    // Hysterese: reset pas onder 85%
-    if (loadPct < 85) {
+    if (loadPct > threshold) {
+      state.highCount++;
+
+      if (!state.notified && state.highCount >= 3) {
+        const phaseNum = phaseKey.replace('l', '');
+        const msg = lang === 'nl'
+          ? `Fase ${phaseNum} overbelast (${loadPct.toFixed(0)}%)`
+          : `Phase ${phaseNum} overloaded (${loadPct.toFixed(0)}%)`;
+
+        this.homey.notifications.createNotification({ excerpt: msg }).catch(this.error);
+        state.notified = true;
+      }
+
+    } else if (loadPct < reset) {
       state.highCount = 0;
       state.notified = false;
     }
   }
-}
 
+  async onSettings(event) {
+    const { newSettings, changedKeys } = event;
+    this.log('Settings updated', changedKeys);
 
-    // Catch offset updates
-    async onSettings(MySettings) {
-      this.log('Settings updated');
-      this.log('Settings:', MySettings);
-      // Update interval polling
-      if (
-        'polling_interval' in MySettings.oldSettings
-        && MySettings.oldSettings.polling_interval !== MySettings.newSettings.polling_interval
-      ) {
-        this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
-        clearInterval(this.onPollInterval);
-        // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-        const settings = this.getSettings();
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    for (const key of changedKeys) {
+
+      if (key === 'polling_interval') {
+        const interval = newSettings.polling_interval;
+        if (typeof interval === 'number' && interval > 0) {
+          if (this.onPollInterval) clearInterval(this.onPollInterval);
+          this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+        } else {
+          this.log('Invalid polling interval:', interval);
+        }
       }
 
-      if ('cloud' in MySettings.oldSettings 
-        && MySettings.oldSettings.cloud !== MySettings.newSettings.cloud
-      ) {
-        this.log('Cloud connection in advanced settings changed to:', MySettings.newSettings.cloud);
-  
+      if (key === 'cloud') {
         try {
-        if (MySettings.newSettings.cloud == 1) {
-            await this.setCloudOn();  
-        }
-        else if (MySettings.newSettings.cloud == 0) {
-            await this.setCloudOff();
-        }
+          if (newSettings.cloud == 1) await this.setCloudOn();
+          else await this.setCloudOff();
         } catch (err) {
-            this.error('Failed to update cloud connection:', err);
+          this.error('Failed to update cloud connection:', err);
         }
       }
 
-      if ('baseload_notifications' in MySettings.newSettings) {
-        this._baseloadNotificationsEnabled = MySettings.newSettings.baseload_notifications;
+      if (key === 'baseload_notifications') {
+        this._baseloadNotificationsEnabled = newSettings.baseload_notifications;
         const app = this.homey.app;
         if (app.baseloadMonitor) {
           app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
@@ -769,12 +734,54 @@ async onPoll() {
         this.log('Baseload notifications changed to:', this._baseloadNotificationsEnabled);
       }
 
-      if ('phase_overload_notifications' in MySettings.newSettings) {
-        this._phaseOverloadNotificationsEnabled = MySettings.newSettings.phase_overload_notifications;
+      if (key === 'phase_overload_notifications') {
+        this._phaseOverloadNotificationsEnabled = newSettings.phase_overload_notifications;
         this.log('Phase overload notifications changed to:', this._phaseOverloadNotificationsEnabled);
       }
 
+      if (key === 'show_gas') {
+        const showGas = newSettings.show_gas;
+        if (!showGas) {
+          for (const cap of ['meter_gas', 'measure_gas', 'meter_gas.daily']) {
+            if (this.hasCapability(cap)) {
+              await this.removeCapability(cap).catch(this.error);
+            }
+          }
+        }
+      }
+
+      if (key === 'phase_overload_threshold') {
+        this._overloadThreshold = newSettings.phase_overload_threshold;
+        this.log('Phase overload threshold changed to:', this._overloadThreshold);
+      }
+
+      if (key === 'phase_overload_reset') {
+        this._overloadReset = newSettings.phase_overload_reset;
+        this.log('Phase overload reset changed to:', this._overloadReset);
+      }
+
+      if (key === 'number_of_phases') {
+        // Manual override: keep capabilities in sync with explicit phase setting
+        this._phases = newSettings.number_of_phases;
+
+        if (this._phases === 1) {
+          for (const cap of PHASE_CAPS) {
+            if (this.hasCapability(cap)) {
+              await this.removeCapability(cap).catch(this.error);
+            }
+          }
+        }
+
+        if (this._phases === 3) {
+          for (const cap of PHASE_CAPS) {
+            if (!this.hasCapability(cap)) {
+              await this.addCapability(cap).catch(this.error);
+            }
+          }
+        }
+      }
+
     }
-     
+  }
 
 };
