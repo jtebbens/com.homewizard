@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.14
+v3.9.17
 
 * New Plugin Battery mode support (zero_charge_only & zero_discharge_only)
 * Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
@@ -25,6 +25,9 @@ v3.9.14
 * Bugfix: SDM630v2 trigger cards removed (obsolete as these are default Homey)
 * Finetune: P1(apiv2) websocket + polling, capability updates
 * Finetune: energy_sockets (fetch / timeout) centralized
+* Refractor code update for P1apiv1, SDM230, SDM630, watermeter
+* Customizable phase overload warning + reset
+* Phase 1 /3 fix for P1(apiv1) after refractor code update
 
 v3.8.22
 
