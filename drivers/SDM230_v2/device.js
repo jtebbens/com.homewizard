@@ -320,17 +320,20 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
   async onPoll() {
     try {
       const settings = this.getSettings();
-
-      // Ensure URL is set
+      
+      // 1. Restore URL if runtime is empty
       if (!this.url) {
         if (settings.url) {
           this.url = settings.url;
-          this.log(`ℹ️ Restored URL from settings: ${this.url}`);
         } else {
-          this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-          await this.setUnavailable().catch(this.error);
+          await this.setUnavailable('Missing URL');
           return;
         }
+      }
+
+      // 2. Sync settings if discovery changed the URL
+      if (this.url && this.url !== settings.url) {
+        await this.setSettings({ url: this.url }).catch(this.error);
       }
 
       // Refresh token if missing

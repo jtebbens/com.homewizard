@@ -1267,6 +1267,24 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
 
   // onPoll method if websocket is to heavy for Homey unit
   async onPoll() {
+
+    const settings = this.getSettings();
+    
+    // 1. Restore URL if runtime is empty
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+      } else {
+        await this.setUnavailable('Missing URL');
+        return;
+      }
+    }
+
+    // 2. Sync settings if discovery changed the URL
+    if (this.url && this.url !== settings.url) {
+      await this.setSettings({ url: this.url }).catch(this.error);
+    }
+
     try {
       const [measurement, system, batteries] = await Promise.all([
         api.getMeasurement(this.url, this.token),

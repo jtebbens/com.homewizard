@@ -216,6 +216,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     const settings = this.getSettings();
     this.log('Settings for Plugin Battery: ', settings.polling_interval);
 
+    if (!this.url && settings.url) { this.url = settings.url; this.log(`Restored URL from settings: ${this.url}`); }
+
     if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
       await this.setSettings({ polling_interval: 10 });
       settings.polling_interval = 10; // update local variable
