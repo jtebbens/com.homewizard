@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.15",
+  "version": "3.9.17",
   "platforms": [
     "local"
   ],
@@ -2512,6 +2512,30 @@
             "nl": "Fase-overbelasting meldingen"
           },
           "value": true
+        },
+        {
+          "id": "phase_overload_threshold",
+          "type": "number",
+          "label": {
+            "en": "Phase overload warning threshold (%)",
+            "nl": "Fase overbelasting waarschuwing (%)"
+          },
+          "value": 97,
+          "min": 50,
+          "max": 120,
+          "step": 1
+        },
+        {
+          "id": "phase_overload_reset",
+          "type": "number",
+          "label": {
+            "en": "Phase overload reset threshold (%)",
+            "nl": "Fase overbelasting reset (%)"
+          },
+          "value": 85,
+          "min": 20,
+          "max": 100,
+          "step": 1
         }
       ]
     },
