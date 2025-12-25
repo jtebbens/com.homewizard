@@ -790,5 +790,11 @@
   },
   "3.9.18": {
     "en": "Bugfix: Fallback url for SDM230v2 and P1apiv2 (mDNS fail workaround)"
+  },
+  "3.9.19": {
+    "en": "Bugfix: pairing problem \"Cannot read properties of undefined (reading 'log')"
+  },
+  "3.9.20": {
+    "en": "Bugfix: pairing problem apiv1 and apiv2"
   }
 }
