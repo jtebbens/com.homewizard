@@ -137,7 +137,7 @@ async function applyMeasurementCapabilities(device, m) {
       'meter_power.returned': m.energy_export_kwh,
       'tariff': m.tariff,
       'measure_frequency': m.frequency_hz,
-  
+
       // Per phase
       'measure_power.l1': m.power_l1_w,
       'measure_power.l2': m.power_l2_w,
@@ -148,8 +148,8 @@ async function applyMeasurementCapabilities(device, m) {
       'measure_current.l1': m.current_l1_a,
       'measure_current.l2': m.current_l2_a,
       'measure_current.l3': m.current_l3_a,
-  
-      // Tariff totals t1,t2,t3,t4 import/export
+
+      // Tariff totals
       'meter_power.consumed.t1': m.energy_import_t1_kwh,
       'meter_power.produced.t1': m.energy_export_t1_kwh,
       'meter_power.consumed.t2': m.energy_import_t2_kwh,
@@ -158,7 +158,7 @@ async function applyMeasurementCapabilities(device, m) {
       'meter_power.produced.t3': m.energy_export_t3_kwh,
       'meter_power.consumed.t4': m.energy_import_t4_kwh,
       'meter_power.produced.t4': m.energy_export_t4_kwh,
-  
+
       // Net quality
       'long_power_fail_count': m.long_power_fail_count,
       'voltage_sag_l1': m.voltage_sag_l1_count,
@@ -167,25 +167,32 @@ async function applyMeasurementCapabilities(device, m) {
       'voltage_swell_l1': m.voltage_swell_l1_count,
       'voltage_swell_l2': m.voltage_swell_l2_count,
       'voltage_swell_l3': m.voltage_swell_l3_count,
+
       // Belgium
       'measure_power.montly_power_peak': m.monthly_power_peak_w,
       'measure_power.average_power_15m_w': m.average_power_15m_w,
-
     };
-  
+
+    // Collect all capability updates as promises
+    const tasks = [];
+
     for (const [capability, value] of Object.entries(mappings)) {
       const cur = device.getCapabilityValue(capability);
       if (cur !== value) {
-        await updateCapability(device, capability, value ?? null);
+        tasks.push(updateCapability(device, capability, value ?? null));
       }
     }
 
+    // Run all updates in parallel
+    await Promise.allSettled(tasks);
 
   } catch (error) {
     device.error('Failed to apply measurement capabilities:', error);
     throw error;
   }
 }
+
+
 
 /**
  * Normalize battery mode from raw payload
@@ -608,56 +615,58 @@ this.homey.flow
 
 
 
-  async _handleExternalMeters(external) {
-  const setCapabilityPromises = [];
+async _handleExternalMeters(external) {
+  const tasks = [];
 
-const latest = (type) => {
-  let newest = null;
+  // Determine structural presence of gas/water meters
+  const gasExists = external?.some(e => e.type === 'gas_meter');
+  const waterExists = external?.some(e => e.type === 'water_meter');
 
-  for (const { type: t, value, timestamp } of external ?? []) {
-    if (t === type && typeof value === 'number') {
-      if (!newest || timestamp > newest.timestamp) {
-        newest = { type: t, value, timestamp };
+  // Extract latest values (if any)
+  const latest = (type) => {
+    let newest = null;
+    for (const { type: t, value, timestamp } of external ?? []) {
+      if (t === type && typeof value === 'number') {
+        if (!newest || timestamp > newest.timestamp) {
+          newest = { type: t, value, timestamp };
+        }
       }
     }
-  }
-
-  return newest;
-};
-
+    return newest;
+  };
 
   const gas = latest('gas_meter');
-  // this.log('📟 Gas meter data:', gas);
-
   const water = latest('water_meter');
 
-  // Gas meter
-  if (gas) {
-    if (!this.hasCapability('meter_gas')) {
-      setCapabilityPromises.push(this.addCapability('meter_gas').catch(this.error));
-    }
-    if (this.getCapabilityValue('meter_gas') !== gas.value) {
-      setCapabilityPromises.push(this.setCapabilityValue('meter_gas', gas.value).catch(this.error));
-    }
-  } else if (this.hasCapability('meter_gas')) {
-    setCapabilityPromises.push(this.removeCapability('meter_gas').catch(this.error));
+  // GAS CAPABILITY MANAGEMENT (structural)
+  if (gasExists && !this.hasCapability('meter_gas')) {
+    tasks.push(this.addCapability('meter_gas').catch(this.error));
+  }
+  if (!gasExists && this.hasCapability('meter_gas')) {
+    tasks.push(this.removeCapability('meter_gas').catch(this.error));
     this.log('Removed meter_gas — no gas meter found.');
   }
 
-  // Water meter
-  if (water) {
-    if (!this.hasCapability('meter_water')) {
-      setCapabilityPromises.push(this.addCapability('meter_water').catch(this.error));
-    }
-    if (this.getCapabilityValue('meter_water') !== water.value) {
-      setCapabilityPromises.push(this.setCapabilityValue('meter_water', water.value).catch(this.error));
-    }
-  } else if (this.hasCapability('meter_water')) {
-    setCapabilityPromises.push(this.removeCapability('meter_water').catch(this.error));
+  // GAS VALUE UPDATE (data)
+  if (gasExists && gas && this.getCapabilityValue('meter_gas') !== gas.value) {
+    tasks.push(this.setCapabilityValue('meter_gas', gas.value).catch(this.error));
+  }
+
+  // WATER CAPABILITY MANAGEMENT (structural)
+  if (waterExists && !this.hasCapability('meter_water')) {
+    tasks.push(this.addCapability('meter_water').catch(this.error));
+  }
+  if (!waterExists && this.hasCapability('meter_water')) {
+    tasks.push(this.removeCapability('meter_water').catch(this.error));
     this.log('Removed meter_water — no water meter found.');
   }
 
-  await Promise.all(setCapabilityPromises);
+  // WATER VALUE UPDATE (data)
+  if (waterExists && water && this.getCapabilityValue('meter_water') !== water.value) {
+    tasks.push(this.setCapabilityValue('meter_water', water.value).catch(this.error));
+  }
+
+  await Promise.all(tasks);
 
   return { gas, water };
 }
@@ -669,7 +678,7 @@ const latest = (type) => {
 async _handleMeasurement(m) {
   const now = Date.now();
 
-  // 🧠 Throttle WS-updates: max 1x per seconde
+  // Throttle WS updates: max 1 per second
   if (this._lastWsUpdate && now - this._lastWsUpdate < 1000) return;
   this._lastWsUpdate = now;
 
@@ -677,7 +686,7 @@ async _handleMeasurement(m) {
   const showGas = settings.show_gas === true;
   const homey_lang = this.homey.i18n.getLanguage();
 
-  // Skip if device has been deleted or no ID
+  // Skip if device was deleted
   const dataObj = this.getData();
   if (!dataObj || !dataObj.id) {
     this.log('⚠️ Ignoring measurement: device no longer exists');
@@ -686,59 +695,66 @@ async _handleMeasurement(m) {
 
   this.lastMeasurementAt = now;
 
-  // Helper to avoid double getCapabilityValue-calls
-  const cap = async (name, value) => {
+  // Collect all capability updates here
+  const tasks = [];
+
+  // Helper: push capability update tasks instead of awaiting them
+  const cap = (name, value) => {
     const cur = this.getCapabilityValue(name);
     if (cur !== value) {
-      await updateCapability(this, name, value).catch(this.error);
+      tasks.push(updateCapability(this, name, value).catch(this.error));
     }
   };
 
-  // Power en fases (alleen als measure_power wijzigt)
+  // Power and phases (only when measure_power changes)
   const currentPower = this.getCapabilityValue('measure_power');
   if (currentPower !== m.power_w) {
-    await cap('measure_power', m.power_w);
-    await cap('measure_power.l1', m.power_l1_w);
-    await cap('measure_power.l2', m.power_l2_w);
-    await cap('measure_power.l3', m.power_l3_w);
+    cap('measure_power', m.power_w);
+    cap('measure_power.l1', m.power_l1_w);
+    cap('measure_power.l2', m.power_l2_w);
+    cap('measure_power.l3', m.power_l3_w);
   }
 
+  // Phase loads
   if (m.current_l1_a !== undefined) {
     const load1 = Math.abs((m.current_l1_a / settings.grid_phase_amps) * 100);
-    await cap('net_load_phase1_pct', load1);
+    cap('net_load_phase1_pct', load1);
     this._handlePhaseOverload('l1', load1, homey_lang);
   }
 
   if (m.current_l2_a !== undefined) {
     const load2 = Math.abs((m.current_l2_a / settings.grid_phase_amps) * 100);
-    await cap('net_load_phase2_pct', load2);
+    cap('net_load_phase2_pct', load2);
     this._handlePhaseOverload('l2', load2, homey_lang);
   }
 
   if (m.current_l3_a !== undefined) {
     const load3 = Math.abs((m.current_l3_a / settings.grid_phase_amps) * 100);
-    await cap('net_load_phase3_pct', load3);
+    cap('net_load_phase3_pct', load3);
     this._handlePhaseOverload('l3', load3, homey_lang);
   }
 
-  // Every 10s, refresh the rest
+  // Every 10 seconds: full refresh (now parallel)
   if (!this._lastFullUpdate || now - this._lastFullUpdate > 10000) {
-    await applyMeasurementCapabilities(this, m).catch(this.error);
+    tasks.push(applyMeasurementCapabilities(this, m).catch(this.error));
     this._lastFullUpdate = now;
   }
 
-  // Trigger Flows only if values changed
-  if (typeof m.energy_import_kwh === 'number' && this._triggerFlowPrevious.import !== m.energy_import_kwh) {
+  // Flow triggers (no awaits needed)
+  if (typeof m.energy_import_kwh === 'number' &&
+      this._triggerFlowPrevious.import !== m.energy_import_kwh) {
     this._triggerFlowPrevious.import = m.energy_import_kwh;
     this.flowTriggerImport(this, m.energy_import_kwh);
   }
 
-  if (typeof m.energy_export_kwh === 'number' && this._triggerFlowPrevious.export !== m.energy_export_kwh) {
+  if (typeof m.energy_export_kwh === 'number' &&
+      this._triggerFlowPrevious.export !== m.energy_export_kwh) {
     this._triggerFlowPrevious.export = m.energy_export_kwh;
     this.flowTriggerExport(this, m.energy_export_kwh);
   }
 
-  if (typeof m.active_tariff === 'number' && this._triggerFlowPrevious.tariff !== m.active_tariff) {
+  if (typeof m.active_tariff === 'number' &&
+      this._triggerFlowPrevious.tariff !== m.active_tariff) {
     this._triggerFlowPrevious.tariff = m.active_tariff;
     this.flowTriggerTariff(this, m.active_tariff);
   }
@@ -746,41 +762,36 @@ async _handleMeasurement(m) {
   // Net power
   if (m.energy_import_kwh !== undefined && m.energy_export_kwh !== undefined) {
     const net = m.energy_import_kwh - m.energy_export_kwh;
-    await cap('meter_power', net);
+    cap('meter_power', net);
   }
 
-  // External meters
+  // External meters (gas/water)
   let gas = null;
   let water = null;
 
-  // const previousExternal = await getStoreValueSafe(this, 'external_last_payload');
   const previousExternal = this._cacheGet('external_last_payload');
-
-  // Timestamp hash
   const prevHash = previousExternal?.map(e => e.timestamp).join('|') ?? null;
   const newHash  = m.external?.map(e => e.timestamp).join('|') ?? null;
 
   if (prevHash === newHash) {
-    // No change use cached result
     const lastResult = this._cacheGet('external_last_result');
     gas = lastResult?.gas ?? null;
     water = lastResult?.water ?? null;
   } else {
-    // Change detected, process new values
-    const result = await this._handleExternalMeters(m.external);
-    gas = result.gas;
-    water = result.water;
-
-    this._cacheSet('external_last_payload', m.external);
-    this._cacheSet('external_last_result', result);
+    tasks.push((async () => {
+      const result = await this._handleExternalMeters(m.external);
+      gas = result.gas;
+      water = result.water;
+      this._cacheSet('external_last_payload', m.external);
+      this._cacheSet('external_last_result', result);
+    })());
   }
 
-
-  // GAS DISABLED — remove all gas capabilities and skip all gas logic
+  // Gas disabled → remove capabilities
   if (!showGas) {
-    if (this.hasCapability('meter_gas')) await this.removeCapability('meter_gas').catch(this.error);
-    if (this.hasCapability('measure_gas')) await this.removeCapability('measure_gas').catch(this.error);
-    if (this.hasCapability('meter_gas.daily')) await this.removeCapability('meter_gas.daily').catch(this.error);
+    if (this.hasCapability('meter_gas')) tasks.push(this.removeCapability('meter_gas').catch(this.error));
+    if (this.hasCapability('measure_gas')) tasks.push(this.removeCapability('measure_gas').catch(this.error));
+    if (this.hasCapability('meter_gas.daily')) tasks.push(this.removeCapability('meter_gas.daily').catch(this.error));
     gas = null;
   }
 
@@ -789,108 +800,95 @@ async _handleMeasurement(m) {
   // Daily reset at midnight
   if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
     if (typeof m.energy_import_kwh === 'number') {
-      // await setStoreValueSafe(this, 'meter_start_day', m.energy_import_kwh);
       this._cacheSet('meter_start_day', m.energy_import_kwh);
     }
     if (typeof gas?.value === 'number') {
-      // await setStoreValueSafe(this, 'gasmeter_start_day', gas.value);
       this._cacheSet('gasmeter_start_day', gas.value);
     }
   } else {
-    // const meterStartDay = await getStoreValueSafe(this, 'meter_start_day');
     const meterStartDay = this._cacheGet('meter_start_day');
-    // const gasmeterStartDay = await getStoreValueSafe(this, 'gasmeter_start_day');
     const gasmeterStartDay = this._cacheGet('gasmeter_start_day');
+
     if (!meterStartDay && typeof m.energy_import_kwh === 'number') {
-      // await setStoreValueSafe(this, 'meter_start_day', m.energy_import_kwh);
       this._cacheSet('meter_start_day', m.energy_import_kwh);
     }
     if (!gasmeterStartDay && typeof gas?.value === 'number') {
-      // await setStoreValueSafe(this, 'gasmeter_start_day', gas.value);
       this._cacheSet('gasmeter_start_day', gas.value);
     }
   }
 
   // Gas delta every 5 minutes
   const currentMinute = nowLocal.getMinutes();
-  // const lastMinute = await getStoreValueSafe(this, 'last_gas_delta_minute');
   const lastMinute = this._cacheGet('last_gas_delta_minute');
 
   if (showGas && currentMinute % 5 === 0 && lastMinute !== currentMinute) {
-    // await setStoreValueSafe(this, 'last_gas_delta_minute', currentMinute);
     this._cacheSet('last_gas_delta_minute', currentMinute);
 
-    if (!gas || typeof gas.value !== 'number') {
-      return;
-    }
+    if (gas && typeof gas.value === 'number') {
+      const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
 
-    // const prevTimestamp = await getStoreValueSafe(this, 'gasmeter_previous_reading_timestamp');
-    const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
-    if (gas.timestamp != null && prevTimestamp == null) {
-      // await setStoreValueSafe(this, 'gasmeter_previous_reading_timestamp', gas.timestamp);
-      this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-      return;
-    }
-
-    if (gas.timestamp !== prevTimestamp) {
-      // const prevReading = await getStoreValueSafe(this, 'gasmeter_previous_reading');
-      const prevReading = this._cacheGet('gasmeter_previous_reading');
-      if (typeof prevReading === 'number') {
-        const delta = gas.value - prevReading;
-        if (delta >= 0) {
-          await cap('measure_gas', delta);
+      if (gas.timestamp != null && prevTimestamp == null) {
+        this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+      } else if (gas.timestamp !== prevTimestamp) {
+        const prevReading = this._cacheGet('gasmeter_previous_reading');
+        if (typeof prevReading === 'number') {
+          const delta = gas.value - prevReading;
+          if (delta >= 0) {
+            cap('measure_gas', delta);
+          }
         }
-      } else {
-        this.log('🆕 No previous gas reading — storing current value');
-      }
 
-      // await setStoreValueSafe(this, 'gasmeter_previous_reading', gas.value);
-      this._cacheSet('gasmeter_previous_reading', gas.value);
-      // await setStoreValueSafe(this, 'gasmeter_previous_reading_timestamp', gas.timestamp);
-      this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+        this._cacheSet('gasmeter_previous_reading', gas.value);
+        this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+      }
     }
   }
 
-  // Daily usage
-  // const meterStart = await getStoreValueSafe(this, 'meter_start_day');
+  // Daily electricity usage
   const meterStart = this._cacheGet('meter_start_day');
   if (meterStart != null) {
     const dailyImport = m.energy_import_kwh - meterStart;
-    await cap('meter_power.daily', dailyImport);
+    cap('meter_power.daily', dailyImport);
   }
 
+  // Daily gas usage
   if (showGas) {
-    // const gasStart = await getStoreValueSafe(this, 'gasmeter_start_day');
     const gasStart = this._cacheGet('gasmeter_start_day');
-    const gasDiff = (gas?.value != null && gasStart != null) ? gas.value - gasStart : null;
-    await cap('meter_gas.daily', gasDiff);
+
+    if (gas?.value != null && gasStart != null) {
+      const gasDiff = gas.value - gasStart;
+      cap('meter_gas.daily', gasDiff);
+    }
   }
 
-  // Battery Group
+
+  // Battery group aggregation
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
   const batteries = Object.values(group).filter((b) => now - b.updated_at < 60000);
 
-  if (batteries.length === 0) {
-    this.log('⚠️ No fresh battery data found — skipping group update');
-    return;
+  if (batteries.length > 0) {
+    const totalCapacity = batteries.reduce((sum, b) => sum + b.capacity_kwh, 0);
+    const averageSoC = batteries.reduce((sum, b) => sum + b.soc_pct, 0) / batteries.length;
+    const totalPowerW = batteries.reduce((sum, b) => sum + b.power_w, 0);
+
+    let chargeState = 'idle';
+    if (totalPowerW > 0) chargeState = 'charging';
+    else if (totalPowerW < 0) chargeState = 'discharging';
+
+    tasks.push(
+      this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity).catch(this.error),
+      this._setCapabilityValue('battery_group_average_soc', averageSoC).catch(this.error),
+      this._setCapabilityValue('battery_group_state', chargeState).catch(this.error),
+    );
   }
 
-  const totalCapacity = batteries.reduce((sum, b) => sum + b.capacity_kwh, 0);
-  const averageSoC = batteries.reduce((sum, b) => sum + b.soc_pct, 0) / batteries.length;
-  const totalPowerW = batteries.reduce((sum, b) => sum + b.power_w, 0);
-
-  let chargeState = 'idle';
-  if (totalPowerW > 0) chargeState = 'charging';
-  else if (totalPowerW < 0) chargeState = 'discharging';
-
-  await Promise.all([
-    this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity).catch(this.error),
-    this._setCapabilityValue('battery_group_average_soc', averageSoC).catch(this.error),
-    this._setCapabilityValue('battery_group_state', chargeState).catch(this.error),
-  ]);
-
-  // await setStoreValueSafe(this, 'external_last_payload', m.external);
+  // Cache external payload
   this._cacheSet('external_last_payload', m.external);
+
+  // Run all updates in parallel
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks);
+  }
 }
 
 
@@ -917,24 +915,25 @@ _handleSystem(data) {
 
 
 async _handleBatteries(data) {
-  // Soft guard
+  // Soft guard: ignore events if the device no longer exists in Homey
   const dataObj = this.getData();
   if (!dataObj || !dataObj.id) {
     this.log('⚠️ Ignoring batteries event: device no longer exists');
     return;
   }
 
-  // Hard guard — correct Homey registry check
+  // Hard guard: verify the device still exists in the driver registry
   let deviceInstance;
   try {
     const driver = this.homey.drivers.getDriver('energy_v2');
     deviceInstance = driver?.getDevice(dataObj);
   } catch (err) {
+    // Homey throws "Could not get device" when the device was deleted
     if (err.message?.includes('Could not get device')) {
       this.log('⚠️ Ignoring batteries event: device lookup failed');
       return;
     }
-    throw err;
+    throw err; // Unexpected error → rethrow
   }
 
   if (!deviceInstance) {
@@ -942,35 +941,32 @@ async _handleBatteries(data) {
     return;
   }
 
-
-  // If data is an array, pick the first element
+  // If the payload is an array, use the first element
   const battery = Array.isArray(data) ? data[0] : data;
 
-  // If the element is just a string, merge with outer data
+  // If the payload is a string, merge it into the original object
   const payload = typeof battery === 'string'
     ? { ...data, mode: battery, permissions: [] }
     : battery;
 
-  // Normalize mode
+  // Normalize the battery mode (handles mode + permissions combinations)
   const normalizedMode = normalizeBatteryMode(payload);
 
-  // Retrieve previous normalized mode
-  // const lastBatteryMode = await getStoreValueSafe(this, 'last_battery_mode');
+  // Retrieve the previously stored normalized mode
   const lastBatteryMode = this._cacheGet('last_battery_mode');
 
-  // Trigger only when normalized mode changes
+  // Trigger flow and update settings only when the mode actually changes
   if (normalizedMode !== lastBatteryMode) {
     try {
-    this.flowTriggerBatteryMode(this);
-    //await setStoreValueSafe(this, 'last_battery_mode', normalizedMode);
-    this._cacheSet('last_battery_mode', normalizedMode);
-    await this.setSettings({ mode: normalizedMode });
+      this.flowTriggerBatteryMode(this);
+      this._cacheSet('last_battery_mode', normalizedMode);
+      await this.setSettings({ mode: normalizedMode });
     } catch (err) {
       this.error('❌ Failed to update setting "mode":', err);
     }
   }
 
-  // Use payload for capability updates
+  // Update battery‑related power capabilities
   await updateCapability(this, 'measure_power.battery_group_power_w', payload.power_w ?? 0).catch(this.error);
   await updateCapability(this, 'measure_power.battery_group_target_power_w', payload.target_power_w ?? 0).catch(this.error);
   await updateCapability(this, 'measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0).catch(this.error);
@@ -978,7 +974,7 @@ async _handleBatteries(data) {
 
   const settings = this.getSettings();
 
-  // Update settings if mode changed
+  // Ensure Homey settings reflect the current normalized mode
   if (settings.mode !== normalizedMode) {
     this.log('Battery mode changed to:', normalizedMode);
     try {
@@ -988,32 +984,37 @@ async _handleBatteries(data) {
     }
   }
 
-  // ✅ Store raw WS state for condition card
+  // Store raw WS battery state for condition cards
   this._cacheSet('last_battery_state', {
     mode: payload.mode,
     permissions: payload.permissions
   });
 
+  // Retrieve the battery group from Homey settings
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
   const batteries = Object.values(group);
 
-  const isGridReturn = (payload.power_w ?? 0) < -400;
-  const batteriesPresent = batteries.length > 0;
-  const shouldBeCharging = (payload.target_power_w ?? 0) > 0;
-  const isNotStandby = normalizedMode !== 'standby';
+  // Conditions for detecting a battery error
+  const isGridReturn = (payload.power_w ?? 0) < -400;          // Grid is receiving power
+  const batteriesPresent = batteries.length > 0;               // At least one battery in the group
+  const shouldBeCharging = (payload.target_power_w ?? 0) > 0;  // System expects charging
+  const isNotStandby = normalizedMode !== 'standby';           // Battery mode is active
 
   const now = Date.now();
 
+  // Detect prolonged mismatch between expected charging and actual grid return
   if (isGridReturn && batteriesPresent && shouldBeCharging && isNotStandby) {
     if (!this.gridReturnStart) {
-      this.gridReturnStart = now;
+      this.gridReturnStart = now; // Start timing the mismatch
     }
 
     const duration = now - this.gridReturnStart;
 
+    // If mismatch persists for >30 seconds → trigger battery error flow
     if (duration > 30000 && !this.batteryErrorTriggered) {
       this.batteryErrorTriggered = true;
       this.log('❌ Battery error: batteries should be charging and grid is receiving power');
+
       this.homey.flow
         .getDeviceTriggerCard('battery_error_detected')
         .trigger(this, {}, {
@@ -1024,11 +1025,14 @@ async _handleBatteries(data) {
         })
         .catch(this.error);
     }
+
   } else {
+    // Reset mismatch tracking when conditions no longer apply
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
   }
 }
+
 
 
 

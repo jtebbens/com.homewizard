@@ -23,20 +23,35 @@ const PHASE_CAPS = [
 ];
 
 async function updateCapability(device, capability, value) {
-  const current = device.getCapabilityValue(capability);
-
-  // deletion-safe: never remove capabilities based on null/undefined from payload
+  // Skip null/undefined values (deletion-safe)
   if (value === undefined || value === null) return;
 
+  const current = device.getCapabilityValue(capability);
+
+  // If capability is missing, add it once
   if (!device.hasCapability(capability)) {
-    await device.addCapability(capability).catch(device.error);
-    device.log(`Added capability "${capability}"`);
+    try {
+      await device.addCapability(capability);
+      device.log(`➕ Added capability "${capability}"`);
+    } catch (err) {
+      // If another parallel call added it, ignore the error
+      if (!String(err.message).includes('already_exists')) {
+        device.error(`Failed to add capability "${capability}"`, err);
+      }
+    }
   }
 
+  // Update value only when changed
   if (current !== value) {
-    await device.setCapabilityValue(capability, value).catch(device.error);
+    try {
+      await device.setCapabilityValue(capability, value);
+    } catch (err) {
+      device.error(`Failed to update capability "${capability}"`, err);
+    }
   }
 }
+
+
 
 function getWifiQuality(percent) {
   if (percent >= 80) return 'Excellent / Strong';

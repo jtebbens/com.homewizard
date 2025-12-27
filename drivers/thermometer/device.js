@@ -3,162 +3,131 @@
 const Homey = require('homey');
 const homewizard = require('../../includes/legacy/homewizard.js');
 
-// const { ManagerDrivers } = require('homey');
-// const driver = ManagerDrivers.getDriver('thermometer');
-
-let refreshIntervalId;
-const devices = {};
-// const thermometers = {};
-const debug = false;
+const debug = false; // leave true for now while validating
 
 class HomeWizardThermometer extends Homey.Device {
 
   async onInit() {
+    this.sensorIndex = -1;
+    this.homewizard_id = this.getSetting('homewizard_id');
 
-    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    const rawId = this.getData().id;
+    this.log('Thermometer init → raw id:', rawId, 'device name:', this.getName());
 
-    const devices = this.homey.drivers.getDriver('thermometer').getDevices();
+    // Deterministic offset based on device name (stable enough)
+    const hash = this._hashString(this.getName());
+    const offsetMs = (hash % 20) * 1000;
+    this.log(`Thermometer update offset: ${offsetMs}ms`);
 
-    devices.forEach((device) => {
-      if (debug) { this.log(`add device: ${JSON.stringify(device.getName())}`); }
-      devices[device.getData().id] = device;
-      devices[device.getData().id].settings = device.getSettings();
-    });
+    setTimeout(() => {
+      this.pollOnce();
+      this.refreshIntervalId = setInterval(() => this.pollOnce(), 20_000);
+    }, offsetMs);
+  }
 
-    if (Object.keys(devices).length > 0) {
-	    this.startPolling(devices);
+  async pollOnce() {
+    try {
+      if (!this.homewizard_id) return;
+
+      const result = await homewizard.getDeviceData(this.homewizard_id, 'thermometers');
+      if (!result || !Array.isArray(result) || result.length === 0) {
+        if (debug) this.log('No thermometer data yet');
+        return;
+      }
+
+      if (debug) this.log('Thermometer array from HomeWizard:', JSON.stringify(result));
+
+      // Resolve index lazily by matching name
+      if (this.sensorIndex === -1) {
+        const name = this.getName();
+        this.sensorIndex = result.findIndex(t => t.name === name);
+        this.log('Resolved index at runtime (by name):', this.sensorIndex, 'for name:', name);
+
+        if (this.sensorIndex === -1) {
+          if (debug) this.log('Sensor name not found in array yet');
+          return;
+        }
+      }
+
+      const sensor = result[this.sensorIndex];
+      if (!sensor) return;
+
+      if (sensor.te == null || sensor.hu == null) return;
+
+      let te = (sensor.te.toFixed(1) * 2) / 2;
+      let hu = (sensor.hu.toFixed(1) * 2) / 2;
+
+      te += this.getSetting('offset_temperature') || 0;
+      hu += this.getSetting('offset_humidity') || 0;
+
+      const tasks = [];
+
+      if (this.getCapabilityValue('measure_temperature') !== te) {
+        if (debug) this.log(`New TE → ${te}`);
+        tasks.push(this.setCapabilityValue('measure_temperature', te));
+      }
+
+      if (this.getCapabilityValue('measure_humidity') !== hu) {
+        if (debug) this.log(`New HU → ${hu}`);
+        tasks.push(this.setCapabilityValue('measure_humidity', hu));
+      }
+
+      if (sensor.lowBattery != null) {
+        const low = sensor.lowBattery === 'yes';
+
+        if (!this.hasCapability('alarm_battery')) {
+          tasks.push(this.addCapability('alarm_battery'));
+        }
+
+        if (this.getCapabilityValue('alarm_battery') !== low) {
+          if (debug) this.log(`New battery status → ${low}`);
+          tasks.push(this.setCapabilityValue('alarm_battery', low));
+        }
+      }
+
+      if (tasks.length > 0) {
+        await Promise.allSettled(tasks);
+      }
+
+      await this.setAvailable();
+
+    } catch (err) {
+      this.error(err);
+      await this.setUnavailable(err);
     }
   }
 
-  startPolling(devices) {
-
-    // Clear interval
+  onDeleted() {
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
     }
-
-    // Start polling for thermometer
-    this.refreshIntervalId = setInterval(() => {
-      if (debug) { this.log('--Start Thermometer Polling-- '); }
-
-      this.getStatus(devices);
-
-    }, 1000 * 20);
-
+    this.log(`Thermometer deleted: ${this.getName()}`);
   }
 
-  async getStatus(devices) {
-    try {
-		  const promises = devices.map(async (device) => { // parallel processing using Promise.all
-        if (device.settings.homewizard_id !== undefined) {
-			  const { homewizard_id } = device.settings;
-			  const { thermometer_id } = device.settings;
-
-			  const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
-
-			  if (Object.keys(result).length > 0) {
-            for (const index2 in result) {
-				  if (
-                result[index2].id == thermometer_id
-					&& result[index2].te != undefined
-					&& result[index2].hu != undefined
-					&& typeof result[index2].te != 'undefined'
-					&& typeof result[index2].hu != 'undefined'
-				  ) {
-                let te = (result[index2].te.toFixed(1) * 2) / 2;
-                let hu = (result[index2].hu.toFixed(1) * 2) / 2;
-
-                // First adjust retrieved temperature with offset
-                const offset_temp = device.getSetting('offset_temperature');
-                te += offset_temp;
-
-                // Check current temperature
-                if (device.getCapabilityValue('measure_temperature') != te) {
-					  if (debug) { this.log(`New TE - ${te}`); }
-					  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
-                }
-
-                // First adjust retrieved humidity with offset
-                const offset_hu = device.getSetting('offset_humidity');
-                hu += offset_hu;
-
-                // Check current humidity
-                if (device.getCapabilityValue('measure_humidity') != hu) {
-					  if (debug) { this.log(`New HU - ${hu}`); }
-					  await device.setCapabilityValue('measure_humidity', hu).catch(this.error);
-                }
-
-                if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-					  if (!device.hasCapability('alarm_battery')) {
-                    await device.addCapability('alarm_battery').catch(this.error);
-					  }
-
-					  const lowBattery_temp = result[index2].lowBattery;
-					  const lowBattery_status = lowBattery_temp == 'yes';
-
-					  if (device.getCapabilityValue('alarm_battery') != lowBattery_status) {
-                    if (debug) { this.log(`New status - ${lowBattery_status}`); }
-                    await device.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
-					  }
-                } else if (device.hasCapability('alarm_battery')) {
-                  await device.removeCapability('alarm_battery').catch(this.error);
-					  }
-				  }
-            }
-			  }
-        }
-		  });
-
-		  await Promise.all(promises);
-
-		  await this.setAvailable().catch(this.error);
-    } catch (err) {
-		  this.error(err);
-		  await this.setUnavailable(err).catch(this.error);
-    }
-	  }
-  
-  onDeleted() {
-
-    if (Object.keys(devices).length === 0) {
-      clearInterval(refreshIntervalId);
-      if (debug) { this.log('--Stopped Polling--'); }
-    }
-
-    this.log(`deleted: ${JSON.stringify(this)}`);
-  }
-
-  // Catch offset updates
   onSettings(oldSettings, newSettings, changedKeys) {
     this.log('Settings updated');
-    // Update display values if offset has changed
-    for (const k in changedKeys) {
-      const key = changedKeys[k];
-      if (key.slice(0, 7) === 'offset_') {
+
+    for (const key of changedKeys) {
+      if (key.startsWith('offset_')) {
         const cap = `measure_${key.slice(7)}`;
-        const value = this.getCapabilityValue(cap);
+        const oldVal = this.getCapabilityValue(cap);
         const delta = newSettings[key] - oldSettings[key];
-        this.log('Updating value of', cap, 'from', value, 'to', value + delta);
-        this.setCapabilityValue(cap, value + delta)
-          .catch((err) => this.error(err));
+        const newVal = oldVal + delta;
+
+        this.log(`Updating ${cap} from ${oldVal} → ${newVal}`);
+        this.setCapabilityValue(cap, newVal).catch(this.error);
       }
     }
-
   }
 
-  updateValue(cap, value) {
-    // add offset if defined
-    this.log('Updating value of', this.id, 'with capability', cap, 'to', value);
-    const cap_offset = cap.replace('measure', 'offset');
-    const offset = this.getSetting(cap_offset);
-    this.log(cap_offset, offset);
-    if (offset != null) {
-      value += offset;
+  _hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
     }
-    this.setCapabilityValue(cap, value)
-      .catch((err) => this.error(err));
+    return Math.abs(hash);
   }
-
 }
 
 module.exports = HomeWizardThermometer;
