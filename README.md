@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.20
+v3.9.21
 
 * New Plugin Battery mode support (zero_charge_only & zero_discharge_only)
 * Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
@@ -30,6 +30,8 @@ v3.9.20
 * Phase 1 /3 fix for P1(apiv1) after refractor code update
 * Bugfix: Fallback url for SDM230v2 and P1apiv2 (mDNS fail workaround)
 * Bugfix: pairing problem "Cannot read properties of undefined (reading 'log')
+* Homewizard legacy, clear some old callback methods
+* Finetune async/await updates
 
 v3.8.22
 
