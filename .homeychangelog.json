@@ -796,5 +796,8 @@
   },
   "3.9.20": {
     "en": "Bugfix: pairing problem apiv1 and apiv2"
+  },
+  "3.9.21": {
+    "en": "Wsmanager optimize, custom polling Homewizard Legacy and fix Driver.js (this.log)"
   }
 }
