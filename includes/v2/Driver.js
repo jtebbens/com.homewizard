@@ -17,7 +17,7 @@ async function requestToken(address) {
     name: `local/homey_${Math.random().toString(16).substr(2, 6)}`,
   };
 
-  this.log('Trying to get token...');
+  console.log('Trying to get token...');
 
   // The request...
   const response = await fetch(`https:/${address}/api/user`, {
@@ -32,7 +32,7 @@ async function requestToken(address) {
 
   // See if we get an unauthorized response, meaning the button has not been pressed yet
   if (response.status == 403) {
-    this.log('Button not pressed yet...');
+    console.log('Button not pressed yet...');
     return null;
   }
 
@@ -65,7 +65,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-      this.log('Discovered devices:', discoveryResults);
+      console.log('Discovered devices:', discoveryResults);
 
       // Return list of devices, we do not test if device is reachable as we trust the discovery results
       const devices = [];
@@ -138,7 +138,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         this.timeout = setTimeout(async () => {
           clearInterval(this.interval);
           clearTimeout(this.timeout);
-          this.log('Timeout!');
+          console.log('Timeout!');
           try {
             await session.emit('authorize_timeout');
           } catch (e) {
@@ -147,7 +147,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
         }, duration);
 
       } catch (error) {
-        this.log('Pair Session Timeout error', error);
+        console.log('Pair Session Timeout error', error);
       }
     });
   }

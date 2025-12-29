@@ -4,12 +4,13 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.22
+v3.9.21
 
 * Wsmanager optimize
 * Homewizard legacy custom polling
+* Driver.js (apiv2) log fix (this.log undefined)
 
-v3.9.21
+v3.9.20
 
 * New Plugin Battery mode support (zero_charge_only & zero_discharge_only)
 * Optional gas checkbox (default enabled) for P1 (apiv1 and apiv2). (User request)
