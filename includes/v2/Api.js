@@ -1,6 +1,8 @@
 'use strict';
 
-const fetch = require('node-fetch');
+// const fetch = require('node-fetch');
+const fetch = require('../utils/fetchQueue');
+
 const https = require('https');
 
 // Unified timeout wrapper — returns Response

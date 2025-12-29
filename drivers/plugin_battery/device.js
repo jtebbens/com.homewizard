@@ -233,6 +233,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     // Initialize WebSocket manager (preferred real-time updates)
     this.wsManager = new WebSocketManager({
+      device: this,
       url: this.url,
       token: this.token,
       log: this.log.bind(this),
@@ -241,7 +242,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       getSetting: this.getSetting.bind(this),
       handleMeasurement: this._handleMeasurement.bind(this),
       handleSystem: this._handleSystem.bind(this),
-      // handleBatteries: this._handleBatteries.bind(this)
+      handleBatteries: this._handleBatteries?.bind(this),
     });
     this.wsManager.start();
   

@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 const https = require('https');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
+const debug = false;
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -191,6 +192,7 @@ async function applyMeasurementCapabilities(device, m) {
     throw error;
   }
 }
+
 
 
 
@@ -531,8 +533,10 @@ this.homey.flow
     this._triggerFlowPrevious = {};
 
     // this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+
+    this.pollingEnabled = !!settings.use_polling;
     
-    if (settings.use_polling) {
+    if (this.pollingEnabled) {
       this.log('⚙️ Polling enabled via settings');
       this.startPolling();
     } else {
@@ -551,6 +555,18 @@ this.homey.flow
 
       this.wsManager.start();
     }
+    
+    if (debug) setInterval(() => {
+      this.log(
+        'CPU diag:',
+        'ws=', this.wsManager?.isConnected(),
+        'poll=', this.pollingEnabled,
+        'batteryGroup=', this._phaseOverloadNotificationsEnabled,
+        'external=', !!this._cache.external_last_payload,
+        'lastWS=', Date.now() - (this.wsManager?.lastMeasurementAt || 0)
+      );
+    }, 10000);
+
 
     // 🕒 Driver-side watchdog
     this._wsWatchdog = setInterval(() => {
@@ -578,6 +594,14 @@ this.homey.flow
         await setStoreValueSafe(this, key, value);
       }
     }, 30000);
+
+    this._batteryGroupInterval = setInterval(() => {
+      this._updateBatteryGroup().catch(this.error);
+    }, 10000); // elke 10 seconden
+
+    this._dailyInterval = setInterval(() => {
+      this._updateDaily().catch(this.error);
+    }, 60000); // elke minuut
 
     
   } 
@@ -611,6 +635,122 @@ this.homey.flow
     // this.log(`📤 Triggering export change with value:`, value);
     this._flowTriggerExport.trigger(device, { export: value }).catch(this.error);
   }
+
+async _updateBatteryGroup() {
+  const dataObj = this.getData();
+  if (!dataObj || !dataObj.id) return;
+
+  const group = this.homey.settings.get('pluginBatteryGroup') || {};
+  if (!group || Object.keys(group).length === 0) return;
+
+  const batteries = Object.values(group).filter(b => Date.now() - b.updated_at < 60000);
+  if (batteries.length === 0) return;
+
+  const totalCapacity = batteries.reduce((sum, b) => sum + b.capacity_kwh, 0);
+  const averageSoC = batteries.reduce((sum, b) => sum + b.soc_pct, 0) / batteries.length;
+  const totalPowerW = batteries.reduce((sum, b) => sum + b.power_w, 0);
+
+  let chargeState = 'idle';
+  if (totalPowerW > 0) chargeState = 'charging';
+  else if (totalPowerW < 0) chargeState = 'discharging';
+
+  await Promise.allSettled([
+    this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity),
+    this._setCapabilityValue('battery_group_average_soc', averageSoC),
+    this._setCapabilityValue('battery_group_state', chargeState),
+  ]);
+}
+
+async _updateDaily() {
+  const dataObj = this.getData();
+  if (!dataObj || !dataObj.id) return;
+
+  const showGas = this.getSetting('show_gas') === true;
+
+  const m = this._cacheGet('last_measurement');
+  if (!m) return;
+
+  const nowLocal = new Date(new Date().toLocaleString('en-US', {
+    timeZone: 'Europe/Brussels'
+  }));
+
+  const hour = nowLocal.getHours();
+  const minute = nowLocal.getMinutes();
+
+  // --- MIDNIGHT RESET ---
+  if (hour === 0 && minute === 0) {
+    if (typeof m.energy_import_kwh === 'number') {
+      this._cacheSet('meter_start_day', m.energy_import_kwh);
+    }
+
+    const lastExternal = this._cacheGet('external_last_result');
+    const gas = lastExternal?.gas;
+
+    if (showGas && typeof gas?.value === 'number') {
+      this._cacheSet('gasmeter_start_day', gas.value);
+    }
+  }
+
+  // --- DAILY ELECTRICITY ---
+  const meterStart = this._cacheGet('meter_start_day');
+  if (meterStart != null && typeof m.energy_import_kwh === 'number') {
+    const dailyImport = m.energy_import_kwh - meterStart;
+    const cur = this.getCapabilityValue('meter_power.daily');
+    if (cur !== dailyImport) {
+      await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
+    }
+  }
+
+  // --- DAILY GAS ---
+  if (showGas) {
+    const lastExternal = this._cacheGet('external_last_result');
+    const gas = lastExternal?.gas;
+    const gasStart = this._cacheGet('gasmeter_start_day');
+
+    if (gas?.value != null && gasStart != null) {
+      const gasDiff = gas.value - gasStart;
+      const cur = this.getCapabilityValue('meter_gas.daily');
+      if (cur !== gasDiff) {
+        await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
+      }
+    }
+  }
+
+  // --- GAS DELTA (5‑minute interval) ---
+  if (showGas && minute % 5 === 0) {
+    const lastMinute = this._cacheGet('last_gas_delta_minute');
+    if (lastMinute !== minute) {
+      this._cacheSet('last_gas_delta_minute', minute);
+
+      const lastExternal = this._cacheGet('external_last_result');
+      const gas = lastExternal?.gas;
+
+      if (gas && typeof gas.value === 'number') {
+        const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
+
+        if (prevTimestamp == null) {
+          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+        } else if (gas.timestamp !== prevTimestamp) {
+          const prevReading = this._cacheGet('gasmeter_previous_reading');
+
+          if (typeof prevReading === 'number') {
+            const delta = gas.value - prevReading;
+            if (delta >= 0) {
+              const cur = this.getCapabilityValue('measure_gas');
+              if (cur !== delta) {
+                await updateCapability(this, 'measure_gas', delta).catch(this.error);
+              }
+            }
+          }
+
+          this._cacheSet('gasmeter_previous_reading', gas.value);
+          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+        }
+      }
+    }
+  }
+}
+
 
 
 
@@ -677,14 +817,10 @@ async _handleExternalMeters(external) {
 
 async _handleMeasurement(m) {
   const now = Date.now();
-
-  // Throttle WS updates: max 1 per second
-  if (this._lastWsUpdate && now - this._lastWsUpdate < 1000) return;
-  this._lastWsUpdate = now;
-
   const settings = this.getSettings();
   const showGas = settings.show_gas === true;
   const homey_lang = this.homey.i18n.getLanguage();
+  this._cacheSet('last_measurement', m);
 
   // Skip if device was deleted
   const dataObj = this.getData();
@@ -741,23 +877,30 @@ async _handleMeasurement(m) {
   }
 
   // Flow triggers (no awaits needed)
-  if (typeof m.energy_import_kwh === 'number' &&
-      this._triggerFlowPrevious.import !== m.energy_import_kwh) {
-    this._triggerFlowPrevious.import = m.energy_import_kwh;
-    this.flowTriggerImport(this, m.energy_import_kwh);
+  // Throttle flow triggers to once every 5 seconds
+  if (!this._lastFlowTrigger || now - this._lastFlowTrigger > 5000) {
+
+    if (typeof m.energy_import_kwh === 'number' &&
+        this._triggerFlowPrevious.import !== m.energy_import_kwh) {
+      this._triggerFlowPrevious.import = m.energy_import_kwh;
+      this.flowTriggerImport(this, m.energy_import_kwh);
+    }
+
+    if (typeof m.energy_export_kwh === 'number' &&
+        this._triggerFlowPrevious.export !== m.energy_export_kwh) {
+      this._triggerFlowPrevious.export = m.energy_export_kwh;
+      this.flowTriggerExport(this, m.energy_export_kwh);
+    }
+
+    if (typeof m.active_tariff === 'number' &&
+        this._triggerFlowPrevious.tariff !== m.active_tariff) {
+      this._triggerFlowPrevious.tariff = m.active_tariff;
+      this.flowTriggerTariff(this, m.active_tariff);
+    }
+
+    this._lastFlowTrigger = now;
   }
 
-  if (typeof m.energy_export_kwh === 'number' &&
-      this._triggerFlowPrevious.export !== m.energy_export_kwh) {
-    this._triggerFlowPrevious.export = m.energy_export_kwh;
-    this.flowTriggerExport(this, m.energy_export_kwh);
-  }
-
-  if (typeof m.active_tariff === 'number' &&
-      this._triggerFlowPrevious.tariff !== m.active_tariff) {
-    this._triggerFlowPrevious.tariff = m.active_tariff;
-    this.flowTriggerTariff(this, m.active_tariff);
-  }
 
   // Net power
   if (m.energy_import_kwh !== undefined && m.energy_export_kwh !== undefined) {
@@ -793,93 +936,6 @@ async _handleMeasurement(m) {
     if (this.hasCapability('measure_gas')) tasks.push(this.removeCapability('measure_gas').catch(this.error));
     if (this.hasCapability('meter_gas.daily')) tasks.push(this.removeCapability('meter_gas.daily').catch(this.error));
     gas = null;
-  }
-
-  const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Brussels' }));
-
-  // Daily reset at midnight
-  if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
-    if (typeof m.energy_import_kwh === 'number') {
-      this._cacheSet('meter_start_day', m.energy_import_kwh);
-    }
-    if (typeof gas?.value === 'number') {
-      this._cacheSet('gasmeter_start_day', gas.value);
-    }
-  } else {
-    const meterStartDay = this._cacheGet('meter_start_day');
-    const gasmeterStartDay = this._cacheGet('gasmeter_start_day');
-
-    if (!meterStartDay && typeof m.energy_import_kwh === 'number') {
-      this._cacheSet('meter_start_day', m.energy_import_kwh);
-    }
-    if (!gasmeterStartDay && typeof gas?.value === 'number') {
-      this._cacheSet('gasmeter_start_day', gas.value);
-    }
-  }
-
-  // Gas delta every 5 minutes
-  const currentMinute = nowLocal.getMinutes();
-  const lastMinute = this._cacheGet('last_gas_delta_minute');
-
-  if (showGas && currentMinute % 5 === 0 && lastMinute !== currentMinute) {
-    this._cacheSet('last_gas_delta_minute', currentMinute);
-
-    if (gas && typeof gas.value === 'number') {
-      const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
-
-      if (gas.timestamp != null && prevTimestamp == null) {
-        this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-      } else if (gas.timestamp !== prevTimestamp) {
-        const prevReading = this._cacheGet('gasmeter_previous_reading');
-        if (typeof prevReading === 'number') {
-          const delta = gas.value - prevReading;
-          if (delta >= 0) {
-            cap('measure_gas', delta);
-          }
-        }
-
-        this._cacheSet('gasmeter_previous_reading', gas.value);
-        this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-      }
-    }
-  }
-
-  // Daily electricity usage
-  const meterStart = this._cacheGet('meter_start_day');
-  if (meterStart != null) {
-    const dailyImport = m.energy_import_kwh - meterStart;
-    cap('meter_power.daily', dailyImport);
-  }
-
-  // Daily gas usage
-  if (showGas) {
-    const gasStart = this._cacheGet('gasmeter_start_day');
-
-    if (gas?.value != null && gasStart != null) {
-      const gasDiff = gas.value - gasStart;
-      cap('meter_gas.daily', gasDiff);
-    }
-  }
-
-
-  // Battery group aggregation
-  const group = this.homey.settings.get('pluginBatteryGroup') || {};
-  const batteries = Object.values(group).filter((b) => now - b.updated_at < 60000);
-
-  if (batteries.length > 0) {
-    const totalCapacity = batteries.reduce((sum, b) => sum + b.capacity_kwh, 0);
-    const averageSoC = batteries.reduce((sum, b) => sum + b.soc_pct, 0) / batteries.length;
-    const totalPowerW = batteries.reduce((sum, b) => sum + b.power_w, 0);
-
-    let chargeState = 'idle';
-    if (totalPowerW > 0) chargeState = 'charging';
-    else if (totalPowerW < 0) chargeState = 'discharging';
-
-    tasks.push(
-      this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity).catch(this.error),
-      this._setCapabilityValue('battery_group_average_soc', averageSoC).catch(this.error),
-      this._setCapabilityValue('battery_group_state', chargeState).catch(this.error),
-    );
   }
 
   // Cache external payload
@@ -1064,6 +1120,16 @@ async _handleBatteries(data) {
       this.wsManager.stop();
       this.wsManager = null;
     }
+    if (this._batteryGroupInterval) {
+      clearInterval(this._batteryGroupInterval);
+      this._batteryGroupInterval = null;
+    }
+    if (this._dailyInterval) {
+      clearInterval(this._dailyInterval);
+      this._dailyInterval = null;
+    }
+
+
   }
 
 
@@ -1077,10 +1143,11 @@ async onDiscoveryAvailable(discoveryResult) {
   // Debounce reconnects to avoid hammering
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(async () => {
-    if (settings.use_polling) {
-      this.log('🔁 Discovery: polling is active, skipping WebSocket reconnect');
+    if (this.pollingEnabled) {
+      this.log('🔁 Discovery: polling is active (runtime), skipping WebSocket reconnect');
       return;
     }
+
 
     // Preflight reachability check
     try {
@@ -1135,7 +1202,7 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
 
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
-    if (!settings.use_polling) {
+    if (!this.pollingEnabled) {
       this.log('🔁 Reconnecting WebSocket due to last seen update...');
       if (this.wsManager) {
         this.wsManager.restartWebSocket();
@@ -1388,6 +1455,9 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
 
     if (MySettings.changedKeys.includes('use_polling')) {
       this.log(`⚙️ use_polling gewijzigd naar: ${MySettings.newSettings.use_polling}`);
+
+      // ⭐ FIX: update runtime flag
+      this.pollingEnabled = MySettings.newSettings.use_polling;
 
       if (MySettings.newSettings.use_polling) {
         this.wsManager?.stop(); // cleanly stop WebSocket

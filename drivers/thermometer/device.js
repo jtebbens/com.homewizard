@@ -21,8 +21,16 @@ class HomeWizardThermometer extends Homey.Device {
 
     setTimeout(() => {
       this.pollOnce();
-      this.refreshIntervalId = setInterval(() => this.pollOnce(), 20_000);
+
+      // Pak polling-interval van de hoofdunit
+      const intervalSec =
+        homewizard.devices?.[this.homewizard_id]?.settings?.poll_interval || 20;
+
+      this.log(`Thermometer polling every ${intervalSec}s (from main unit)`);
+
+      this.refreshIntervalId = setInterval(() => this.pollOnce(), intervalSec * 1000);
     }, offsetMs);
+
   }
 
   async pollOnce() {
