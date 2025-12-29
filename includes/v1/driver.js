@@ -21,7 +21,7 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
     const discoveryResults = discoveryStrategy.getDiscoveryResults();
     const numberOfDiscoveryResults = Object.keys(discoveryResults).length;
-    this.log('Discovered devices:', discoveryResults);
+    console.log('Discovered devices:', discoveryResults);
         
     const devices = [];
     await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
@@ -46,7 +46,7 @@ module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
           },
         });
       } catch (err) {
-        this.error(`Discovery failed for ${discoveryResult.id}:`, err.message);
+        console.log(`Discovery failed for ${discoveryResult.id}:`, err.message);
       }
     }));
     if (devices.length === 0) {
