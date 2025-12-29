@@ -62,6 +62,17 @@
             "nl": "Gebruik ledring"
           },
           "value": false
+        },
+        { 
+          "id": "poll_interval", 
+          "type": "number", 
+          "label": { 
+            "en": "Polling interval (seconds)", 
+            "nl": "Polling-interval (seconden)" 
+          }, 
+          "value": 30, 
+          "min": 10, 
+          "max": 3600 
         }
       ]
     }

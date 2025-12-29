@@ -4,6 +4,7 @@ const https = require('https');
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
 // const fetch = require('../../includes/utils/fetchQueue');
+const debug = false;
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -94,6 +95,12 @@ class WebSocketManager {
     this._handleMeasurement = handleMeasurement;
     this._handleSystem = handleSystem;
     this._handleBatteries = handleBatteries;
+    this.pendingMeasurement = null;   
+    this.pendingSystem = null;        
+    this.pendingBatteries = null;
+    this._eventsThisSecond = 0; 
+    this._lastSecond = Math.floor(Date.now() / 1000);
+
     
     // WebSocket instance and state flags
     this.ws = null;
@@ -141,7 +148,6 @@ class WebSocketManager {
    */
 
   async start() {
-    let pendingMeasurement = null;
     // If an existing socket is in CONNECTING state, skip starting again
 
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
@@ -246,12 +252,25 @@ class WebSocketManager {
       // ⬇️ Add this block for 2s measurement flush
       const updateInterval = this.getSetting('update_interval') || 2000;
       this._safeSetInterval(() => {
-        if (pendingMeasurement) {
+        if (this.pendingMeasurement) {
           this.lastMeasurementAt = Date.now();
-          this._handleMeasurement?.(pendingMeasurement);
-          pendingMeasurement = null;
+          this._handleMeasurement?.(this.pendingMeasurement);
+          this.pendingMeasurement = null;
         }
       }, updateInterval);
+      // ⬆️
+      // ⬇️ Add this block for buffered system + batteries flush (every 10s)
+      this._safeSetInterval(() => {
+        if (this.pendingSystem) {
+          this._handleSystem?.(this.pendingSystem);
+          this.pendingSystem = null;
+        }
+
+        if (this.pendingBatteries) {
+          this._handleBatteries?.(this.pendingBatteries);
+          this.pendingBatteries = null;
+        }
+      }, 10000);
       // ⬆️
 
       const maxRetries = 30;
@@ -273,29 +292,73 @@ class WebSocketManager {
       tryAuthorize();
     });
 
+this.ws.on('message', (msg) => {
+  this._eventsThisSecond++;
+  let data;
+  try {
+    data = JSON.parse(msg.toString());
+  } catch (err) {
+    this.error('❌ Failed to parse WebSocket message:', err);
+    return;
+  }
 
-    this.ws.on('message', (msg) => {
-      
-      // ✅ RAW message log (exact bytes from device)
-      // this.log(`📡 WS RAW: ${msg.toString()}`);
+  // 🔍 Altijd loggen welk type bericht binnenkomt
+  const devId = this.device?.getData?.().id || 'unknown-device';
+  if (debug) this.log(`[WS][${devId}] TYPE=${data.type}`);
 
-      let data;
-      try { data = JSON.parse(msg.toString()); }
-      catch (err) { this.error('❌ Failed to parse WebSocket message:', err); return; }
-
-      if (data.type === 'authorized') this._subscribeTopics();
-      else if (data.type === 'measurement') {
-        pendingMeasurement = data.data;   // keep latest only
-      } else if (data.type === 'system') this._handleSystem?.(data.data);
-      else if (data.type === 'batteries') this._handleBatteries?.(data.data);
-    });
+  // 🔐 Authorized → subscribe topics + start WS events/sec counter
+  if (data.type === 'authorized') {
+    this._subscribeTopics();
+  }
 
 
-    this.ws.on('error', (err) => {
-      this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-      this.wsActive = false;
-      this._scheduleReconnect();
-    });
+
+
+  // 📡 Measurement → batterijmetingen (P1 + plugin_battery)
+  else if (data.type === 'measurement') {
+    const d = data.data || {};
+    const devId = this.device?.getData?.().id || 'unknown-device';
+    if (debug) this.log(
+      `[WS][${devId}] MEAS: ${JSON.stringify(d)}`
+    );
+
+
+    this.pendingMeasurement = d; // keep latest only
+  }
+
+  // ⚙️ System → systeeminfo
+  else if (data.type === 'system') {
+    // this._handleSystem?.(data.data);
+    this.pendingSystem = data.data;
+  }
+
+  // 🔋 Batteries → battery group updates (P1 + plugin_battery)
+  else if (data.type === 'batteries') {
+    const d = data.data || {};
+    const devId = this.device?.getData?.().id || 'unknown-device';
+    if (debug) this.log(
+      `[WS][${devId}] BATTERY GROUP: mode=${d.mode}, target=${d.target_power_w}, permissions=${JSON.stringify(d.permissions)}`
+    );
+
+    // this._handleBatteries?.(d);
+    this.pendingBatteries = d; // buffer only latest
+  }
+
+  // ❓ Onbekend type
+  else {
+    const devId = this.device?.getData?.().id || 'unknown-device';
+    if (debug) this.log(`[WS][${devId}] UNKNOWN TYPE: ${data.type}`);
+
+  }
+});
+
+
+// 🛑 Error handler
+this.ws.on('error', (err) => {
+  this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
+  this.wsActive = false;
+  this._scheduleReconnect();
+});
 
     this.ws.on('close', () => {
       this.log('🔌 WebSocket closed — retrying');
@@ -346,19 +409,22 @@ class WebSocketManager {
     this.setAvailable().catch(this.error);
   }
 
-  _startHeartbeatMonitor() {
-    this._safeSetInterval(() => {
-      const now = Date.now();
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this._safeSend({ type: 'batteries' });
-      }
-      // Increase threshold from 60s → 180s
-      if (now - this.lastMeasurementAt > 180000) {
-        this.log('💤 No measurement in 3min — reconnecting WebSocket');
-        this.restartWebSocket();
-      }
-    }, 30000); // still check every 30s
-  }
+_startHeartbeatMonitor() {
+  this._safeSetInterval(() => {
+    const now = Date.now();
+
+    // Only update when missed
+    if (this.ws?.readyState === WebSocket.OPEN && now - this.lastMeasurementAt > 60000) {
+      this._safeSend({ type: 'batteries' });
+    }
+
+    if (now - this.lastMeasurementAt > 180000) {
+      this.log('💤 No measurement in 3min — reconnecting WebSocket');
+      this.restartWebSocket();
+    }
+  }, 30000);
+}
+
 
 
   isConnected() {

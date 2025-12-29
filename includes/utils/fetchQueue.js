@@ -79,7 +79,7 @@ function queuedFetch(url, opts = {}) {
 
     // Duplicate suppression
     if (queue.some(job => `${job.url}|${job.opts.method || 'GET'}` === key)) {
-      return reject(new Error(`Duplicate job dropped: ${key}`));
+      return reject(new Error(`Duplicate request suppressed`));
     }
 
     // Backpressure

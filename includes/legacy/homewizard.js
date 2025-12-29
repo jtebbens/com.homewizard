@@ -1,7 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('../utils/fetchQueue');
+// const fetch = require('../utils/fetchQueue');
+const fetch = require('node-fetch');
 // const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
@@ -96,13 +97,25 @@ homewizard.callnew = async function(device_id, uri_part) {
   homewizard.startpoll = function() {
     homewizard.poll(); // Initial poll
 
+    // Pak interval uit settings van het eerste device
+    const firstDevice = Object.values(self.devices)[0];
+    const intervalSec = firstDevice?.settings?.poll_interval || 30;
+
+    console.log(`⏱️ Legacy polling every ${intervalSec}s`);
+
+    // Stop oude timer als hij bestaat
+    if (self.polls.device_id) {
+      clearInterval(self.polls.device_id);
+    }
+
+    // Start nieuwe timer
     self.polls.device_id = setInterval(async () => {
       try {
         await homewizard.poll();
       } catch (error) {
         console.error('Error occurred during polling:', error);
       }
-    }, 1000 * 30);
+    }, intervalSec * 1000);
   };
 
   homewizard.poll = async function() {

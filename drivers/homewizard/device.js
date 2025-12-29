@@ -64,13 +64,21 @@ class HomeWizardDevice extends Homey.Device {
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
     }
+
+    // Pak interval van de hoofdunit
+    const firstDeviceId = Object.keys(homeWizard_devices)[0];
+    const intervalSec =
+      homeWizard_devices[firstDeviceId]?.settings?.poll_interval || 20;
+
+    this.log(`HomeWizard preset polling every ${intervalSec}s (from main unit)`);
+
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { this.log('--Start HomeWizard Polling-- '); }
+      if (debug) { this.log('--Start HomeWizard Polling--'); }
       this.getStatus(devices);
-
-    }, 1000 * 20);
-
+    }, intervalSec * 1000);
   }
+
+
 
   getStatus(devices) {
     Promise.resolve()
@@ -131,6 +139,16 @@ class HomeWizardDevice extends Homey.Device {
         this.setUnavailable(err).catch(this.error);
       });
 	  } // end of getstatus
+
+
+    async onSettings({ changedKeys }) {
+      if (changedKeys.includes('poll_interval')) {
+        const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+        for (const d of devices) {
+          d.startPolling(devices); // herstart met nieuwe interval
+        }
+      }
+    }
 
   /*
 	getStatus(devices) {

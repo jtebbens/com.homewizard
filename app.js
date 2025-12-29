@@ -1,6 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
+// const fetchQueue = require('./includes/utils/fetchQueue');
 // const v8 = require('v8');
 
 const Testing = false;
@@ -10,6 +11,9 @@ class HomeWizardApp extends Homey.App {
     this.log('HomeWizard app ready!');
     this.baseloadMonitor = null;
     this.p1Source = null;
+
+     // Debug: fetchQueue stats elke 10 seconden 
+     // setInterval(() => { const stats = fetchQueue.stats(); this.log('fetchQueue stats:', stats); }, 1000);
 
       if (process.env.DEBUG === '1' && Testing) {
         try { 
