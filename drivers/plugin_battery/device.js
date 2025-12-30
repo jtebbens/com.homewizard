@@ -2,50 +2,30 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-
 const https = require('https');
 const WebSocketManager = require('../../includes/v2/Ws');
-
 const api = require('../../includes/v2/Api');
 
-process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
-});
+const agent = new https.Agent({ rejectUnauthorized: false });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-});
+process.on('uncaughtException', err => console.error('💥 Uncaught Exception:', err));
+process.on('unhandledRejection', (reason, promise) =>
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason)
+);
 
-// Create an agent that skips TLS verification
-const agent = new https.Agent({
-  rejectUnauthorized: false
-});
-
-/**
- * Perform a fetch with a timeout using AbortController.
- *
- * @param {string} url - The URL to fetch.
- * @param {object} [options={}] - Fetch options (headers, agent, etc.).
- * @param {number} [timeout=5000] - Timeout in milliseconds.
- * @returns {Promise<any>} Parsed JSON response.
- * @throws {Error} If the request times out or fetch fails.
- */
+// ---------------------------------------------------------
+// fetchWithTimeout (unchanged)
+// ---------------------------------------------------------
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('Fetch timeout'));
-    }, timeout);
+    const timer = setTimeout(() => reject(new Error('Fetch timeout')), timeout);
 
     fetch(url, options)
       .then(async res => {
         clearTimeout(timer);
-
         const text = await res.text();
-        try {
-          resolve(JSON.parse(text));
-        } catch {
-          resolve(text);
-        }
+        try { resolve(JSON.parse(text)); }
+        catch { resolve(text); }
       })
       .catch(err => {
         clearTimeout(timer);
@@ -54,96 +34,52 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   });
 }
 
-
-/**
- * Estimate battery kWh capacity left based on state of charge, cycles and inverter efficiency.
- *
- * @param {number} loadPct - Current state of charge in percent (0-100).
- * @param {number} cycles - Number of charge/discharge cycles the battery has gone through.
- * @param {number} inverterEfficiency - Round trip inverter efficiency (0..1).
- * @returns {number} Estimated kWh left in the battery.
- */
+// ---------------------------------------------------------
+// estimateBatteryKWh (unchanged)
+// ---------------------------------------------------------
 function estimateBatteryKWh(loadPct, cycles, inverterEfficiency) {
-  const nominalCapacity = 2.8; // kWh
+  const nominalCapacity = 2.8;
   const referenceCycles = 6000;
-  const referenceDegradation = 0.7; // 70% capacity at 6000 cycles
+  const referenceDegradation = 0.7;
 
-  // Linear degradation rate
   const degradationRate = (1 - referenceDegradation) / referenceCycles;
-
-  // Degradation factor based on cycles
   let degradationFactor = 1 - (degradationRate * cycles);
   degradationFactor = Math.max(degradationFactor, 0);
 
-  // Final usable energy
-  if (inverterEfficiency < 0.75) inverterEfficiency = 0.75; // minimum 75% to avoid unrealistic low values based on cycles
-  const estimatedKWh = nominalCapacity * inverterEfficiency * (loadPct / 100) * degradationFactor;
+  if (inverterEfficiency < 0.75) inverterEfficiency = 0.75;
 
-  return estimatedKWh;
+  return nominalCapacity * inverterEfficiency * (loadPct / 100) * degradationFactor;
 }
 
-/**
- * Experimental State-of-Charge (SoC) drift detector.
- *
- * Compares the observed SoC change rate with the expected SoC change based on reported power and battery capacity.
- *
- * @param {object} params
- * @param {number} params.previousSoC - Previous SoC percentage.
- * @param {number} params.previousTimestamp - Timestamp (ms) of previous reading.
- * @param {number} params.currentSoC - Current SoC percentage.
- * @param {number} params.currentPowerW - Current battery power in watts (positive = charging).
- * @param {number} [params.batteryCapacityWh=2470] - Battery capacity in Wh.
- * @param {number} [params.driftMargin=5] - Margin (%) to consider drift significant.
- * @returns {object} { drift: boolean, rateOfChange, expectedSoCChange, timestamp }
- */
-function checkSoCDrift({
-  previousSoC,
-  previousTimestamp,
-  currentSoC,
-  currentPowerW,
-  batteryCapacityWh = 2470,
-  driftMargin = 0.5
-}) {
+// ---------------------------------------------------------
+// checkSoCDrift (unchanged)
+// ---------------------------------------------------------
+function checkSoCDrift({ previousSoC, previousTimestamp, currentSoC, currentPowerW, batteryCapacityWh = 2470, driftMargin = 0.5 }) {
   if (previousSoC === undefined || previousTimestamp === undefined) return { drift: false };
 
   const now = Date.now();
-  // Number of minutes between readings 60000ms is 60s
   const deltaTimeMin = (now - previousTimestamp) / 60000;
-  
-  // Ignore intervals shorter than 12 seconds
   if (deltaTimeMin < 0.2) return { drift: false, timestamp: now };
-  
-  // Calculate rate of SoC change in % per minute
+
   const deltaSoC = currentSoC - previousSoC;
   const rateOfChange = deltaSoC / deltaTimeMin;
 
-  // Calculate expected usage in Wh over the period
   const expectedWhChange = currentPowerW * deltaTimeMin;
   const expectedSoCChange = (expectedWhChange / batteryCapacityWh) * 100;
 
-  // Compare actual vs expected if difference exceeds margin
   if (Math.abs(rateOfChange - expectedSoCChange) > driftMargin) {
-    return {
-      drift: true,
-      rateOfChange,
-      expectedSoCChange,
-      timestamp: now
-    };
+    return { drift: true, rateOfChange, expectedSoCChange, timestamp: now };
   }
 
-  // Else no drift
   return { drift: false, timestamp: now };
 }
 
-/**
- * Map RSSI dBm value to a human readable wifi quality label.
- *
- * @param {number} strength - RSSI in dBm.
- * @returns {string} Quality label (Excellent, Strong, Moderate, Weak, Poor, Unusable).
- */
+// ---------------------------------------------------------
+// getWifiQuality (unchanged)
+// ---------------------------------------------------------
 function getWifiQuality(strength) {
   if (typeof strength !== 'number') return 'Unknown';
-  if (strength >= -30) return 'Excellent';  // Strongest signal
+  if (strength >= -30) return 'Excellent';
   if (strength >= -60) return 'Strong';
   if (strength >= -70) return 'Moderate';
   if (strength >= -80) return 'Weak';
@@ -151,18 +87,9 @@ function getWifiQuality(strength) {
   return 'Unusable';
 }
 
-/**
- * Add, remove or update a capability on a device based on the supplied value.
- *
- * - If value is null/undefined the capability is removed (if present).
- * - If capability does not exist it will be added.
- * - Capability value is only changed when it differs from current value.
- *
- * @param {Homey.Device} device
- * @param {string} capability
- * @param {*} value
- * @returns {Promise<void>}
- */
+// ---------------------------------------------------------
+// updateCapability (unchanged)
+// ---------------------------------------------------------
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
 
@@ -181,46 +108,39 @@ async function updateCapability(device, capability, value) {
 
   if (current !== value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
-    //  device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
   }
 }
 
-/**
- * Homey driver for the HomeWizard Plugin Battery device.
- *
- * Manages polling, WebSocket updates, capability mapping and flow triggers.
- */
+// ---------------------------------------------------------
+// DEVICE CLASS
+// ---------------------------------------------------------
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
-  /**
-   * Called when the device is initialized by Homey.
-   * - Ensures capabilities exist
-   * - Registers listeners
-   * - Starts polling and WebSocket manager according to settings
-   *
-   * @returns {Promise<void>}
-   */
   async onInit() {
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
-    //  await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
-
     this.previousChargingState = null;
     this.previousTimeToEmpty = null;
     this.previousStateOfCharge = null;
+    this._prevTimeToFull = this.getCapabilityValue('time_to_full') ?? 0;
+    this._prevTimeToEmpty = this.getCapabilityValue('time_to_empty') ?? 0;
+
+
 
     this.token = await this.getStoreValue('token');
-    //this.log('PIB Token:', this.token);
 
-    const settings = this.getSettings();
-    this.log('Settings for Plugin Battery: ', settings.polling_interval);
+    const settings = { use_polling: false, ...this.getSettings() };
+    this.log('Settings for Plugin Battery:', settings);
 
-    if (!this.url && settings.url) { this.url = settings.url; this.log(`Restored URL from settings: ${this.url}`); }
+    if (!this.url && settings.url) {
+      this.url = settings.url;
+      this.log(`Restored URL from settings: ${this.url}`);
+    }
 
-    if ((settings.polling_interval === undefined) || (settings.polling_interval === null)) {
+    if (settings.polling_interval == null) {
       await this.setSettings({ polling_interval: 10 });
-      settings.polling_interval = 10; // update local variable
+      settings.polling_interval = 10;
     }
 
     if (this.onPollInterval) {
@@ -228,10 +148,199 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.onPollInterval = null;
     }
 
-    // Start polling only if enabled in settings (commented out by default; enable if required)
-    // this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+    // 🔥 CRUCIALE FIX: altijd oude WebSocket stoppen
+    if (this.wsManager) {
+      this.wsManager.stop();
+      this.wsManager = null;
+    }
 
-    // Initialize WebSocket manager (preferred real-time updates)
+    // -----------------------------------------------------
+    // SELECT DATA SOURCE (identiek aan energy_v2)
+    // -----------------------------------------------------
+    if (settings.use_polling) {
+      const intervalSec = settings.polling_interval || 10;
+      this.log(`⏱️ Polling enabled at init, interval ${intervalSec}s`);
+
+      this.onPollInterval = setInterval(
+        this.onPoll.bind(this),
+        intervalSec * 1000
+      );
+
+    } else {
+      this.log('🔌 WebSocket enabled at init');
+
+      this.wsManager = new WebSocketManager({
+        device: this,
+        url: this.url,
+        token: this.token,
+        log: this.log.bind(this),
+        error: this.error.bind(this),
+        setAvailable: this.setAvailable.bind(this),
+        getSetting: this.getSetting.bind(this),
+        handleMeasurement: (data) => {
+          this.lastWsMeasurementAt = Date.now();
+          this._handleMeasurement(data);
+        },
+        handleSystem: this._handleSystem.bind(this),
+      });
+
+      this.wsManager.start();
+
+      // Idle watchdog: fallback poll if WS is silent too long
+      this._wsIdleWatchdog = setInterval(() => {
+        const last = this.lastWsMeasurementAt || 0;
+        const diff = Date.now() - last;
+
+        // 10 minutes idle → fallback poll
+        if (diff > 10 * 60 * 1000) {
+          this.log(`🕒 WS idle for ${diff}ms → performing fallback poll`);
+          this._fallbackPoll();
+        }
+      }, 60 * 1000);
+
+
+      this._wsWatchdog = setInterval(() => {
+        const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
+        if (!this.getSettings().use_polling && staleMs > 190000) {
+          this.log(`🕒 Driver watchdog: stale >3min (${staleMs}ms), restarting WS`);
+          this.wsManager?.restartWebSocket();
+        }
+      }, 60000);
+
+      // Battery group updater (every 10 sec, like energy_v2)
+      this._batteryGroupInterval = setInterval(() => {
+        this._updateBatteryGroup();
+      }, 10000);
+
+
+    }
+  }
+
+  onDeleted() {
+  // Stop stale-WS watchdog
+  if (this._wsWatchdog) {
+    clearInterval(this._wsWatchdog);
+    this._wsWatchdog = null;
+  }
+
+  // Stop idle-fallback watchdog
+  if (this._wsIdleWatchdog) {
+    clearInterval(this._wsIdleWatchdog);
+    this._wsIdleWatchdog = null;
+  }
+
+  // Stop polling interval
+  if (this.onPollInterval) {
+    clearInterval(this.onPollInterval);
+    this.onPollInterval = null;
+  }
+
+  // Stop WebSocket manager
+  if (this.wsManager) {
+    this.wsManager.stop();
+    this.wsManager = null;
+  }
+
+  // Remove from pluginBatteryGroup
+  const batteryId = this.getData().id;
+  const group = this.homey.settings.get('pluginBatteryGroup') || {};
+  if (group[batteryId]) {
+    delete group[batteryId];
+    this.homey.settings.set('pluginBatteryGroup', group);
+    this.log(`Battery ${batteryId} removed from pluginBatteryGroup`);
+  }
+}
+
+
+/**
+ * Handle discovery available event from Homey MDNS discovery.
+ * Updates stored URL and rebuilds WebSocket if needed.
+ */
+async onDiscoveryAvailable(discoveryResult) {
+  this.url = `https://${discoveryResult.address}`;
+  this.log(`🌐 Discovery available — IP set to: ${discoveryResult.address}`);
+  await this.setSettings({ url: this.url }).catch(this.error);
+
+  const settings = this.getSettings();
+
+  // Debounce reconnects
+  if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
+  this._wsReconnectTimeout = setTimeout(async () => {
+
+    // Polling mode → skip WS rebuild
+    if (settings.use_polling) {
+      this.log('🔁 Discovery: polling active → skipping WebSocket rebuild');
+      return;
+    }
+
+    // Preflight reachability check
+    try {
+      const res = await fetchWithTimeout(`${this.url}/api/system`, {
+        headers: { Authorization: `Bearer ${this.token}` },
+        agent: new https.Agent({ rejectUnauthorized: false })
+      }, 3000);
+
+      if (!res || typeof res.cloud_enabled === 'undefined') {
+        this.error(`❌ Discovery: device unreachable → skipping WebSocket`);
+        return;
+      }
+
+      this.log('✅ Discovery: device reachable — rebuilding WebSocket');
+
+      // FULL REBUILD (never restart)
+      if (this.wsManager) {
+        this.wsManager.stop();
+        this.wsManager = null;
+      }
+
+      this.wsManager = new WebSocketManager({
+        device: this,
+        url: this.url,
+        token: this.token,
+        log: this.log.bind(this),
+        error: this.error.bind(this),
+        setAvailable: this.setAvailable.bind(this),
+        getSetting: this.getSetting.bind(this),
+        handleMeasurement: (data) => {
+          this.lastWsMeasurementAt = Date.now();
+          this._handleMeasurement(data);
+        },
+        handleSystem: this._handleSystem.bind(this),
+      });
+
+      this.wsManager.start();
+
+    } catch (err) {
+      this.error(`❌ Discovery: preflight failed — ${err.message}`);
+    }
+
+  }, 500);
+}
+
+
+/**
+ * Handle discovery address changes.
+ */
+async onDiscoveryAddressChanged(discoveryResult) {
+  this.url = `https://${discoveryResult.address}`;
+  this.log(`🌐 Address changed — new URL: ${this.url}`);
+  await this.setSettings({ url: this.url }).catch(this.error);
+
+  if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
+  this._wsReconnectTimeout = setTimeout(() => {
+
+    if (this.getSettings().use_polling) {
+      this.log('🔁 Address change: polling active → skipping WebSocket rebuild');
+      return;
+    }
+
+    this.log('🔁 Address change: rebuilding WebSocket');
+
+    if (this.wsManager) {
+      this.wsManager.stop();
+      this.wsManager = null;
+    }
+
     this.wsManager = new WebSocketManager({
       device: this,
       url: this.url,
@@ -240,286 +349,275 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       error: this.error.bind(this),
       setAvailable: this.setAvailable.bind(this),
       getSetting: this.getSetting.bind(this),
-      handleMeasurement: this._handleMeasurement.bind(this),
+      handleMeasurement: (data) => {
+          this.lastWsMeasurementAt = Date.now();
+          this._handleMeasurement(data);
+      },
       handleSystem: this._handleSystem.bind(this),
-      handleBatteries: this._handleBatteries?.bind(this),
     });
+
     this.wsManager.start();
-  
-    // 🕒 Driver-side watchdog
-    this._wsWatchdog = setInterval(() => {
-      const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
-      if (!this.getSettings().use_polling && staleMs > 190000) { // just over 3min
-        this.log(`🕒 Driver watchdog: stale >3min (${staleMs}ms), restarting WS`);
-        this.wsManager?.restartWebSocket();
-      }
-    }, 60000); // check every minute
-    
-  }
 
-  /**
-   * Clean up timers, websockets and settings on device deletion.
-   * @returns {void}
-   */
-  onDeleted() {
-    // Clear watchdog timer
-    if (this._wsWatchdog) {
-      clearInterval(this._wsWatchdog);
-      this._wsWatchdog = null;
+  }, 500);
+}
+
+
+/**
+ * Handle "last seen" discovery update.
+ */
+async onDiscoveryLastSeenChanged(discoveryResult) {
+  this.url = `https://${discoveryResult.address}`;
+  this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
+  await this.setSettings({ url: this.url }).catch(this.error);
+  await this.setAvailable();
+
+  const settings = this.getSettings();
+
+  if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
+  this._wsReconnectTimeout = setTimeout(() => {
+
+    if (settings.use_polling) {
+      this.log('🔁 Last seen: polling active → skipping WebSocket rebuild');
+      return;
     }
 
-    // Clear polling interval
-    if (this.onPollInterval) {
-      clearInterval(this.onPollInterval);
-      this.onPollInterval = null;
-    }
+    this.log('🔁 Last seen: rebuilding WebSocket');
 
-    // Stop WebSocket manager once
     if (this.wsManager) {
-      this.wsManager.stop(); // Cleanly shuts down the WebSocket
+      this.wsManager.stop();
       this.wsManager = null;
     }
 
-    // Remove battery from shared group
-    const batteryId = this.getData().id;
-    const group = this.homey.settings.get('pluginBatteryGroup') || {};
-    if (group[batteryId]) {
-      delete group[batteryId];
-      this.homey.settings.set('pluginBatteryGroup', group);
-      this.log(`Battery ${batteryId} removed from pluginBatteryGroup`);
+    this.wsManager = new WebSocketManager({
+      device: this,
+      url: this.url,
+      token: this.token,
+      log: this.log.bind(this),
+      error: this.error.bind(this),
+      setAvailable: this.setAvailable.bind(this),
+      getSetting: this.getSetting.bind(this),
+      handleMeasurement: (data) => {
+          this.lastWsMeasurementAt = Date.now();
+          this._handleMeasurement(data);
+      },
+      handleSystem: this._handleSystem.bind(this),
+    });
+
+    this.wsManager.start();
+
+  }, 500);
+}
+
+
+async onPoll() {
+  try {
+    const measurement = await fetchWithTimeout(`${this.url}/api/measurement`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent: new https.Agent({ rejectUnauthorized: false })
+    });
+
+    if (measurement) {
+      this._handleMeasurement(measurement);
     }
+
+    const system = await fetchWithTimeout(`${this.url}/api/system`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent: new https.Agent({ rejectUnauthorized: false })
+    });
+
+    if (system) {
+      this._handleSystem(system);
+    }
+
+  } catch (err) {
+    this.error('Polling error:', err.message);
   }
+}
 
-
-  /**
-   * Handle discovery available event from Homey MDNS discovery.
-   * Updates stored URL and optionally restarts WebSocket (debounced).
-   *
-   * @param {object} discoveryResult
-   * @returns {Promise<void>}
-   */
-  async onDiscoveryAvailable(discoveryResult) {
-    this.url = `https://${discoveryResult.address}`;
-    this.log(`🌐 Discovery available — IP set to: ${discoveryResult.address}`);
-    await this.setSettings({ url: this.url }).catch(this.error);
-
-    const settings = this.getSettings();
-
-    // Debounce reconnects to avoid hammering
-    if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
-    this._wsReconnectTimeout = setTimeout(async () => {
-      if (settings.use_polling) {
-        this.log('🔁 Discovery: polling is active, skipping WebSocket reconnect');
-        return;
-      }
-
-      // Preflight reachability check
-      try {
-        const res = await fetchWithTimeout(`${this.url}/api/system`, {
-          headers: { Authorization: `Bearer ${this.token}` },
-          agent: new https.Agent({ rejectUnauthorized: false })
-        }, 3000);
-
-        if (!res || typeof res.cloud_enabled === 'undefined') {
-          this.error(`❌ Discovery: device at ${this.url} is unreachable — skipping WebSocket`);
-          return;
-        }
-
-        this.log('✅ Discovery: device reachable — restarting WebSocket');
-        if (this.wsManager) {
-          this.wsManager.restartWebSocket();
-        }
-
-      } catch (err) {
-        this.error(`❌ Discovery: preflight check failed — ${err.message}`);
-      }
-    }, 500);
-  }
-
-  /**
-   * Handle discovery address changes.
-   * @param {object} discoveryResult
-   * @returns {Promise<void>}
-   */
-  async onDiscoveryAddressChanged(discoveryResult) {
-    this.url = `https://${discoveryResult.address}`;
-    this.log(`🌐 Address changed — new URL: ${this.url}`);
-    await this.setSettings({ url: this.url }).catch(this.error);
-
-    if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
-    this._wsReconnectTimeout = setTimeout(() => {
-      if (!this.getSettings().use_polling) {
-        if (this.wsManager) {
-          this.wsManager.restartWebSocket();
-        }
-      } else {
-        this.log('🔁 Address change: polling is active, skipping WebSocket reconnect');
-      }
-    }, 500);
-  }
-
-  /**
-   * Handle "last seen" discovery update.
-   * Refresh URL, mark available and restart WS if needed.
-   * @param {object} discoveryResult
-   * @returns {Promise<void>}
-   */
-  async onDiscoveryLastSeenChanged(discoveryResult) {
-    this.url = `https://${discoveryResult.address}`;
-    this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
-    await this.setSettings({ url: this.url }).catch(this.error);
-    await this.setAvailable();
-
-    const settings = this.getSettings();
-
-    if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
-    this._wsReconnectTimeout = setTimeout(() => {
-      if (!settings.use_polling) {
-        this.log('🔁 Reconnecting WebSocket due to last seen update...');
-        if (this.wsManager) {
-          this.wsManager.restartWebSocket();
-        }
-      } else {
-        this.log('🔁 Device seen again: polling is active, skipping WebSocket reconnect');
-      }
-    }, 500);
-  }
 
   /**
    * Handle incoming measurement payloads from WS.
    * Maps fields to capabilities, updates shared group info and triggers flows.
-   *
-   * @param {object} data Measurement payload from device.
-   * @returns {Promise<void>}
    */
   async _handleMeasurement(data) {
-    // Skip if device has been deleted or no ID
-    if (!this.getData() || !this.getData().id) {
-      this.log('⚠️ Ignoring measurement: device no longer exists');
-      return;
+  if (!this.getData() || !this.getData().id) {
+    this.log('⚠️ Ignoring measurement: device no longer exists');
+    return;
+  }
+
+  const now = Date.now();
+  this.lastMeasurementAt = now;
+
+  const BATTERY_CAPACITY_WH = 2470;
+
+  // ---------------------------------------------------------
+  // 1. REALTIME capabilities (max 1 Hz)
+  // ---------------------------------------------------------
+  const realtimeCaps = [
+    ['measure_power', data.power_w],
+    ['measure_voltage', data.voltage_v],
+    ['measure_current', data.current_a],
+    ['measure_frequency', data.frequency_hz]
+  ];
+
+  for (const [cap, val] of realtimeCaps) {
+    const cur = this.getCapabilityValue(cap);
+    if (cur !== val) {
+      await updateCapability(this, cap, val);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2. SOC debounced (max 1× per 5 sec)
+  // ---------------------------------------------------------
+  if (!this._socLastUpdate || now - this._socLastUpdate > 5000) {
+    const cur = this.getCapabilityValue('measure_battery');
+    if (cur !== data.state_of_charge_pct) {
+      await updateCapability(this, 'measure_battery', data.state_of_charge_pct);
+    }
+    this._socLastUpdate = now;
+  }
+
+  // ---------------------------------------------------------
+  // 3. Import/export debounced (max 1× per 10 sec)
+  // ---------------------------------------------------------
+  if (!this._energyLastUpdate || now - this._energyLastUpdate > 10000) {
+    const imp = this.getCapabilityValue('meter_power.import');
+    const exp = this.getCapabilityValue('meter_power.export');
+
+    if (imp !== data.energy_import_kwh) {
+      await updateCapability(this, 'meter_power.import', data.energy_import_kwh);
+    }
+    if (exp !== data.energy_export_kwh) {
+      await updateCapability(this, 'meter_power.export', data.energy_export_kwh);
     }
 
-    this.lastMeasurementAt = Date.now();
+    this._energyLastUpdate = now;
+  }
 
-    let time_to_empty = null;
-    let time_to_full = null;
-    const BATTERY_CAPACITY_WH = 2470;
-
-    // this.log('🔎 WS measurement payload:', JSON.stringify(data));
-
-    // Power and measurement capabilities (use updateCapability helper)
-    await updateCapability(this, 'meter_power.import', data.energy_import_kwh ?? null).catch(this.error);
-    await updateCapability(this, 'meter_power.export', data.energy_export_kwh ?? null).catch(this.error);
-    await updateCapability(this, 'measure_power', data.power_w ?? null).catch(this.error);
-    await updateCapability(this, 'measure_voltage', data.voltage_v ?? null).catch(this.error);
-    await updateCapability(this, 'measure_current', data.current_a ?? null).catch(this.error);
-    await updateCapability(this, 'measure_battery', data.state_of_charge_pct ?? null).catch(this.error);
-    await updateCapability(this, 'measure_voltage', data.voltage_v ?? null).catch(this.error);
-    await updateCapability(this, 'measure_frequency', data.frequency_hz ?? null).catch(this.error);
-    await updateCapability(this, 'cycles', data.cycles ?? null).catch(this.error);
-
-    // Update shared pluginBatteryGroup in app settings
-    const batteryId = this.getData().id;
-    const batteryInfo = {
-      id: batteryId,
-      capacity_kwh: 2.8,
-      cycles: data.cycles,
-      power_w: data.power_w,
-      soc_pct: data.state_of_charge_pct,
-      updated_at: Date.now()
-    };
-
-    let group = this.homey.settings.get('pluginBatteryGroup') || {};
-    group[batteryId] = batteryInfo;
-    this.homey.settings.set('pluginBatteryGroup', group);
-
-    // battery_charging_state
-    let chargingState;
-    if (data.power_w > 10) {
-      chargingState = 'charging';
-    } else if (data.power_w < 0) {
-      chargingState = 'discharging';
-    } else {
-      chargingState = 'idle';
+  // ---------------------------------------------------------
+  // 4. Cycles debounced (max 1× per 60 sec)
+  // ---------------------------------------------------------
+  if (!this._cyclesLastUpdate || now - this._cyclesLastUpdate > 60000) {
+    const cur = this.getCapabilityValue('cycles');
+    if (cur !== data.cycles) {
+      await updateCapability(this, 'cycles', data.cycles);
     }
-    await updateCapability(this, 'battery_charging_state', chargingState).catch(this.error);
+    this._cyclesLastUpdate = now;
+  }
 
-    // Time to full / empty calculations (guard against divide-by-zero)
-    if (typeof data.state_of_charge_pct === 'number' && typeof data.power_w === 'number') {
-      if (data.power_w > 10) {
-        const current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
-        time_to_full = (BATTERY_CAPACITY_WH - current_battery_capacity) / (data.power_w * 60);
-        await updateCapability(this, 'time_to_full', Math.round(time_to_full)).catch(this.error);
-        await updateCapability(this, 'time_to_empty', 0).catch(this.error);
+  // ---------------------------------------------------------
+  // 5. Charging state (realtime, maar alleen bij verandering)
+  // ---------------------------------------------------------
+  let chargingState;
+  if (data.power_w > 10) chargingState = 'charging';
+  else if (data.power_w < -10) chargingState = 'discharging';
+  else chargingState = 'idle';
 
-      }
+  if (chargingState !== this.previousChargingState) {
+    await updateCapability(this, 'battery_charging_state', chargingState);
+    this.previousChargingState = chargingState;
 
-      if (data.power_w < -10) {
-        const current_battery_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
-        time_to_empty = (current_battery_capacity / Math.abs(data.power_w)) * 60;
-        await updateCapability(this, 'time_to_empty', Math.round(time_to_empty)).catch(this.error);
-        await updateCapability(this, 'time_to_full', 0).catch(this.error);
-        
-      }
+    this.homey.flow
+      .getDeviceTriggerCard('battery_state_changed')
+      .trigger(this, { state: chargingState })
+      .catch(this.error);
+  }
+
+  // ---------------------------------------------------------
+// 6. Time to full / empty (smooth + CPU‑vriendelijk)
+// ---------------------------------------------------------
+if (typeof data.state_of_charge_pct === 'number' && typeof data.power_w === 'number') {
+
+  const current_capacity = BATTERY_CAPACITY_WH * (data.state_of_charge_pct / 100);
+
+    // LADEN
+  if (data.power_w > 10) {
+    const remaining = BATTERY_CAPACITY_WH - current_capacity;
+    let ttf = Math.round((remaining / data.power_w) * 60);
+
+    // Smooth: alleen bij verschil ≥ 5
+    if (Math.abs(this._prevTimeToFull - ttf) >= 5) {
+      await updateCapability(this, 'time_to_full', ttf);
+      this._prevTimeToFull = ttf;
     }
 
-    // Flow triggers
-    if (chargingState !== this.previousChargingState) {
-      this.previousChargingState = chargingState;
-      this.homey.flow
-        .getDeviceTriggerCard('battery_state_changed')
-        .trigger(this, { state: chargingState })
-        .catch(this.error);
+    // Alleen 0 zetten als het verandert
+    if (this._prevTimeToEmpty !== 0) {
+      await updateCapability(this, 'time_to_empty', 0);
+      this._prevTimeToEmpty = 0;
+    }
+  }
+
+  // ONTLADEN
+  else if (data.power_w < -10) {
+    let tte = Math.round((current_capacity / Math.abs(data.power_w)) * 60);
+
+    if (Math.abs(this._prevTimeToEmpty - tte) >= 5) {
+      await updateCapability(this, 'time_to_empty', tte);
+      this._prevTimeToEmpty = tte;
     }
 
-    if (typeof time_to_empty === 'number' && time_to_empty < 30 && this.previousTimeToEmpty >= 30) {
-      this.previousTimeToEmpty = time_to_empty;
-      this.homey.flow
-        .getDeviceTriggerCard('battery_low_runtime')
-        .trigger(this, { minutes: Math.round(time_to_empty) })
-        .catch(this.error);
-    } else {
-      this.previousTimeToEmpty = time_to_empty;
+    if (this._prevTimeToFull !== 0) {
+      await updateCapability(this, 'time_to_full', 0);
+      this._prevTimeToFull = 0;
     }
+  }
 
-    if (data.state_of_charge_pct === 100 && this.previousStateOfCharge < 100) {
-      this.previousStateOfCharge = data.state_of_charge_pct;
-      this.homey.flow
-        .getDeviceTriggerCard('battery_full')
-        .trigger(this)
-        .catch(this.error);
-    } else {
-      this.previousStateOfCharge = data.state_of_charge_pct;
+  // IDLE
+  else {
+    if (this._prevTimeToFull !== 0) {
+      await updateCapability(this, 'time_to_full', 0);
+      this._prevTimeToFull = 0;
     }
-
-    // Net frequency out of range trigger
-    if (typeof data.frequency_hz === 'number' && (data.frequency_hz > 50.2 || data.frequency_hz < 49.8)) {
-      this.homey.flow
-        .getDeviceTriggerCard('net_frequency_out_of_range')
-        .trigger(this)
-        .catch(this.error);
+    if (this._prevTimeToEmpty !== 0) {
+      await updateCapability(this, 'time_to_empty', 0);
+      this._prevTimeToEmpty = 0;
     }
+  }
 
-    // Inverter efficiency and estimate_kwh
+}
+
+
+
+  // ---------------------------------------------------------
+  // 7. Estimate KWh (max 1× per 30 sec)
+  // ---------------------------------------------------------
+  if (!this._estimateLastUpdate || now - this._estimateLastUpdate > 30000) {
     const inverterEfficiency = (data.energy_import_kwh > 0)
       ? data.energy_export_kwh / data.energy_import_kwh
-      : 0.75; // fallback default
+      : 0.75;
 
-    const estimate_kwh = estimateBatteryKWh(data.state_of_charge_pct, data.cycles, inverterEfficiency);
-    await updateCapability(this, 'estimate_kwh', Math.round(estimate_kwh * 100) / 100).catch(this.error);
+    const estimate_kwh = estimateBatteryKWh(
+      data.state_of_charge_pct,
+      data.cycles,
+      inverterEfficiency
+    );
 
-    // Initialize drift state if not already set
-    if (this.driftActive === undefined) {
-      this.driftActive = false;
+    const rounded = Math.round(estimate_kwh * 100) / 100;
+    if (this.getCapabilityValue('estimate_kwh') !== rounded) {
+      await updateCapability(this, 'estimate_kwh', rounded);
     }
 
-    // State of charge drift detection (experimental)
+    this._estimateLastUpdate = now;
+  }
+
+  // ---------------------------------------------------------
+  // 8. Drift detection (max 1× per 30 sec)
+  // ---------------------------------------------------------
+  if (!this._driftLastUpdate || now - this._driftLastUpdate > 30000) {
     const driftResult = checkSoCDrift({
       previousSoC: this.previousSoC,
       previousTimestamp: this.previousTimestamp,
       currentSoC: data.state_of_charge_pct,
       currentPowerW: data.power_w,
-      currentTimestamp: Date.now()
+      currentTimestamp: now
     });
 
     this.previousSoC = data.state_of_charge_pct;
@@ -527,13 +625,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     if (driftResult.drift && !this.driftActive) {
       this.driftActive = true;
-      this.log(`⚠️ SoC drift detected: ${driftResult.rateOfChange.toFixed(2)}%/min vs expected ${driftResult.expectedSoCChange.toFixed(2)}%/min`);
+      this.log(`⚠️ SoC drift detected`);
       this.homey.flow
         .getDeviceTriggerCard('battery_soc_drift_detected')
-        .trigger(this, {
-          rate: Math.round(driftResult.rateOfChange),
-          expected: Math.round(driftResult.expectedSoCChange)
-        })
+        .trigger(this)
         .catch(this.error);
     }
 
@@ -541,173 +636,257 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.driftActive = false;
       this.log('✅ SoC drift resolved.');
     }
+
+    this._driftLastUpdate = now;
+  }
+  // ---------------------------------------------------------
+  // 9. Store latest values for group updater (interval-based)
+  // ---------------------------------------------------------
+
+  this._lastPower = data.power_w;
+  this._lastSoC = data.state_of_charge_pct;
+  this._lastCycles = data.cycles;
+
+}
+
+
+
+  /**
+   * Handle system events (wifi, cloud, etc.)
+   */
+  /**
+ * Handle system events (wifi, cloud, etc.)
+ * Optimized for low CPU load with value-change filtering + debouncing.
+ */
+_handleSystem(data) {
+  if (!this.getData() || !this.getData().id) {
+    this.log('⚠️ Ignoring system event: device no longer exists');
+    return;
   }
 
-  /**
-   * Handle system events from the device (e.g., wifi rssi, cloud enabled).
-   *
-   * @param {object} data System payload from device.
-   * @returns {void}
-   */
-    _handleSystem(data) {
+  const now = Date.now();
 
-      // Skip if device has been deleted or no ID
-      if (!this.getData() || !this.getData().id) {
-        this.log('⚠️ Ignoring system event: device no longer exists');
-        return;
+  // ---------------------------------------------------------
+  // 1. WiFi RSSI (debounced: max 1× per 5 sec)
+  // ---------------------------------------------------------
+  if (typeof data.wifi_rssi_db === 'number') {
+    if (!this._wifiLastUpdate || now - this._wifiLastUpdate > 5000) {
+      const curRssi = this.getCapabilityValue('rssi');
+      if (curRssi !== data.wifi_rssi_db) {
+        updateCapability(this, 'rssi', data.wifi_rssi_db);
       }
 
-      try {
-        
-        if (typeof data.wifi_rssi_db === 'number') {
-          updateCapability(this, 'rssi', data.wifi_rssi_db).catch(this.error);
-          const wifiQuality = getWifiQuality(data.wifi_rssi_db);
-          updateCapability(this, 'wifi_quality', wifiQuality).catch(this.error);
-        }
-        
-      } catch (err) {
-        this.error(`System handler failed: ${err.message}`);
+      const quality = getWifiQuality(data.wifi_rssi_db);
+      const curQuality = this.getCapabilityValue('wifi_quality');
+      if (curQuality !== quality) {
+        updateCapability(this, 'wifi_quality', quality);
       }
+
+      this._wifiLastUpdate = now;
     }
+  }
+
+  // ---------------------------------------------------------
+  // 2. Cloud status (optional future expansion)
+  // ---------------------------------------------------------
+  // if (typeof data.cloud_enabled === 'boolean') {
+  //   // Only update if you add a capability for cloud status
+  // }
+
+  // ---------------------------------------------------------
+  // 3. Firmware info (ignored unless you add capabilities)
+  // ---------------------------------------------------------
+  // if (data.firmware_version) { ... }
+}
+
 
 
   /**
-   * Ensure required capabilities exist on the device.
-   * Adds capabilities if missing (runs once on init).
-   *
-   * @returns {Promise<void>}
+   * Ensure required capabilities exist.
    */
   async _updateCapabilities() {
-    if (!this.hasCapability('identify')) {
-      await this.addCapability('identify').catch(this.error);
-      this.log(`created capability identify for ${this.getName()}`);
-    }
+    const caps = [
+      'identify',
+      'meter_power.import',
+      'meter_power.export',
+      'measure_power',
+      'measure_voltage',
+      'measure_current',
+      'measure_battery',
+      'battery_charging_state',
+      'cycles',
+      'time_to_empty',
+      'time_to_full',
+      'rssi',
+      'estimate_kwh'
+    ];
 
-    if (!this.hasCapability('meter_power.import')) {
-      await this.addCapability('meter_power.import').catch(this.error);
-      this.log(`created capability meter_power.import for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('meter_power.export')) {
-      await this.addCapability('meter_power.export').catch(this.error);
-      this.log(`created capability meter_power.export for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('measure_power')) {
-      await this.addCapability('measure_power').catch(this.error);
-      this.log(`created capability measure_power for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('measure_voltage')) {
-      await this.addCapability('measure_voltage').catch(this.error);
-      this.log(`created capability measure_voltage for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('measure_current')) {
-      await this.addCapability('measure_current').catch(this.error);
-      this.log(`created capability measure_current for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('measure_battery')) {
-      await this.addCapability('measure_battery').catch(this.error);
-      this.log(`created capability measure_battery for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('battery_charging_state')) {
-      await this.addCapability('battery_charging_state').catch(this.error);
-      this.log(`created capability battery_charging_state for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('cycles')) {
-      await this.addCapability('cycles').catch(this.error);
-      this.log(`created capability cycles for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('time_to_empty')) {
-      await this.addCapability('time_to_empty').catch(this.error);
-      this.log(`created capability time_to_empty for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('time_to_full')) {
-      await this.addCapability('time_to_full').catch(this.error);
-      this.log(`created capability time_to_full for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('rssi')) {
-      await this.addCapability('rssi').catch(this.error);
-      this.log(`created capability rssi for ${this.getName()}`);
-    }
-
-    if (!this.hasCapability('estimate_kwh')) {
-      await this.addCapability('estimate_kwh').catch(this.error);
-      this.log(`created capability estimate_kwh for ${this.getName()}`);
+    for (const cap of caps) {
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap).catch(this.error);
+        this.log(`created capability ${cap} for ${this.getName()}`);
+      }
     }
   }
 
+
+  async _fallbackPoll() {
+  try {
+    const measurement = await fetchWithTimeout(`${this.url}/api/measurement`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent: new https.Agent({ rejectUnauthorized: false })
+    });
+
+    if (measurement) {
+      this._handleMeasurement(measurement);
+    }
+
+    const system = await fetchWithTimeout(`${this.url}/api/system`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent: new https.Agent({ rejectUnauthorized: false })
+    });
+
+    if (system) {
+      this._handleSystem(system);
+    }
+
+    this.log('📡 Fallback poll completed');
+
+  } catch (err) {
+    this.error('Fallback poll error:', err.message);
+  }
+}
+
+/**
+ * Update battery group every 10 seconds (energy_v2 style)
+ */
+_updateBatteryGroup() {
+  const batteryId = this.getData()?.id;
+  if (!batteryId) return;
+
+  const info = {
+    id: batteryId,
+    capacity_kwh: 2.8,
+    cycles: this._lastCycles,
+    power_w: this._lastPower,
+    soc_pct: this._lastSoC,
+    updated_at: Date.now()
+  };
+
+  let group = this.homey.settings.get('pluginBatteryGroup') || {};
+  const prev = JSON.stringify(group[batteryId]);
+  const next = JSON.stringify(info);
+
+  // Only write if changed
+  if (prev !== next) {
+    group[batteryId] = info;
+    this.homey.settings.set('pluginBatteryGroup', group);
+  }
+}
+
+
   /**
-   * Register capability listeners (e.g., identify button).
-   *
-   * @returns {Promise<void>}
+   * Register capability listeners.
    */
   async _registerCapabilityListeners() {
-    this.registerCapabilityListener('identify', async (value) => {
+    this.registerCapabilityListener('identify', async () => {
       await api.identify(this.url, this.token);
     });
   }
 
+
   /**
-   * Settings handler for Homey SDK3.
-   *
-   * Starts/stops/restarts polling based on changed settings.
-   *
-   * @param {object} param0
-   * @param {object} param0.oldSettings
-   * @param {object} param0.newSettings
-   * @param {string[]} param0.changedKeys
-   * @returns {boolean} Return true to accept settings.
+   * Settings handler — fully patched for WS/polling switching.
    */
   async onSettings({ oldSettings = {}, newSettings = {}, changedKeys = [] } = {}) {
     this.log('Plugin Battery Settings updated', newSettings, changedKeys);
 
-    // handle polling enable/disable
     const oldUsePolling = oldSettings.use_polling;
     const newUsePolling = newSettings.use_polling;
 
     const oldInterval = oldSettings.polling_interval;
     const newInterval = newSettings.polling_interval;
 
-    // if polling toggled
-    if (typeof newUsePolling !== 'undefined' && newUsePolling !== oldUsePolling) {
+    // ---------------------------------------------------------
+    // 🔀 1. use_polling toggled → switch between WS and polling
+    // ---------------------------------------------------------
+    if (changedKeys.includes('use_polling')) {
       if (newUsePolling) {
-        // start polling
-        const intervalSec = newInterval || (await this.getSettings()).polling_interval || 10;
+        // SWITCH TO POLLING
+        this.log('⚙️ Switching to POLLING mode');
+
+        // Stop WebSocket
+        if (this.wsManager) {
+          this.log('🔌 Stopping WebSocket (polling enabled)');
+          this.wsManager.stop();
+          this.wsManager = null;
+        }
+
+        // Start polling
+        const intervalSec = newInterval || newSettings.polling_interval || 10;
         if (this.onPollInterval) clearInterval(this.onPollInterval);
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * intervalSec);
-        this.log(`🔁 Polling enabled, interval ${intervalSec}s`);
+        this.onPollInterval = setInterval(this.onPoll.bind(this), intervalSec * 1000);
+
+        this.log(`⏱️ Polling enabled, interval ${intervalSec}s`);
+
       } else {
-        // stop polling
+        // SWITCH TO WEBSOCKET
+        this.log('⚙️ Switching to WEBSOCKET mode');
+
+        // Stop polling
         if (this.onPollInterval) {
           clearInterval(this.onPollInterval);
           this.onPollInterval = null;
+          this.log('⏹️ Polling stopped');
         }
-        this.log('🔁 Polling disabled by settings');
+
+        // FULL REBUILD of WebSocketManager
+        if (this.wsManager) {
+          this.wsManager.stop();
+          this.wsManager = null;
+        }
+
+        this.wsManager = new WebSocketManager({
+          device: this,
+          url: this.url,
+          token: this.token,
+          log: this.log.bind(this),
+          error: this.error.bind(this),
+          setAvailable: this.setAvailable.bind(this),
+          getSetting: this.getSetting.bind(this),
+          handleMeasurement: (data) => {
+          this.lastWsMeasurementAt = Date.now();
+          this._handleMeasurement(data);
+        },
+          handleSystem: this._handleSystem.bind(this),
+        });
+
+        this.log('🔌 Starting WebSocket (polling disabled)');
+        this.wsManager.start();
       }
     }
 
-    // if interval changed while polling enabled, restart with new value
-    if (typeof newInterval !== 'undefined' && newInterval !== oldInterval) {
-      const settings = await this.getSettings();
-      const intervalSec = newInterval || settings.polling_interval || 10;
-      if (this.onPollInterval) clearInterval(this.onPollInterval);
-      if (settings.use_polling) {
-        this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * intervalSec);
-        this.log(`🔁 Polling interval updated to ${intervalSec}s`);
+    // ---------------------------------------------------------
+    // ⏱️ 2. Polling interval changed → restart polling if active
+    // ---------------------------------------------------------
+    if (changedKeys.includes('polling_interval')) {
+      const intervalSec = newInterval || newSettings.polling_interval || 10;
+
+      if (newSettings.use_polling) {
+        if (this.onPollInterval) clearInterval(this.onPollInterval);
+        this.onPollInterval = setInterval(this.onPoll.bind(this), intervalSec * 1000);
+        this.log(`⏱️ Polling interval updated to ${intervalSec}s`);
       } else {
-        this.onPollInterval = null;
+        this.log('⏱️ Polling interval changed, but polling is disabled');
       }
     }
 
     return true;
   }
-
 };

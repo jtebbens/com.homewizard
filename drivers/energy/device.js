@@ -68,6 +68,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.pollingActive = false;
     this.failCount = 0;
     this._lastSamples = {}; // mini-cache
+    this._deleted = false;
 
     await updateCapability(this, 'connection_error', 'No errors');
 
@@ -138,6 +139,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
     setTimeout(() => {
+      if (this._deleted) return;
       this.onPoll();
       this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
     }, offset);
@@ -179,6 +181,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   onDeleted() {
+    this._deleted = true;
+
     const app = this.homey.app;
     if (app.baseloadMonitor) {
       app.baseloadMonitor.unregisterP1Device(this);
@@ -230,6 +234,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   onDiscoveryAvailable(discoveryResult) {
+    if (this._deleted) return;
     try {
       if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
         throw new Error('Invalid discovery result: missing address, port, or path');
@@ -245,12 +250,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
+    if (this._deleted) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL updated: ${this.url}`);
     this.onPoll();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
+    if (this._deleted) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL restored: ${this.url}`);
     this.setAvailable();
@@ -300,6 +307,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   async onPoll() {
+    if (this._deleted) return;
     const settings = this.getSettings();
 
     if (!this.url) {
@@ -671,6 +679,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         }
 
         setTimeout(() => {
+          if (this._deleted) return;
           this.onPoll();
         }, 2000);
       }

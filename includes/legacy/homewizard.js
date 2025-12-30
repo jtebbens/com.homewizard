@@ -1,6 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
+const http = require('http');
 const fetch = require('../utils/fetchQueue');
 // const fetch = require('node-fetch');
 // const cache = {}; // Cache object to store the callnew responses
@@ -43,36 +44,80 @@ module.exports = (function() {
     });
   };
 
-homewizard.callnew = async function(device_id, uri_part) {
-  if (
-    typeof self.devices[device_id] === 'undefined' ||
-    !self.devices[device_id].settings ||
-    !self.devices[device_id].settings.homewizard_ip ||
-    !self.devices[device_id].settings.homewizard_pass
-  ) {
-    throw new Error(`HomeWizard ${device_id}: settings not found`);
-  }
+  homewizard.callnew = async function(device_id, uri_part, callback) {
+    const timeoutDuration = 8000; // Timeout duration in milliseconds
+    try {
+      if (debug) {
+        console.log('Call device ', device_id, 'endpoint:', uri_part);
+      }
+      if (
+        typeof self.devices[device_id] !== 'undefined'
+          && 'settings' in self.devices[device_id]
+          && 'homewizard_ip' in self.devices[device_id].settings
+          && 'homewizard_pass' in self.devices[device_id].settings
+      ) {
+        const { homewizard_ip } = self.devices[device_id].settings;
+        const { homewizard_pass } = self.devices[device_id].settings;
 
-  const { homewizard_ip, homewizard_pass } = self.devices[device_id].settings;
+        const controller = new AbortController(); // Create an AbortController
+        const { signal } = controller; // Get the AbortSignal from the controller
 
-  const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, {
-    follow: 0,
-    redirect: 'error',
-    headers: { 'Content-Type': 'application/json' }
-  });
+        // Set a timeout to abort the fetch request
+        const timeout = setTimeout(() => {
+          controller.abort(); // Abort the fetch request
+          console.log('Fetch request timed out');
+        }, timeoutDuration);
 
-  if (response.status !== 200) {
-    throw new Error(`HTTP error ${response.status}`);
-  }
+        const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, {
+          signal,
+          follow: 0,
+          redirect: 'error',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
-  const json = await response.json();
+        clearTimeout(timeout); // Clear the timeout since the fetch request completed
 
-  if (!json || json.status !== 'ok') {
-    throw new Error('Invalid data');
-  }
+        if (response.status === 200) {
+          const jsonData = await response.json();
+          if (
+            jsonData.status !== undefined
+              && jsonData.status === 'ok'
+          ) {
+            if (typeof callback === 'function') {
+              
+              callback(null, jsonData.response);
+            } else {
+              console.log('Not typeof function');
+            }
+          } else {
+            console.log('jsonData.status not ok');
+            callback('Invalid data', []);
+          }
+        } else {
+          console.log('Error: no clue what is going on here.');
+          callback('Error', []);
+        }
+      } else {
+        console.log(`Homewizard ${device_id}: settings not found!`);
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Fetch request aborted');
+      } else if (error.code === 'ECONNRESET') {
+        console.log('Connection was reset');
+      }
 
-  return json.response;
-};
+      console.error(`FETCH PROBLEM -> ${error}`);
+      if (typeof callback === 'function') {
+        callback(error, []);
+      }
+
+      return; 
+    }
+
+  };
 
   if (!Homey2023) {
     homewizard.ledring_pulse = function(device_id, colorName) {
@@ -94,75 +139,75 @@ homewizard.callnew = async function(device_id, uri_part) {
     };
   }
 
-  homewizard.startpoll = function() {
-    homewizard.poll(); // Initial poll
+homewizard.startpoll = function() {
 
-    // Pak interval uit settings van het eerste device
-    const firstDevice = Object.values(self.devices)[0];
-    const intervalSec = firstDevice?.settings?.poll_interval || 30;
+  // Initial poll
+  homewizard.poll();
 
-    console.log(`⏱️ Legacy polling every ${intervalSec}s`);
+  // Per-device custom polling
+  for (const device_id in self.devices) {
+    const intervalSec =
+      self.devices[device_id]?.settings?.poll_interval || 30;
 
-    // Stop oude timer als hij bestaat
-    if (self.polls.device_id) {
-      clearInterval(self.polls.device_id);
+    if (self.polls[device_id]) {
+      clearInterval(self.polls[device_id]);
     }
 
-    // Start nieuwe timer
-    self.polls.device_id = setInterval(async () => {
+    self.polls[device_id] = setInterval(async () => {
       try {
-        await homewizard.poll();
+        await homewizard.poll(device_id);
       } catch (error) {
-        console.error('Error occurred during polling:', error);
+        console.error(`Polling error for device ${device_id}:`, error);
       }
     }, intervalSec * 1000);
-  };
+  }
+};
 
-  homewizard.poll = async function() {
-    for (const device_id in self.devices) {
-      if (
-        typeof self.devices[device_id].polldata === 'undefined'
-          || typeof self.devices[device_id].polldata == 'undefined'
-          || typeof self.devices[device_id].polldata == undefined
-      ) {
-        self.devices[device_id].polldata = [];
-      }
 
-      let response;
-      try {
-        response = await homewizard.callnew(device_id, '/get-sensors');
-      } catch (err) {
-        console.error(`Poll error for device ${device_id}:`, err);
-        continue; // skip this device, do not crash poll loop
-      }
 
-      if (response) {
-        self.devices[device_id].polldata.preset = response.preset;
-        self.devices[device_id].polldata.heatlinks = response.heatlinks;
-        self.devices[device_id].polldata.energylinks = response.energylinks;
-        self.devices[device_id].polldata.energymeters = response.energymeters;
-        self.devices[device_id].polldata.thermometers = response.thermometers;
-        self.devices[device_id].polldata.rainmeters = response.rainmeters;
-        self.devices[device_id].polldata.windmeters = response.windmeters;
-        self.devices[device_id].polldata.kakusensors = response.kakusensors;
+  homewizard.poll = async function(device_id = null) {
+  const list = device_id ? [device_id] : Object.keys(self.devices);
 
-        if (Object.keys(response.energylinks).length !== 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          let response2;
-          try {
-            response2 = await homewizard.callnew(device_id, '/el/get/0/readings');
-          } catch (err) {
-            console.error(`EL readings error for device ${device_id}:`, err);
-            // do NOT continue; energylink_el is optional
-          }
+  for (const id of list) {
+    if (!self.devices[id]) continue;
 
-          if (response2) {
-            self.devices[device_id].polldata.energylink_el = response2;
-          }
+    if (!self.devices[id].polldata) {
+      self.devices[id].polldata = [];
+    }
+
+    let response = await new Promise((resolve, reject) => {
+      homewizard.callnew(id, '/get-sensors', (err, response) => {
+        if (err == null) resolve(response);
+        else reject(err);
+      });
+    });
+
+    if (response) {
+      self.devices[id].polldata.preset = response.preset;
+      self.devices[id].polldata.heatlinks = response.heatlinks;
+      self.devices[id].polldata.energylinks = response.energylinks;
+      self.devices[id].polldata.energymeters = response.energymeters;
+      self.devices[id].polldata.thermometers = response.thermometers;
+      self.devices[id].polldata.rainmeters = response.rainmeters;
+      self.devices[id].polldata.windmeters = response.windmeters;
+      self.devices[id].polldata.kakusensors = response.kakusensors;
+
+      if (Object.keys(response.energylinks).length !== 0) {
+        let response2 = await new Promise((resolve, reject) => {
+          homewizard.callnew(id, '/el/get/0/readings', (err2, response2) => {
+            if (err2 == null) resolve(response2);
+            else reject(err2);
+          });
+        });
+
+        if (response2) {
+          self.devices[id].polldata.energylink_el = response2;
         }
       }
     }
-  };
+  }
+};
+
 
   return homewizard;
 }());

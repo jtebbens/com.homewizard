@@ -29,37 +29,40 @@ class HomeWizardHeatlink extends Homey.Device {
 
     this.startPolling();
 
-    this.registerCapabilityListener('target_temperature', (temperature) => {
-      // Catch faulty trigger and max/min temp
-      if (!temperature) {
-        // callback(true, temperature);
-        return false;
-      }
+    this.registerCapabilityListener('target_temperature', async (temperature) => {
+      // 1. Input sanity
+      if (!temperature) return false;
+
       if (temperature < 5) {
         temperature = 5;
-      }
-      else if (temperature > 35) {
+      } else if (temperature > 35) {
         temperature = 35;
       }
       temperature = Math.round(temperature.toFixed(1) * 2) / 2;
 
-      return new Promise(async (resolve) => { // async
-        const url = `/hl/0/settarget/${temperature}`;
-        this.log(url); // Console log url
-        const homewizard_id = this.getSetting('homewizard_id');
-			    	await homewizard.callnew(homewizard_id, `/hl/0/settarget/${temperature}`, (err) => { // await, maybe a timestamp for log?
+      const homewizard_id = this.getSetting('homewizard_id');
+      const path = `/hl/0/settarget/${temperature}`;
+      this.log(path);
+
+      try {
+        await homewizard.callnew(homewizard_id, path, (err) => {
           if (err) {
-            // this.log('ERR settarget target_temperature -> returned false');
             this.log('ERR settarget target_temperature -> returned false');
-            return resolve(false);
+            return;
           }
-          // this.log('settarget target_temperature - returned true');
           this.log('settarget target_temperature - returned true');
-          return resolve(true);
         });
-      });
-      // return Promise.resolve(); eslint?
+
+        return true;
+
+      } catch (err) {
+        this.error(
+          `Heatlink ${this.getName()} (${this.getData().id}) settarget failed: ${err.message || err}`
+        );
+        return false;
+      }
     });
+
   }
 
   startPolling() {

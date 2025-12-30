@@ -105,6 +105,7 @@ class WebSocketManager {
     // WebSocket instance and state flags
     this.ws = null;
     this.wsActive = false;
+    this.wsAuthorized = false;
     this.reconnectAttempts = 0;
     this.lastMeasurementAt = Date.now();
 
@@ -225,9 +226,7 @@ class WebSocketManager {
     // WS open handler: authorize and setup heartbeat monitor
     this.ws.on('open', () => {
       this.wsActive = true;
-      this.lastMeasurementAt = Date.now();
       this.reconnectAttempts = 0; // reset backoff after successful connect
-      this._startHeartbeatMonitor();
       this.log('🔌 WebSocket opened — waiting to authorize...');
 
       if (this.ws._socket) this.ws._socket.setKeepAlive(true, 30000);
@@ -277,7 +276,7 @@ class WebSocketManager {
       let retries = 0;
       const tryAuthorize = () => {
         if (!this.ws) return;
-        if (this.ws.readyState === this.ws.OPEN) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.log('🔐 Sending WebSocket authorization');
           this._safeSend({ type: 'authorization', data: this.token });
         } else if (retries < maxRetries) {
@@ -308,8 +307,12 @@ this.ws.on('message', (msg) => {
 
   // 🔐 Authorized → subscribe topics + start WS events/sec counter
   if (data.type === 'authorized') {
+    this.wsAuthorized = true;
+    this.lastMeasurementAt = Date.now();
     this._subscribeTopics();
+    this._startHeartbeatMonitor();
   }
+
 
 
 
@@ -354,17 +357,20 @@ this.ws.on('message', (msg) => {
 
 
 // 🛑 Error handler
-this.ws.on('error', (err) => {
-  this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-  this.wsActive = false;
-  this._scheduleReconnect();
-});
+  this.ws.on('error', (err) => {
+    this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
+    this.wsActive = false;
+    this.wsAuthorized = false;
+    this._scheduleReconnect();
+  });
 
-    this.ws.on('close', () => {
-      this.log('🔌 WebSocket closed — retrying');
-      this.wsActive = false;
-      this._scheduleReconnect();
-    });
+  this.ws.on('close', () => {
+    this.log('🔌 WebSocket closed — retrying');
+    this.wsActive = false;
+    this.wsAuthorized = false;
+    this._scheduleReconnect();
+  });
+
   }
 
   _scheduleReconnect() {
@@ -409,21 +415,24 @@ this.ws.on('error', (err) => {
     this.setAvailable().catch(this.error);
   }
 
-_startHeartbeatMonitor() {
-  this._safeSetInterval(() => {
-    const now = Date.now();
+  _startHeartbeatMonitor() {
+    this._safeSetInterval(() => {
+      const now = Date.now();
 
-    // Only update when missed
-    if (this.ws?.readyState === WebSocket.OPEN && now - this.lastMeasurementAt > 60000) {
-      this._safeSend({ type: 'batteries' });
-    }
+      if (!this.wsAuthorized) return;
 
-    if (now - this.lastMeasurementAt > 180000) {
-      this.log('💤 No measurement in 3min — reconnecting WebSocket');
-      this.restartWebSocket();
-    }
-  }, 30000);
-}
+      if (this.ws?.readyState === WebSocket.OPEN &&
+          now - this.lastMeasurementAt > 60000) {
+        this._safeSend({ type: 'batteries' });
+      }
+
+      if (now - this.lastMeasurementAt > 180000) {
+        this.log('💤 No measurement in 3min — reconnecting WebSocket');
+        this.restartWebSocket();
+      }
+    }, 30000);
+  }
+
 
 
 
@@ -450,26 +459,51 @@ _startHeartbeatMonitor() {
   }
 
   _resetWebSocket() {
-    if (!this.ws) return;
-    const state = this.ws.readyState;
-    if (state === WebSocket.CONNECTING) {
-      this.log('⏸️ WebSocket is still connecting — skipping termination');
-      return;
-    }
-    try {
-      if (state === WebSocket.OPEN) {
-        this.log(`🔄 Terminating active WebSocket (state: ${state})`);
-        this.ws.terminate();
-      } else {
-        this.log(`🔄 Closing inactive WebSocket (state: ${state})`);
-        this.ws.close();
-      }
-    } catch (err) {
-      this.error('❌ Failed to reset WebSocket:', err);
-    }
-    this.ws = null;
-    this.wsActive = false;
+  if (!this.ws) return;
+
+  const state = this.ws.readyState;
+
+  // ❌ Nooit sockets killen die nog bezig zijn
+  if (state === WebSocket.CONNECTING) {
+    this.log('⏸️ WS is CONNECTING — skipping reset');
+    return;
   }
+
+  if (state === WebSocket.CLOSING) {
+    this.log('⏸️ WS is CLOSING — skipping reset');
+    return;
+  }
+
+  // ❌ Nooit resetten als reconnect al bezig is
+  if (this.reconnecting) {
+    this.log('⏸️ WS reset suppressed — reconnect in progress');
+    return;
+  }
+
+  // ❌ Nooit resetten binnen cooldown
+  if (Date.now() - this._restartCooldown < 3000) {
+    this.log('⏸️ WS reset suppressed — restart cooldown active');
+    return;
+  }
+
+  try {
+    if (state === WebSocket.OPEN) {
+      this.log(`🔄 Terminating active WebSocket (state: ${state})`);
+      this.ws.terminate();
+    } else if (state === WebSocket.CLOSED) {
+      this.log(`🔄 WS already CLOSED — skipping close`);
+    } else {
+      this.log(`🔄 Closing inactive WebSocket (state: ${state})`);
+      this.ws.close();
+    }
+  } catch (err) {
+    this.error('❌ Failed to reset WebSocket:', err);
+  }
+
+  this.ws = null;
+  this.wsActive = false;
+}
+
 
   setBatteryMode(mode) {
     if (!this.isConnected()) {
