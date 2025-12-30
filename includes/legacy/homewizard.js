@@ -2,8 +2,8 @@
 
 const Homey = require('homey');
 const http = require('http');
-const fetch = require('../utils/fetchQueue');
-// const fetch = require('node-fetch');
+// const fetch = require('../utils/fetchQueue');
+const fetch = require('node-fetch');
 // const cache = {}; // Cache object to store the callnew responses
 
 const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;

@@ -4,12 +4,13 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.22
+v3.9.23
 
 * Wsmanager optimize
 * Homewizard legacy custom polling
 * Driver.js (apiv2) log fix (this.log undefined)
 * Thermometer rollback (name index matching doesnt work as expected)
+* Homewizard legacy -> node-fetch and not the fetchQueue utility (bad user experience feedback)
 
 v3.9.20
 
