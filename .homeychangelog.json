@@ -802,5 +802,8 @@
   },
   "3.9.22": {
     "en": "Thermometer rollback (name index matching doesnt work as expected)"
+  },
+  "3.9.23": {
+    "en": "Homewizard legacy -> node-fetch and not the fetchQueue utility (bad user experience feedback)"
   }
 }
