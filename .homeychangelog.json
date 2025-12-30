@@ -799,5 +799,8 @@
   },
   "3.9.21": {
     "en": "Wsmanager optimize, custom polling Homewizard Legacy and fix Driver.js (this.log)"
+  },
+  "3.9.22": {
+    "en": "Thermometer rollback (name index matching doesnt work as expected)"
   }
 }

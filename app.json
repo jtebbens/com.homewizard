@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.21",
+  "version": "3.9.22",
   "platforms": [
     "local"
   ],
@@ -3734,6 +3734,15 @@
             "en": "url",
             "nl": "url"
           }
+        },
+        {
+          "id": "use_polling",
+          "type": "checkbox",
+          "label": {
+            "en": "Use polling instead of WebSocket",
+            "nl": "Gebruik polling in plaats van WebSocket"
+          },
+          "value": true
         }
       ]
     },
