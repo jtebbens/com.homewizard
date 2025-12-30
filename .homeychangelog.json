@@ -805,5 +805,8 @@
   },
   "3.9.23": {
     "en": "Homewizard legacy -> node-fetch and not the fetchQueue utility (bad user experience feedback)"
+  },
+  "3.9.24": {
+    "en": "Baseload (sluipverbruik) improvement (fridge/freezer should not be flagged as invalid )"
   }
 }
