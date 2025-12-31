@@ -808,5 +808,8 @@
   },
   "3.9.24": {
     "en": "Baseload (sluipverbruik) improvement (fridge/freezer should not be flagged as invalid )"
+  },
+  "3.9.25": {
+    "en": "Homewizard app setting page with log or debug information for discovery, fetch failures, websocket problems and baseload samples"
   }
 }
