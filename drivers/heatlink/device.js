@@ -11,33 +11,80 @@ const devices = {};
 
 const debug = false;
 
+function callnewAsync(device_id, uri_part, {
+  timeout = 3000,
+  retries = 2,
+  retryDelay = 250
+} = {}) {
+
+  return new Promise((resolve, reject) => {
+
+    let attempts = 0;
+
+    const attempt = () => {
+      attempts++;
+
+      let timeoutId;
+      let finished = false;
+
+      // Timeout mechanisme
+      timeoutId = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+
+        if (attempts <= retries) {
+          return setTimeout(attempt, retryDelay);
+        }
+
+        return reject(new Error(`Timeout after ${timeout}ms`));
+      }, timeout);
+
+      // De echte call
+      homewizard.callnew(device_id, uri_part, (err, result) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeoutId);
+
+        if (err) {
+          if (attempts <= retries) {
+            return setTimeout(attempt, retryDelay);
+          }
+          return reject(err);
+        }
+
+        return resolve(result);
+      });
+    };
+
+    attempt();
+  });
+}
+
+
+
 class HomeWizardHeatlink extends Homey.Device {
 
   async onInit() {
 
-    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    // const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
+    const driverDevices = this.homey.drivers.getDriver('heatlink').getDevices();
 
-    // this.log(`HomeWizard Heatlink ${this.getName()} has been inited`);
 
-    const devices = this.homey.drivers.getDriver('heatlink').getDevices(); // or heatlink
-    devices.forEach((device) => {
-      this.log(`add device: ${JSON.stringify(device.getName())}`);
-
+    driverDevices.forEach((device) => {
+      this.log(`add device: ${device.getName()}`);
       devices[device.getData().id] = device;
       devices[device.getData().id].settings = device.getSettings();
     });
 
+
     this.startPolling();
 
     this.registerCapabilityListener('target_temperature', async (temperature) => {
-      // 1. Input sanity
       if (!temperature) return false;
 
-      if (temperature < 5) {
-        temperature = 5;
-      } else if (temperature > 35) {
-        temperature = 35;
-      }
+      if (temperature < 5) temperature = 5;
+      else if (temperature > 35) temperature = 35;
+
       temperature = Math.round(temperature.toFixed(1) * 2) / 2;
 
       const homewizard_id = this.getSetting('homewizard_id');
@@ -45,24 +92,18 @@ class HomeWizardHeatlink extends Homey.Device {
       this.log(path);
 
       try {
-        await homewizard.callnew(homewizard_id, path, (err) => {
-          if (err) {
-            this.log('ERR settarget target_temperature -> returned false');
-            return;
-          }
-          this.log('settarget target_temperature - returned true');
-        });
-
+        await callnewAsync(homewizard_id, path);
+        this.log('settarget target_temperature - returned true');
         return true;
 
       } catch (err) {
+        this.log('ERR settarget target_temperature -> returned false');
         this.error(
           `Heatlink ${this.getName()} (${this.getData().id}) settarget failed: ${err.message || err}`
         );
         return false;
       }
     });
-
   }
 
   startPolling() {
@@ -187,8 +228,8 @@ class HomeWizardHeatlink extends Homey.Device {
   onDeleted() {
 
     if (Object.keys(devices).length === 0) {
-      clearInterval(refreshIntervalId);
-      this.log('--Stopped Polling--');
+      clearInterval(this.refreshIntervalId);
+     this.log('--Stopped Polling--');
     }
 
     this.log(`deleted: ${JSON.stringify(this)}`);

@@ -30,94 +30,215 @@ module.exports = (function() {
   homewizard.getDeviceData = function(device_id, data_part) {
     return new Promise((resolve, reject) => {
       if (
-        typeof self.devices[device_id] === 'undefined'
-        || typeof self.devices[device_id].polldata === 'undefined'
-        || typeof self.devices[device_id].polldata[data_part] === 'undefined'
-        || typeof self.devices[device_id] === undefined
-        || typeof self.devices[device_id].polldata === undefined
-        || typeof self.devices[device_id].polldata[data_part] === undefined
-      ) {
-        resolve([]);
-      } else {
-        resolve(self.devices[device_id].polldata[data_part]);
-      }
+          typeof self.devices[device_id] === 'undefined'
+          || typeof self.devices[device_id].polldata === 'undefined'
+          || typeof self.devices[device_id].polldata[data_part] === 'undefined'
+        ) {
+          resolve([]);
+        } else {
+          resolve(self.devices[device_id].polldata[data_part]);
+        }
     });
   };
 
+  function fetchWithConnectTimeout(url, options = {}, timeoutMs = 2000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('connect_timeout'));
+    }, timeoutMs);
+
+    fetch(url, options)
+      .then(res => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+
+  function initCircuitBreaker(device) {
+  if (!device.circuit) {
+    device.circuit = {
+      failures: 0,
+      lastFailure: 0,
+      openUntil: 0,
+      threshold: 3,      
+      cooldownMs: 120000 // 2 min cooldown
+    };
+  }
+}
+
+function circuitBreakerAllows(device) {
+  initCircuitBreaker(device);
+
+  const now = Date.now();
+
+  // Breaker open?
+  if (device.circuit.openUntil > now) {
+    return false;
+  }
+
+  return true;
+}
+
+function circuitBreakerFail(device) {
+  initCircuitBreaker(device);
+
+  const now = Date.now();
+  const c = device.circuit;
+
+  c.failures++;
+  c.lastFailure = now;
+
+  if (c.failures >= c.threshold) {
+    c.openUntil = now + c.cooldownMs;
+    if (debug) console.log(`Circuit breaker OPEN for device (cooldown ${c.cooldownMs}ms)`);
+  }
+}
+
+function circuitBreakerSuccess(device) {
+  initCircuitBreaker(device);
+
+  const c = device.circuit;
+
+  // Reset bij succes
+  c.failures = 0;
+  c.openUntil = 0;
+}
+
+
+
+
+function recordResponseTime(device, durationMs) {
+  if (!device.responseStats) {
+    device.responseStats = { samples: [], maxSamples: 20 };
+  }
+
+  const stats = device.responseStats;
+  stats.samples.push(durationMs);
+
+  if (stats.samples.length > stats.maxSamples) {
+    stats.samples.shift();
+  }
+}
+
+function getAverageResponseTime(device) {
+  if (!device.responseStats || device.responseStats.samples.length === 0) {
+    return null;
+  }
+
+  const arr = device.responseStats.samples;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function getAdaptiveTimeout(device) {
+  const avg = getAverageResponseTime(device);
+
+  if (!avg) {
+    // Geen data → veilige default
+    return 8000;
+  }
+
+  // Adaptive timeout:
+  // - 3x avarage response
+  // - never below 3s
+  // - never above 8s
+  return Math.min(Math.max(avg * 3, 3000), 8000);
+}
+
+
+
   homewizard.callnew = async function(device_id, uri_part, callback) {
-    const timeoutDuration = 8000; // Timeout duration in milliseconds
-    try {
-      if (debug) {
-        console.log('Call device ', device_id, 'endpoint:', uri_part);
-      }
-      if (
-        typeof self.devices[device_id] !== 'undefined'
-          && 'settings' in self.devices[device_id]
-          && 'homewizard_ip' in self.devices[device_id].settings
-          && 'homewizard_pass' in self.devices[device_id].settings
-      ) {
-        const { homewizard_ip } = self.devices[device_id].settings;
-        const { homewizard_pass } = self.devices[device_id].settings;
+  let timeout = null;
+  let controller = null;
 
-        const controller = new AbortController(); // Create an AbortController
-        const { signal } = controller; // Get the AbortSignal from the controller
+  const device = self.devices[device_id];
+  if (!device || !device.settings) {
+    return callback('settings_missing', []);
+  }
 
-        // Set a timeout to abort the fetch request
-        const timeout = setTimeout(() => {
-          controller.abort(); // Abort the fetch request
-          console.log('Fetch request timed out');
-        }, timeoutDuration);
+  const { homewizard_ip, homewizard_pass } = device.settings;
+  const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
 
-        const response = await fetch(`http://${homewizard_ip}/${homewizard_pass}${uri_part}`, {
-          signal,
-          follow: 0,
-          redirect: 'error',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+  // Circuit breaker check
+  if (!circuitBreakerAllows(device)) {
+    if (debug) console.log(`Circuit breaker BLOCKED fetch for ${url}`);
+    return callback('circuit_open', []);
+  }
+  
+  // Adaptive timeout op basis van gemeten performance
+  const timeoutDuration = getAdaptiveTimeout(device);
 
-        clearTimeout(timeout); // Clear the timeout since the fetch request completed
+  const start = Date.now(); // START TIMER
 
-        if (response.status === 200) {
-          const jsonData = await response.json();
-          if (
-            jsonData.status !== undefined
-              && jsonData.status === 'ok'
-          ) {
-            if (typeof callback === 'function') {
-              
-              callback(null, jsonData.response);
-            } else {
-              console.log('Not typeof function');
-            }
-          } else {
-            console.log('jsonData.status not ok');
-            callback('Invalid data', []);
-          }
-        } else {
-          console.log('Error: no clue what is going on here.');
-          callback('Error', []);
-        }
-      } else {
-        console.log(`Homewizard ${device_id}: settings not found!`);
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('Fetch request aborted');
-      } else if (error.code === 'ECONNRESET') {
-        console.log('Connection was reset');
-      }
+  try {
+    controller = new AbortController();
+    const { signal } = controller;
 
-      console.error(`FETCH PROBLEM -> ${error}`);
-      if (typeof callback === 'function') {
-        callback(error, []);
-      }
+    timeout = setTimeout(() => {
+      controller.abort();
+      if (debug) console.log(`Timeout (${timeoutDuration}ms) on ${url}`);
+    }, timeoutDuration);
 
-      return; 
+    const response = await fetchWithConnectTimeout(url, {
+      signal,
+      follow: 0,
+      redirect: 'error',
+      headers: { 'Content-Type': 'application/json' }
+    }, 2000); // 2s connect timeout
+
+
+    clearTimeout(timeout);
+
+    const duration = Date.now() - start;
+    recordResponseTime(device, duration);
+
+    circuitBreakerSuccess(device);
+
+    if (debug) {
+      const avg = getAverageResponseTime(device);
+      console.log(`Fetch ${url} took ${duration}ms (avg ${avg}ms, timeout ${timeoutDuration}ms)`);
     }
 
-  };
+    if (response.status !== 200) {
+      return callback('http_error', []);
+    }
+
+    const jsonData = await response.json();
+
+    if (jsonData.status === 'ok') {
+      return callback(null, jsonData.response);
+    } else {
+      return callback('invalid_data', []);
+    }
+
+  } catch (error) {
+    clearTimeout(timeout);
+
+    const duration = Date.now() - start;
+    recordResponseTime(device, duration);
+
+    circuitBreakerFail(device);
+
+    if (debug) {
+      const avg = getAverageResponseTime(device);
+      console.log(`Fetch failed after ${duration}ms (avg ${avg}ms, timeout ${timeoutDuration}ms)`);
+    }
+
+    if (error.name === 'AbortError') {
+      return callback('timeout', []);
+    }
+
+    return callback(error, []);
+  }
+};
+
+
+
 
   if (!Homey2023) {
     homewizard.ledring_pulse = function(device_id, colorName) {
@@ -146,22 +267,61 @@ homewizard.startpoll = function() {
 
   // Per-device custom polling
   for (const device_id in self.devices) {
-    const intervalSec =
-      self.devices[device_id]?.settings?.poll_interval || 30;
+    const device = self.devices[device_id];
+    if (!device) continue;
 
+    // User-defined interval or default
+    const userIntervalSec = device?.settings?.poll_interval || 30;
+
+    // Adaptive timeout for this device
+    const adaptiveTimeoutMs = getAdaptiveTimeout(device);
+
+    // Minimum safe polling interval (timeout + 1s buffer)
+    const minPollSec = Math.ceil((adaptiveTimeoutMs + 1000) / 1000);
+
+    // Effective interval = max(user interval, minimum safe interval)
+    const effectivePollSec = Math.max(userIntervalSec, minPollSec);
+
+    if (debug && effectivePollSec !== userIntervalSec) {
+      console.log(
+        `Polling interval for device ${device_id} adjusted from ${userIntervalSec}s to ${effectivePollSec}s (adaptive timeout ${adaptiveTimeoutMs}ms)`
+      );
+    }
+
+    // Clear existing interval if present
     if (self.polls[device_id]) {
       clearInterval(self.polls[device_id]);
     }
 
-    self.polls[device_id] = setInterval(async () => {
+    // Start safe polling interval
+    // Start safe polling interval
+self.polls[device_id] = setInterval(async () => {
       try {
         await homewizard.poll(device_id);
       } catch (error) {
+
+        // 1. Circuit breaker open
+        if (error === 'circuit_open') {
+          return;
+        }
+
+        // 2. Timeout
+        const msg = typeof error === 'string' ? error : error?.message;
+        const code = typeof error === 'object' ? error?.code : null;
+
+        if (msg === 'connect_timeout' || msg === 'timeout' || code === 'ECONNRESET') {
+          if (debug) console.log(`Polling warning for ${device_id}:`, msg || code);
+          return;
+        }
+
+        // 3. Log real errors
         console.error(`Polling error for device ${device_id}:`, error);
       }
-    }, intervalSec * 1000);
+    }, effectivePollSec * 1000);
+
   }
 };
+
 
 
 

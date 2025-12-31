@@ -11,33 +11,208 @@
     body { font-family: sans-serif; padding: 20px; text-align: center; }
     img { width: 400px; height: auto; margin-bottom: 20px; }  
     a { display: block; margin: 0.5em 0; font-size: 1.1em; }
+
+    .debug-container {
+      margin-top: 40px;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .debug-container h2 {
+      text-align: center;
+    }
+    .debug-box {
+      background: #f3f3f3;
+      padding: 15px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow: auto;
+    }
   </style>
 </head>
 <body>
-  <!-- PNG on top -->
   <img src="../assets/images/small.png" alt="Homewizard" />
   <h1 id="title"></h1>
 
   <a id="changelog" href="https://community.homey.app/t/app-pro-homewizard/19267/2" target="_blank"></a>
   <a id="support" target="_blank"></a>
 
+  <!-- Discovery debug -->
+  <div class="debug-container" id="discovery-container">
+    <h2>Discovery debug</h2>
+    <pre id="discovery-debug" class="debug-box">Loading…</pre>
+  </div>
 
+  <!-- FetchQueue debug -->
+  <div class="debug-container" id="fetch-container">
+    <h2>FetchQueue debug</h2>
+    <pre id="fetch-debug" class="debug-box">Loading…</pre>
+  </div>
+
+  <!-- WebSocket debug -->
+  <div class="debug-container" id="ws-container">
+    <h2>WebSocket debug</h2>
+    <pre id="ws-debug" class="debug-box">Loading…</pre>
+  </div>
+
+
+  <!-- Baseload debug (conditioneel zichtbaar) -->
+  <div class="debug-container" id="baseload-container">
+    <h2>Baseload debug</h2>
+    <pre id="baseload-debug-history" class="debug-box">Loading…</pre>
+  </div>
+
+  <!-- Clear logs -->
+  <div class="debug-container" style="text-align:center; margin-top:30px;">
+    <button id="clear-debug-btn" style="
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      background: #d9534f;
+      color: white;
+      cursor: pointer;
+    ">
+      Clear debug logs
+    </button>
+    <p id="clear-debug-status" style="font-size:12px; color:#555; margin-top:10px;"></p>
+  </div>
 
   <script>
     function onHomeyReady(Homey) {
-      // Title
       document.getElementById('title').innerText = Homey.__('settings.title');
 
-      // Changelog
       const changelogAnchor = document.getElementById('changelog');
       changelogAnchor.innerText = Homey.__('settings.changelog.label');
 
-      // Support
       const supportAnchor = document.getElementById('support');
       supportAnchor.href = Homey.__('settings.support.link');
       supportAnchor.innerText = Homey.__('settings.support.label');
 
-      Homey.ready();
+      Homey.get((err, settings) => {
+        if (err) {
+          document.getElementById('discovery-debug').textContent =
+            'Error loading settings: ' + err;
+          document.getElementById('fetch-debug').textContent =
+            'Error loading settings: ' + err;
+          document.getElementById('baseload-debug-history').textContent =
+            'Error loading settings: ' + err;
+          Homey.ready();
+          return;
+        }
+
+        /*
+         * DISCOVERY DEBUG
+         */
+        const discoveryEl = document.getElementById('discovery-debug');
+        const dbg = settings['debug_discovery'];
+
+        if (!dbg) {
+          discoveryEl.textContent = 'No discovery debug info found.';
+        } else {
+          discoveryEl.textContent = JSON.stringify({
+            lastStatus: dbg.lastStatus,
+            lastDetail: dbg.lastDetail,
+            lastUpdate: dbg.lastUpdate
+          }, null, 2);
+        }
+
+        /*
+         * FETCHQUEUE DEBUG
+         */
+        const fetchEl = document.getElementById('fetch-debug');
+        const fetchDbg = settings['debug_fetch'];
+
+        if (!fetchDbg || fetchDbg.length === 0) {
+          fetchEl.textContent = 'No fetchQueue errors logged.';
+        } else {
+          fetchEl.textContent = JSON.stringify(fetchDbg.slice(-20), null, 2);
+        }
+
+        /*
+         * WEBSOCKET DEBUG
+        */
+          const wsEl = document.getElementById('ws-debug');
+          const wsDbg = settings['debug_ws'];
+
+          if (!wsDbg || wsDbg.length === 0) {
+            wsEl.textContent = 'No WebSocket events logged.';
+          } else {
+            wsEl.textContent = JSON.stringify(wsDbg.slice(-20), null, 2);
+          }
+
+
+        /*
+         * CONDITIONEEL: Baseload debug tonen/verbergen
+         */
+        const baseloadContainer = document.getElementById('baseload-container');
+        const baseloadEnabled = settings['baseload_notifications'] ?? true;
+
+        if (!baseloadEnabled) {
+          baseloadContainer.style.display = 'none';
+        }
+
+        /*
+         * BASELOAD DEBUG
+         */
+        const baseloadEl = document.getElementById('baseload-debug-history');
+        const state = settings['baseload_state'];
+
+        if (!state || !state.nightHistory) {
+          baseloadEl.textContent = 'No baseload_state.nightHistory found.';
+        } else {
+          const compact = state.nightHistory.map(n => ({
+            date: n.date,
+            avg: n.avg,
+            invalid: n.invalid,
+            fridgeCycles: n.fridgeCycles,
+            flags: {
+              sawHighPlateau: n.sawHighPlateau,
+              sawNegativeLong: n.sawNegativeLong,
+              sawNearZeroLong: n.sawNearZeroLong,
+              sawOscillation: n.sawOscillation,
+              sawPVStartup: n.sawPVStartup
+            }
+          }));
+
+          baseloadEl.textContent = JSON.stringify(compact.slice(-10), null, 2);
+        }
+
+        /*
+         * CLEAR DEBUG BUTTON
+         */
+        const clearBtn = document.getElementById('clear-debug-btn');
+        const clearStatus = document.getElementById('clear-debug-status');
+
+        clearBtn.addEventListener('click', () => {
+          clearStatus.textContent = 'Clearing…';
+
+          const newSettings = {
+            baseload_state: settings['baseload_state'], // keep baseload
+            debug_discovery: null,
+            debug_fetch: null,
+            debug_ws: null
+          };
+
+          Homey.set(newSettings, (err) => {
+            if (err) {
+              clearStatus.textContent = 'Error clearing logs: ' + err;
+              return;
+            }
+
+            clearStatus.textContent = 'Debug logs cleared. Reloading…';
+
+            setTimeout(() => location.reload(), 500);
+          });
+        });
+
+        Homey.ready();
+      });
     }
   </script>
 </body>

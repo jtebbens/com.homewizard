@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.24
+v3.9.25
 
 * Wsmanager optimize
 * Homewizard legacy custom polling
@@ -12,6 +12,7 @@ v3.9.24
 * Thermometer rollback (name index matching doesnt work as expected)
 * Homewizard legacy -> node-fetch and not the fetchQueue utility (bad user experience feedback)
 * Baseload (sluipverbruik) improvement (fridge/freezer should not be flagged as invalid )
+* Homewizard app setting page with log or debug information for discovery, fetch failures, websocket problems and baseload samples
 
 v3.9.20
 

@@ -22,6 +22,8 @@ const PHASE_CAPS = [
   'meter_power.consumed.t3', 'meter_power.produced.t3'
 ];
 
+
+
 async function updateCapability(device, capability, value) {
   // Skip null/undefined values (deletion-safe)
   if (value === undefined || value === null) return;
