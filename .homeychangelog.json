@@ -811,5 +811,8 @@
   },
   "3.9.25": {
     "en": "Homewizard app setting page with log or debug information for discovery, fetch failures, websocket problems and baseload samples"
+  },
+  "3.9.26": {
+    "en": "Bugfix: Homewizard.poll (legacy unit)"
   }
 }
