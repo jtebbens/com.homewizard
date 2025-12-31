@@ -263,8 +263,20 @@ function getAdaptiveTimeout(device) {
 homewizard.startpoll = function() {
 
   // Initial poll
-  homewizard.poll();
+  homewizard.poll().catch((error) => {
+    if (error === 'circuit_open') return;
 
+    const msg = typeof error === 'string' ? error : error?.message;
+    const code = typeof error === 'object' ? error?.code : null;
+
+    if (msg === 'connect_timeout' || msg === 'timeout' || code === 'ECONNRESET') {
+      if (debug) console.log('Initial polling warning:', msg || code);
+      return;
+    }
+
+    console.error('Initial polling error:', error);
+  });
+  
   // Per-device custom polling
   for (const device_id in self.devices) {
     const device = self.devices[device_id];
@@ -325,7 +337,7 @@ self.polls[device_id] = setInterval(async () => {
 
 
 
-  homewizard.poll = async function(device_id = null) {
+homewizard.poll = async function(device_id = null) {
   const list = device_id ? [device_id] : Object.keys(self.devices);
 
   for (const id of list) {
@@ -335,38 +347,73 @@ self.polls[device_id] = setInterval(async () => {
       self.devices[id].polldata = [];
     }
 
-    let response = await new Promise((resolve, reject) => {
-      homewizard.callnew(id, '/get-sensors', (err, response) => {
-        if (err == null) resolve(response);
-        else reject(err);
+    let response;
+    try {
+      response = await new Promise((resolve, reject) => {
+        homewizard.callnew(id, '/get-sensors', (err, response) => {
+          if (err == null) resolve(response);
+          else reject(err);
+        });
       });
-    });
+    } catch (err) {
+      // zelfde classificatie als in startpoll
+      if (err === 'circuit_open') {
+        if (debug) console.log(`Polling blocked by circuit breaker for device ${id}`);
+        continue;
+      }
 
-    if (response) {
-      self.devices[id].polldata.preset = response.preset;
-      self.devices[id].polldata.heatlinks = response.heatlinks;
-      self.devices[id].polldata.energylinks = response.energylinks;
-      self.devices[id].polldata.energymeters = response.energymeters;
-      self.devices[id].polldata.thermometers = response.thermometers;
-      self.devices[id].polldata.rainmeters = response.rainmeters;
-      self.devices[id].polldata.windmeters = response.windmeters;
-      self.devices[id].polldata.kakusensors = response.kakusensors;
+      const msg = typeof err === 'string' ? err : err?.message;
+      const code = typeof err === 'object' ? err?.code : null;
 
-      if (Object.keys(response.energylinks).length !== 0) {
-        let response2 = await new Promise((resolve, reject) => {
+      if (msg === 'connect_timeout' || msg === 'timeout' || code === 'ECONNRESET') {
+        if (debug) console.log(`Polling warning for device ${id}:`, msg || code);
+        continue;
+      }
+
+      console.error(`Polling error for device ${id}:`, err);
+      continue;
+    }
+
+    if (!response) continue;
+
+    self.devices[id].polldata.preset = response.preset;
+    self.devices[id].polldata.heatlinks = response.heatlinks;
+    self.devices[id].polldata.energylinks = response.energylinks;
+    self.devices[id].polldata.energymeters = response.energymeters;
+    self.devices[id].polldata.thermometers = response.thermometers;
+    self.devices[id].polldata.rainmeters = response.rainmeters;
+    self.devices[id].polldata.windmeters = response.windmeters;
+    self.devices[id].polldata.kakusensors = response.kakusensors;
+
+    if (Object.keys(response.energylinks).length !== 0) {
+      let response2;
+      try {
+        response2 = await new Promise((resolve, reject) => {
           homewizard.callnew(id, '/el/get/0/readings', (err2, response2) => {
             if (err2 == null) resolve(response2);
             else reject(err2);
           });
         });
+      } catch (err2) {
+        const msg2 = typeof err2 === 'string' ? err2 : err2?.message;
+        const code2 = typeof err2 === 'object' ? err2?.code : null;
 
-        if (response2) {
-          self.devices[id].polldata.energylink_el = response2;
+        if (msg2 === 'connect_timeout' || msg2 === 'timeout' || code2 === 'ECONNRESET') {
+          if (debug) console.log(`Polling warning (energylink) for device ${id}:`, msg2 || code2);
+          continue;
         }
+
+        console.error(`Polling error (energylink) for device ${id}:`, err2);
+        continue;
+      }
+
+      if (response2) {
+        self.devices[id].polldata.energylink_el = response2;
       }
     }
   }
 };
+
 
 
   return homewizard;

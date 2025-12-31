@@ -7,7 +7,8 @@ const MAX_LOG = 50; // ringbuffer size
 module.exports = {
   log(type, url, message) {
     try {
-      const dbg = Homey.settings.get('debug_fetch') || [];
+      let dbg = Homey.settings.get('debug_fetch');
+      if (!Array.isArray(dbg)) dbg = [];
 
       dbg.push({
         ts: new Date().toISOString(),
@@ -15,6 +16,7 @@ module.exports = {
         url,
         message
       });
+
 
       // ringbuffer
       Homey.settings.set('debug_fetch', dbg.slice(-MAX_LOG));
