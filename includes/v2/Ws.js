@@ -3,6 +3,7 @@
 const https = require('https');
 const WebSocket = require('ws');
 const fetch = require('node-fetch');
+const wsDebug = require('./wsDebug');
 // const fetch = require('../../includes/utils/fetchQueue');
 const debug = false;
 
@@ -228,6 +229,8 @@ class WebSocketManager {
       this.wsActive = true;
       this.reconnectAttempts = 0; // reset backoff after successful connect
       this.log('🔌 WebSocket opened — waiting to authorize...');
+       const devId = this.device?.getData?.().id || 'unknown-device'; 
+       wsDebug.log('open', devId, 'WebSocket opened');
 
       if (this.ws._socket) this.ws._socket.setKeepAlive(true, 30000);
 
@@ -292,6 +295,7 @@ class WebSocketManager {
     });
 
 this.ws.on('message', (msg) => {
+  const devId = this.device?.getData?.().id || 'unknown-device'; 
   this._eventsThisSecond++;
   let data;
   try {
@@ -301,12 +305,13 @@ this.ws.on('message', (msg) => {
     return;
   }
 
-  // 🔍 Altijd loggen welk type bericht binnenkomt
-  const devId = this.device?.getData?.().id || 'unknown-device';
+  // 🔍 Log 
   if (debug) this.log(`[WS][${devId}] TYPE=${data.type}`);
 
   // 🔐 Authorized → subscribe topics + start WS events/sec counter
   if (data.type === 'authorized') {
+    const devId = this.device?.getData?.().id || 'unknown-device'; 
+    wsDebug.log('authorized', devId, 'WebSocket authorized');
     this.wsAuthorized = true;
     this.lastMeasurementAt = Date.now();
     this._subscribeTopics();
@@ -359,6 +364,8 @@ this.ws.on('message', (msg) => {
 // 🛑 Error handler
   this.ws.on('error', (err) => {
     this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
+    const devId = this.device?.getData?.().id || 'unknown-device'; 
+    wsDebug.log('error', devId, `${err.code || ''} ${err.message || err}`);
     this.wsActive = false;
     this.wsAuthorized = false;
     this._scheduleReconnect();
@@ -366,6 +373,8 @@ this.ws.on('message', (msg) => {
 
   this.ws.on('close', () => {
     this.log('🔌 WebSocket closed — retrying');
+    const devId = this.device?.getData?.().id || 'unknown-device'; 
+    wsDebug.log('close', devId, 'WebSocket closed');
     this.wsActive = false;
     this.wsAuthorized = false;
     this._scheduleReconnect();
@@ -374,22 +383,38 @@ this.ws.on('message', (msg) => {
   }
 
   _scheduleReconnect() {
-    if (this.reconnecting) return;
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-      this.log('⏸️ reconnect suppressed — socket is OPEN or CONNECTING');
-      return;
-    }
-    this.reconnecting = true;
-    this.reconnectAttempts++;
-    const base = 5000 * this.reconnectAttempts;
-    const delay = Math.min(base, 180000); // cap at 3 minutes
-    const jitter = delay * (0.9 + Math.random() * 0.2);
-    this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter / 1000)}s`);
-    this._safeSetTimeout(() => {
-      this.reconnecting = false;
-      this.restartWebSocket();
-    }, jitter);
+  const devId = this.device?.getData?.().id || 'unknown-device';
+
+  // Already reconnecting → suppress
+  if (this.reconnecting) {
+    wsDebug.log('reconnect_suppressed', devId, 'Already reconnecting');
+    return;
   }
+
+  // Socket still open or connecting → suppress
+  if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+    this.log('⏸️ reconnect suppressed — socket is OPEN or CONNECTING');
+    wsDebug.log('reconnect_suppressed', devId, `State=${this.ws.readyState}`);
+    return;
+  }
+
+  this.reconnecting = true;
+  this.reconnectAttempts++;
+
+  const base = 5000 * this.reconnectAttempts;
+  const delay = Math.min(base, 180000); // cap at 3 minutes
+  const jitter = delay * (0.9 + Math.random() * 0.2);
+
+  this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter / 1000)}s`);
+  wsDebug.log('reconnect_scheduled', devId, `${Math.round(jitter / 1000)}s`);
+
+  this._safeSetTimeout(() => {
+    this.reconnecting = false;
+    wsDebug.log('reconnect_execute', devId, 'Restarting WebSocket');
+    this.restartWebSocket();
+  }, jitter);
+}
+
 
 
 
@@ -441,22 +466,33 @@ this.ws.on('message', (msg) => {
   }
 
   restartWebSocket() {
-    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
-      this.log('⏸️ Socket is OPEN or still CONNECTING — skipping restart');
-      return;
-    }
+  const devId = this.device?.getData?.().id || 'unknown-device';
 
-    const now = Date.now();
-    if (now - this._restartCooldown < 3000) {
-      this.log('⏸️ Skipping restart — cooldown active');
-      return;
-    }
-
-    this._restartCooldown = now;
-    this._clearTimers();
-    this._resetWebSocket();
-    this.start();
+  // ⏸️ Suppress restart if socket is still active
+  if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+    this.log('⏸️ Socket is OPEN or still CONNECTING — skipping restart');
+    wsDebug.log('restart_suppressed', devId, `State=${this.ws.readyState}`);
+    return;
   }
+
+  const now = Date.now();
+
+  // ⏸️ Suppress restart if cooldown active
+  if (now - this._restartCooldown < 3000) {
+    this.log('⏸️ Skipping restart — cooldown active');
+    wsDebug.log('restart_cooldown', devId, `${now - this._restartCooldown}ms since last restart`);
+    return;
+  }
+
+  // 🔄 Restart allowed
+  this._restartCooldown = now;
+  wsDebug.log('restart_execute', devId, 'Restarting WebSocket');
+
+  this._clearTimers();
+  this._resetWebSocket();
+  this.start();
+}
+
 
   _resetWebSocket() {
   if (!this.ws) return;

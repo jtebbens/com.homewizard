@@ -52,6 +52,17 @@ async function requestToken(address) {
 
 module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
+  logDiscovery(status, detail = null) {
+    const dbg = this.homey.settings.get('debug_discovery') || {};
+
+    dbg.lastStatus = status;               // 'ok', 'error', 'not_found'
+    dbg.lastDetail = detail ? String(detail) : null;
+    dbg.lastUpdate = new Date().toISOString();
+
+    this.homey.settings.set('debug_discovery', dbg);
+  }
+
+
   async onPair(session) {
 
     // Initialize variables to prevent undefined errors
@@ -66,6 +77,13 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
       console.log('Discovered devices:', discoveryResults);
+
+      if (!discoveryResults || Object.keys(discoveryResults).length === 0) {
+        this.logDiscovery('not_found', 'No devices found via mDNS');
+      } else {
+        this.logDiscovery('ok', `Found ${Object.keys(discoveryResults).length} devices`);
+      }
+
 
       // Return list of devices, we do not test if device is reachable as we trust the discovery results
       const devices = [];
@@ -111,7 +129,9 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
             token = await requestToken(this.selectedDevice.store.address);
           }
           catch (error) {
-            console.error('Error while trying to get token: ', error);
+              console.error('Error while trying to get token: ', error);
+              this.logDiscovery('error', `Token request failed: ${error.message}`);
+
             try {
               await session.emit('error', error.message);
             } catch (e) {
@@ -139,6 +159,8 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
           clearInterval(this.interval);
           clearTimeout(this.timeout);
           console.log('Timeout!');
+          this.logDiscovery('error', 'Authorization timeout');
+
           try {
             await session.emit('authorize_timeout');
           } catch (e) {

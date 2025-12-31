@@ -1,4 +1,7 @@
+'use strict';
+
 const fetch = require('node-fetch');
+const debug = require('./fetchQueueDebug'); // <-- jouw debug module
 
 const queue = [];
 let active = 0;
@@ -11,7 +14,6 @@ function log(...args) {
   const ts = new Date().toISOString();
   console.log(ts, '[fetchQueue]', ...args);
 }
-
 
 function processQueue() {
   if (active >= MAX_CONCURRENT) return;
@@ -28,6 +30,7 @@ function processQueue() {
   const timeout = setTimeout(() => {
     controller.abort();
     log(`timeout: ${url}`);
+    debug.log('timeout', url, `Timeout after ${timeoutMs}ms`);
   }, timeoutMs);
 
   fetch(url, { ...opts, signal: controller.signal })
@@ -35,18 +38,21 @@ function processQueue() {
     .catch(err => {
       if (err.name === 'AbortError') {
         log(`timeout (abort): ${url}`);
+        debug.log('abort', url, 'AbortError');
       } else {
         log(`error on ${url}: ${err.message}`);
+        debug.log('network', url, err.message);
       }
 
       if (!retry) {
         log(`retrying once: ${url}`);
+        debug.log('retry', url, 'Retrying once');
 
         setTimeout(() => {
-          // Retry must respect MAX_QUEUE and duplicate rules
           const key = `${url}|${opts.method || 'GET'}`;
 
           if (queue.length >= MAX_QUEUE) {
+            debug.log('overflow', url, `Queue overflow during retry`);
             return reject(new Error(`Queue overflow during retry: ${key}`));
           }
 
@@ -59,6 +65,7 @@ function processQueue() {
 
       } else {
         log(`final fail: ${url}`);
+        debug.log('final_fail', url, err.message);
         reject(err);
       }
     })
@@ -66,7 +73,6 @@ function processQueue() {
       clearTimeout(timeout);
       active = Math.max(0, active - 1);
 
-      // Always schedule next job with jitter
       setTimeout(() => {
         setImmediate(processQueue);
       }, MIN_DELAY + Math.floor(Math.random() * 100));
@@ -77,19 +83,18 @@ function queuedFetch(url, opts = {}) {
   return new Promise((resolve, reject) => {
     const key = `${url}|${opts.method || 'GET'}`;
 
-    // Duplicate suppression
     if (queue.some(job => `${job.url}|${job.opts.method || 'GET'}` === key)) {
+      debug.log('duplicate', url, 'Duplicate request suppressed');
       return reject(new Error(`Duplicate request suppressed`));
     }
 
-    // Backpressure
     if (queue.length >= MAX_QUEUE) {
+      debug.log('overflow', url, `Queue overflow: ${queue.length}`);
       return reject(new Error(`Queue overflow: ${queue.length} jobs`));
     }
 
     queue.push({ url, opts, resolve, reject, retry: false });
 
-    // Always schedule processing on next tick to avoid starvation
     setImmediate(processQueue);
   });
 }

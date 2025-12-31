@@ -141,56 +141,13 @@ class HomeWizardDevice extends Homey.Device {
 	  } // end of getstatus
 
 
-    async onSettings({ changedKeys }) {
-      if (changedKeys.includes('poll_interval')) {
-        const devices = this.homey.drivers.getDriver('homewizard').getDevices();
-        for (const d of devices) {
-          d.startPolling(devices); // herstart met nieuwe interval
-        }
-      }
+  async onSettings({ changedKeys }) {
+    if (changedKeys.includes('poll_interval')) {
+      const devices = this.homey.drivers.getDriver('homewizard').getDevices();
+      this.startPolling(devices);
     }
+  }
 
-  /*
-	getStatus(devices) {
-
-		var me = this;
-
-		var homey_lang = this.homey.i18n.getLanguage();
-
-		for (var index in devices) {
-			homewizard.getDeviceData(devices[index].getData().id, 'preset', async function(callback) { // async added
-
-				try {
-					if (devices[index].getStoreValue('preset') === null) {
-						if (debug) {me.log('Preset was set to ' + callback);}
-
-						devices[index].getStoreValue('preset', callback);
-					}
-
-					if (devices[index].getStoreValue('preset') != callback) {
-
-						await devices[index].setStoreValue('preset', callback).catch(me.error);
-
-						if (debug) {me.log('Flow call! -> ' + callback);}
-
-						if (homey_lang == "nl") {
-							preset_text = preset_text_nl[callback];
-						} else {
-							preset_text = preset_text_en[callback];
-						}
-						me.flowTriggerPresetChanged(devices[index], {preset: callback, preset_text: preset_text});
-
-						if (debug) {me.log('Preset was changed! ->'+ preset_text);}
-					}
-				} catch(err) {
-					this.log ("HomeWizard data corrupt");
-					this.log(err);
-				};
-			});
-
-		}
-	};
-*/
 
 }
 

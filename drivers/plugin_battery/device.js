@@ -4,6 +4,7 @@ const Homey = require('homey');
 const fetch = require('node-fetch');
 const https = require('https');
 const WebSocketManager = require('../../includes/v2/Ws');
+const wsDebug = require('../../includes/v2/wsDebug');
 const api = require('../../includes/v2/Api');
 
 const agent = new https.Agent({ rejectUnauthorized: false });
@@ -117,6 +118,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
   async onInit() {
+    wsDebug.init(this.homey);
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 

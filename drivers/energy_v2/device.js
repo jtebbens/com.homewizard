@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 const https = require('https');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
+const wsDebug = require('../../includes/v2/wsDebug');
 const debug = false;
 
 process.on('uncaughtException', (err) => {
@@ -255,7 +256,7 @@ function normalizeBatteryMode(data) {
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
   async onInit() {
-
+    wsDebug.init(this.homey);
     this.onPollInterval = null;
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
