@@ -2,26 +2,31 @@
 <html>
 <head>
   <title>Homewizard Settings</title>
-  <script
-    type="text/javascript"
-    src="/homey.js"
-    data-origin="settings">
-  </script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; text-align: center; }
-    img { width: 400px; height: auto; margin-bottom: 20px; }  
-    a { display: block; margin: 0.5em 0; font-size: 1.1em; }
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
 
-    .debug-container {
-      margin-top: 40px;
-      text-align: left;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
+    .tab {
+      padding: 10px 16px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 6px 6px 0 0;
+      margin-right: 4px;
+      background: #eee;
     }
-    .debug-container h2 {
-      text-align: center;
+    .tab.active {
+      background: white;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      font-weight: bold;
     }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
     .debug-box {
       background: #f3f3f3;
       padding: 15px;
@@ -33,208 +38,192 @@
       max-height: 400px;
       overflow: auto;
     }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 16px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    th { background: #f0f0f0; }
   </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
-  <img src="../assets/images/small.png" alt="Homewizard" />
+
   <h1 id="title"></h1>
+  <a id="changelog" href="#" target="_blank"></a>
+  <a id="support" href="#" target="_blank"></a>
 
-  <a id="changelog" href="https://community.homey.app/t/app-pro-homewizard/19267/2" target="_blank"></a>
-  <a id="support" target="_blank"></a>
-
-  <!-- Discovery debug -->
-  <div class="debug-container" id="discovery-container">
-    <h2>Discovery debug</h2>
-    <pre id="discovery-debug" class="debug-box">Loading…</pre>
+  <!-- TAB HEADERS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="baseload" id="tab-baseload"></div>
+    <div class="tab" data-tab="fetch">Fetch Debug</div>
+    <div class="tab" data-tab="discovery">Discovery Debug</div>
+    <div class="tab" data-tab="ws">WebSocket Debug</div>
+    <div class="tab" data-tab="legacy">Legacy Fetch</div>
   </div>
 
-  <!-- FetchQueue debug -->
-  <div class="debug-container" id="fetch-container">
+  <!-- TAB: BASELOAD -->
+  <div id="baseload" class="tab-content active">
+    <h2>Sluipverbruik grafiek</h2>
+    <canvas id="baseloadChart" height="150"></canvas>
+
+    <h3>Samples van geselecteerde nacht</h3>
+    <select id="nightSelector"></select>
+
+    <button id="toggleSamplesBtn" style="
+      margin-top: 10px;
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    ">
+      Toon samples
+    </button>
+
+    <div id="sampleContainer" style="display:none; margin-top:15px;">
+      <table id="sampleTable">
+        <thead><tr><th>Tijd</th><th>Vermogen (W)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- TAB: FETCH -->
+  <div id="fetch" class="tab-content">
     <h2>FetchQueue debug</h2>
     <pre id="fetch-debug" class="debug-box">Loading…</pre>
   </div>
 
-  <!-- WebSocket debug -->
-  <div class="debug-container" id="ws-container">
+  <!-- TAB: DISCOVERY -->
+  <div id="discovery" class="tab-content">
+    <h2>Discovery debug</h2>
+    <pre id="discovery-debug" class="debug-box">Loading…</pre>
+  </div>
+
+  <!-- TAB: WEBSOCKET -->
+  <div id="ws" class="tab-content">
     <h2>WebSocket debug</h2>
     <pre id="ws-debug" class="debug-box">Loading…</pre>
   </div>
 
-  <!-- Legacy Fetch debug -->
-  <div class="debug-container" id="legacyfetch-container">
-    <h2>Old Homewizard Legacy Fetch debug</h2>
+  <!-- TAB: LEGACY FETCH -->
+  <div id="legacy" class="tab-content">
+    <h2>Legacy Fetch debug</h2>
     <pre id="legacyfetch-debug" class="debug-box">Loading…</pre>
   </div>
 
-
-
-  <!-- Baseload debug (conditioneel zichtbaar) -->
-  <div class="debug-container" id="baseload-container">
-    <h2>Baseload debug</h2>
-    <pre id="baseload-debug-history" class="debug-box">Loading…</pre>
-  </div>
-
-  <!-- Clear logs -->
-  <div class="debug-container" style="text-align:center; margin-top:30px;">
-    <button id="clear-debug-btn" style="
-      padding: 10px 20px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      background: #d9534f;
-      color: white;
-      cursor: pointer;
-    ">
-      Clear debug logs
-    </button>
-    <p id="clear-debug-status" style="font-size:12px; color:#555; margin-top:10px;"></p>
-  </div>
-
   <script>
+    /* TAB SWITCHING */
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    /* HOMEY READY */
     function onHomeyReady(Homey) {
       document.getElementById('title').innerText = Homey.__('settings.title');
+      document.getElementById('changelog').innerText = Homey.__('settings.changelog.label');
+      document.getElementById('support').innerText = Homey.__('settings.support.label');
+      document.getElementById('support').href = Homey.__('settings.support.link');
+      document.getElementById('tab-baseload').innerText = Homey.__('settings.tab_baseload');
 
-      const changelogAnchor = document.getElementById('changelog');
-      changelogAnchor.innerText = Homey.__('settings.changelog.label');
+      Homey.get(async (err, settings) => {
+        if (err) return;
 
-      const supportAnchor = document.getElementById('support');
-      supportAnchor.href = Homey.__('settings.support.link');
-      supportAnchor.innerText = Homey.__('settings.support.label');
-
-      Homey.get((err, settings) => {
-        if (err) {
-          document.getElementById('discovery-debug').textContent =
-            'Error loading settings: ' + err;
-          document.getElementById('fetch-debug').textContent =
-            'Error loading settings: ' + err;
-          document.getElementById('baseload-debug-history').textContent =
-            'Error loading settings: ' + err;
-          Homey.ready();
-          return;
-        }
-
-        /*
-         * DISCOVERY DEBUG
-         */
-        const discoveryEl = document.getElementById('discovery-debug');
-        const dbg = settings['debug_discovery'];
-
-        if (!dbg) {
-          discoveryEl.textContent = 'No discovery debug info found.';
-        } else {
-          discoveryEl.textContent = JSON.stringify({
-            lastStatus: dbg.lastStatus,
-            lastDetail: dbg.lastDetail,
-            lastUpdate: dbg.lastUpdate
-          }, null, 2);
-        }
-
-        /*
-         * FETCHQUEUE DEBUG
-         */
-        const fetchEl = document.getElementById('fetch-debug');
-        const fetchDbg = settings['debug_fetch'];
-
-        if (!fetchDbg || fetchDbg.length === 0) {
-          fetchEl.textContent = 'No fetchQueue errors logged.';
-        } else {
-          fetchEl.textContent = JSON.stringify(fetchDbg.slice(-20), null, 2);
-        }
-
-        /*
-         * WEBSOCKET DEBUG
-        */
-          const wsEl = document.getElementById('ws-debug');
-          const wsDbg = settings['debug_ws'];
-
-          if (!wsDbg || wsDbg.length === 0) {
-            wsEl.textContent = 'No WebSocket events logged.';
-          } else {
-            wsEl.textContent = JSON.stringify(wsDbg.slice(-20), null, 2);
-          }
-
-          /*
-          * LEGACY FETCH DEBUG
-          */
-          const legacyEl = document.getElementById('legacyfetch-debug');
-          const legacyDbg = settings['debug_legacy_fetch'];
-
-          if (!legacyDbg || legacyDbg.length === 0) {
-            legacyEl.textContent = 'No legacy fetch errors logged.';
-          } else {
-            legacyEl.textContent = JSON.stringify(legacyDbg.slice(-50), null, 2);
-          }
-
-
-
-        /*
-         * CONDITIONEEL: Baseload debug tonen/verbergen
-         */
-        const baseloadContainer = document.getElementById('baseload-container');
-        const baseloadEnabled = settings['baseload_notifications'] ?? true;
-
-        if (!baseloadEnabled) {
-          baseloadContainer.style.display = 'none';
-        }
-
-        /*
-         * BASELOAD DEBUG
-         */
-        const baseloadEl = document.getElementById('baseload-debug-history');
+        /* ---- BASELOAD ---- */
         const state = settings['baseload_state'];
+        const history = state?.nightHistory || [];
 
-        if (!state || !state.nightHistory) {
-          baseloadEl.textContent = 'No baseload_state.nightHistory found.';
-        } else {
-          const compact = state.nightHistory.map(n => ({
-            date: n.date,
-            avg: n.avg,
-            invalid: n.invalid,
-            fridgeCycles: n.fridgeCycles,
-            flags: {
-              sawHighPlateau: n.sawHighPlateau,
-              sawNegativeLong: n.sawNegativeLong,
-              sawNearZeroLong: n.sawNearZeroLong,
-              sawOscillation: n.sawOscillation,
-              sawPVStartup: n.sawPVStartup
-            }
-          }));
+        const labels = history.map(n => n.date);
+        const values = history.map(n => n.avg || null);
+        const invalid = history.map(n => n.invalid);
 
-          baseloadEl.textContent = JSON.stringify(compact.slice(-10), null, 2);
+        const ctx = document.getElementById('baseloadChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Baseload (W)',
+              data: values,
+              borderColor: 'rgba(0, 150, 255, 1)',
+              backgroundColor: 'rgba(0, 150, 255, 0.2)',
+              spanGaps: true,
+              pointBackgroundColor: invalid.map(v => v ? 'red' : 'green'),
+              pointRadius: 5,
+            }]
+          }
+        });
+
+        /* NIGHT SELECTOR */
+        const selector = document.getElementById('nightSelector');
+        history.forEach((n, i) => {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = `${n.date} ${n.invalid ? '(ongeldig)' : ''}`;
+          selector.appendChild(opt);
+        });
+
+        selector.addEventListener('change', () => {
+          renderSamples(history[selector.value]);
+          // samples blijven verborgen tot gebruiker op knop klikt
+        });
+
+        function renderSamples(night) {
+          const tbody = document.querySelector('#sampleTable tbody');
+          tbody.innerHTML = '';
+          night.samples.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${new Date(s.ts).toLocaleTimeString()}</td><td>${s.power}</td>`;
+            tbody.appendChild(tr);
+          });
         }
 
-        /*
-         * CLEAR DEBUG BUTTON
-         */
-        const clearBtn = document.getElementById('clear-debug-btn');
-        const clearStatus = document.getElementById('clear-debug-status');
+        const toggleBtn = document.getElementById('toggleSamplesBtn');
+        const sampleContainer = document.getElementById('sampleContainer');
 
-        clearBtn.addEventListener('click', () => {
-          clearStatus.textContent = 'Clearing…';
-
-          const newSettings = {
-            baseload_state: settings['baseload_state'], // keep baseload
-            debug_discovery: null,
-            debug_fetch: null,
-            debug_ws: null,
-            debug_legacy_fetch: null
-          };
-
-          Homey.set(newSettings, (err) => {
-            if (err) {
-              clearStatus.textContent = 'Error clearing logs: ' + err;
-              return;
-            }
-
-            clearStatus.textContent = 'Debug logs cleared. Reloading…';
-
-            setTimeout(() => location.reload(), 500);
-          });
+        toggleBtn.addEventListener('click', () => {
+          const visible = sampleContainer.style.display === 'block';
+          sampleContainer.style.display = visible ? 'none' : 'block';
+          toggleBtn.textContent = visible ? 'Toon samples' : 'Verberg samples';
         });
+
+
+        /* ---- FETCH ---- */
+        document.getElementById('fetch-debug').textContent =
+          JSON.stringify(settings['debug_fetch']?.slice(-20) || [], null, 2);
+
+        /* ---- DISCOVERY ---- */
+        document.getElementById('discovery-debug').textContent =
+          JSON.stringify(settings['debug_discovery'] || {}, null, 2);
+
+        /* ---- WEBSOCKET ---- */
+        document.getElementById('ws-debug').textContent =
+          JSON.stringify(settings['debug_ws']?.slice(-20) || [], null, 2);
+
+        /* ---- LEGACY FETCH ---- */
+        document.getElementById('legacyfetch-debug').textContent =
+          JSON.stringify(settings['debug_legacy_fetch']?.slice(-50) || [], null, 2);
 
         Homey.ready();
       });
     }
   </script>
+
 </body>
 </html>
