@@ -9,6 +9,55 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 
 let homewizard_devices;
 
+function callnewAsync(device_id, uri_part, {
+  timeout = 3000,
+  retries = 2,
+  retryDelay = 2000
+} = {}) {
+
+  return new Promise((resolve, reject) => {
+
+    let attempts = 0;
+
+    const attempt = () => {
+      attempts++;
+
+      let timeoutId;
+      let finished = false;
+
+      // Timeout mechanisme
+      timeoutId = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+
+        if (attempts <= retries) {
+          return setTimeout(attempt, retryDelay);
+        }
+
+        return reject(new Error(`Timeout after ${timeout}ms`));
+      }, timeout);
+
+      // De echte call
+      homewizard.callnew(device_id, uri_part, (err, result) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeoutId);
+
+        if (err) {
+          if (attempts <= retries) {
+            return setTimeout(attempt, retryDelay);
+          }
+          return reject(err);
+        }
+
+        return resolve(result);
+      });
+    };
+
+    attempt();
+  });
+}
+
 class HomeWizardHeatlink extends Homey.Driver {
 
   onInit() {
@@ -16,26 +65,18 @@ class HomeWizardHeatlink extends Homey.Driver {
 
     this.homey.flow.getActionCard('heatlink_off')
     // .register()
-      .registerRunListener((args) => {
-        if (!args.device) {
+      .registerRunListener(async (args) => {
+        if (!args.device) return false;
+
+        try {
+          await callnewAsync(args.device.getData().id, '/hl/0/settarget/0');
+          this.log('flowCardAction heatlink_off -> returned true');
+          return true;
+        } catch (err) {
+          this.log('ERR flowCardAction heatlink_off -> returned false: ', err.message);
           return false;
         }
-
-        return new Promise((resolve) => {
-
-          homewizard.callnew(args.device.getData().id, '/hl/0/settarget/0', (err) => {
-            if (err) {
-              this.log('ERR flowCardAction heatlink_off  -> returned false');
-              return resolve(false);
-            }
-
-            this.log('flowCardAction heatlink_off  -> returned true');
-            return resolve(true);
-          });
-
-        });
       });
-
   }
 
   async onPair(socket) {
@@ -106,165 +147,4 @@ class HomeWizardHeatlink extends Homey.Driver {
 
 module.exports = HomeWizardHeatlink;
 
-// var devices = {};
-// var homewizard = require('./../../includes/legacy/homewizard.js');
-// var refreshIntervalId = 0;
-//
-// // SETTINGS
-// module.exports.settings = function( device_data, newSettingsObj, oldSettingsObj, changedKeysArr, callback ) {
-//     this.log ('Changed settings: ' + JSON.stringify(device_data) + ' / ' + JSON.stringify(newSettingsObj) + ' / old = ' + JSON.stringify(oldSettingsObj));
-//     try {
-// 	    changedKeysArr.forEach(function (key) {
-// 		    devices[device_data.id].settings[key] = newSettingsObj[key];
-// 		});
-// 		callback(null, true);
-//     } catch (error) {
-//       callback(error);
-//     }
-// };
 
-//
-// module.exports.deleted = function( device_data ) {
-//     delete devices[device_data.id];
-//     if (Object.keys(devices).length === 0) {
-//         clearInterval(refreshIntervalId);
-//         this.log("--Stopped Polling--");
-//     }
-//     this.log('deleted: ' + JSON.stringify(device_data));
-// };
-//
-//
-// module.exports.capabilities = {
-//
-//   measure_temperature: {
-//     get: function (device, callback) {
-//       if (device instanceof Error) return callback(device);
-//       this.log("measure_temperature");
-//       getStatus(device.id);
-//       var newvalue = devices[device.id].temperature;
-//       // Callback ambient temperature
-//       callback(null, newvalue);
-//     }
-//   },
-//   target_temperature: {
-//
-//     get: function (device, callback) {
-//       if (device instanceof Error) return callback(device);
-//       this.log("target_temperature:get");
-//       // Retrieve updated data
-//       getStatus(device.id);
-//       var newvalue;
-//       if (devices[device.id].setTemperature !== 0) {
-//         newvalue = devices[device.id].setTemperature;
-//       } else {
-//         newvalue = devices[device.id].thermTemperature;
-//       }
-//       callback(null, newvalue);
-//     },
-//
-//     set: function (device, temperature, callback) {
-//       if (device instanceof Error) return callback(device);
-//         // Catch faulty trigger and max/min temp
-//         if (!temperature) {
-//           callback(true, temperature);
-//           return false;
-//         }
-//         else if (temperature < 5) {
-//           temperature = 5;
-//         }
-//         else if (temperature > 35) {
-//           temperature = 35;
-//         }
-//         temperature = Math.round(temperature.toFixed(1) * 2) / 2;
-//         var url = '/hl/0/settarget/'+temperature;
-//         this.log(url);
-//         var homewizard_id = devices[device.id].settings.homewizard_id;
-//         homewizard.call(homewizard_id, '/hl/0/settarget/'+temperature, function(err, response) {
-//             this.log(err);
-//             if (callback) callback(err, temperature);
-//         });
-//     }
-//   },
-// };
-//
-// Homey.manager('flow').on('action.heatlink_off', function( callback, args ){
-//     homewizard.call(args.device.id, '/hl/0/settarget/0', function(err, response) {
-//       if (err === null) {
-//         this.log('Heatlink Off');
-//         callback( null, true );
-//       } else {
-//         callback(err, false); // err
-//       }
-//     });
-// });
-//
-// function getStatus(device_id) {
-//     if(devices[device_id].settings.homewizard_id !== undefined ) {
-//         var homewizard_id = devices[device_id].settings.homewizard_id;
-//         homewizard.getDeviceData(homewizard_id, 'heatlinks', function(callback) {
-//             if (Object.keys(callback).length > 0) {
-//            	try {
-//                 var rte = (callback[0].rte.toFixed(1) * 2) / 2;
-//                 var rsp = (callback[0].rsp.toFixed(1) * 2) / 2;
-//                 var tte = (callback[0].tte.toFixed(1) * 2) / 2;
-//
-//                 //Check current temperature
-//                 if (devices[device_id].temperature != rte) {
-//                   this.log("New RTE - "+ rte);
-//                   module.exports.realtime( { id: device_id }, "measure_temperature", rte );
-//                   devices[device_id].temperature = rte;
-//                 } else {
-//                   this.log("RTE: no change");
-//                 }
-//
-//                 //Check thermostat temperature
-//                 if (devices[device_id].thermTemperature != rsp) {
-//                   this.log("New RSP - "+ rsp);
-//                   if (devices[device_id].setTemperature === 0) {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", rsp );
-//                   }
-//                   devices[device_id].thermTemperature = rsp;
-//                 } else {
-//                   this.log("RSP: no change");
-//                 }
-//
-//                 //Check heatlink set temperature
-//                 if (devices[device_id].setTemperature != tte) {
-//                   this.log("New TTE - "+ tte);
-//                   if (tte > 0) {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", tte );
-//                   } else {
-//                     module.exports.realtime( { id: device_id }, "target_temperature", devices[device_id].thermTemperature );
-//                   }
-//                   devices[device_id].setTemperature = tte;
-//                 } else {
-//                   this.log("TTE: no change");
-//                 }
-//             } catch(err) {
-//                       this.log ("Heatlink data corrupt");
-//                 }
-//             }
-//         });
-//     } else {
-//         this.log('Removed Heatlink '+ device_id +' (old settings)');
-//         module.exports.setUnavailable({id: device_id}, "No Heatlink found" );
-//         // Only clear interval when the unavailable device is the only device on this driver
-//         // This will prevent stopping the polling when a user has 1 device with old settings and 1 with new
-//         // In the event that a user has multiple devices with old settings this function will get called every 10 seconds but that should not be a problem
-//         if(Object.keys(devices).length === 1) {
-//             clearInterval(refreshIntervalId);
-//         }
-//     }
-//  }
-//
-//  function startPolling() {
-// 	   if (refreshIntervalId) {
-// 		     clearInterval(refreshIntervalId);
-// 	   }
-//      refreshIntervalId = setInterval(function () {
-//          this.log("--Start Heatlink Polling-- ");
-//          Object.keys(devices).forEach(function (device_id) {
-//              getStatus(device_id);
-//          });
-//      }, 1000 * 10);
-//  }

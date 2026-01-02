@@ -60,6 +60,13 @@
     <pre id="ws-debug" class="debug-box">Loading…</pre>
   </div>
 
+  <!-- Legacy Fetch debug -->
+  <div class="debug-container" id="legacyfetch-container">
+    <h2>Old Homewizard Legacy Fetch debug</h2>
+    <pre id="legacyfetch-debug" class="debug-box">Loading…</pre>
+  </div>
+
+
 
   <!-- Baseload debug (conditioneel zichtbaar) -->
   <div class="debug-container" id="baseload-container">
@@ -146,6 +153,19 @@
             wsEl.textContent = JSON.stringify(wsDbg.slice(-20), null, 2);
           }
 
+          /*
+          * LEGACY FETCH DEBUG
+          */
+          const legacyEl = document.getElementById('legacyfetch-debug');
+          const legacyDbg = settings['debug_legacy_fetch'];
+
+          if (!legacyDbg || legacyDbg.length === 0) {
+            legacyEl.textContent = 'No legacy fetch errors logged.';
+          } else {
+            legacyEl.textContent = JSON.stringify(legacyDbg.slice(-50), null, 2);
+          }
+
+
 
         /*
          * CONDITIONEEL: Baseload debug tonen/verbergen
@@ -196,7 +216,8 @@
             baseload_state: settings['baseload_state'], // keep baseload
             debug_discovery: null,
             debug_fetch: null,
-            debug_ws: null
+            debug_ws: null,
+            debug_legacy_fetch: null
           };
 
           Homey.set(newSettings, (err) => {

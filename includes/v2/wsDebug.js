@@ -14,7 +14,15 @@ module.exports = {
     }
 
     try {
-      const dbg = HomeyRef.settings.get('debug_ws') || [];
+      const stored = HomeyRef.settings.get('debug_ws');
+
+      // Reset buffer when settings were cleared
+      let dbg;
+      if (stored === null) {
+        dbg = [];
+      } else {
+        dbg = stored || [];
+      }
 
       dbg.push({
         ts: new Date().toISOString(),
