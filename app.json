@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.26",
+  "version": "3.9.27",
   "platforms": [
     "local"
   ],
@@ -4428,15 +4428,15 @@
         {
           "id": "1",
           "title": {
-            "nl": "Slapen",
-            "en": "Sleep"
+            "nl": "Weg",
+            "en": "Away"
           }
         },
         {
           "id": "2",
           "title": {
-            "nl": "Weg",
-            "en": "Away"
+            "nl": "Slapen",
+            "en": "Sleep"
           }
         },
         {

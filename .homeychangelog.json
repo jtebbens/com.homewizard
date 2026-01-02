@@ -814,5 +814,8 @@
   },
   "3.9.26": {
     "en": "Bugfix: Homewizard.poll (legacy unit)"
+  },
+  "3.9.27": {
+    "en": "Homewizard Preset addition, Heatlink control improvement, Gasmeter fix (external source)"
   }
 }
