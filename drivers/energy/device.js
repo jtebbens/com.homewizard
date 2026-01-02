@@ -347,6 +347,36 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       const tasks = [];
 
+      // ------------------------------
+      // GAS SOURCE SELECTION (FIX)
+      // ------------------------------
+      let gasValue = null;
+      let gasTimestamp = null;
+
+      // 1. Prefer external gas meters with real timestamps
+      if (Array.isArray(data.external)) {
+        const gasMeters = data.external
+          .filter(e => e.type === 'gas_meter' && e.value != null && e.timestamp != null);
+
+        if (gasMeters.length > 0) {
+          // pick the most recent gas meter
+          gasMeters.sort((a, b) => b.timestamp - a.timestamp);
+          gasValue = gasMeters[0].value;
+          gasTimestamp = gasMeters[0].timestamp;
+        }
+      }
+
+      // 2. Fallback to administrative gas meter
+      if (gasValue == null && data.total_gas_m3 != null) {
+        gasValue = data.total_gas_m3;
+        gasTimestamp = data.gas_timestamp;
+      }
+
+      // Expose unified gas fields for the rest of the driver
+      data._gasValue = gasValue;
+      data._gasTimestamp = gasTimestamp;
+
+
       // Autodetect 3 phases (only promote, never demote)
       const hasRealL2 = typeof data.active_current_l2_a === 'number' && data.active_current_l2_a !== 0;
       const hasRealL3 = typeof data.active_current_l3_a === 'number' && data.active_current_l3_a !== 0;
@@ -377,9 +407,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         if (data.total_power_import_kwh !== undefined) {
           tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
         }
-        if (settings.show_gas && data.total_gas_m3 !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error));
+        if (settings.show_gas && data._gasValue !== undefined) {
+          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
         }
+
       } else {
         const meterStartDay = await this.getStoreValue('meter_start_day');
         let gasmeterStartDay = null;
@@ -391,9 +422,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         if (!meterStartDay && data.total_power_import_kwh !== undefined) {
           tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
         }
-        if (settings.show_gas && !gasmeterStartDay && data.total_gas_m3 !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data.total_gas_m3).catch(this.error));
+        if (settings.show_gas && !gasmeterStartDay && data._gasValue !== undefined) {
+          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
         }
+
       }
 
       // Gas 5‑minute delta
@@ -401,22 +433,22 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
 
         if (prevTs == null) {
-          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error));
-        } else if (data.total_gas_m3 != null && prevTs !== data.gas_timestamp) {
+          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
+        } else if (data._gasValue != null && prevTs !== data._gasTimestamp) {
           const prevReading = await this.getStoreValue('gasmeter_previous_reading');
           if (prevReading != null) {
-            const gasDelta = data.total_gas_m3 - prevReading;
+            const gasDelta = data._gasValue - prevReading;
             if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
               tasks.push(updateCapability(this, 'measure_gas', gasDelta));
             }
           }
-          tasks.push(this.setStoreValue('gasmeter_previous_reading', data.total_gas_m3).catch(this.error));
-          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data.gas_timestamp).catch(this.error));
+          tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
+          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
         }
+
       }
 
-      // Daily totals when gas is enabled
-      if (settings.show_gas) {
+      // Daily totals electra
         const meterStart = await this.getStoreValue('meter_start_day');
         if (meterStart != null && data.total_power_import_kwh != null) {
           const dailyImport = data.total_power_import_kwh - meterStart;
@@ -425,14 +457,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
           }
         }
 
-        const gasStart = await this.getStoreValue('gasmeter_start_day');
-        if (data.total_gas_m3 != null && gasStart != null) {
-          const gasDiff = data.total_gas_m3 - gasStart;
-          if (this._hasChanged('meter_gas.daily', gasDiff)) {
-            tasks.push(updateCapability(this, 'meter_gas.daily', gasDiff));
+        if (settings.show_gas) {
+
+          // Daily totals when gas is enabled
+          const gasStart = await this.getStoreValue('gasmeter_start_day');
+          if (data._gasValue != null && gasStart != null) {
+            const gasDiff = data._gasValue - gasStart;
+            if (this._hasChanged('meter_gas.daily', gasDiff)) {
+              tasks.push(updateCapability(this, 'meter_gas.daily', gasDiff));
+            }
           }
         }
-      }
+
 
       // Core power + baseload
       if (this._hasChanged('measure_power', data.active_power_w)) {
@@ -474,9 +510,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
 
       // Gas meter if enabled
-      if (settings.show_gas && data.total_gas_m3 != null && this._hasChanged('meter_gas', data.total_gas_m3)) {
-        tasks.push(updateCapability(this, 'meter_gas', data.total_gas_m3));
+      if (settings.show_gas && data._gasValue != null && this._hasChanged('meter_gas', data._gasValue)) {
+        tasks.push(updateCapability(this, 'meter_gas', data._gasValue));
       }
+
 
       // Export (produced)
       if (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1) {

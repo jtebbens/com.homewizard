@@ -17,6 +17,7 @@ v3.9.27
 * Homewizard Legacy fetch debug added to same section under Application settings
 * Heatlink Legacy improvement
 * Homewizard Legacy Preset improvement (UI picker in Homey app)
+* Using external gas meter (timestamp X) instead of administrative meter
 
 v3.9.20
 

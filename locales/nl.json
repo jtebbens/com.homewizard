@@ -16,7 +16,8 @@
     "support": {
       "link": "https://community.homey.app/t/app-pro-nl-homewizard/71211",
       "label": "🛠️ Support pagina"
-    }
+    },
+    "tab_baseload": "Sluipverbruik"
   },
   "pair": {
     "authorize_title": "Authorizeren",

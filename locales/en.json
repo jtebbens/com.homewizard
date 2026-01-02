@@ -16,7 +16,8 @@
     "support": {
       "link": "https://community.homey.app/t/app-pro-homewizard/19267",
       "label": "🛠️ Support Page"
-    }
+    },
+    "tab_baseload": "Baseload"
   },
   "pair": {
     "authorize_title": "Authorize",
