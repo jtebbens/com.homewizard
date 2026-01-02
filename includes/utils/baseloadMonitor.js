@@ -1,137 +1,67 @@
 'use strict';
 
-/**
- * BaseloadMonitor
- *
- * Purpose:
- * - Collect P1 power samples during a defined night window
- * - Detect invalid nights (EV charging, battery activity, PV startup, oscillation, etc.)
- * - Compute a stable household baseload using only valid nights
- * - Maintain a rolling history
- * - Persist state in Homey settings
- *
- * Design principles:
- * - No hardware assumptions
- * - Pattern-based detection only
- * - Driver-agnostic
- * - Restart-safe and deletion-safe
- * - Deterministic behaviour
- */
 class BaseloadMonitor {
   constructor(homey) {
     this.homey = homey;
 
-    //
-    // Configuration
-    //
     this.nightStartHour = 1;
     this.nightEndHour = 5;
     this.maxNights = 30;
-    this.sampleIntervalMs = 10000;
 
-    //
-    // Detection thresholds
-    //
     this.highPlateauThreshold = 500;
-    this.highPlateauMinDuration = 10 * 60 * 1000;
-
-    this.negativeMinDuration = 5 * 60 * 1000;
-
+    this.highPlateauMinDuration = 600000;
+    this.negativeMinDuration = 300000;
     this.nearZeroMargin = 50;
-    this.nearZeroMinDuration = 20 * 60 * 1000;
-
-    this.oscillationWindow = 5 * 60 * 1000;
+    this.nearZeroMinDuration = 1200000;
+    this.oscillationWindow = 300000;
     this.oscillationAmplitude = 300;
-
     this.pvStartupEarliest = 4;
     this.pvStartupLatest = 6;
 
-    //
-    // Fridge/freezer cycle detection (annotation only, never invalidates)
-    //
-    this.fridgeMinPower = 50;                // W
-    this.fridgeMaxPower = 300;               // W
-    this.fridgeMinDuration = 30 * 60 * 1000; // 30 min
-    this.fridgeMaxDuration = 120 * 60 * 1000;// 120 min
+    this.fridgeMinPower = 50;
+    this.fridgeMaxPower = 300;
+    this.fridgeMinDuration = 1800000;
+    this.fridgeMaxDuration = 7200000;
 
-    //
-    // Runtime state
-    //
     this.devices = new Set();
     this.master = null;
     this.enabled = false;
 
     this.currentNightSamples = [];
     this.nightInvalid = false;
-    this.flags = {
-      sawHighPlateau: false,
-      sawNegativeLong: false,
-      sawNearZeroLong: false,
-      sawOscillation: false,
-      sawPVStartup: false,
-    };
-
+    this.flags = {};
     this.nightHistory = [];
     this.currentBaseload = null;
 
     this._nightTimer = null;
     this._nightEndTimer = null;
 
-    // Per-device notification preferences
     this.deviceNotificationPrefs = new Map();
+    this.defaultNotificationsEnabled = false;
+    this.invalidNightCounter = 0;
 
-    // Load persisted state
     this._loadState();
   }
 
-  /**
-   * Log helper with local + UTC timestamps
-   */
-  _logTime(prefix) {
-    const now = new Date(); // UTC
-    const utc = now.toISOString();
-    const tz = this.homey.clock.getTimezone();
-    const local = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-
-    this.homey.log(
-      `${prefix} | Local: ${local.toISOString()} | UTC: ${utc} | TZ: ${tz}`,
-    );
-  }
-
-  //
-  // Device registration
-  //
   registerP1Device(device) {
     this.devices.add(device);
-    if (!this.enabled) {
-      this.start();
-    }
+    if (!this.enabled) this.start();
   }
 
   unregisterP1Device(device) {
     this.devices.delete(device);
-    if (this.master === device) {
-      this.master = null;
-    }
-    if (this.devices.size === 0) {
-      this.stop();
-    }
+    if (this.master === device) this.master = null;
+    if (this.devices.size === 0) this.stop();
   }
 
   trySetMaster(device) {
-    if (!this.master) {
-      this.master = device;
-    }
+    if (!this.master) this.master = device;
   }
 
   updatePowerFromDevice(device, power) {
-    if (device !== this.master) return;
-    this.updatePower(power);
+    if (device === this.master) this.updatePower(power);
   }
 
-  //
-  // Start/stop lifecycle
-  //
   start() {
     if (this.enabled) return;
     this.enabled = true;
@@ -144,103 +74,78 @@ class BaseloadMonitor {
     this._resetNightState();
   }
 
-  //
-  // Power ingestion
-  //
   updatePower(power) {
-    if (!this.enabled) return;
-    if (typeof power !== 'number' || Number.isNaN(power)) return;
-
+    if (!this.enabled || typeof power !== 'number') return;
     const now = new Date();
     if (!this._isInNightWindow(now)) return;
-
     this._processNightSample(now, power);
   }
 
-  //
-  // Night scheduling
-  //
+  _isInNightWindow(d) {
+    const h = d.getHours();
+    return h >= this.nightStartHour && h < this.nightEndHour;
+  }
+
+  _isWithinCurrentNightWindow(now = new Date()) {
+    const s = new Date(now), e = new Date(now);
+    s.setHours(this.nightStartHour,0,0,0);
+    e.setHours(this.nightEndHour,0,0,0);
+    return now >= s && now < e;
+  }
+
   _scheduleNightWindow() {
     this._clearNightTimers();
-
     const now = new Date();
-    const nextStart = new Date(now);
-    nextStart.setHours(this.nightStartHour, 0, 0, 0);
+    if (this._isWithinCurrentNightWindow(now)) return this._onNightStartFromRecovery(now);
+    const next = new Date(now);
+    next.setHours(this.nightStartHour,0,0,0);
+    if (next <= now) next.setDate(next.getDate()+1);
+    this._nightTimer = this.homey.setTimeout(()=>this._onNightStart(), next-now);
+  }
 
-    // If the start time has already passed today, schedule for tomorrow
-    if (nextStart <= now) {
-      nextStart.setDate(nextStart.getDate() + 1);
-    }
-
-    const ms = nextStart - now;
-    this._nightTimer = this.homey.setTimeout(() => {
-      this._onNightStart();
-    }, ms);
+  _onNightStartFromRecovery(now) {
+    if (!this.enabled) return this._scheduleNightWindow();
+    this._resetNightState();
+    const end = new Date(now);
+    end.setHours(this.nightEndHour,0,0,0);
+    this._nightEndTimer = this.homey.setTimeout(()=>this._onNightEnd(), Math.max(0,end-now));
   }
 
   _clearNightTimers() {
-    if (this._nightTimer) {
-      this.homey.clearTimeout(this._nightTimer);
-      this._nightTimer = null;
-    }
-    if (this._nightEndTimer) {
-      this.homey.clearTimeout(this._nightEndTimer);
-      this._nightEndTimer = null;
-    }
+    if (this._nightTimer) this.homey.clearTimeout(this._nightTimer);
+    if (this._nightEndTimer) this.homey.clearTimeout(this._nightEndTimer);
+    this._nightTimer = this._nightEndTimer = null;
   }
 
   _onNightStart() {
-    if (!this.enabled) {
-      this._scheduleNightWindow();
-      return;
-    }
-
+    if (!this.enabled) return this._scheduleNightWindow();
     this._resetNightState();
-
-    const durationMs =
-      (this.nightEndHour - this.nightStartHour) * 60 * 60 * 1000;
-
-    this._nightEndTimer = this.homey.setTimeout(() => {
-      this._onNightEnd();
-    }, durationMs);
+    const dur = (this.nightEndHour - this.nightStartHour)*3600000;
+    this._nightEndTimer = this.homey.setTimeout(()=>this._onNightEnd(), dur);
   }
 
   _onNightEnd() {
     this.homey.clearTimeout(this._nightEndTimer);
     this._nightEndTimer = null;
-
-    if (!this.enabled) {
-      this._scheduleNightWindow();
-      return;
-    }
-
+    if (!this.enabled) return this._scheduleNightWindow();
     this._finalizeNight();
     this._scheduleNightWindow();
   }
 
-  //
-  // Night state
-  //
   _resetNightState() {
     this.currentNightSamples = [];
     this.nightInvalid = false;
     this.flags = {
-      sawHighPlateau: false,
-      sawNegativeLong: false,
-      sawNearZeroLong: false,
-      sawOscillation: false,
-      sawPVStartup: false,
+      sawHighPlateau:false,
+      sawNegativeLong:false,
+      sawNearZeroLong:false,
+      sawOscillation:false,
+      sawPVStartup:false,
     };
   }
 
-  _isInNightWindow(date) {
-    const h = date.getHours();
-    return h >= this.nightStartHour && h < this.nightEndHour;
-  }
-
-  _processNightSample(ts, power) {
-    this.currentNightSamples.push({ ts, power });
-
+  _processNightSample(ts,power) {
+    this.currentNightSamples.push({ts,power});
     this._detectHighPlateau();
     this._detectNegativeLong();
     this._detectNearZeroLong();
@@ -248,448 +153,255 @@ class BaseloadMonitor {
     this._detectPVStartup();
   }
 
-  //
-  // Invalid-night detectors
-  //
   _detectHighPlateau() {
-    if (this.currentNightSamples.length < 2) return;
-
-    const avg = this._average(this.currentNightSamples.map(s => s.power));
-    const baseline = this.currentBaseload || 100;
-
-    if (avg > baseline + this.highPlateauThreshold) {
-      const duration = this._durationAboveThreshold(
-        baseline + this.highPlateauThreshold,
-      );
-      if (duration >= this.highPlateauMinDuration) {
-        this.flags.sawHighPlateau = true;
-        this.nightInvalid = true;
-      }
+    if (this.currentNightSamples.length<2) return;
+    const avg = this._avg(this.currentNightSamples.map(s=>s.power));
+    const base = this.currentBaseload||100;
+    if (avg>base+this.highPlateauThreshold &&
+        this._durAbove(base+this.highPlateauThreshold)>=this.highPlateauMinDuration) {
+      this.flags.sawHighPlateau=true; this.nightInvalid=true;
     }
   }
 
   _detectNegativeLong() {
-    const duration = this._durationBelowThreshold(0);
-    if (duration >= this.negativeMinDuration) {
-      this.flags.sawNegativeLong = true;
-      this.nightInvalid = true;
+    if (this._durBelow(0)>=this.negativeMinDuration) {
+      this.flags.sawNegativeLong=true; this.nightInvalid=true;
     }
   }
 
   _detectNearZeroLong() {
-    const duration = this._durationAbsBelow(this.nearZeroMargin);
-    if (duration >= this.nearZeroMinDuration) {
-      this.flags.sawNearZeroLong = true;
-      this.nightInvalid = true;
+    if (this._durAbsBelow(this.nearZeroMargin)>=this.nearZeroMinDuration) {
+      this.flags.sawNearZeroLong=true; this.nightInvalid=true;
     }
   }
 
   _detectOscillation() {
-    const windowSamples = this._samplesInLast(this.oscillationWindow);
-    if (windowSamples.length < 4) return;
-
-    const powers = windowSamples.map(s => s.power);
-    const max = Math.max(...powers);
-    const min = Math.min(...powers);
-
-    // Important: a fridge/freezer plateau (~100 W) is NOT oscillation.
-    if (max - min >= this.oscillationAmplitude) {
-      this.flags.sawOscillation = true;
-      this.nightInvalid = true;
+    const w = this._lastSamples(this.oscillationWindow);
+    if (w.length<4) return;
+    const p = w.map(s=>s.power);
+    if (Math.max(...p)-Math.min(...p)>=this.oscillationAmplitude) {
+      this.flags.sawOscillation=true; this.nightInvalid=true;
     }
   }
 
   _detectPVStartup() {
-    const last = this.currentNightSamples[this.currentNightSamples.length - 1];
+    const last = this.currentNightSamples.at(-1);
     if (!last) return;
-
-    const h = new Date().getHours();
-    if (h < this.pvStartupEarliest || h > this.pvStartupLatest) return;
-
-    if (last.power < 0) {
-      this.flags.sawPVStartup = true;
-      this.nightInvalid = true;
+    const h = last.ts.getHours();
+    if (h>=this.pvStartupEarliest && h<=this.pvStartupLatest && last.power<0) {
+      this.flags.sawPVStartup=true; this.nightInvalid=true;
     }
   }
 
-  //
-  // Fridge/freezer cycle detection (annotation only)
-  //
   _detectFridgeCycles(samples) {
-    if (!Array.isArray(samples) || samples.length < 2) return 0;
-
-    const minP = this.fridgeMinPower;
-    const maxP = this.fridgeMaxPower;
-    const minDur = this.fridgeMinDuration;
-    const maxDur = this.fridgeMaxDuration;
-
-    let inCycle = false;
-    let startTs = null;
-    let lastTs = null;
-    let count = 0;
-
-    for (let i = 0; i < samples.length; i++) {
-      const s = samples[i];
-      const p = s.power;
-      const ts = s.ts;
-
-      const withinBand = p >= minP && p <= maxP;
-
-      if (!inCycle && withinBand) {
-        inCycle = true;
-        startTs = ts;
-      } else if (inCycle && !withinBand) {
-        const duration = ts - startTs;
-        if (duration >= minDur && duration <= maxDur) {
-          count++;
-        }
-        inCycle = false;
-        startTs = null;
+    let c=0,inC=false,start=null,last=null;
+    for (const s of samples) {
+      const w = s.power>=this.fridgeMinPower && s.power<=this.fridgeMaxPower;
+      if (!inC && w) {inC=true; start=s.ts;}
+      else if (inC && !w) {
+        const d=s.ts-start;
+        if (d>=this.fridgeMinDuration && d<=this.fridgeMaxDuration) c++;
+        inC=false; start=null;
       }
-
-      lastTs = ts;
+      last=s.ts;
     }
-
-    // Close open cycle at end of night
-    if (inCycle && startTs !== null && lastTs !== null) {
-      const duration = lastTs - startTs;
-      if (duration >= minDur && duration <= maxDur) {
-        count++;
-      }
-    }
-
-    if (count > 0) {
-      this.homey.log(
-        `BaseloadMonitor: detected ${count} fridge/freezer-like cycle(s) this night`,
-      );
-    }
-
-    return count;
+    if (inC && start && last-start>=this.fridgeMinDuration && last-start<=this.fridgeMaxDuration) c++;
+    return c;
   }
 
-  //
-  // Fallback baseload computation
-  //
-  _computeFallbackBaseload() {
-    const recentSamples = [];
-    for (const night of this.nightHistory.slice(-7)) {
-      if (Array.isArray(night.samples)) {
-        recentSamples.push(...night.samples);
-      }
-    }
-
-    const powers = recentSamples
-      .map(s => s.power)
-      .filter(p => typeof p === 'number');
-
-    if (!powers.length) return null;
-
-    const sorted = powers.slice().sort((a, b) => a - b);
-    const takeCount = Math.max(3, Math.floor(sorted.length * 0.1));
-    const take = sorted.slice(0, takeCount);
-
-    return this._average(take);
-  }
-
-  //
-  // Night finalization
-  //
   _finalizeNight() {
-    const dateKey = new Date().toISOString().slice(0, 10);
+    const dateKey = new Date().toISOString().slice(0,10);
+    const cycles = this._detectFridgeCycles(this.currentNightSamples);
 
-    // Detect fridge cycles (annotation only)
-    const fridgeCycleCount = this._detectFridgeCycles(this.currentNightSamples);
-
-    // No samples
-    if (this.currentNightSamples.length === 0) {
-      this._pushHistory(dateKey, null, true, {
-        fridgeCycles: fridgeCycleCount,
-      });
+    if (this.currentNightSamples.length===0) {
+      this._push(dateKey,null,true,{fridgeCycles:cycles});
       this._notify('night_no_samples');
       return;
     }
 
-    //
-    // Reason label mapping
-    //
-    const reasonLabels = {
-      sawHighPlateau: {
-        nl: 'hoog verbruik gedurende langere tijd',
-        en: 'sustained high consumption',
-      },
-      sawNegativeLong: {
-        nl: 'negatief vermogen (accu ontlading)',
-        en: 'negative power (battery discharge)',
-      },
-      sawNearZeroLong: {
-        nl: 'balanceren rond 0 watt (accu of load balancer)',
-        en: 'near-zero balancing (battery or load balancer)',
-      },
-      sawOscillation: {
-        nl: 'sterke fluctuaties in verbruik',
-        en: 'strong consumption oscillation',
-      },
-      sawPVStartup: {
-        nl: 'zonsopkomst / PV opstart',
-        en: 'PV startup (sunrise)',
-      },
+    const labels = {
+      sawHighPlateau:{nl:'hoog verbruik',en:'high consumption'},
+      sawNegativeLong:{nl:'negatief vermogen',en:'negative power'},
+      sawNearZeroLong:{nl:'balanceren rond 0W',en:'near-zero balancing'},
+      sawOscillation:{nl:'fluctuaties',en:'oscillation'},
+      sawPVStartup:{nl:'PV opstart',en:'PV startup'},
     };
+    const lang = this._lang();
 
-    const lang = this._getLang();
-
-    //
-    // Invalid night
-    //
     if (this.nightInvalid) {
-      const reasons = Object.entries(this.flags)
-        .filter(([, v]) => v)
-        .map(([k]) => reasonLabels[k]?.[lang] || reasonLabels[k]?.en || k)
-        .join(', ') || (lang === 'nl' ? 'onbekend' : 'unknown');
+      this.invalidNightCounter++;
+      const reasons = Object.entries(this.flags).filter(([,v])=>v)
+        .map(([k])=>labels[k][lang]).join(', ') || (lang==='nl'?'onbekend':'unknown');
 
-      this._notify('night_invalid', { reasons });
-
-      this._pushHistory(dateKey, null, true, {
-        fridgeCycles: fridgeCycleCount,
-      });
-
-      // Fallback if no valid nights exist
-      const recentValid = this.nightHistory
-        .slice(-7)
-        .filter(n => !n.invalid && typeof n.avg === 'number');
-
-      if (recentValid.length === 0) {
-        const fallback = this._computeFallbackBaseload();
-        if (fallback !== null) {
-          this.currentBaseload = fallback;
-          this._saveState();
-          this._notify('baseload_fallback', {
-            fallback: fallback.toFixed(0),
-          });
-        }
+      if (this.invalidNightCounter>=3) {
+        this._notify('night_invalid',{reasons});
+        this.invalidNightCounter=0;
       }
 
+      this._push(dateKey,null,true,{fridgeCycles:cycles});
+
+      const valid = this.nightHistory.slice(-7).filter(n=>!n.invalid && typeof n.avg==='number');
+      if (!valid.length) {
+        const fb = this._fallback();
+        if (fb!==null) {
+          this.currentBaseload=fb;
+          this._save();
+          this._notify('baseload_fallback',{fallback:fb.toFixed(0)});
+        }
+      }
       return;
     }
 
-    //
-    // Valid night
-    //
-    const recentValid = this.nightHistory
-      .slice(-7)
-      .filter(n => !n.invalid && typeof n.avg === 'number');
+    this.invalidNightCounter=0;
 
-    if (recentValid.length === 0) {
-      const fallback = this._computeFallbackBaseload();
-      if (fallback !== null) {
-        this.currentBaseload = fallback;
-        this._saveState();
-        this._notify('baseload_fallback', {
-          fallback: fallback.toFixed(0),
-        });
-      }
-    }
-
-    const avg = this._average(this.currentNightSamples.map(s => s.power));
-
-    this._pushHistory(dateKey, avg, false, {
-      fridgeCycles: fridgeCycleCount,
-    });
-
-    const oldBaseload = this.currentBaseload;
-    this.currentBaseload = this._computeBaseloadFromHistory();
-    this._saveState();
-
-    // Notify on significant change
-    if (oldBaseload && this.currentBaseload) {
-      const diff = Math.abs(this.currentBaseload - oldBaseload);
-      const pct = (diff / oldBaseload) * 100;
-
-      if (diff > 50 && pct > 20) {
-        this._notify('baseload_changed', {
-          current: this.currentBaseload.toFixed(0),
-          previous: oldBaseload.toFixed(0),
-        });
-      }
-    }
-  }
-
-  //
-  // Language helper
-  //
-  _getLang() {
-    try {
-      const lang = this.homey.i18n.getLanguage();
-      return lang && lang.toLowerCase().startsWith('nl') ? 'nl' : 'en';
-    } catch {
-      return 'en';
-    }
-  }
-
-  //
-  // History
-  //
-  _pushHistory(date, avg, invalid, meta = {}) {
-    this.nightHistory.push({
-      date,
-      avg,
-      invalid,
-      samples: this.currentNightSamples.slice(),
-      ...meta,
-    });
-
-    if (this.nightHistory.length > this.maxNights) {
-      this.nightHistory.splice(0, this.nightHistory.length - this.maxNights);
-    }
-  }
-
-  //
-  // Baseload computation
-  //
-  _computeBaseloadFromHistory() {
-    const valid = this.nightHistory
-      .filter(n => !n.invalid && typeof n.avg === 'number')
-      .map(n => n.avg);
-
+    const valid = this.nightHistory.slice(-7).filter(n=>!n.invalid && typeof n.avg==='number');
     if (!valid.length) {
-      this._notify('baseload_unavailable');
-      return this.currentBaseload || null;
+      const fb = this._fallback();
+      if (fb!==null) {
+        this.currentBaseload=fb;
+        this._save();
+        this._notify('baseload_fallback',{fallback:fb.toFixed(0)});
+      }
     }
 
-    const sorted = valid.slice().sort((a, b) => a - b);
-    const take = sorted.slice(0, Math.min(3, sorted.length));
+    const avg = this._avg(this.currentNightSamples.map(s=>s.power));
+    this._push(dateKey,avg,false,{fridgeCycles:cycles});
 
-    return this._average(take);
-  }
+    const old = this.currentBaseload;
+    this.currentBaseload = this._compute();
+    this._save();
 
-  //
-  // Helpers
-  //
-  _average(list) {
-    if (!list.length) return null;
-    return list.reduce((a, b) => a + b, 0) / list.length;
-  }
-
-  _durationAboveThreshold(threshold) {
-    let ms = 0;
-    for (let i = 1; i < this.currentNightSamples.length; i++) {
-      const prev = this.currentNightSamples[i - 1];
-      const cur = this.currentNightSamples[i];
-      if (prev.power > threshold && cur.power > threshold) {
-        ms += cur.ts - prev.ts;
+    if (old && this.currentBaseload) {
+      const diff = Math.abs(this.currentBaseload-old);
+      const pct = diff/old*100;
+      if (diff>50 && pct>20) {
+        this._notify('baseload_changed',{
+          current:this.currentBaseload.toFixed(0),
+          previous:old.toFixed(0)
+        });
       }
+    }
+  }
+
+  _lang() {
+    try {return this.homey.i18n.getLanguage().startsWith('nl')?'nl':'en';}
+    catch{return'en';}
+  }
+
+  _push(date,avg,invalid,meta={}) {
+    this.nightHistory.push({date,avg,invalid,samples:this.currentNightSamples.slice(),...meta});
+    if (this.nightHistory.length>this.maxNights)
+      this.nightHistory.splice(0,this.nightHistory.length-this.maxNights);
+  }
+
+  _compute() {
+    const v = this.nightHistory.filter(n=>!n.invalid && typeof n.avg==='number').map(n=>n.avg);
+    if (!v.length) {this._notify('baseload_unavailable'); return this.currentBaseload||null;}
+    const s = v.slice().sort((a,b)=>a-b);
+    return this._avg(s.slice(0,Math.min(3,s.length)));
+  }
+
+  _avg(a) {return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;}
+
+  _durAbove(t) {
+    let ms=0;
+    for (let i=1;i<this.currentNightSamples.length;i++) {
+      const p=this.currentNightSamples[i-1],c=this.currentNightSamples[i];
+      if (p.power>t && c.power>t) ms+=c.ts-p.ts;
     }
     return ms;
   }
 
-  _durationBelowThreshold(threshold) {
-    let ms = 0;
-    for (let i = 1; i < this.currentNightSamples.length; i++) {
-      const prev = this.currentNightSamples[i - 1];
-      const cur = this.currentNightSamples[i];
-      if (prev.power < threshold && cur.power < threshold) {
-        ms += cur.ts - prev.ts;
-      }
+  _durBelow(t) {
+    let ms=0;
+    for (let i=1;i<this.currentNightSamples.length;i++) {
+      const p=this.currentNightSamples[i-1],c=this.currentNightSamples[i];
+      if (p.power<t && c.power<t) ms+=c.ts-p.ts;
     }
     return ms;
   }
 
-  _durationAbsBelow(margin) {
-    let ms = 0;
-    for (let i = 1; i < this.currentNightSamples.length; i++) {
-      const prev = this.currentNightSamples[i - 1];
-      const cur = this.currentNightSamples[i];
-      if (Math.abs(prev.power) < margin && Math.abs(cur.power) < margin) {
-        ms += cur.ts - prev.ts;
-      }
+  _durAbsBelow(m) {
+    let ms=0;
+    for (let i=1;i<this.currentNightSamples.length;i++) {
+      const p=this.currentNightSamples[i-1],c=this.currentNightSamples[i];
+      if (Math.abs(p.power)<m && Math.abs(c.power)<m) ms+=c.ts-p.ts;
     }
     return ms;
   }
 
-  _samplesInLast(msWindow) {
+  _lastSamples(ms) {
     if (!this.currentNightSamples.length) return [];
-    const lastTs =
-      this.currentNightSamples[this.currentNightSamples.length - 1].ts;
-    return this.currentNightSamples.filter(s => lastTs - s.ts <= msWindow);
+    const last = this.currentNightSamples.at(-1).ts;
+    return this.currentNightSamples.filter(s=>last-s.ts<=ms);
   }
 
-  //
-  // Persistence
-  //
-  _saveState() {
-    this.homey.settings.set('baseload_state', {
-      nightHistory: this.nightHistory,
-      currentBaseload: this.currentBaseload,
-      deviceNotificationPrefs: Array.from(
-        this.deviceNotificationPrefs.entries(),
-      ),
+  _fallback() {
+    const r=[];
+    for (const n of this.nightHistory.slice(-7)) if (Array.isArray(n.samples)) r.push(...n.samples);
+    const p=r.map(s=>s.power).filter(n=>typeof n==='number');
+    if (!p.length) return null;
+    const s=p.slice().sort((a,b)=>a-b);
+    const take=Math.max(3,Math.floor(s.length*0.1));
+    return this._avg(s.slice(0,take));
+  }
+
+  _save() {
+    this.homey.settings.set('baseload_state',{
+      nightHistory:this.nightHistory,
+      currentBaseload:this.currentBaseload,
+      deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
+      invalidNightCounter:this.invalidNightCounter
     });
   }
 
   _loadState() {
-    const state = this.homey.settings.get('baseload_state');
-    if (!state) return;
-
-    if (Array.isArray(state.nightHistory)) {
-      this.nightHistory = state.nightHistory;
-    }
-    if (typeof state.currentBaseload === 'number') {
-      this.currentBaseload = state.currentBaseload;
-    }
-    if (Array.isArray(state.deviceNotificationPrefs)) {
-      this.deviceNotificationPrefs = new Map(state.deviceNotificationPrefs);
-    }
+    const s=this.homey.settings.get('baseload_state');
+    if (!s) return;
+    if (Array.isArray(s.nightHistory)) this.nightHistory=s.nightHistory;
+    if (typeof s.currentBaseload==='number') this.currentBaseload=s.currentBaseload;
+    if (Array.isArray(s.deviceNotificationPrefs)) this.deviceNotificationPrefs=new Map(s.deviceNotificationPrefs);
+    if (typeof s.invalidNightCounter==='number') this.invalidNightCounter=s.invalidNightCounter;
   }
 
-  //
-  // Notification preference setter
-  //
-  setNotificationsEnabledForDevice(device, enabled) {
-    this.deviceNotificationPrefs.set(device.getId(), enabled);
-    this._saveState();
+  setNotificationsEnabledForDevice(device,enabled) {
+    this.deviceNotificationPrefs.set(device.getId(),enabled);
+    this._save();
   }
 
-  //
-  // Notifications
-  //
-  async _notify(key, vars = {}) {
+  async _notify(key,vars={}) {
     if (!this.master) return;
-
-    const enabled = this.deviceNotificationPrefs.get(this.master.getId());
+    const pref=this.deviceNotificationPrefs.get(this.master.getId());
+    const enabled=(pref!==undefined)?pref:this.defaultNotificationsEnabled;
     if (!enabled) return;
 
-    const lang = this._getLang();
+    const lang=this._lang();
+    const msg={
+      night_invalid:{
+        nl:`Baseload niet bijgewerkt: nacht bevatte fluctuaties (${vars.reasons}).`,
+        en:`Baseload not updated: night contained fluctuations (${vars.reasons}).`
+      },
+      night_no_samples:{
+        nl:`Baseload niet bijgewerkt: geen gegevens ontvangen.`,
+        en:`Baseload not updated: no data received.`
+      },
+      baseload_changed:{
+        nl:`Baseload gewijzigd: ${vars.current} W (was ${vars.previous} W).`,
+        en:`Baseload changed: ${vars.current} W (was ${vars.previous} W).`
+      },
+      baseload_unavailable:{
+        nl:`Baseload niet beschikbaar: geen geldige nachten.`,
+        en:`Baseload unavailable: no valid nights.`
+      },
+      baseload_fallback:{
+        nl:`Baseload (fallback): ${vars.fallback} W.`,
+        en:`Fallback baseload: ${vars.fallback} W.`
+      }
+    }[key]?.[lang];
 
-    const messages = {
-      night_invalid: {
-        nl: `Sluipverbruik-nacht ongeldig: ${vars.reasons || 'onbekend'}`,
-        en: `Baseload night invalid: ${vars.reasons || 'unknown'}`,
-      },
-      night_no_samples: {
-        nl: 'Sluipverbruik-nacht ongeldig: geen samples ontvangen',
-        en: 'Baseload night invalid: no samples collected',
-      },
-      baseload_changed: {
-        nl: `Sluipverbruik gewijzigd: ${vars.current} W (was ${vars.previous} W)`,
-        en: `New baseload: ${vars.current} W (was ${vars.previous} W)`,
-      },
-      baseload_unavailable: {
-        nl: 'Sluipverbruik niet beschikbaar: geen geldige nachten in de afgelopen dagen',
-        en: 'Baseload unavailable: no valid nights in recent days',
-      },
-      baseload_fallback: {
-        nl: `Sluipverbruik (fallback): ${vars.fallback} W`,
-        en: `Fallback baseload: ${vars.fallback} W`,
-      },
-    };
-
-    const msg = messages[key]?.[lang];
     if (!msg) return;
-
-    try {
-      await this.homey.notifications.createNotification({ excerpt: msg });
-    } catch (err) {
-      this.homey.error('Notification failed:', err);
-    }
+    try {await this.homey.notifications.createNotification({excerpt:msg});}
+    catch(e){this.homey.error('Notification failed:',e);}
   }
 }
 

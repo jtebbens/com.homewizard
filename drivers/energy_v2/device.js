@@ -255,12 +255,13 @@ function normalizeBatteryMode(data) {
 
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
-  async onInit() {
+ async onInit() {
     wsDebug.init(this.homey);
     this.onPollInterval = null;
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
     this._lastFullUpdate = 0;
+    this._lastDiscoveryIP = null;
 
     this._cache = {
       external_last_payload: null,
@@ -1135,20 +1136,36 @@ async _handleBatteries(data) {
 
 
 async onDiscoveryAvailable(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
-  this.log(`🌐 Discovery available — IP set to: ${discoveryResult.address}`);
+  const newIP = discoveryResult.address;
+
+  // Eerste keer discovery → IP opslaan
+  if (!this._lastDiscoveryIP) {
+    this._lastDiscoveryIP = newIP;
+    this.url = `https://${newIP}`;
+    this.log(`🌐 Discovery: initial IP set to ${newIP}`);
+    await this.setSettings({ url: this.url }).catch(this.error);
+  }
+
+  // IP is NIET veranderd → niets doen
+  if (this._lastDiscoveryIP === newIP) {
+    this.log(`🌐 Discovery: IP unchanged (${newIP}) — ignoring`);
+    return;
+  }
+
+  // IP is WEL veranderd → update + restart
+  this._lastDiscoveryIP = newIP;
+  this.url = `https://${newIP}`;
+  this.log(`🌐 Discovery: IP changed → ${newIP}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
-  const settings = this.getSettings();
-
-  // Debounce reconnects to avoid hammering
+  // Debounce reconnect
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(async () => {
+
     if (this.pollingEnabled) {
-      this.log('🔁 Discovery: polling is active (runtime), skipping WebSocket reconnect');
+      this.log('🔁 Discovery: polling active — skipping WS reconnect');
       return;
     }
-
 
     // Preflight reachability check
     try {
@@ -1158,61 +1175,87 @@ async onDiscoveryAvailable(discoveryResult) {
       }, 3000);
 
       if (!res || typeof res.cloud_enabled === 'undefined') {
-        this.error(`❌ Discovery: device at ${this.url} is unreachable — skipping WebSocket`);
+        this.error(`❌ Discovery: device at ${this.url} unreachable — skipping WS`);
         return;
       }
 
-      this.log('✅ Discovery: device reachable — restarting WebSocket');
-      if (this.wsManager) {
-        this.wsManager.restartWebSocket();
-      }
+      this.log('🔁 Discovery: IP changed & reachable — restarting WebSocket');
+      this.wsManager?.restartWebSocket();
 
     } catch (err) {
-      this.error(`❌ Discovery: preflight check failed — ${err.message}`);
+      this.error(`❌ Discovery preflight failed — ${err.message}`);
     }
+
   }, 500);
 }
+
 
 
 
 
 async onDiscoveryAddressChanged(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
+  const newIP = discoveryResult.address;
+
+  // Alleen reageren als het IP echt veranderd is
+  if (this._lastDiscoveryIP === newIP) {
+    this.log(`🌐 AddressChanged: IP unchanged (${newIP}) — ignoring`);
+    return;
+  }
+
+  // IP is veranderd → opslaan + settings bijwerken
+  this._lastDiscoveryIP = newIP;
+  this.url = `https://${newIP}`;
   this.log(`🌐 Address changed — new URL: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
+  // Debounce reconnect
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
     if (!this.getSettings().use_polling) {
-      if (this.wsManager) {
-        this.wsManager.restartWebSocket();
-      }
+      this.log('🔁 Address change: restarting WebSocket');
+      this.wsManager?.restartWebSocket();
     } else {
-      this.log('🔁 Address change: polling is active, skipping WebSocket reconnect');
+      this.log('🔁 Address change: polling active — skipping WS reconnect');
     }
   }, 500);
 }
+
 
 async onDiscoveryLastSeenChanged(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
-  this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
-  await this.setSettings({ url: this.url }).catch(this.error);
+  const newIP = discoveryResult.address;
+
+  // Update IP only if changed
+  if (this._lastDiscoveryIP !== newIP) {
+    this._lastDiscoveryIP = newIP;
+    this.url = `https://${newIP}`;
+    this.log(`📡 Device seen again — IP updated: ${newIP}`);
+    await this.setSettings({ url: this.url }).catch(this.error);
+  } else {
+    this.log(`📡 Device seen again — IP unchanged (${newIP})`);
+  }
+
   await this.setAvailable();
 
-  const settings = this.getSettings();
-
+  // Debounce reconnect
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
-    if (!this.pollingEnabled) {
-      this.log('🔁 Reconnecting WebSocket due to last seen update...');
-      if (this.wsManager) {
-        this.wsManager.restartWebSocket();
-      }
-    } else {
-      this.log('🔁 Device seen again: polling is active, skipping WebSocket reconnect');
+
+    if (this.pollingEnabled) {
+      this.log('🔁 LastSeen: polling active — skipping WS reconnect');
+      return;
     }
+
+    // Only restart WS if it is NOT connected
+    if (!this.wsManager?.isConnected()) {
+      this.log('🔁 LastSeen: WS not connected → restarting WebSocket');
+      this.wsManager?.restartWebSocket();
+    } else {
+      this.log('📡 LastSeen: WS already connected — ignoring');
+    }
+
   }, 500);
 }
+
 
 
 

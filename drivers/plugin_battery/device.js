@@ -127,6 +127,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousStateOfCharge = null;
     this._prevTimeToFull = this.getCapabilityValue('time_to_full') ?? 0;
     this._prevTimeToEmpty = this.getCapabilityValue('time_to_empty') ?? 0;
+    this._lastDiscoveryIP = null;
 
 
 
@@ -259,8 +260,26 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
  * Updates stored URL and rebuilds WebSocket if needed.
  */
 async onDiscoveryAvailable(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
-  this.log(`🌐 Discovery available — IP set to: ${discoveryResult.address}`);
+  const newIP = discoveryResult.address;
+
+  // Eerste keer discovery → IP opslaan
+  if (!this._lastDiscoveryIP) {
+    this._lastDiscoveryIP = newIP;
+    this.url = `https://${newIP}`;
+    this.log(`🌐 Discovery: initial IP set to ${newIP}`);
+    await this.setSettings({ url: this.url }).catch(this.error);
+  }
+
+  // IP is NIET veranderd → niets doen
+  if (this._lastDiscoveryIP === newIP) {
+    this.log(`🌐 Discovery: IP unchanged (${newIP}) — ignoring`);
+    return;
+  }
+
+  // IP is WEL veranderd → update + rebuild
+  this._lastDiscoveryIP = newIP;
+  this.url = `https://${newIP}`;
+  this.log(`🌐 Discovery: IP changed → ${newIP}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
   const settings = this.getSettings();
@@ -269,7 +288,6 @@ async onDiscoveryAvailable(discoveryResult) {
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(async () => {
 
-    // Polling mode → skip WS rebuild
     if (settings.use_polling) {
       this.log('🔁 Discovery: polling active → skipping WebSocket rebuild');
       return;
@@ -287,9 +305,9 @@ async onDiscoveryAvailable(discoveryResult) {
         return;
       }
 
-      this.log('✅ Discovery: device reachable — rebuilding WebSocket');
+      this.log('🔁 Discovery: IP changed & reachable — rebuilding WebSocket');
 
-      // FULL REBUILD (never restart)
+      // FULL REBUILD
       if (this.wsManager) {
         this.wsManager.stop();
         this.wsManager = null;
@@ -324,10 +342,21 @@ async onDiscoveryAvailable(discoveryResult) {
  * Handle discovery address changes.
  */
 async onDiscoveryAddressChanged(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
+  const newIP = discoveryResult.address;
+
+  // Alleen reageren als het IP echt veranderd is
+  if (this._lastDiscoveryIP === newIP) {
+    this.log(`🌐 AddressChanged: IP unchanged (${newIP}) — ignoring`);
+    return;
+  }
+
+  // IP is veranderd → opslaan + settings bijwerken
+  this._lastDiscoveryIP = newIP;
+  this.url = `https://${newIP}`;
   this.log(`🌐 Address changed — new URL: ${this.url}`);
   await this.setSettings({ url: this.url }).catch(this.error);
 
+  // Debounce rebuild
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
 
@@ -338,6 +367,7 @@ async onDiscoveryAddressChanged(discoveryResult) {
 
     this.log('🔁 Address change: rebuilding WebSocket');
 
+    // FULL REBUILD
     if (this.wsManager) {
       this.wsManager.stop();
       this.wsManager = null;
@@ -352,8 +382,8 @@ async onDiscoveryAddressChanged(discoveryResult) {
       setAvailable: this.setAvailable.bind(this),
       getSetting: this.getSetting.bind(this),
       handleMeasurement: (data) => {
-          this.lastWsMeasurementAt = Date.now();
-          this._handleMeasurement(data);
+        this.lastWsMeasurementAt = Date.now();
+        this._handleMeasurement(data);
       },
       handleSystem: this._handleSystem.bind(this),
     });
@@ -364,48 +394,65 @@ async onDiscoveryAddressChanged(discoveryResult) {
 }
 
 
+
 /**
  * Handle "last seen" discovery update.
  */
 async onDiscoveryLastSeenChanged(discoveryResult) {
-  this.url = `https://${discoveryResult.address}`;
-  this.log(`📡 Device seen again — URL refreshed: ${this.url}`);
-  await this.setSettings({ url: this.url }).catch(this.error);
+  const newIP = discoveryResult.address;
+
+  // Update IP only if changed
+  if (this._lastDiscoveryIP !== newIP) {
+    this._lastDiscoveryIP = newIP;
+    this.url = `https://${newIP}`;
+    this.log(`📡 Device seen again — IP updated: ${newIP}`);
+    await this.setSettings({ url: this.url }).catch(this.error);
+  } else {
+    this.log(`📡 Device seen again — IP unchanged (${newIP})`);
+  }
+
   await this.setAvailable();
 
   const settings = this.getSettings();
 
+  // Debounce rebuild
   if (this._wsReconnectTimeout) clearTimeout(this._wsReconnectTimeout);
   this._wsReconnectTimeout = setTimeout(() => {
 
     if (settings.use_polling) {
-      this.log('🔁 Last seen: polling active → skipping WebSocket rebuild');
+      this.log('🔁 LastSeen: polling active → skipping WebSocket rebuild');
       return;
     }
 
-    this.log('🔁 Last seen: rebuilding WebSocket');
+    // Only rebuild WS if it is NOT connected
+    if (!this.wsManager?.isConnected()) {
+      this.log('🔁 LastSeen: WS not connected → rebuilding WebSocket');
 
-    if (this.wsManager) {
-      this.wsManager.stop();
-      this.wsManager = null;
-    }
+      if (this.wsManager) {
+        this.wsManager.stop();
+        this.wsManager = null;
+      }
 
-    this.wsManager = new WebSocketManager({
-      device: this,
-      url: this.url,
-      token: this.token,
-      log: this.log.bind(this),
-      error: this.error.bind(this),
-      setAvailable: this.setAvailable.bind(this),
-      getSetting: this.getSetting.bind(this),
-      handleMeasurement: (data) => {
+      this.wsManager = new WebSocketManager({
+        device: this,
+        url: this.url,
+        token: this.token,
+        log: this.log.bind(this),
+        error: this.error.bind(this),
+        setAvailable: this.setAvailable.bind(this),
+        getSetting: this.getSetting.bind(this),
+        handleMeasurement: (data) => {
           this.lastWsMeasurementAt = Date.now();
           this._handleMeasurement(data);
-      },
-      handleSystem: this._handleSystem.bind(this),
-    });
+        },
+        handleSystem: this._handleSystem.bind(this),
+      });
 
-    this.wsManager.start();
+      this.wsManager.start();
+
+    } else {
+      this.log('📡 LastSeen: WS already connected — ignoring');
+    }
 
   }, 500);
 }

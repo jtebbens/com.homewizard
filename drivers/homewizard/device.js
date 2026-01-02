@@ -16,6 +16,60 @@ const preset_text_en = ['Home', 'Away', 'Sleep', 'Holiday'];
 
 const debug = false;
 
+function callnewAsync(device_id, uri_part, {
+  timeout = 4000,      // iets ruimer dan 3000ms
+  retries = 1,         // verificatie hoeft niet agressief te zijn
+  retryDelay = 1500    // rustiger retry
+} = {}) {
+
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+
+    const attempt = () => {
+      attempts++;
+
+      let finished = false;
+
+      const timeoutId = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+
+        if (attempts <= retries) {
+          console.log(`[callnewAsync] Timeout on ${device_id}${uri_part}, retry ${attempts}/${retries}`);
+          return setTimeout(attempt, retryDelay);
+        }
+
+        console.log(`[callnewAsync] FINAL TIMEOUT on ${device_id}${uri_part}`);
+        return reject(new Error(`Timeout calling ${uri_part} on device ${device_id}`));
+      }, timeout);
+
+      homewizard.callnew(device_id, uri_part, (err, result) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeoutId);
+
+        if (err) {
+          if (attempts <= retries) {
+            console.log(`[callnewAsync] Error on ${device_id}${uri_part}: ${err.message}, retry ${attempts}/${retries}`);
+            return setTimeout(attempt, retryDelay);
+          }
+
+          console.log(`[callnewAsync] FINAL ERROR on ${device_id}${uri_part}: ${err.message}`);
+          return reject(err);
+        }
+
+        console.log(`[callnewAsync] OK ${device_id}${uri_part}`);
+        return resolve(result);
+      });
+    };
+
+    attempt();
+  });
+}
+
+
+
+
 class HomeWizardDevice extends Homey.Device {
 
   async onInit() {
@@ -23,6 +77,11 @@ class HomeWizardDevice extends Homey.Device {
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     if (debug) { this.log('HomeWizard Appliance has been inited'); }
+
+    if (!this.hasCapability('preset')) {
+      await this.addCapability('preset').catch(this.error);
+    }
+
 
     const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
@@ -44,6 +103,60 @@ class HomeWizardDevice extends Homey.Device {
     // Init flow triggers
     this._flowTriggerPresetChanged = this.homey.flow.getDeviceTriggerCard('preset_changed');
 
+    this.registerCapabilityListener('preset', async (value) => {
+  const presetId = Number(value);
+  const id = this.getData().id;
+
+  try {
+    this.log('Setting preset to', presetId);
+
+    //
+    // 1. Homey bepaalt de preset → capability direct zetten
+    //
+    await this.setCapabilityValue('preset', String(presetId));
+    await this.setStoreValue('preset', presetId);
+
+    //
+    // 2. Naar HomeWizard sturen
+    //
+    await callnewAsync(id, `/preset/${presetId}`);
+
+    //
+    // 3. Best-effort verificatie (mag falen!)
+    //
+    try {
+      const sensors = await callnewAsync(id, '/get-sensors');
+      const hwPreset = sensors?.preset;
+
+      if (hwPreset !== presetId) {
+        this.log(`WARN: HW returned preset ${hwPreset} but Homey set ${presetId}. Ignoring.`);
+      }
+    } catch (verifyErr) {
+      this.log(`WARN: Verification failed after setting preset ${presetId}: ${verifyErr.message}`);
+      // NIET throwen → Homey blijft leidend
+    }
+
+    //
+    // 4. Flow triggeren
+    //
+    const lang = this.homey.i18n.getLanguage();
+    const preset_text = (lang === 'nl')
+      ? preset_text_nl[presetId]
+      : preset_text_en[presetId];
+
+    this.flowTriggerPresetChanged(this, {
+      preset: presetId,
+      preset_text
+    });
+
+    return true;
+
+  } catch (err) {
+    this.error('Failed to set preset (HW call failed):', err.message);
+    return false; // alleen falen als /preset/<id> faalt
+  }
+});
+
   }
 
   async onUninit() {
@@ -64,90 +177,62 @@ class HomeWizardDevice extends Homey.Device {
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
     }
-
-    // Pak interval van de hoofdunit
-    const firstDeviceId = Object.keys(homeWizard_devices)[0];
-    const intervalSec =
-      homeWizard_devices[firstDeviceId]?.settings?.poll_interval || 20;
-
-    this.log(`HomeWizard preset polling every ${intervalSec}s (from main unit)`);
-
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { this.log('--Start HomeWizard Polling--'); }
+      if (debug) { this.log('--Start HomeWizard Polling-- '); }
       this.getStatus(devices);
-    }, intervalSec * 1000);
+
+    }, 1000 * 20);
+
   }
+  
 
+getStatus(devices) {
+  Promise.resolve()
+    .then(async () => {
 
+      const homey_lang = this.homey.i18n.getLanguage();
 
-  getStatus(devices) {
-    Promise.resolve()
-      .then(async () => {
+      for (const device of devices) {
+        try {
+          const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
+          const hwPreset = typeof callback === 'object' ? callback.id : callback;
 
-        // const me = this;
-        const homey_lang = this.homey.i18n.getLanguage();
+          // Homey is leidend: store bevat de "waarheid" zoals Homey die gezet heeft
+          const homeyPreset = await device.getStoreValue('preset');
 
-        // new
-        for (const device of devices) {
-          try {
-					  const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
-
-					  if (device.getStoreValue('preset') === null) {
-              if (debug) {
-						  this.log(`Preset was set to ${callback}`);
-              }
-              await device.setStoreValue('preset', callback);
-					  }
-
-					  if (device.getStoreValue('preset') !== callback) {
-              await device.setStoreValue('preset', callback);
-
-              if (debug) {
-						  this.log(`Flow call! -> ${callback}`);
-              }
-
-              const presetId = typeof callback === 'object' ? callback.id : callback;
-
-              if (typeof presetId !== 'number') {
-                this.error(`Invalid preset value: ${JSON.stringify(callback)}`);
-                return;
-              }
-
-              const preset_text = (homey_lang === 'nl') ? preset_text_nl[presetId] : preset_text_en[presetId];
-
-              this.flowTriggerPresetChanged(device, {
-                preset: presetId,
-                preset_text
-              });
-
-
-              if (debug) {
-						  this.log(`Preset was changed! ->${preset_text}`);
-              }
-					  }
-          } catch (err) {
-					  this.log('HomeWizard data corrupt');
-					  this.log(err);
+          // Eerste init (bij lege store) → alleen store vullen, capability NIET aanpassen
+          if (homeyPreset === null || homeyPreset === undefined) {
+            if (debug) {
+              this.log(`Initial preset store set to ${hwPreset} for device ${device.getName()}`);
+            }
+            await device.setStoreValue('preset', hwPreset);
+            continue;
           }
-				  }
-      })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
-	  } // end of getstatus
 
+          // Als HW afwijkt van Homey → alleen loggen, NIET aanpassen
+          if (hwPreset !== homeyPreset) {
+            this.log(
+              `WARN: Polling detected HW preset ${hwPreset} but Homey preset ${homeyPreset} for device ${device.getName()}. Ignoring.`
+            );
+          }
 
-  async onSettings({ changedKeys }) {
-    if (changedKeys.includes('poll_interval')) {
-      const devices = this.homey.drivers.getDriver('homewizard').getDevices();
-      this.startPolling(devices);
-    }
-  }
+          // Hier kun je andere capabilities updaten, maar preset NIET
+          // (dus geen setCapabilityValue('preset') meer vanuit polling)
 
+        } catch (err) {
+          this.log('HomeWizard data corrupt');
+          this.log(err);
+        }
+      }
+    })
+    .then(() => {
+      this.setAvailable().catch(this.error);
+    })
+    .catch((err) => {
+      this.error(err);
+      this.setUnavailable(err).catch(this.error);
+    });
+} //end of getStatus
 
 }
 

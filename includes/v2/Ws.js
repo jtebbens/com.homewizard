@@ -243,10 +243,18 @@ class WebSocketManager {
       this._safeSetInterval(() => {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
         if (!this.pongReceived) {
-          this.log('⚠️ No pong received — restarting WebSocket');
-          this.restartWebSocket();
-          return;
-        }
+            this.log('🧨 No pong — force closing zombie WebSocket');
+
+            try { this.ws.terminate(); } catch(e) {}
+            try { this.ws.close(); } catch(e) {}
+
+            this.ws = null;
+            this.wsActive = false;
+            this.wsAuthorized = false;
+
+            this._scheduleReconnect();
+            return;
+          }
         this.pongReceived = false;
         try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
       }, 30000);
@@ -391,12 +399,13 @@ this.ws.on('message', (msg) => {
     return;
   }
 
-  // Socket still open or connecting → suppress
-  if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
-    this.log('⏸️ reconnect suppressed — socket is OPEN or CONNECTING');
+  // Suppress reconnect ONLY if still CONNECTING
+  if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+    this.log('⏸️ reconnect suppressed — still CONNECTING');
     wsDebug.log('reconnect_suppressed', devId, `State=${this.ws.readyState}`);
     return;
   }
+
 
   this.reconnecting = true;
   this.reconnectAttempts++;
@@ -468,9 +477,9 @@ this.ws.on('message', (msg) => {
   restartWebSocket() {
   const devId = this.device?.getData?.().id || 'unknown-device';
 
-  // ⏸️ Suppress restart if socket is still active
-  if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
-    this.log('⏸️ Socket is OPEN or still CONNECTING — skipping restart');
+  // ⏸️ Suppress restart ONLY if still CONNECTING
+  if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+    this.log('⏸️ WS is CONNECTING — skipping restart');
     wsDebug.log('restart_suppressed', devId, `State=${this.ws.readyState}`);
     return;
   }
@@ -513,12 +522,6 @@ this.ws.on('message', (msg) => {
   // ❌ Nooit resetten als reconnect al bezig is
   if (this.reconnecting) {
     this.log('⏸️ WS reset suppressed — reconnect in progress');
-    return;
-  }
-
-  // ❌ Nooit resetten binnen cooldown
-  if (Date.now() - this._restartCooldown < 3000) {
-    this.log('⏸️ WS reset suppressed — restart cooldown active');
     return;
   }
 

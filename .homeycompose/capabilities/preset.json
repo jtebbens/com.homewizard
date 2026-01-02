@@ -1,0 +1,16 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Preset",
+    "nl": "Preset"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker",
+  "values": [
+    { "id": "0", "title": { "nl": "Thuis", "en": "Home" } },
+    { "id": "1", "title": { "nl": "Slapen", "en": "Sleep" } },
+    { "id": "2", "title": { "nl": "Weg", "en": "Away" } },
+    { "id": "3", "title": { "nl": "Vakantie", "en": "Holiday" } }
+  ]
+}
