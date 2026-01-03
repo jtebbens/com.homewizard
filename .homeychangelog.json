@@ -817,5 +817,8 @@
   },
   "3.9.27": {
     "en": "Homewizard Preset addition, Heatlink control improvement, Gasmeter fix (external source)"
+  },
+  "3.9.28": {
+    "en": "Thermometer trigger and condition cards for no response X hours."
   }
 }

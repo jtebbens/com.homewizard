@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.27",
+  "version": "3.9.28",
   "platforms": [
     "local"
   ],
@@ -808,6 +808,32 @@
             "example": 15
           }
         ]
+      },
+      {
+        "id": "temp_not_changed_trigger",
+        "title": {
+          "en": "Temperature unchanged for X hours",
+          "nl": "Temperatuur niet veranderd sinds X uur"
+        },
+        "titleFormatted": {
+          "en": "Temperature unchanged for [[hours]] hours",
+          "nl": "Temperatuur niet veranderd sinds [[hours]] uren"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=thermometer"
+          },
+          {
+            "name": "hours",
+            "type": "number",
+            "title": {
+              "en": "Hours",
+              "nl": "Uren"
+            }
+          }
+        ]
       }
     ],
     "conditions": [
@@ -919,6 +945,36 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "temp_not_changed_hours",
+        "title": {
+          "en": "Temperature not changed for",
+          "nl": "Temperatuur niet veranderd sinds"
+        },
+        "titleFormatted": {
+          "en": "Temperature not changed for [[hours]] hours",
+          "nl": "Temperatuur niet veranderd sinds [[hours]] uren"
+        },
+        "hint": {
+          "en": "Checks if the temperature has not changed for the given number of hours.",
+          "nl": "Controleert of de temperatuur niet veranderd is gedurende het opgegeven aantal uren."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=thermometer"
+          },
+          {
+            "name": "hours",
+            "type": "number",
+            "title": {
+              "en": "Hours",
+              "nl": "Uren"
+            }
           }
         ]
       }
