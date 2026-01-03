@@ -87,10 +87,19 @@ class HomeWizardRainmeter extends Homey.Device {
               const rain_last3h = callback[0]['3h']; // Last 3 hours rain in mm used JSON $rainmeters[0]['3h']
 
               // Rain last 3 hours
-              await me.setCapabilityValue('measure_rain.last3h', rain_last3h).catch(me.error);
+              if (typeof rain_last3h === 'number' && !isNaN(rain_last3h)) {
+                await me.setCapabilityValue('measure_rain.last3h', rain_last3h).catch(me.error);
+              } else {
+                this.log('Skipping measure_rain.last3h → invalid value:', rain_last3h);
+              }
 
               // Rain total day
-              await me.setCapabilityValue('measure_rain.total', rain_daytotal).catch(me.error);
+              if (typeof rain_daytotal === 'number' && !isNaN(rain_daytotal)) {
+                await me.setCapabilityValue('measure_rain.total', rain_daytotal).catch(me.error);
+              } else {
+                this.log('Skipping measure_rain.total → invalid value:', rain_daytotal);
+              }
+
 
               // Trigger flows
               if (rain_daytotal != me.getStoreValue('last_raintotal') && rain_daytotal != 0 && rain_daytotal != undefined && rain_daytotal != null) {
