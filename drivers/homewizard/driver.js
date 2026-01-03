@@ -80,9 +80,7 @@ class HomeWizardDriver extends Homey.Driver {
     try {
       this.log(`ActionCard set_preset: setting preset ${presetId} on HW device ${id}`);
 
-      //
       // 1. HomeWizard aansturen
-      //
       await new Promise((resolve, reject) => {
         homewizard.callnew(id, `/preset/${presetId}`, (err, response) => {
           if (err) return reject(err);
@@ -90,11 +88,8 @@ class HomeWizardDriver extends Homey.Driver {
         });
       });
 
-      //
-      // 2. Controleren of HW het accepteert
-      //
+      // 2. Verificatie
       let hwPreset = null;
-
       try {
         const sensors = await new Promise((resolve, reject) => {
           homewizard.callnew(id, '/get-sensors', (err, res) => {
@@ -102,24 +97,18 @@ class HomeWizardDriver extends Homey.Driver {
             resolve(res);
           });
         });
-
         hwPreset = sensors?.preset;
-
       } catch (err) {
         this.log(`WARN: set_preset → HW verification failed (${err.message}). Falling back to Homey state.`);
       }
 
-      //
-      // 3. Logging van mismatch (maar Homey blijft leidend)
-      //
+      // 3. Logging mismatch
       if (hwPreset !== null && hwPreset !== presetId) {
         this.log(`WARN: HW returned preset ${hwPreset} but action set ${presetId}. Homey remains authoritative.`);
       }
 
-      //
-      // 4. Homey state NIET aanpassen hier
-      //    → dat doet de capability listener in device.js
-      //
+      // ⭐ 4. Capability bijwerken (en daarmee storevalue via device.js)
+      await device.setCapabilityValue('preset', String(presetId));
 
       this.log('ActionCard set_preset -> returned true');
       return true;
@@ -129,6 +118,7 @@ class HomeWizardDriver extends Homey.Driver {
       return false;
     }
   });
+
 
     // SCENES
     this.homey.flow.getActionCard('switch_scene_on')

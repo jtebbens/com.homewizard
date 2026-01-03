@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.9.27
+v3.9.28
 
 * Wsmanager optimize
 * Homewizard legacy custom polling
@@ -18,6 +18,7 @@ v3.9.27
 * Heatlink Legacy improvement
 * Homewizard Legacy Preset improvement (UI picker in Homey app)
 * Using external gas meter (timestamp X) instead of administrative meter
+* Thermometer trigger and condition cards for no response for X hours.
 
 v3.9.20
 

@@ -7,7 +7,7 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 // const driver = ManagerDrivers.getDriver('thermometer');
 
 let refreshIntervalId;
-const devices = {};
+// const devices = {};
 // const thermometers = {};
 const debug = false;
 
@@ -74,9 +74,34 @@ class HomeWizardThermometer extends Homey.Device {
 
                 // Check current temperature
                 if (device.getCapabilityValue('measure_temperature') != te) {
-					  if (debug) { this.log(`New TE - ${te}`); }
-					  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
+                  if (debug) { this.log(`New TE - ${te}`); }
+                  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
+                  await device.setStoreValue('lastTempUpdate', Date.now()).catch(this.error);
+                  // Reset trigger state 
+                  await device.setStoreValue('unchangedTriggered', false).catch(this.error);
                 }
+
+                // Check trigger condition
+                const last = await device.getStoreValue('lastTempUpdate');
+                if (last) {
+                  const diffHours = (Date.now() - last) / 1000 / 3600;
+
+                  const triggerCard = this.homey.flow.getDeviceTriggerCard('temp_not_changed_trigger');
+
+                  // Haal ingestelde uren op uit device settings of store
+                  const hours = device.getSetting('temp_not_changed_hours') 
+                            ?? await device.getStoreValue('temp_not_changed_hours');
+
+                  if (hours && diffHours >= hours) {
+                    const alreadyTriggered = await device.getStoreValue('unchangedTriggered');
+
+                    if (!alreadyTriggered) {
+                      await triggerCard.trigger(device, { hours }).catch(this.error);
+                      await device.setStoreValue('unchangedTriggered', true).catch(this.error);
+                    }
+                  }
+                }
+
 
                 // First adjust retrieved humidity with offset
                 const offset_hu = device.getSetting('offset_humidity');
@@ -130,21 +155,28 @@ class HomeWizardThermometer extends Homey.Device {
 
   // Catch offset updates
   onSettings(oldSettings, newSettings, changedKeys) {
-    this.log('Settings updated');
-    // Update display values if offset has changed
-    for (const k in changedKeys) {
-      const key = changedKeys[k];
-      if (key.slice(0, 7) === 'offset_') {
-        const cap = `measure_${key.slice(7)}`;
-        const value = this.getCapabilityValue(cap);
-        const delta = newSettings[key] - oldSettings[key];
-        this.log('Updating value of', cap, 'from', value, 'to', value + delta);
-        this.setCapabilityValue(cap, value + delta)
-          .catch((err) => this.error(err));
-      }
-    }
+  this.log('Settings updated');
 
+  // Defensieve check: Homey geeft soms geen array terug
+  if (!Array.isArray(changedKeys)) {
+    this.error('changedKeys is not iterable:', changedKeys);
+    return;
   }
+
+  for (const key of changedKeys) {
+    if (key.startsWith('offset_')) {
+      const cap = `measure_${key.slice(7)}`;
+      const value = this.getCapabilityValue(cap);
+      const delta = newSettings[key] - oldSettings[key];
+
+      this.log('Updating value of', cap, 'from', value, 'to', value + delta);
+
+      this.setCapabilityValue(cap, value + delta)
+        .catch((err) => this.error(err));
+    }
+  }
+}
+
 
   updateValue(cap, value) {
     // add offset if defined
