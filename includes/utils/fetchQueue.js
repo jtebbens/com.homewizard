@@ -1,10 +1,13 @@
 'use strict';
 
 const fetch = require('node-fetch');
-const debug = require('./fetchQueueDebug'); // <-- jouw debug module
+const debug = require('./fetchQueueDebug');
 
 const queue = [];
 let active = 0;
+
+// Runtime-only, deletion-safe state per device
+const deviceState = {};
 
 const MAX_CONCURRENT = 4;
 const MIN_DELAY = 200;
@@ -15,12 +18,40 @@ function log(...args) {
   console.log(ts, '[fetchQueue]', ...args);
 }
 
+function getDeviceIdFromUrl(url) {
+  const m = url.match(/:\/\/([^/]+)/);
+  return m ? m[1] : url; // IP:port as device ID
+}
+
 function processQueue() {
   if (active >= MAX_CONCURRENT) return;
   if (queue.length === 0) return;
 
   const job = queue.shift();
   const { url, opts, resolve, reject, retry } = job;
+
+  const deviceId = getDeviceIdFromUrl(url);
+
+  // Init per-device state
+  if (!deviceState[deviceId]) {
+    deviceState[deviceId] = {
+      errorCount: 0,
+      cooldownUntil: 0,
+      lastErrorAt: 0,
+      lastFetch: 0,
+    };
+  }
+
+  const state = deviceState[deviceId];
+
+  // ⏸️ Cooldown active → skip fetch
+  if (Date.now() < state.cooldownUntil) {
+    const remaining = Math.round((state.cooldownUntil - Date.now()) / 1000);
+    log(`⏸️ cooldown active for ${deviceId} (${remaining}s left)`);
+    debug.log('cooldown', url, `${remaining}s remaining`);
+    setImmediate(processQueue);
+    return;
+  }
 
   active++;
 
@@ -34,8 +65,18 @@ function processQueue() {
   }, timeoutMs);
 
   fetch(url, { ...opts, signal: controller.signal })
-    .then(resolve)
+    .then(result => {
+      // Reset error state on success
+      state.errorCount = 0;
+      state.cooldownUntil = 0;
+      state.lastFetch = Date.now();
+      resolve(result);
+    })
     .catch(err => {
+      // Update error state
+      state.errorCount++;
+      state.lastErrorAt = Date.now();
+
       if (err.name === 'AbortError') {
         log(`timeout (abort): ${url}`);
         debug.log('abort', url, 'AbortError');
@@ -44,6 +85,18 @@ function processQueue() {
         debug.log('network', url, err.message);
       }
 
+      // ❄️ Enter cooldown after 3 consecutive errors
+      if (state.errorCount >= 3) {
+        state.cooldownUntil = Date.now() + 60000; // 60s cooldown
+        log(`❄️ entering cooldown for ${deviceId} (60s)`);
+        debug.log('cooldown_start', url, '60s');
+
+        // géén active-- hier: finally doet dat altijd
+        setImmediate(processQueue);
+        return;
+      }
+
+      // Retry once
       if (!retry) {
         log(`retrying once: ${url}`);
         debug.log('retry', url, 'Retrying once');
@@ -102,6 +155,7 @@ function queuedFetch(url, opts = {}) {
 queuedFetch.stats = () => ({
   active,
   pending: queue.length,
+  deviceState,
 });
 
 module.exports = queuedFetch;

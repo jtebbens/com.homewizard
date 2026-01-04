@@ -5,12 +5,6 @@ const fetch = require('../../includes/utils/fetchQueue');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 const http = require('http');
 
-let agent = new http.Agent({
-  keepAlive: true,
-  keepAliveMsecs: 10000,
-  maxSockets: 1
-});
-
 // All phase‑dependent capabilities (L2/L3/T3)
 const PHASE_CAPS = [
   'measure_power.l2', 'measure_power.l3',
@@ -71,6 +65,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.failCount = 0;
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
+
+    this.agent = new http.Agent({
+      keepAlive: true,
+      keepAliveMsecs: 10000,
+      maxSockets: 1
+    });
+
 
     await updateCapability(this, 'connection_error', 'No errors');
 
@@ -332,7 +333,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       const homeyLang = this.homey.i18n.getLanguage();
 
       const res = await fetch(`${this.url}/data`, {
-        agent,
+        agent: this.agent,
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -342,8 +343,24 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
-      const data = await res.json();
-      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+      // const data = await res.json();
+      // if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+
+      let text;
+      let data;
+
+      try {
+        text = await res.text();
+        data = JSON.parse(text);
+      } catch (err) {
+        this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
+        throw new Error('Invalid JSON');
+      }
+
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid JSON');
+      }
+
 
       const tasks = [];
 
@@ -707,8 +724,8 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
         this.log('Timeout/connection reset detected — recreating HTTP agent and retrying');
         try {
-          agent.destroy?.();
-          agent = new http.Agent({
+          this.agent.destroy?.();
+          this.agent = new http.Agent({
             keepAlive: true,
             keepAliveMsecs: 10000,
             maxSockets: 1

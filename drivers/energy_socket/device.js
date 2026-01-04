@@ -4,11 +4,6 @@ const Homey = require('homey');
 const fetch = require('../../includes/utils/fetchQueue');
 const http = require('http');
 
-let agent = new http.Agent({
-  keepAlive: true,
-  keepAliveMsecs: 10000,
-  maxSockets: 2
-});
 
 async function updateCapability(device, capability, value) {
   // Skip null/undefined values (deletion-safe)
@@ -48,6 +43,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._pendingStateUpdate = false;
     this._lastStatePoll = 0;
     this.failCount = 0;
+
+    this.agent = new http.Agent({
+      keepAlive: true,
+      keepAliveMsecs: 10000,
+      maxSockets: 2
+    });
 
     await updateCapability(this, 'connection_error', 'No errors').catch(this.error);
 
@@ -222,12 +223,26 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   try {
     // --- Fetch /data ---
     const res = await fetch(`${this.url}/data`, {
-      agent,
+      agent: this.agent,
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    }, 5000);
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 5000
+    });
 
-    const data = await res.json();
+
+    // const data = await res.json();
+    let text;
+    let data;
+
+    try {
+      text = await res.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
+      throw new Error('Invalid JSON');
+    }
+
+
     if (!data || typeof data !== 'object') throw new Error('Invalid response format');
 
     const offset_socket = this.getSetting('offset_socket') || 0;
@@ -273,12 +288,25 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
       try {
         const resState = await fetch(`${this.url}/state`, {
-          agent,
+          agent: this.agent,
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }, 5000);
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 5000
+        });
 
-        const state = await resState.json();
+        // const state = await resState.json();
+
+        let stateText;
+        let state;
+
+        try {
+          stateText = await resState.text();
+          state = JSON.parse(stateText);
+        } catch (err) {
+          this.error('JSON parse error (state):', err.message, 'Body:', stateText?.slice(0, 200));
+          throw new Error('Invalid JSON');
+        }
+
         if (!state || typeof state !== 'object') throw new Error('Invalid state response');
 
         cap('onoff', state.power_on);
@@ -317,7 +345,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       await updateCapability(this, 'connection_error', 'Socket unreachable');
     } else if (err.code === 'ETIMEDOUT') {
       await updateCapability(this, 'connection_error', 'Timeout');
-      agent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 1 });
+      this.agent = new http.Agent({ keepAlive: true, keepAliveMsecs: 10000, maxSockets: 2 });
       setTimeout(() => this.onPoll(), 2000);
     } else {
       await updateCapability(this, 'connection_error', err.message || 'Polling error');

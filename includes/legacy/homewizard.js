@@ -142,8 +142,15 @@ module.exports = (function() {
 
     const device = self.devices[device_id];
     if (!device || !device.settings) {
+      try {
+        device?.fetchLegacyDebug?.log({
+          type: 'settings_missing',
+          url: null
+        });
+      } catch (_) {}
       return callback('settings_missing', []);
     }
+
 
     // 🟩 FIX: ensure debug exists ALWAYS
     if (!device.fetchLegacyDebug) {
@@ -154,8 +161,16 @@ module.exports = (function() {
     const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
 
     if (!circuitBreakerAllows(device)) {
+      try {
+        device.fetchLegacyDebug.log({
+          type: 'circuit_open',
+          url,
+          openUntil: device.circuit.openUntil
+        });
+      } catch (_) {}
       return callback('circuit_open', []);
     }
+
 
     const timeoutDuration = getAdaptiveTimeout(device);
     const start = Date.now();

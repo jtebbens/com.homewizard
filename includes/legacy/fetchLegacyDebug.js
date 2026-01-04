@@ -20,6 +20,9 @@ module.exports = class FetchLegacyDebug {
     if (this.buffer.length > this.size) {
       this.buffer.shift();
     }
+
+    // No Homey.settings here — this file has no access to it.
+    // Buffer stays in memory. Caller must sync to settings if needed.
   }
 
   get() {

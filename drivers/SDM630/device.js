@@ -33,7 +33,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     this.failCount = 0;
 
     const settings = this.getSettings();
-    this.log('Settings for SDM630:', settings.polling_interval);
+    this.log('Polling settings for SDM630:', settings.polling_interval);
 
     // Ensure polling interval exists
     if (settings.polling_interval == null) {

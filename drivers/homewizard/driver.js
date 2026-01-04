@@ -109,6 +109,8 @@ class HomeWizardDriver extends Homey.Driver {
 
       // ⭐ 4. Capability bijwerken (en daarmee storevalue via device.js)
       await device.setCapabilityValue('preset', String(presetId));
+      await device.setStoreValue('preset', presetId);
+
 
       this.log('ActionCard set_preset -> returned true');
       return true;
