@@ -40,6 +40,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     if (settings.polling_interval == null) {
       await this.setSettings({ polling_interval: 10 });
     }
+    this.log('Polling settings for SDM230:', settings.polling_interval);
 
     const interval = Math.max(settings.polling_interval, 2);
     const offset = Math.floor(Math.random() * interval * 1000);

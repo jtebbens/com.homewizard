@@ -206,8 +206,29 @@
 
 
         /* ---- FETCH ---- */
-        document.getElementById('fetch-debug').textContent =
-          JSON.stringify(settings['debug_fetch']?.slice(-20) || [], null, 2);
+        const fetchLog = settings['debug_fetch']?.slice(-20) || [];
+        const fetchState = settings['debug_fetch_state'] || {};
+
+        let out = '';
+        out += '=== Fetch Log (last 20) ===\n';
+        out += JSON.stringify(fetchLog, null, 2);
+        out += '\n\n=== Device State ===\n';
+
+        for (const [id, s] of Object.entries(fetchState)) {
+          const cooldownActive = Date.now() < s.cooldownUntil;
+          const remaining = cooldownActive
+            ? Math.round((s.cooldownUntil - Date.now()) / 1000)
+            : 0;
+
+          out += `\nDevice: ${id}\n`;
+          out += `  Last fetch:   ${s.lastFetch ? new Date(s.lastFetch).toLocaleTimeString() : '—'}\n`;
+          out += `  Last error:   ${s.lastErrorAt ? new Date(s.lastErrorAt).toLocaleTimeString() : '—'}\n`;
+          out += `  Error count:  ${s.errorCount}\n`;
+          out += `  Cooldown:     ${cooldownActive ? `YES (${remaining}s)` : 'no'}\n`;
+        }
+
+        document.getElementById('fetch-debug').textContent = out;
+
 
         /* ---- DISCOVERY ---- */
         document.getElementById('discovery-debug').textContent =

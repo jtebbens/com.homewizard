@@ -134,7 +134,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.token = await this.getStoreValue('token');
 
     const settings = { use_polling: false, ...this.getSettings() };
-    this.log('Settings for Plugin Battery:', settings);
+    this.log('Polling Settings for Plugin Battery:', settings);
 
     if (!this.url && settings.url) {
       this.url = settings.url;
