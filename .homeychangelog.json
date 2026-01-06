@@ -823,5 +823,8 @@
   },
   "3.9.29": {
     "en": "Improvement fetchQueue (protect against high cpu warning for devices on 1s polling)"
+  },
+  "3.10.0": {
+    "en": "fetchQueue method dropped, using fetch directly so debug information can be shown in app settings tabs"
   }
 }

@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.9.29",
+  "version": "3.10.0",
   "platforms": [
     "local"
   ],
@@ -1617,6 +1617,15 @@
             "en": "url",
             "nl": "url"
           }
+        },
+        {
+          "id": "baseload_notifications",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable baseload notifications",
+            "nl": "Sluipverbruik meldingen inschakelen"
+          },
+          "value": true
         }
       ]
     },
