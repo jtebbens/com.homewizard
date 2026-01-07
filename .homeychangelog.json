@@ -835,5 +835,8 @@
   },
   "3.10.3": {
     "en": "Bugfix: SDM230(p1mode) - updateCapability missed"
+  },
+  "3.10.4": {
+    "en": "Another Circular Reference \"device\" error fix"
   }
 }
