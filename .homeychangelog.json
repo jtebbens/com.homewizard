@@ -826,5 +826,8 @@
   },
   "3.10.0": {
     "en": "fetchQueue method dropped, using fetch directly so debug information can be shown in app settings tabs"
+  },
+  "3.10.1": {
+    "en": "Watermeter daily usage added, Bugfix: Device Fetch Debug wasn't updating"
   }
 }

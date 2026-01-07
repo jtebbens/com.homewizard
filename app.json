@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.10.0",
+  "version": "3.10.1",
   "platforms": [
     "local"
   ],
@@ -3970,6 +3970,17 @@
           "title": {
             "en": "Total usage",
             "nl": "Totaal verbruik"
+          }
+        },
+        "meter_water.daily": {
+          "decimals": 3,
+          "title": {
+            "en": "Daily water usage",
+            "nl": "Dagverbruik water"
+          },
+          "units": {
+            "en": "m³",
+            "nl": "m³"
           }
         }
       },
