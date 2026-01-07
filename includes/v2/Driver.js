@@ -76,7 +76,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-      console.log('Discovered devices:', discoveryResults);
+      // console.log('Discovered devices:', discoveryResults);
 
       if (!discoveryResults || Object.keys(discoveryResults).length === 0) {
         this.logDiscovery('not_found', 'No devices found via mDNS');
