@@ -76,7 +76,18 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       const discoveryStrategy = this.getDiscoveryStrategy();
       const discoveryResults = discoveryStrategy.getDiscoveryResults();
 
-      // console.log('Discovered devices:', discoveryResults);
+      // console.log('Discovered devices:', discoveryResults); Error: Circular Reference "device"
+      console.log(
+        '[DISCOVERY]',
+        Object.values(discoveryResults).map(r => ({
+          id: r.id,
+          address: r.address,
+          port: r.port,
+          product: r.txt?.product_name,
+          serial: r.txt?.serial,
+        }))
+      );
+
 
       if (!discoveryResults || Object.keys(discoveryResults).length === 0) {
         this.logDiscovery('not_found', 'No devices found via mDNS');

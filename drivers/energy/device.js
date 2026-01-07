@@ -18,7 +18,7 @@ const PHASE_CAPS = [
   'meter_power.consumed.t3', 'meter_power.produced.t3'
 ];
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     let settled = false;
 
@@ -837,22 +837,43 @@ onDiscoveryAddressChanged(discoveryResult) {
   }
 
 _debugLog(msg) {
-  const ts = new Date().toISOString();
-  const line = `${ts} ${msg}`;
-
-  this._debugLogs.push(line);
-  if (this._debugLogs.length > 200) this._debugLogs.shift();
-
-  // Per-device store
-  this.setStoreValue('debug_logs', this._debugLogs).catch(() => {});
-
-  // App settings (synchronous, no Promise)
   try {
-    this.homey.settings.set('debug_logs', this._debugLogs);
+    const ts = new Date().toLocaleString('nl-NL', {
+      hour12: false,
+      timeZone: 'Europe/Amsterdam'
+    });
+
+    const name = this.getName() || this.getData().id;
+
+    // Force everything to a pure string — no objects, no arrays, no errors
+    const safeMsg = typeof msg === 'string'
+      ? msg
+      : (msg instanceof Error
+          ? msg.message
+          : JSON.stringify(msg, (key, value) => {
+              // Strip circular references
+              if (value === this) return '[device]';
+              if (value === this.homey) return '[homey]';
+              return value;
+            })
+        );
+
+    const line = `${ts} [${name}] ${safeMsg}`;
+
+    this._debugLogs.push(line);
+    if (this._debugLogs.length > 200) this._debugLogs.shift();
+
+    // Store per-device to avoid collisions and circular refs
+    this.homey.settings.set(`debug_logs_${this.getData().id}`, this._debugLogs);
+
   } catch (err) {
-    this.error('Failed to write debug_logs:', err);
+    // Never throw from logger
+    this.error('Failed to write debug logs:', err.message || err);
   }
 }
+
+
+
 
 
 
