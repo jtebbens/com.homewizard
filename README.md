@@ -4,10 +4,12 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.10.0
+v3.10.1
 
 * Bugfix: Homewizard Legacy fetch (tab was empty, no entries while there were errors in the log)
 * Remove fetchQueue feature in favor of capture debug information in the app settings page
+* Watermeter daily usage added
+* Bugfix: Device Fetch Debug wasn't updating only showed "Loading..."
 
 v3.9.29
 

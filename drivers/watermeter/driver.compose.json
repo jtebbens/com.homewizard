@@ -45,6 +45,11 @@
         "en": "Total usage",
         "nl": "Totaal verbruik"
       }
+    },
+    "meter_water.daily": {
+      "decimals": 3,
+      "title": { "en": "Daily water usage", "nl": "Dagverbruik water" }, 
+      "units": { "en": "m³", "nl": "m³" }
     }
   },
   "settings": [

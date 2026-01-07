@@ -54,6 +54,8 @@ async function updateCapability(device, capability, value) {
   }
 }
 
+
+
 module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
@@ -311,6 +313,13 @@ _debugLog(msg) {
     await updateCapability(this, 'meter_water', totalM3);
     await updateCapability(this, 'rssi', data.wifi_strength);
 
+    // --- DAILY USAGE ---
+    const dailyStart = await this._ensureDailyBaseline(totalM3);
+    const dailyUsage = Math.max(0, totalM3 - dailyStart);
+
+    await updateCapability(this, 'meter_water.daily', dailyUsage);
+
+
     await this.setAvailable();
     this.failCount = 0;
 
@@ -334,6 +343,27 @@ _debugLog(msg) {
     this.pollingActive = false;
   }
 }
+
+  /**
+   * Daily baseline logic — deletion‑safe, timezone‑correct
+   */
+  async _ensureDailyBaseline(totalM3) {
+    // Homey’s ISO date is LOCAL date (Amsterdam-correct)
+    const today = new Date().toISOString().slice(0, 10);
+
+    const storedDate = await this.getStoreValue('dailyStartDate');
+    const storedValue = await this.getStoreValue('dailyStartM3');
+
+    // Eerste keer of nieuwe dag → baseline resetten
+    if (storedDate !== today || storedValue == null) {
+      await this.setStoreValue('dailyStartDate', today);
+      await this.setStoreValue('dailyStartM3', totalM3);
+      return totalM3;
+    }
+
+    return storedValue;
+  }
+
 
 
   async onSettings(oldSettings) {
