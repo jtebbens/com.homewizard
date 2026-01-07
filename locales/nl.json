@@ -13,10 +13,8 @@
     "changelog": {
       "label": "📜 Bekijk Changelog"
     },
-    "support": {
-      "link": "https://community.homey.app/t/app-pro-nl-homewizard/71211",
-      "label": "🛠️ Support pagina"
-    },
+    "support_label": "🛠️ Support pagina", 
+    "support_link": "https://community.homey.app/t/app-pro-nl-homewizard/71211",
     "tab_baseload": "Sluipverbruik"
   },
   "pair": {

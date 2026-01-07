@@ -25,7 +25,7 @@ module.exports = {
       }
 
       dbg.push({
-        ts: new Date().toISOString(),
+        ts: new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false }),
         type,
         deviceId,
         message

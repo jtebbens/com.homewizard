@@ -58,14 +58,14 @@
 <body>
 
   <h1 id="title"></h1>
-  <a id="changelog" href="#" target="_blank"></a>
-  <a id="support" href="#" target="_blank"></a>
+  <a id="changelog" href="https://community.homey.app/t/app-pro-homewizard/19267/2" target="_blank"></a>
+  <a id="support" data-i18n="settings.support.label" target="_blank"></a>
   <br><br>
 
   <!-- TAB HEADERS -->
   <div class="tabs">
     <div class="tab active" data-tab="baseload" id="tab-baseload"></div>
-    <div class="tab" data-tab="fetch">Fetch Debug</div>
+    <div class="tab" data-tab="fetch">Device Fetch Debug</div>
     <div class="tab" data-tab="discovery">Discovery Debug</div>
     <div class="tab" data-tab="ws">WebSocket Debug</div>
     <div class="tab" data-tab="legacy">Legacy Fetch</div>
@@ -99,11 +99,23 @@
 
   </div>
 
-  <!-- TAB: FETCH -->
-  <div id="fetch" class="tab-content">
-    <h2>FetchQueue debug</h2>
-    <pre id="fetch-debug" class="debug-box">Loading…</pre>
-  </div>
+<!-- TAB: FETCH -->
+<div id="fetch" class="tab-content">
+  <h2>Device Fetch Debug</h2>
+
+  <pre id="fetch-debug" class="debug-box">Loading…</pre>
+
+  <button id="clear-fetch-btn" style="
+    margin-top: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  ">
+    Wis fetch-logs
+  </button>
+</div>
 
   <!-- TAB: DISCOVERY -->
   <div id="discovery" class="tab-content">
@@ -139,8 +151,8 @@
     function onHomeyReady(Homey) {
       document.getElementById('title').innerText = Homey.__('settings.title');
       document.getElementById('changelog').innerText = Homey.__('settings.changelog.label');
-      document.getElementById('support').innerText = Homey.__('settings.support.label');
-      document.getElementById('support').href = Homey.__('settings.support.link');
+      document.getElementById('support').innerText = Homey.__('settings.support_label'); 
+      document.getElementById('support').href = Homey.__('settings.support_link');
       document.getElementById('tab-baseload').innerText = Homey.__('settings.tab_baseload');
 
       Homey.get(async (err, settings) => {
@@ -205,29 +217,36 @@
         });
 
 
-        /* ---- FETCH ---- */
-        const fetchLog = settings['debug_fetch']?.slice(-20) || [];
-        const fetchState = settings['debug_fetch_state'] || {};
+        /* ---- PER-DEVICE FETCH DEBUG (debug_logs) ---- */
+const fetchBox = document.getElementById('fetch-debug');
 
-        let out = '';
-        out += '=== Fetch Log (last 20) ===\n';
-        out += JSON.stringify(fetchLog, null, 2);
-        out += '\n\n=== Device State ===\n';
+function renderFetchDebug(settings) {
+  const logs = settings['debug_logs'] || [];
 
-        for (const [id, s] of Object.entries(fetchState)) {
-          const cooldownActive = Date.now() < s.cooldownUntil;
-          const remaining = cooldownActive
-            ? Math.round((s.cooldownUntil - Date.now()) / 1000)
-            : 0;
+  if (!Array.isArray(logs) || logs.length === 0) {
+    fetchBox.textContent = 'Geen fetch-logs beschikbaar.';
+    return;
+  }
 
-          out += `\nDevice: ${id}\n`;
-          out += `  Last fetch:   ${s.lastFetch ? new Date(s.lastFetch).toLocaleTimeString() : '—'}\n`;
-          out += `  Last error:   ${s.lastErrorAt ? new Date(s.lastErrorAt).toLocaleTimeString() : '—'}\n`;
-          out += `  Error count:  ${s.errorCount}\n`;
-          out += `  Cooldown:     ${cooldownActive ? `YES (${remaining}s)` : 'no'}\n`;
-        }
+  fetchBox.textContent = logs.join('\n');
+  fetchBox.scrollTop = fetchBox.scrollHeight;
+}
 
-        document.getElementById('fetch-debug').textContent = out;
+/* Live updates */
+Homey.on('settings.set', changedKey => {
+  if (changedKey === 'debug_logs') {
+    Homey.get((err, newSettings) => {
+      if (!err) renderFetchDebug(newSettings);
+    });
+  }
+});
+
+/* Clear button */
+document.getElementById('clear-fetch-btn').addEventListener('click', () => {
+  Homey.set('debug_logs', []);
+});
+
+
 
 
         /* ---- DISCOVERY ---- */

@@ -1,18 +1,51 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
+const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 
-// const POLL_INTERVAL = 1000 * 1; // 1 seconds
+/**
+ * Timeout wrapper for node-fetch (Homey has no AbortController)
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
 
-// const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
+
+    fetch(url, options)
+      .then(res => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(res);
+        }
+      })
+      .catch(err => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+  });
+}
+
 
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+    this.pollingActive = false;
+    this.failCount = 0;
+    this._pendingStateUpdate = false;
+    this._debugLogs = [];
+
 
     const settings = this.getSettings();
     this.log('Settings for SDM230: ', settings.polling_interval);
@@ -57,6 +90,18 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
       await this.addCapability('rssi').catch(this.error);
     }
 
+    // Baseload monitor wiring
+    this._baseloadNotificationsEnabled = this.getSetting('baseload_notifications') ?? true;
+    
+    const app = this.homey.app;
+    if (!app.baseloadMonitor) {
+      app.baseloadMonitor = new BaseloadMonitor(this.homey);
+    }
+
+    app.baseloadMonitor.registerP1Device(this);
+    app.baseloadMonitor.trySetMaster(this);
+    app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+
   }
 
   onDeleted() {
@@ -66,25 +111,51 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.onPoll();
-  }
+onDiscoveryAvailable(discoveryResult) {
+  this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+  // this._debugLog(`🔄 Discovery available: ${this.url}`);
+  this._pendingStateUpdate = true;
+  this.setAvailable();
+}
 
-  onDiscoveryAddressChanged(discoveryResult) {
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.log('onDiscoveryAddressChanged');
-    this.onPoll();
-  }
+onDiscoveryAddressChanged(discoveryResult) {
+  this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+  this._debugLog(`🔄 Discovery address changed: ${this.url}`);
+  this._pendingStateUpdate = true;
+  this.setAvailable();
+}
 
-  onDiscoveryLastSeenChanged(discoveryResult) {
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.setAvailable();
-    this.onPoll();
+onDiscoveryLastSeenChanged(discoveryResult) {
+  this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+  // this._debugLog(`🔄 Discovery last seen: ${this.url}`);
+  this._pendingStateUpdate = true;
+  this.setAvailable();
+}
+
+
+  /**
+ * Per-device debug logger
+ */
+_debugLog(msg) {
+  const ts = new Date().toISOString();
+  const line = `${ts} ${msg}`;
+
+  this._debugLogs.push(line);
+  if (this._debugLogs.length > 200) this._debugLogs.shift();
+
+  // Per-device store
+  this.setStoreValue('debug_logs', this._debugLogs).catch(() => {});
+
+  // App settings (synchronous, no Promise)
+  try {
+    this.homey.settings.set('debug_logs', this._debugLogs);
+  } catch (err) {
+    this.error('Failed to write debug_logs:', err);
   }
+}
+
+
+
 
   async setCloudOn() {
     if (!this.url) return;
@@ -119,116 +190,151 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
-  async onPoll() {
-    
-    const settings = this.getSettings();
 
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-        this.log(`ℹ️ this.url was empty, restored from settings: ${this.url}`);
-      } else {
-        this.error('❌ this.url is empty and no fallback settings.url found — aborting poll');
-        await this.setUnavailable().catch(this.error);
-        return;
+  _onNewPowerValue(power) {
+    const app = this.homey.app;
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.updatePowerFromDevice(this, power);
+    }
+  }
+
+  async onPoll() {
+  const settings = this.getSettings();
+
+  // Restore URL only from settings, never write back
+  if (!this.url) {
+    if (settings.url) {
+      this.url = settings.url;
+      this.log(`ℹ️ Restored URL from settings: ${this.url}`);
+    } else {
+      this.error('❌ Missing URL and no fallback settings.url found');
+      await this.setUnavailable().catch(this.error);
+      return;
+    }
+  }
+
+  // Burst‑safe discovery handling
+  if (this._pendingStateUpdate) {
+    this._pendingStateUpdate = false;
+    this._debugLog(`🔁 Forced poll due to discovery/state update`);
+  }
+
+  // Polling guard
+  if (this.pollingActive) return;
+  this.pollingActive = true;
+
+  try {
+    // -----------------------------
+    // FETCH WITH TIMEOUT
+    // -----------------------------
+    let res;
+    try {
+      res = await fetchWithTimeout(`${this.url}/data`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      }, 5000);
+    } catch (err) {
+      if (err.message === 'TIMEOUT') {
+        this._debugLog(`⏱️ Timeout during GET /data`);
       }
+      throw err;
     }
 
-    Promise.resolve().then(async () => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-      const res = await fetch(`${this.url}/data`);
+    // -----------------------------
+    // JSON PARSE WITH DEBUG
+    // -----------------------------
+    let text;
+    let data;
 
-      if (!res || !res.ok) {
-        throw new Error(res ? res.statusText : 'Unknown error during fetch'); 
-      }
+    try {
+      text = await res.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
+      throw new Error('Invalid JSON');
+    }
 
-      const data = await res.json();
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid JSON');
+    }
 
+    // -----------------------------
+    // CAPABILITY UPDATES (exactly your original logic)
+    // -----------------------------
+    await updateCapability(this, 'rssi', data.wifi_strength);
 
-      if (this.getCapabilityValue('rssi') != data.wifi_strength)
-      { await this.setCapabilityValue('rssi', data.wifi_strength).catch(this.error); }
+    // measure_power
+    if (this.getClass() === 'solarpanel') {
+      await updateCapability(this, 'measure_power', data.active_power_w * -1);
+    } else {
+      await updateCapability(this, 'measure_power', data.active_power_w);
+      this._onNewPowerValue(data.active_power_w);
+    }
 
+    // meter_power.consumed.t1
+    await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
 
-      // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
-      if (this.getClass() == 'solarpanel') {
-        await this.setCapabilityValue('measure_power', data.active_power_w * -1).catch(this.error);
-      } else {
-        await this.setCapabilityValue('measure_power', data.active_power_w).catch(this.error);
-      }
+    // measure_power.l1
+    if (this.getClass() === 'solarpanel') {
+      await updateCapability(this, 'measure_power.l1', data.active_power_l1_w * -1);
+    } else {
+      await updateCapability(this, 'measure_power.l1', data.active_power_l1_w);
+    }
 
-      // await this.setCapabilityValue('measure_power.active_power_w', data.active_power_w).catch(this.error);
-      await this.setCapabilityValue('meter_power.consumed.t1', data.total_power_import_t1_kwh).catch(this.error);
+    // meter_power.produced.t1
+    if (data.total_power_export_t1_kwh > 1) {
+      await updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh);
+    } else if (this.hasCapability('meter_power.produced.t1')) {
+      await this.removeCapability('meter_power.produced.t1').catch(this.error);
+    }
 
-      // There are old paired SDM230 devices that still have the old sensor and show negative values that needs to be inverted
-      if (this.getClass() == 'solarpanel') {
-        await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w * -1).catch(this.error);
-      } else {
-        await this.setCapabilityValue('measure_power.l1', data.active_power_l1_w).catch(this.error);
-      }
-      // await this.setCapabilityValue('meter_power.consumed.t2', data.total_power_import_t2_kwh).catch(this.error);
+    // aggregated meter_power
+    await updateCapability(
+      this,
+      'meter_power',
+      data.total_power_import_t1_kwh - data.total_power_export_t1_kwh
+    );
 
-      // Check to see if there is solar panel production exported if received value is more than 1 it returned back to the power grid
-      if (data.total_power_export_t1_kwh > 1) {
-        if (!this.hasCapability('meter_power.produced.t1')) {
-          // add production meters
-          await this.addCapability('meter_power.produced.t1').catch(this.error);
-        }
-        // update values for solar production
-        await this.setCapabilityValue('meter_power.produced.t1', data.total_power_export_t1_kwh).catch(this.error);
-      }
-      else if (data.total_power_export_t1_kwh < 1) {
-        await this.removeCapability('meter_power.produced.t1').catch(this.error);
-      }
+    // measure_voltage
+    if (data.active_voltage_v !== undefined) {
+      await updateCapability(this, 'measure_voltage', data.active_voltage_v);
+    } else if (this.hasCapability('measure_voltage')) {
+      await this.removeCapability('measure_voltage').catch(this.error);
+    }
 
-      // aggregated meter for Power by the hour support
-      if (!this.hasCapability('meter_power')) {
-        await this.addCapability('meter_power').catch(this.error);
-      }
-      // update calculated value which is sum of import deducted by the sum of the export this overall kwh number is used for Power by the hour app
-      await this.setCapabilityValue('meter_power', (data.total_power_import_t1_kwh - data.total_power_export_t1_kwh)).catch(this.error);
+    // measure_current
+    if (data.active_current_a !== undefined) {
+      await updateCapability(this, 'measure_current', data.active_current_a);
+    } else if (this.hasCapability('measure_current')) {
+      await this.removeCapability('measure_current').catch(this.error);
+    }
 
-      // active_voltage_l1_v
-      if (data.active_voltage_v !== undefined) {
-        if (!this.hasCapability('measure_voltage')) {
-          await this.addCapability('measure_voltage').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_voltage') != data.active_voltage_v)
-        { await this.setCapabilityValue('measure_voltage', data.active_voltage_v).catch(this.error); }
-      }
-      else if ((data.active_voltage_v == undefined) && (this.hasCapability('measure_voltage'))) {
-        await this.removeCapability('measure_voltage').catch(this.error);
-      }
+    await this.setAvailable().catch(this.error);
+    this.failCount = 0;
 
-      // active_current_a  Amp's
-      if (data.active_current_a !== undefined) {
-        if (!this.hasCapability('measure_current')) {
-          await this.addCapability('measure_current').catch(this.error);
-        }
-        if (this.getCapabilityValue('measure_current') != data.active_current_a)
-        { await this.setCapabilityValue('measure_current', data.active_current_a).catch(this.error); }
-      }
-      else if ((data.active_current_a == undefined) && (this.hasCapability('measure_current'))) {
-        await this.removeCapability('measure_current').catch(this.error);
-      }
+  } catch (err) {
 
-      if (this.url != settings.url) {
-            this.log('SDM230-p1mode - Updating settings url');
-            await this.setSettings({
-                  // Update url settings
-                  url: this.url
-                });
-      }
+    if (err.message === 'TIMEOUT') {
+      this._debugLog(`⏱️ Timeout during GET /data (outer catch)`);
+    }
 
+    this.error('Polling failed:', err);
+    this.failCount++;
 
-    })
-      .then(() => {
-        this.setAvailable().catch(this.error);
-      })
-      .catch((err) => {
-        this.error(err);
-        this.setUnavailable(err).catch(this.error);
-      });
+    if (this.failCount > 3) {
+      if (this.onPollInterval) clearInterval(this.onPollInterval);
+      await this.setUnavailable('Device unreachable');
+    } else {
+      await this.setUnavailable(err.message || 'Polling error');
+    }
+
+  } finally {
+    this.pollingActive = false;
   }
+}
+
 
   async onSettings(MySettings) {
     this.log('Settings updated');
@@ -256,6 +362,20 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
             this.setCloudOff();
         }
       }
+
+      if ('baseload_notifications' in MySettings.oldSettings &&
+        MySettings.oldSettings.baseload_notifications !== MySettings.newSettings.baseload_notifications
+      ) {
+        this._baseloadNotificationsEnabled = MySettings.newSettings.baseload_notifications;
+
+        const app = this.homey.app;
+        if (app.baseloadMonitor) {
+          app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+        }
+
+        this.log('Baseload notifications changed to:', this._baseloadNotificationsEnabled);
+      }
+
     // return true;
   }
 

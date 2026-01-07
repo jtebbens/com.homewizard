@@ -21,5 +21,14 @@
     "label": { "en": "url",
                 "nl": "url"
    }
+  },
+    {
+    "id": "baseload_notifications",
+    "type": "checkbox",
+    "label": {
+      "en": "Enable baseload notifications",
+      "nl": "Sluipverbruik meldingen inschakelen"
+    },
+    "value": true
   }
 ]

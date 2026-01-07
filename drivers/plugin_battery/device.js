@@ -17,23 +17,37 @@ process.on('unhandledRejection', (reason, promise) =>
 // ---------------------------------------------------------
 // fetchWithTimeout (unchanged)
 // ---------------------------------------------------------
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Fetch timeout')), timeout);
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
 
     fetch(url, options)
       .then(async res => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
+
         const text = await res.text();
         try { resolve(JSON.parse(text)); }
         catch { resolve(text); }
       })
       .catch(err => {
-        clearTimeout(timer);
-        reject(err);
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
       });
   });
 }
+
 
 // ---------------------------------------------------------
 // estimateBatteryKWh (unchanged)
@@ -94,13 +108,7 @@ function getWifiQuality(strength) {
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
 
-  if (value == null) {
-    if (device.hasCapability(capability) && current !== null) {
-      await device.removeCapability(capability).catch(device.error);
-      device.log(`🗑️ Removed capability "${capability}"`);
-    }
-    return;
-  }
+  if (value === undefined || value === null) return;
 
   if (!device.hasCapability(capability)) {
     await device.addCapability(capability).catch(device.error);

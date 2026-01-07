@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetchQueue = require('./includes/utils/fetchQueue');
+
 // const v8 = require('v8');
 
 const Testing = false;

@@ -1,7 +1,9 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('../../includes/utils/fetchQueue');
+
+const fetch = require('node-fetch');
+
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 const http = require('http');
 
@@ -16,6 +18,34 @@ const PHASE_CAPS = [
   'meter_power.consumed.t3', 'meter_power.produced.t3'
 ];
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
+
+    fetch(url, options)
+      .then(res => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(res);
+        }
+      })
+      .catch(err => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+  });
+}
 
 
 async function updateCapability(device, capability, value) {
@@ -65,6 +95,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.failCount = 0;
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
+    this._debugLogs = [];
 
     this.agent = new http.Agent({
       keepAlive: true,
@@ -220,7 +251,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!this.url) return;
 
     try {
-      const res = await fetch(`${this.url}/identify`, {
+      const res = await fetchWithTimeout(`${this.url}/identify`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -236,33 +267,42 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
-    if (this._deleted) return;
-    try {
-      if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
-        throw new Error('Invalid discovery result: missing address, port, or path');
-      }
+onDiscoveryAvailable(discoveryResult) {
+  if (this._deleted) return;
 
-      this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-      this.log(`Discovered device URL: ${this.url}`);
-      this.onPoll();
-
-    } catch (err) {
-      this.log(`Discovery failed: ${err.message}`);
+  try {
+    if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
+      throw new Error('Invalid discovery result: missing address, port, or path');
     }
-  }
 
-  onDiscoveryAddressChanged(discoveryResult) {
-    if (this._deleted) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL updated: ${this.url}`);
-    this.onPoll();
+    // this._debugLog(`🔄 Discovery available: ${this.url}`);
+    this._pendingStateUpdate = true;
+    this.setAvailable();
+
+  } catch (err) {
+    this._debugLog(`Discovery failed: ${err.message}`);
   }
+}
+
+
+onDiscoveryAddressChanged(discoveryResult) {
+  if (this._deleted) return;
+
+  this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+  this._debugLog(`🔄 Discovery address changed: ${this.url}`);
+  this._pendingStateUpdate = true;
+  this.setAvailable();
+}
+
+
+
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     if (this._deleted) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL restored: ${this.url}`);
+    //this._debugLog(`🔄 Discovery address changed: ${this.url}`);
     this.setAvailable();
     this.onPoll();
   }
@@ -271,7 +311,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!this.url) return;
 
     try {
-      const res = await fetch(`${this.url}/system`, {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
@@ -292,7 +332,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!this.url) return;
 
     try {
-      const res = await fetch(`${this.url}/system`, {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
@@ -310,7 +350,14 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   async onPoll() {
+    if (this.pollingActive) return;
     if (this._deleted) return;
+
+    if (this._pendingStateUpdate) {
+      this._pendingStateUpdate = false;
+      this._debugLog(`🔁 Forced poll due to discovery/state update`);
+    }
+
     const settings = this.getSettings();
 
     if (!this.url) {
@@ -332,16 +379,25 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
       const homeyLang = this.homey.i18n.getLanguage();
 
-      const res = await fetch(`${this.url}/data`, {
-        agent: this.agent,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      let res;
+      try {
+        res = await fetchWithTimeout(`${this.url}/data`, {
+          agent: this.agent,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        if (err.message === 'TIMEOUT') {
+          this._debugLog(`⏱️ Timeout during GET /data`);
+        }
+        throw err; // laat outer catch het verder afhandelen
+      }
 
       if (!res || !res.ok) {
         await updateCapability(this, 'connection_error', 'Fetch error');
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
+
 
       // const data = await res.json();
       // if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
@@ -779,6 +835,26 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       state.notified = false;
     }
   }
+
+_debugLog(msg) {
+  const ts = new Date().toISOString();
+  const line = `${ts} ${msg}`;
+
+  this._debugLogs.push(line);
+  if (this._debugLogs.length > 200) this._debugLogs.shift();
+
+  // Per-device store
+  this.setStoreValue('debug_logs', this._debugLogs).catch(() => {});
+
+  // App settings (synchronous, no Promise)
+  try {
+    this.homey.settings.set('debug_logs', this._debugLogs);
+  } catch (err) {
+    this.error('Failed to write debug_logs:', err);
+  }
+}
+
+
 
   async onSettings(event) {
     const { newSettings, changedKeys } = event;

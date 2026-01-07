@@ -1,28 +1,74 @@
 'use strict';
 
+const Homey = require('homey');
+
 module.exports = class FetchLegacyDebug {
-  constructor(device, size = 50) {
+  constructor(device, size = 200) {
     this.device = device;
     this.size = size;
-    this.buffer = [];
+
+    this.deviceId =
+      device?.id ||
+      device?.getData?.()?.id ||
+      device?.deviceInstance?.getData?.()?.id ||
+      'unknown-device';
+
+    this.deviceName =
+      device?.name ||
+      device?.deviceInstance?.getName?.() ||
+      'unknown';
+
+    this.key = `fetchLegacyDebug_${this.deviceId}`;
+
+    this.settings =
+      Homey &&
+      Homey.settings &&
+      typeof Homey.settings.get === 'function' &&
+      typeof Homey.settings.set === 'function'
+        ? Homey.settings
+        : null;
+
+    let stored = [];
+    if (this.settings) {
+      try {
+        stored = this.settings.get(this.key) || [];
+      } catch (_) {}
+    }
+
+    this.buffer = Array.isArray(stored) ? stored : [];
+
+    // throttle state
+    this._lastFlush = 0;
   }
 
   log(entry) {
-    const timestamp = new Date().toISOString();
-    const devId = this.device?.getData?.().id || 'unknown-device';
+    const iso = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false });
 
     this.buffer.push({
-      t: timestamp,
-      id: devId,
-      ...entry
+      t: iso,
+      id: this.deviceId,
+      name: this.deviceName,
+      ...entry,
     });
 
     if (this.buffer.length > this.size) {
-      this.buffer.shift();
+      this.buffer = this.buffer.slice(-this.size);
     }
 
-    // No Homey.settings here — this file has no access to it.
-    // Buffer stays in memory. Caller must sync to settings if needed.
+    this.flush();
+  }
+
+  flush() {
+    if (!this.settings) return;
+
+    const now = Date.now();
+    if (now - this._lastFlush < 1000) return; // max 1 write per seconde
+
+    this._lastFlush = now;
+
+    try {
+      this.settings.set(this.key, this.buffer);
+    } catch (_) {}
   }
 
   get() {
@@ -31,5 +77,10 @@ module.exports = class FetchLegacyDebug {
 
   clear() {
     this.buffer = [];
+    if (this.settings) {
+      try {
+        this.settings.set(this.key, []);
+      } catch (_) {}
+    }
   }
 };

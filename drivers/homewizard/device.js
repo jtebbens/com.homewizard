@@ -17,7 +17,7 @@ function callnewAsync(
   uri_part,
   {
     timeout = 4000,
-    retries = 1,
+    retries = 2,
     retryDelay = 1500
   } = {},
   deviceInstance
@@ -57,13 +57,13 @@ function callnewAsync(
 
         if (err) {
           if (attempts <= retries) {
-            console.log(
+            if (debug) console.log(
               `[callnewAsync] Error on ${device_id}${uri_part}: ${err.message}, retry ${attempts}/${retries}`
             );
             return setTimeout(attempt, retryDelay);
           }
 
-          console.log(
+          if (debug) console.log(
             `[callnewAsync] FINAL ERROR on ${device_id}${uri_part}: ${err.message}`
           );
           if (deviceInstance?.syncLegacyDebugToSettings) {
@@ -72,7 +72,7 @@ function callnewAsync(
           return reject(err);
         }
 
-        console.log(`[callnewAsync] OK ${device_id}${uri_part}`);
+        if (debug) console.log(`[callnewAsync] OK ${device_id}${uri_part}`);
         if (deviceInstance?.syncLegacyDebugToSettings) {
           deviceInstance.syncLegacyDebugToSettings();
         }
@@ -90,6 +90,15 @@ class HomeWizardDevice extends Homey.Device {
 
     // ⬅️ BELANGRIJK: bind device instance mee als laatste argument
     this.callnewAsyncBound = (...args) => callnewAsync(...args, this);
+    this._lastLegacySync = 0;
+
+    
+    homewizard.setDeviceInstance(this.getData().id, this);
+
+    if (!this.homey.settings.get('debug_legacy_fetch')) {
+      this.homey.settings.set('debug_legacy_fetch', []);
+    }
+
 
     if (debug) { this.log('HomeWizard Appliance has been inited'); }
 
@@ -100,12 +109,19 @@ class HomeWizardDevice extends Homey.Device {
     const devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
     devices.forEach((device) => {
-      this.log(`add device: ${JSON.stringify(device.getName())}`);
+      const id = device.getData().id;
+      const name = device.getName();
 
-      homeWizard_devices[device.getData().id] = {};
-      homeWizard_devices[device.getData().id].name = device.getName();
-      homeWizard_devices[device.getData().id].settings = device.getSettings();
+      if (debug) this.log(`add device: ${JSON.stringify(name)} (${id})`);
+
+      homeWizard_devices[id] = {
+        id,
+        name,
+        settings: device.getSettings(),
+        hasEverReturnedPreset: false
+      };
     });
+
 
     homewizard.setDevices(homeWizard_devices);
     homewizard.startpoll();
@@ -133,16 +149,21 @@ class HomeWizardDevice extends Homey.Device {
 
         // 3. Best-effort verificatie (mag falen!)
         try {
-          const sensors = await this.callnewAsyncBound(id, '/get-sensors');
-          const hwPreset = sensors?.preset;
+          const sensors = await this.callnewAsyncBound(id, '/get-status', { timeout: 8000 });
+          console.log(sensors);
 
-          if (hwPreset !== presetId) {
+          // sensors is het volledige object van callnew: { status, version, request, response }
+          const hwPreset = sensors?.response?.preset;
+
+          // Alleen loggen als HW een *andere* preset teruggeeft, niet bij undefined
+          if (hwPreset !== undefined && hwPreset !== presetId) {
             this.log(`WARN: HW returned preset ${hwPreset} but Homey set ${presetId}. Ignoring.`);
           }
         } catch (verifyErr) {
           this.log(`WARN: Verification failed after setting preset ${presetId}: ${verifyErr.message}`);
           // NIET throwen → Homey blijft leidend
         }
+
 
         // 4. Flow triggeren
         const lang = this.homey.i18n.getLanguage();
@@ -178,19 +199,58 @@ class HomeWizardDevice extends Homey.Device {
   }
 
   syncLegacyDebugToSettings() {
-    try {
-      // homewizard.js gebruikt een plain object, geen echte Device instances
-      const devices = homewizard.self?.devices || {};
-
-      const all = Object.values(devices)
-        .map(d => d.fetchLegacyDebug?.get?.() || [])
-        .flat();
-
-      this.homey.settings.set('debug_legacy_fetch', all);
-    } catch (e) {
-      this.log('Legacy debug sync failed:', e.message);
+  try {
+    const now = Date.now();
+    if (now - (this._lastLegacySync || 0) < 2000) {
+      // max 1 sync per 2 seconden
+      return;
     }
+    this._lastLegacySync = now;
+
+    const devices = homewizard.self?.devices || {};
+    const LEGACY_MAX_LOG = 500;
+
+    const all = Object.values(devices)
+      .map(d => d.fetchLegacyDebug?.get?.() || [])
+      .flat()
+      .filter(entry => entry && typeof entry === 'object')
+      .filter(entry => !(entry.type === 'raw_response' && entry.status === 200));
+
+
+    const formatted = all.map(entry => {
+      const iso = entry.t || entry.ts || new Date().toISOString();
+      const ts = iso;
+      const name = entry.name || entry.id || '—';
+      const type = entry.type || 'unknown';
+
+      let msg = '';
+      switch (type) {
+        case 'timeout': msg = entry.ms ? `timeout ${entry.ms}ms` : 'timeout'; break;
+        case 'http_error': msg = entry.status ? `HTTP ${entry.status}` : 'HTTP fout'; break;
+        case 'socket_hangup':
+        case 'error': msg = entry.error || 'socket hangup'; break;
+        case 'circuit_open': {
+          const remaining = Math.max(0, Math.round((entry.openUntil - Date.now()) / 1000));
+          msg = `circuit open (${remaining}s resterend)`;
+          break;
+        }
+        case 'settings_missing': msg = 'instellingen ontbreken'; break;
+        case 'parse_error': msg = entry.error ? `parse error: ${entry.error}` : 'parse error'; break;
+        case 'device_error': msg = entry.message || entry.error || 'device error'; break;
+        default: msg = entry.error || entry.message || entry.status || '(geen details)';
+      }
+
+      return { ts, name, msg, type };
+    });
+
+    const trimmed = formatted.slice(-LEGACY_MAX_LOG);
+    this.homey.settings.set('debug_legacy_fetch', trimmed);
+
+  } catch (e) {
+    this.log('Legacy debug sync failed:', e.message);
   }
+}
+
 
   startPolling(devices) {
     if (this.refreshIntervalId) {
@@ -209,34 +269,65 @@ class HomeWizardDevice extends Homey.Device {
         const homey_lang = this.homey.i18n.getLanguage();
 
         for (const device of devices) {
-          try {
-            const callback = await homewizard.getDeviceData(device.getData().id, 'preset');
-            const hwPreset = typeof callback === 'object' ? callback.id : callback;
+  try {
+    const id = device.getData().id;
 
-            // Homey is leidend: store bevat de "waarheid" zoals Homey die gezet heeft
-            const homeyPreset = await device.getStoreValue('preset');
+    // Altijd via /get-status, nooit meer via legacy wrapper
+    const sensors = await this.callnewAsyncBound(id, '/get-status', { timeout: 8000 });
+    const hwPreset = sensors?.response?.preset;
 
-            // Eerste init (bij lege store) → alleen store vullen, capability NIET aanpassen
-            if (homeyPreset === null || homeyPreset === undefined) {
-              if (debug) {
-                this.log(`Initial preset store set to ${hwPreset} for device ${device.getName()}`);
-              }
-              await device.setStoreValue('preset', hwPreset);
-              continue;
-            }
+    // Markeer dat HW ooit een geldige preset heeft teruggegeven
+    if (hwPreset !== null && hwPreset !== undefined && hwPreset !== '') {
+      homeWizard_devices[id].hasEverReturnedPreset = true;
+    }
 
-            // Als HW afwijkt van Homey → alleen loggen, NIET aanpassen
-            if (hwPreset !== homeyPreset) {
-              this.log(
-                `WARN: Polling detected HW preset ${hwPreset} but Homey preset ${homeyPreset} for device ${device.getName()}. Ignoring.`
-              );
-            }
+    // Homey is leidend
+    const homeyPreset = await device.getStoreValue('preset');
 
-          } catch (err) {
-            this.log('HomeWizard data corrupt');
-            this.log(err);
-          }
-        }
+    // Eerste init
+    if (homeyPreset === null || homeyPreset === undefined) {
+      if (debug) this.log(`Initial preset store set to ${hwPreset} for device ${device.getName()}`);
+      await device.setStoreValue('preset', hwPreset);
+      continue;
+    }
+
+    // Als HW geen preset geeft → stil blijven
+    if (hwPreset === undefined || hwPreset === null || hwPreset === '') {
+      if (debug && homeWizard_devices[id].hasEverReturnedPreset) {
+        if (debug) this.log(`check_preset: HW returned no preset, using Homey preset=${homeyPreset}`);
+      }
+      continue;
+    }
+
+    // Alleen loggen bij echte afwijking
+    if (hwPreset !== homeyPreset) {
+      this.log(`WARN: HW preset ${hwPreset} differs from Homey preset ${homeyPreset}. Ignoring.`);
+    }
+
+    } catch (err) {
+      // Log naar legacy debug buffer
+      try {
+        const dev = homewizard.self?.devices?.[device.getData().id];
+        dev?.fetchLegacyDebug?.log({
+          type: 'device_error',
+          message: 'HomeWizard data corrupt',
+          error: err?.message || String(err),
+          ts: Date.now()
+        });
+      } catch (_) {}
+
+      // Sync naar settings zodat het zichtbaar wordt in de UI
+      this.syncLegacyDebugToSettings?.();
+
+      // Alleen in debug naar de Homey-log
+      if (debug) {
+        this.log('HomeWizard data corrupt');
+        this.log(err);
+      }
+}
+
+}
+
       })
       .then(() => {
         this.setAvailable().catch(this.error);
