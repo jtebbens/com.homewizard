@@ -829,5 +829,8 @@
   },
   "3.10.1": {
     "en": "Watermeter daily usage added, Bugfix: Device Fetch Debug wasn't updating"
+  },
+  "3.10.2": {
+    "en": "Bugfix: Circular Reference \"device\""
   }
 }
