@@ -217,7 +217,7 @@
         });
 
 
-        /* ---- PER-DEVICE FETCH DEBUG (debug_logs) ---- */
+/* ---- PER-DEVICE FETCH DEBUG (debug_logs) ---- */
 const fetchBox = document.getElementById('fetch-debug');
 
 function renderFetchDebug(settings) {
@@ -231,6 +231,9 @@ function renderFetchDebug(settings) {
   fetchBox.textContent = logs.join('\n');
   fetchBox.scrollTop = fetchBox.scrollHeight;
 }
+
+renderFetchDebug(settings);
+
 
 /* Live updates */
 Homey.on('settings.set', changedKey => {
