@@ -13,10 +13,8 @@
     "changelog": {
       "label": "📜 View Changelog"
     },
-    "support": {
-      "link": "https://community.homey.app/t/app-pro-homewizard/19267",
-      "label": "🛠️ Support Page"
-    },
+    "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
+    "support_label": "🛠️ Support Page",
     "tab_baseload": "Baseload"
   },
   "pair": {

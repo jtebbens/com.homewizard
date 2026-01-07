@@ -10,7 +10,8 @@ const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 module.exports = (function() {
   const homewizard = {};
   const self = {};
-  self.devices = [];
+  // self.devices = [];
+  self.devices = {};
   self.polls = [];
   const debug = false;
 
@@ -48,24 +49,6 @@ module.exports = (function() {
       }
     });
   };
-
-  function fetchWithConnectTimeout(url, options = {}, timeoutMs = 5000) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(new Error('connect_timeout'));
-      }, timeoutMs);
-
-      fetch(url, options)
-        .then(res => {
-          clearTimeout(timer);
-          resolve(res);
-        })
-        .catch(err => {
-          clearTimeout(timer);
-          reject(err);
-        });
-    });
-  }
 
   function initCircuitBreaker(device) {
     if (!device.circuit) {
@@ -128,152 +111,174 @@ module.exports = (function() {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
   }
 
-  function getAdaptiveTimeout(device) {
-    const avg = getAverageResponseTime(device);
+    function getAdaptiveTimeout(device) {
+      const avg = getAverageResponseTime(device);
 
-    if (!avg) return 8000;
+      if (!avg) return 6000;
 
-    return Math.min(Math.max(avg * 3, 3000), 8000);
-  }
+      // Adaptive timeout: 2.5 × avg
+      const adaptive = avg * 2.5;
+
+      // Hard min/max
+      return Math.min(Math.max(adaptive, 5000), 8000);
+    }
+
+
+    homewizard.setDeviceInstance = function(device_id, deviceInstance) {
+    if (!self.devices[device_id]) {
+      // optioneel: in debug zien dat er iets mis is
+      if (debug) console.log(`[homewizard.setDeviceInstance] Unknown device_id: ${device_id}`);
+      return;
+    }
+
+    self.devices[device_id].deviceInstance = deviceInstance;
+  };
+
+
+
+  // ---------------------------------------------------------------------------
+  // 🟩 LEGACY PARSER
+  // ---------------------------------------------------------------------------
 
   homewizard.callnew = async function(device_id, uri_part, callback) {
-    let timeout = null;
-    let controller = null;
+  let timeout = null;
+  let controller = null;
 
-    const device = self.devices[device_id];
-    if (!device || !device.settings) {
-      try {
-        device?.fetchLegacyDebug?.log({
-          type: 'settings_missing',
-          url: null
-        });
-      } catch (_) {}
-      return callback('settings_missing', []);
-    }
-
-
-    // 🟩 FIX: ensure debug exists ALWAYS
-    if (!device.fetchLegacyDebug) {
-      device.fetchLegacyDebug = new FetchLegacyDebug(device, 100);
-    }
-
-    const { homewizard_ip, homewizard_pass } = device.settings;
-    const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
-
-    if (!circuitBreakerAllows(device)) {
-      try {
-        device.fetchLegacyDebug.log({
-          type: 'circuit_open',
-          url,
-          openUntil: device.circuit.openUntil
-        });
-      } catch (_) {}
-      return callback('circuit_open', []);
-    }
-
-
-    const timeoutDuration = getAdaptiveTimeout(device);
-    const start = Date.now();
-
+  const device = self.devices[device_id];
+  if (!device || !device.settings) {
     try {
-      controller = new AbortController();
-      const { signal } = controller;
-
-      timeout = setTimeout(() => {
-        controller.abort();
-      }, timeoutDuration);
-
-      const response = await fetch(url, {
-        signal,
-        follow: 0,
-        redirect: 'error',
-        headers: { 'Content-Type': 'application/json' }
+      device?.fetchLegacyDebug?.log({
+        type: 'settings_missing',
+        url: null
       });
+    } catch (_) {}
+    return callback('settings_missing', []);
+  }
 
-      clearTimeout(timeout);
+  if (!device.fetchLegacyDebug) {
+    device.fetchLegacyDebug = new FetchLegacyDebug(device, 100);
+  }
 
-      const duration = Date.now() - start;
-      recordResponseTime(device, duration);
-      circuitBreakerSuccess(device);
+  const { homewizard_ip, homewizard_pass } = device.settings;
+  const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
 
-      if (response.status !== 200) {
-        device.fetchLegacyDebug.log({
-          type: 'http_error',
-          url,
-          ms: duration,
-          status: response.status
-        });
-        return callback('http_error', []);
-      }
-
-      
-
-      // const jsonData = await response.json();
-      const text = await response.text();
-
-device.fetchLegacyDebug.log({
-  type: 'raw_response',
-  url,
-  ms: duration,
-  status: response.status,
-  body: text.slice(0, 300)
-});
-
-let jsonData;
-try {
-  jsonData = JSON.parse(text);
-} catch (e) {
-  device.fetchLegacyDebug.log({
-    type: 'json_parse_error',
-    url,
-    ms: duration,
-    error: e.message,
-    bodySnippet: text.slice(0, 300)
-  });
-  return callback('json_parse_error', []);
-}
-
-
-      if (jsonData.status === 'ok') {
-        return callback(null, jsonData.response);
-      } else {
-        device.fetchLegacyDebug.log({
-          type: 'invalid_data',
-          url,
-          ms: duration,
-          payload: jsonData
-        });
-        return callback('invalid_data', []);
-      }
-
-    } catch (error) {
-      clearTimeout(timeout);
-
-      const duration = Date.now() - start;
-      recordResponseTime(device, duration);
-      circuitBreakerFail(device);
-
+  if (!circuitBreakerAllows(device)) {
+    try {
       device.fetchLegacyDebug.log({
-        type: 'error',
+        type: 'circuit_open',
+        url,
+        openUntil: device.circuit.openUntil
+      });
+    } catch (_) {}
+    return callback('circuit_open', []);
+  }
+
+  const timeoutDuration = getAdaptiveTimeout(device);
+  const start = Date.now();
+
+  try {
+    controller = new AbortController();
+    const { signal } = controller;
+
+    timeout = setTimeout(() => {
+      controller.abort();
+    }, timeoutDuration);
+
+    const response = await fetch(url, {
+      signal,
+      follow: 0,
+      redirect: 'error',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    clearTimeout(timeout);
+
+    const duration = Date.now() - start;
+    recordResponseTime(device, duration);
+    circuitBreakerSuccess(device);
+
+    if (response.status !== 200) {
+      device.fetchLegacyDebug.log({
+        type: 'http_error',
         url,
         ms: duration,
-        error: error.message || error,
-        code: error.code || null
+        status: response.status
       });
-
-      if (error.name === 'AbortError') {
-        device.fetchLegacyDebug.log({
-          type: 'timeout',
-          url,
-          ms: duration,
-          timeout: timeoutDuration
-        });
-        return callback('timeout', []);
-      }
-
-      return callback(error, []);
+      return callback('http_error', []);
     }
-  };
+
+    const text = await response.text();
+
+    // Alleen nog bij debug=true, niet in productie
+    if (debug) {
+      device.fetchLegacyDebug.log({
+        type: 'raw_response',
+        url,
+        ms: duration,
+        status: response.status,
+        body: text.slice(0, 300)
+      });
+    }
+
+
+    let jsonData;
+    try {
+      jsonData = JSON.parse(text);
+    } catch (e) {
+      device.fetchLegacyDebug.log({
+        type: 'json_parse_error',
+        url,
+        ms: duration,
+        error: e.message,
+        bodySnippet: text.slice(0, 300)
+      });
+      return callback('json_parse_error', []);
+    }
+
+    if (jsonData.status === 'ok') {
+      return callback(null, jsonData.response);
+    }
+
+    device.fetchLegacyDebug.log({
+      type: 'invalid_data',
+      url,
+      ms: duration,
+      payload: jsonData
+    });
+    return callback('invalid_data', []);
+
+  } catch (error) {
+    clearTimeout(timeout);
+
+    const duration = Date.now() - start;
+    recordResponseTime(device, duration);
+    circuitBreakerFail(device);
+
+    if (error.name === 'AbortError') {
+      device.fetchLegacyDebug.log({
+        type: 'timeout',
+        url,
+        ms: duration,
+        timeout: timeoutDuration
+      });
+      // geen "user aborted" log, geen dubbele entry
+      return callback('timeout', []);
+    }
+
+    device.fetchLegacyDebug.log({
+      type: 'error',
+      url,
+      ms: duration,
+      error: error.message || error,
+      code: error.code || null
+    });
+
+    return callback(error, []);
+  }
+};
+
+
+  // ---------------------------------------------------------------------------
 
   if (!Homey2023) {
     homewizard.ledring_pulse = function(device_id, colorName) {
@@ -367,5 +372,6 @@ try {
     }
   };
 
+  homewizard.self = self;
   return homewizard;
 }());

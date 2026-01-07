@@ -87,30 +87,37 @@ async function getStoreValueSafe(device, key) {
 }
 
 
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
+    let settled = false;
+
     const timer = setTimeout(() => {
-      reject(new Error('Fetch timeout'));
-    }, timeout);
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
 
     fetch(url, options)
       .then(async res => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
 
-        // Safely parse JSON or return text
         const text = await res.text();
-        try {
-          resolve(JSON.parse(text));
-        } catch {
-          resolve(text);
-        }
+        try { resolve(JSON.parse(text)); }
+        catch { resolve(text); }
       })
       .catch(err => {
-        clearTimeout(timer);
-        reject(err);
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
       });
   });
 }
+
 
 
 

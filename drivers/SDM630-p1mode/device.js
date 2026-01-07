@@ -1,9 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-// const fetch = require('node-fetch');
-const fetch = require('../../includes/utils/fetchQueue');
 
+const fetch = require('node-fetch');
 // const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 // const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;

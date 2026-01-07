@@ -1,23 +1,35 @@
 'use strict';
 
-// const fetch = require('node-fetch');
-const fetch = require('../utils/fetchQueue');
+const fetch = require('node-fetch');
 
 const https = require('https');
 
 // Unified timeout wrapper — returns Response
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('Fetch timeout')), timeout);
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
 
     fetch(url, options)
       .then(res => {
-        clearTimeout(timer);
-        resolve(res);
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(res);
+        }
       })
       .catch(err => {
-        clearTimeout(timer);
-        reject(err);
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
       });
   });
 }

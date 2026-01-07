@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-// const fetch = require('../../includes/utils/fetchQueue');
+
 const https = require('https');
 
 /**
@@ -57,7 +57,7 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
     dbg.lastStatus = status;               // 'ok', 'error', 'not_found'
     dbg.lastDetail = detail ? String(detail) : null;
-    dbg.lastUpdate = new Date().toISOString();
+    dbg.lastUpdate = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false }),
 
     this.homey.settings.set('debug_discovery', dbg);
   }

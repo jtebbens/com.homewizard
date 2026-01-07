@@ -1,14 +1,52 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetch = require('node-fetch');
 const http = require('http');
 
+/**
+ * Timeout wrapper for node-fetch (Homey has no AbortController)
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        reject(new Error('TIMEOUT'));
+      }
+    }, timeoutMs);
+
+    fetch(url, options)
+      .then(res => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(res);
+        }
+      })
+      .catch(err => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          reject(err);
+        }
+      });
+  });
+}
+
+/**
+ * Shared HTTP agent
+ */
 const agent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 11000
 });
 
+/**
+ * Safe capability updater
+ */
 async function updateCapability(device, capability, value) {
   const current = device.getCapabilityValue(capability);
 
@@ -31,6 +69,8 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
     this.pollingActive = false;
     this.failCount = 0;
+    this._pendingStateUpdate = false;
+    this._debugLogs = [];
 
     const settings = this.getSettings();
     this.log('Polling settings for SDM630:', settings.polling_interval);
@@ -63,39 +103,71 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     }
   }
 
+  /**
+   * Discovery — burst-safe
+   */
   onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL: ${this.url}`);
-    this.onPoll();
+    // this._debugLog(`🔄 Discovery available: ${this.url}`);
+    this._pendingStateUpdate = true;
+    this.setAvailable();
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL updated: ${this.url}`);
-    this.onPoll();
+    this._debugLog(`🔄 Discovery address changed: ${this.url}`);
+    this._pendingStateUpdate = true;
+    this.setAvailable();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL restored: ${this.url}`);
+    // this._debugLog(`🔄 Discovery last seen: ${this.url}`);
+    this._pendingStateUpdate = true;
     this.setAvailable();
-    this.onPoll();
   }
+
+  /**
+   * Per-device debug logger
+   */
+_debugLog(msg) {
+  const ts = new Date().toISOString();
+  const line = `${ts} ${msg}`;
+
+  this._debugLogs.push(line);
+  if (this._debugLogs.length > 200) this._debugLogs.shift();
+
+  // Per-device store
+  this.setStoreValue('debug_logs', this._debugLogs).catch(() => {});
+
+  // App settings (synchronous, no Promise)
+  try {
+    this.homey.settings.set('debug_logs', this._debugLogs);
+  } catch (err) {
+    this.error('Failed to write debug_logs:', err);
+  }
+}
+
 
   async setCloudOn() {
     if (!this.url) return;
 
     try {
-      const res = await fetch(`${this.url}/system`, {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
-      });
+      }, 5000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
       this.log('Cloud enabled successfully');
     } catch (err) {
+
+      if (err.message === 'TIMEOUT') {
+        this._debugLog(`⏱️ Timeout during PUT /system (enable)`);
+      }
+
       this.error('Failed to enable cloud:', err);
     }
   }
@@ -104,109 +176,148 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     if (!this.url) return;
 
     try {
-      const res = await fetch(`${this.url}/system`, {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
-      });
+      }, 5000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
       this.log('Cloud disabled successfully');
     } catch (err) {
+
+      if (err.message === 'TIMEOUT') {
+        this._debugLog(`⏱️ Timeout during PUT /system (disable)`);
+      }
+
       this.error('Failed to disable cloud:', err);
     }
   }
 
   async onPoll() {
-    const settings = this.getSettings();
+  const settings = this.getSettings();
 
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-        this.log(`Restored URL from settings: ${this.url}`);
-      } else {
-        await this.setUnavailable('Missing URL');
-        return;
-      }
-    }
-
-    if (this.pollingActive) return;
-    this.pollingActive = true;
-
-    try {
-      const res = await fetch(`${this.url}/data`, {
-        agent,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-
-      const data = await res.json();
-      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
-
-      const updates = [];
-
-      // Core capabilities
-      updates.push(updateCapability(this, 'measure_power', data.active_power_w));
-      updates.push(updateCapability(this, 'measure_power.active_power_w', data.active_power_w));
-      updates.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
-      updates.push(updateCapability(this, 'rssi', data.wifi_strength));
-
-      // Solar export (production)
-      if (data.total_power_export_t1_kwh > 1) {
-        updates.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
-      }
-
-      // Net power
-      const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
-      updates.push(updateCapability(this, 'meter_power', net));
-
-      // 3‑phase power
-      updates.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));
-      updates.push(updateCapability(this, 'measure_power.l2', data.active_power_l2_w));
-      updates.push(updateCapability(this, 'measure_power.l3', data.active_power_l3_w));
-
-      // 3‑phase voltages
-      updates.push(updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v));
-      updates.push(updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v));
-      updates.push(updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v));
-
-      // 3‑phase currents
-      updates.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
-      updates.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
-      updates.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
-
-      // Sync URL if changed
-      if (this.url !== settings.url) {
-        this.log('SDM630 - Updating settings url');
-        await this.setSettings({ url: this.url }).catch(this.error);
-      }
-
-      await Promise.allSettled(updates);
-
-      await this.setAvailable().catch(this.error);
-      this.failCount = 0;
-
-    } catch (err) {
-      this.error('Polling failed:', err);
-      this.failCount++;
-
-      if (this.failCount > 3) {
-        if (this.onPollInterval) clearInterval(this.onPollInterval);
-        await this.setUnavailable('Device unreachable');
-      } else {
-        await this.setUnavailable(err.message || 'Polling error').catch(this.error);
-      }
-
-    } finally {
-      this.pollingActive = false;
+  // Restore URL only from settings, never write back
+  if (!this.url) {
+    if (settings.url) {
+      this.url = settings.url;
+      this.log(`Restored URL from settings: ${this.url}`);
+    } else {
+      await this.setUnavailable('Missing URL');
+      return;
     }
   }
 
+  // Burst‑safe discovery handling
+  if (this._pendingStateUpdate) {
+    this._pendingStateUpdate = false;
+    this._debugLog(`🔁 Forced poll due to discovery/state update`);
+  }
+
+  // Polling guard
+  if (this.pollingActive) return;
+  this.pollingActive = true;
+
+  try {
+    // -----------------------------
+    // FETCH WITH TIMEOUT
+    // -----------------------------
+    let res;
+    try {
+      res = await fetchWithTimeout(`${this.url}/data`, {
+        agent,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      }, 5000);
+    } catch (err) {
+      if (err.message === 'TIMEOUT') {
+        this._debugLog(`⏱️ Timeout during GET /data`);
+      }
+      throw err;
+    }
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+    // -----------------------------
+    // JSON PARSE WITH DEBUG
+    // -----------------------------
+    let text;
+    let data;
+
+    try {
+      text = await res.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
+      throw new Error('Invalid JSON');
+    }
+
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid JSON');
+    }
+
+    // -----------------------------
+    // CAPABILITY UPDATES (exactly as in your original driver)
+    // -----------------------------
+    const updates = [];
+
+    updates.push(updateCapability(this, 'measure_power', data.active_power_w));
+    updates.push(updateCapability(this, 'measure_power.active_power_w', data.active_power_w));
+    updates.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
+    updates.push(updateCapability(this, 'rssi', data.wifi_strength));
+
+    if (data.total_power_export_t1_kwh > 1) {
+      updates.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
+    }
+
+    const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
+    updates.push(updateCapability(this, 'meter_power', net));
+
+    // 3‑phase power
+    updates.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));
+    updates.push(updateCapability(this, 'measure_power.l2', data.active_power_l2_w));
+    updates.push(updateCapability(this, 'measure_power.l3', data.active_power_l3_w));
+
+    // 3‑phase voltage
+    updates.push(updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v));
+    updates.push(updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v));
+    updates.push(updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v));
+
+    // 3‑phase current
+    updates.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
+    updates.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
+    updates.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
+
+    await Promise.allSettled(updates);
+
+    await this.setAvailable().catch(this.error);
+    this.failCount = 0;
+
+  } catch (err) {
+
+    if (err.message === 'TIMEOUT') {
+      this._debugLog(`⏱️ Timeout during GET /data (outer catch)`);
+    }
+
+    this.error('Polling failed:', err);
+    this.failCount++;
+
+    if (this.failCount > 3) {
+      if (this.onPollInterval) clearInterval(this.onPollInterval);
+      await this.setUnavailable('Device unreachable');
+    } else {
+      await this.setUnavailable(err.message || 'Polling error').catch(this.error);
+    }
+
+  } finally {
+    this.pollingActive = false;
+  }
+}
+
+
   onSettings(event) {
-    const { oldSettings, newSettings, changedKeys } = event;
+    const { newSettings, changedKeys } = event;
 
     for (const key of changedKeys) {
 

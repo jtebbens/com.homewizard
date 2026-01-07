@@ -3,7 +3,7 @@
 const Homey = require('homey');
 // const request = require('request');
 const fetch = require('node-fetch');
-// const fetch = require('../../includes/utils/fetchQueue');
+
 
 const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
@@ -30,27 +30,27 @@ class HomeWizardDriver extends Homey.Driver {
     //
     try {
       const response = await new Promise((resolve, reject) => {
-        homewizard.callnew(device.getData().id, '/get-status/', (err, res) => {
+        homewizard.callnew(device.getData().id, '/get-status', (err, res) => {
           if (err) return reject(err);
           resolve(res);
         });
       });
 
-      const hwPreset = response?.preset;
+      const hwPreset = response?.preset ?? response?.response?.preset;
 
       if (hwPreset !== undefined && hwPreset !== null) {
         if (debug) this.log(`check_preset: HW=${hwPreset}, flow=${flowPreset}`);
         return String(hwPreset) === flowPreset;
       }
 
-      this.log('check_preset: HW returned no preset, falling back to capability');
+      if (debug) this.log('check_preset: HW returned no preset, falling back to capability');
     }
 
     //
     // 2. Als HW faalt → capability fallback
     //
     catch (err) {
-      this.log(`check_preset: HW error "${err.message}", falling back to capability`);
+      if (debug) this.log(`check_preset: HW error "${err.message}", falling back to capability`);
     }
 
     //
@@ -63,7 +63,7 @@ class HomeWizardDriver extends Homey.Driver {
       return false;
     }
 
-    this.log(`check_preset (fallback): cap=${capPreset}, flow=${flowPreset}`);
+    if (debug) this.log(`check_preset (fallback): cap=${capPreset}, flow=${flowPreset}`);
     return String(capPreset) === flowPreset;
   });
 
@@ -83,7 +83,9 @@ class HomeWizardDriver extends Homey.Driver {
       // 1. HomeWizard aansturen
       await new Promise((resolve, reject) => {
         homewizard.callnew(id, `/preset/${presetId}`, (err, response) => {
-          if (err) return reject(err);
+          if (err) {
+            return reject(new Error(err?.message || String(err) || 'Unknown HW error'));
+          }
           resolve(response);
         });
       });
@@ -91,13 +93,13 @@ class HomeWizardDriver extends Homey.Driver {
       // 2. Verificatie
       let hwPreset = null;
       try {
-        const sensors = await new Promise((resolve, reject) => {
-          homewizard.callnew(id, '/get-sensors', (err, res) => {
+        const status = await new Promise((resolve, reject) => {
+          homewizard.callnew(id, '/get-status', (err, res) => {
             if (err) return reject(err);
             resolve(res);
           });
         });
-        hwPreset = sensors?.preset;
+        hwPreset = status?.preset;
       } catch (err) {
         this.log(`WARN: set_preset → HW verification failed (${err.message}). Falling back to Homey state.`);
       }
@@ -236,7 +238,7 @@ class HomeWizardDriver extends Homey.Driver {
 
     socket.setHandler('manual_add', async (device) => {
 
-      const url = `http://${device.settings.homewizard_ip}/${device.settings.homewizard_pass}/get-sensors/`;
+      const url = `http://${device.settings.homewizard_ip}/${device.settings.homewizard_pass}/get-status/`;
 
       const json = await fetch(url).then((res) => res.json());
 

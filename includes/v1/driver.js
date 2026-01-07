@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
-// const fetch = require('../../includes/utils/fetchQueue');
+
 
 module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
 
@@ -11,7 +11,7 @@ logDiscovery(status, detail = null) {
 
   dbg.lastStatus = status;               // 'ok', 'error', 'timeout', 'not_found'
   dbg.lastDetail = detail ? String(detail) : null;
-  dbg.lastUpdate = new Date().toISOString();
+  dbg.lastUpdate = new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false }),
 
   this.homey.settings.set('debug_discovery', dbg);
 }
