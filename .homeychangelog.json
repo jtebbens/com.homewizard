@@ -838,5 +838,8 @@
   },
   "3.10.4": {
     "en": "Another Circular Reference \"device\" error fix"
+  },
+  "3.10.5": {
+    "en": "Removed all retry/timeout code for fetch as it seems to lock up devices"
   }
 }
