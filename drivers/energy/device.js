@@ -1,11 +1,11 @@
 'use strict';
 
 const Homey = require('homey');
-
+//const fetch = require('../../includes/utils/fetchQueue');
 const fetch = require('node-fetch');
-
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 const http = require('http');
+
 
 // All phase‑dependent capabilities (L2/L3/T3)
 const PHASE_CAPS = [
@@ -18,7 +18,7 @@ const PHASE_CAPS = [
   'meter_power.consumed.t3', 'meter_power.produced.t3'
 ];
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     let settled = false;
 
@@ -49,31 +49,39 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
 
 
 async function updateCapability(device, capability, value) {
-  // Skip null/undefined values (deletion-safe)
-  if (value === undefined || value === null) return;
+  try {
+    const current = device.getCapabilityValue(capability);
 
-  const current = device.getCapabilityValue(capability);
+    // --- SAFE REMOVE ---
+    // Removal is allowed only when:
+    // 1) the new value is null
+    // 2) the current value in Homey is also null
 
-  // If capability is missing, add it once
-  if (!device.hasCapability(capability)) {
-    try {
+    if (value == null && current == null) {
+      if (device.hasCapability(capability)) {
+        await device.removeCapability(capability);
+        device.log(`🗑️ Removed capability "${capability}"`);
+      }
+      return;
+    }
+
+    // --- ADD IF MISSING ---
+    if (!device.hasCapability(capability)) {
       await device.addCapability(capability);
       device.log(`➕ Added capability "${capability}"`);
-    } catch (err) {
-      // If another parallel call added it, ignore the error
-      if (!String(err.message).includes('already_exists')) {
-        device.error(`Failed to add capability "${capability}"`, err);
-      }
     }
-  }
 
-  // Update value only when changed
-  if (current !== value) {
-    try {
+    // --- UPDATE ---
+    if (current !== value) {
       await device.setCapabilityValue(capability, value);
-    } catch (err) {
-      device.error(`Failed to update capability "${capability}"`, err);
     }
+
+  } catch (err) {
+    if (err.message === 'device_not_found') {
+      device.log(`⚠️ Skipping capability "${capability}" — device not found`);
+      return;
+    }
+    device.error(`❌ Failed updateCapability("${capability}")`, err);
   }
 }
 
@@ -95,14 +103,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this.failCount = 0;
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
-    this._debugLogs = [];
 
     this.agent = new http.Agent({
       keepAlive: true,
-      keepAliveMsecs: 10000,
-      maxSockets: 1
+      keepAliveMsecs: 10000
     });
-
 
     await updateCapability(this, 'connection_error', 'No errors');
 
@@ -252,6 +257,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     try {
       const res = await fetchWithTimeout(`${this.url}/identify`, {
+        agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -267,42 +273,34 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-onDiscoveryAvailable(discoveryResult) {
-  if (this._deleted) return;
+  onDiscoveryAvailable(discoveryResult) {
+    if (this._deleted) return;
+    try {
+      if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
+        throw new Error('Invalid discovery result: missing address, port, or path');
+      }
 
-  try {
-    if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
-      throw new Error('Invalid discovery result: missing address, port, or path');
+      this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+      this.log(`Discovered device URL: ${this.url}`);
+      this.onPoll();
+
+    } catch (err) {
+      this.log(`Discovery failed: ${err.message}`);
     }
-
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    // this._debugLog(`🔄 Discovery available: ${this.url}`);
-    this._pendingStateUpdate = true;
-    this.setAvailable();
-
-  } catch (err) {
-    this._debugLog(`Discovery failed: ${err.message}`);
   }
-}
 
-
-onDiscoveryAddressChanged(discoveryResult) {
-  if (this._deleted) return;
-
-  this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-  this._debugLog(`🔄 Discovery address changed: ${this.url}`);
-  this._pendingStateUpdate = true;
-  this.setAvailable();
-}
-
-
-
+  onDiscoveryAddressChanged(discoveryResult) {
+    if (this._deleted) return;
+    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this.log(`URL updated: ${this.url}`);
+    this._debugLog(`Discovery address changed: ${this.url}`);
+    this.onPoll();
+  }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     if (this._deleted) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL restored: ${this.url}`);
-    //this._debugLog(`🔄 Discovery address changed: ${this.url}`);
     this.setAvailable();
     this.onPoll();
   }
@@ -312,6 +310,7 @@ onDiscoveryAddressChanged(discoveryResult) {
 
     try {
       const res = await fetchWithTimeout(`${this.url}/system`, {
+        agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
@@ -333,6 +332,7 @@ onDiscoveryAddressChanged(discoveryResult) {
 
     try {
       const res = await fetchWithTimeout(`${this.url}/system`, {
+        agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
@@ -349,15 +349,37 @@ onDiscoveryAddressChanged(discoveryResult) {
     }
   }
 
+  /**
+   * Debug logger
+   */
+  _debugLog(msg) {
+  try {
+    const ts = new Date().toLocaleString('nl-NL', {
+      hour12: false,
+      timeZone: 'Europe/Amsterdam'
+    });
+
+    const driverName = this.driver.id;
+
+    const safeMsg = typeof msg === 'string'
+      ? msg
+      : (msg instanceof Error ? msg.message : JSON.stringify(msg));
+
+    const line = `${ts} [${driverName}] ${safeMsg}`;
+
+    const logs = this.homey.settings.get('debug_logs') || [];
+    logs.push(line);
+    if (logs.length > 200) logs.shift();
+
+    this.homey.settings.set('debug_logs', logs);
+
+  } catch (err) {
+    this.error('Failed to write debug logs:', err.message || err);
+  }
+}
+
   async onPoll() {
-    if (this.pollingActive) return;
     if (this._deleted) return;
-
-    if (this._pendingStateUpdate) {
-      this._pendingStateUpdate = false;
-      this._debugLog(`🔁 Forced poll due to discovery/state update`);
-    }
-
     const settings = this.getSettings();
 
     if (!this.url) {
@@ -379,25 +401,16 @@ onDiscoveryAddressChanged(discoveryResult) {
       const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
       const homeyLang = this.homey.i18n.getLanguage();
 
-      let res;
-      try {
-        res = await fetchWithTimeout(`${this.url}/data`, {
-          agent: this.agent,
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (err) {
-        if (err.message === 'TIMEOUT') {
-          this._debugLog(`⏱️ Timeout during GET /data`);
-        }
-        throw err; // laat outer catch het verder afhandelen
-      }
+      const res = await fetchWithTimeout(`${this.url}/data`, {
+        agent: this.agent,
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
       if (!res || !res.ok) {
         await updateCapability(this, 'connection_error', 'Fetch error');
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
-
 
       // const data = await res.json();
       // if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
@@ -801,6 +814,7 @@ onDiscoveryAddressChanged(discoveryResult) {
         await this.setUnavailable('Device unreachable');
       } else {
         await this.setUnavailable(err.message || 'Polling error');
+        this._debugLog(`Poll failed: ${err.message}`);
       }
 
     } finally {
@@ -835,47 +849,6 @@ onDiscoveryAddressChanged(discoveryResult) {
       state.notified = false;
     }
   }
-
-_debugLog(msg) {
-  try {
-    const ts = new Date().toLocaleString('nl-NL', {
-      hour12: false,
-      timeZone: 'Europe/Amsterdam'
-    });
-
-    const name = this.getName() || this.getData().id;
-
-    // Force everything to a pure string — no objects, no arrays, no errors
-    const safeMsg = typeof msg === 'string'
-      ? msg
-      : (msg instanceof Error
-          ? msg.message
-          : JSON.stringify(msg, (key, value) => {
-              // Strip circular references
-              if (value === this) return '[device]';
-              if (value === this.homey) return '[homey]';
-              return value;
-            })
-        );
-
-    const line = `${ts} [${name}] ${safeMsg}`;
-
-    this._debugLogs.push(line);
-    if (this._debugLogs.length > 200) this._debugLogs.shift();
-
-    // Store per-device to avoid collisions and circular refs
-    this.homey.settings.set(`debug_logs_${this.getData().id}`, this._debugLogs);
-
-  } catch (err) {
-    // Never throw from logger
-    this.error('Failed to write debug logs:', err.message || err);
-  }
-}
-
-
-
-
-
 
   async onSettings(event) {
     const { newSettings, changedKeys } = event;

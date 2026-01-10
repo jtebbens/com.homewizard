@@ -33,47 +33,76 @@ class HomeWizardThermometer extends Homey.Driver {
     });
 
     // socket.on('get_homewizards', function () {
-await socket.setHandler('get_homewizards', async () => {
-  const hwDevices = this.homey.drivers.getDriver('homewizard').getDevices();
+    await socket.setHandler('get_homewizards', async () => {
+      const fetchedDevices = homewizard.self.devices || {};
+      const thermometerList = [];
 
-  homewizard.getDevices((fetchedDevices) => {
-    const thermometerList = [];
+      const hwIds = Object.keys(fetchedDevices);
 
-    Object.keys(fetchedDevices).forEach((hwId) => {
-      const thermometers = fetchedDevices[hwId].polldata?.thermometers;
-      if (Array.isArray(thermometers)) {
-        thermometers.forEach((t) => {
-          thermometerList.push({
-            id: t.id,
-            name: t.name,
-            homewizard_id: hwId
+      // We wachten op ALLE /get-sensors calls
+      await Promise.all(
+        hwIds.map(hwId => {
+          return new Promise(resolve => {
+            homewizard.callnew(hwId, '/get-sensors', (err, response) => {
+              if (err || !response) return resolve();
+
+              const thermometers = response.thermometers || [];
+              thermometers.forEach(t => {
+                thermometerList.push({
+                  id: t.id,
+                  name: t.name,
+                  homewizard_id: hwId
+                });
+              });
+
+              resolve();
+            });
           });
-        });
-      }
+        })
+      );
+
+      this.log('[PAIRING] Emitting thermometer list:', thermometerList);
+      socket.emit('thermometer_list', thermometerList);
     });
 
-    this.log('[PAIRING] Emitting thermometer list:', thermometerList);
-    socket.emit('thermometer_list', thermometerList);
+
+
+    await socket.setHandler('manual_add', async (device) => {
+  const hwId = device.settings.homewizard_id;
+  const sensorId = device.settings.thermometer_id;
+
+  if (!hwId || sensorId === undefined) {
+    socket.emit('error', 'Invalid selection');
+    return;
+  }
+
+  // Zoek thermometer opnieuw via /get-sensors
+  homewizard.callnew(hwId, '/get-sensors', (err, response) => {
+    if (err || !response) {
+      socket.emit('error', 'Could not read sensors');
+      return;
+    }
+
+    const selected = (response.thermometers || []).find(t => t.id == sensorId);
+    if (!selected) {
+      socket.emit('error', 'Thermometer not found');
+      return;
+    }
+
+    // Naam opslaan
+    device.settings.thermometer_name = selected.name;
+
+    devices[device.data.id] = {
+      id: device.data.id,
+      name: device.name,
+      settings: device.settings,
+    };
+
+    socket.emit('success', device);
   });
 });
 
 
-    await socket.setHandler('manual_add', (device) => {
-      if (typeof device.settings.homewizard_id == 'string' && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-        // true
-        this.log(`Thermometer added ${device.data.id}`);
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-        };
-        socket.emit('success', device);
-        return devices;
-
-      }
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
-
-    });
 
     await socket.setHandler('disconnect', () => {
       this.log('User aborted pairing, or pairing is finished');

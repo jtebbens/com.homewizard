@@ -1,98 +1,71 @@
 'use strict';
 
 const Homey = require('homey');
-
-const devices = {};
 const homewizard = require('../../includes/legacy/homewizard.js');
-
-let homewizard_devices;
 
 class HomeWizardKakusensors extends Homey.Driver {
 
   onInit() {
-    // this.log('HomeWizard Kakusensors has been inited');
+    // this.log('HomeWizard Kakusensors driver inited');
   }
 
   async onPair(socket) {
-    // Show a specific view by ID
+
     await socket.showView('start');
 
-    // Show the next view
-    await socket.nextView();
+    socket.setHandler('get_homewizards', async () => {
+      const hwDevices = this.homey.drivers.getDriver('homewizard').getDevices();
+      const result = {};
 
-    // Show the previous view
-    await socket.prevView();
+      await Promise.all(
+        Object.keys(hwDevices).map(hwId => {
+          return new Promise(resolve => {
+            homewizard.callnew(hwId, '/get-sensors', (err, response) => {
+              if (err || !response) {
+                result[hwId] = { id: hwId, kakusensors: [] };
+                return resolve();
+              }
 
-    // Close the pair session
-    await socket.done();
+              result[hwId] = {
+                id: hwId,
+                kakusensors: response.kakusensors || []
+              };
 
-    // Received when a view has changed
-    socket.setHandler('showView', (viewId) => {
-      this.log(`View: ${viewId}`);
-      // this.log("data", viewId);
+              resolve();
+            });
+          });
+        })
+      );
+
+      socket.emit('hw_devices', result);
     });
 
-    // socket.on('get_homewizards', function () {
-    socket.setHandler('get_homewizards', () => {
+    socket.setHandler('manual_add', async (device) => {
+      const hwId = device.settings.homewizard_id;
+      const sensorId = device.settings.kakusensors_id;
 
-      // homewizard_devices = driver.getDevices();
-      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
-
-      homewizard.getDevices((homewizard_devices) => {
-        const hw_devices = {};
-
-        Object.keys(homewizard_devices).forEach((key) => {
-          const kakusensors = JSON.stringify(homewizard_devices[key].polldata.kakusensors);
-
-          hw_devices[key] = homewizard_devices[key];
-          hw_devices[key].polldata = {};
-          hw_devices[key].kakusensors = kakusensors;
-        });
-
-        this.log(hw_devices);
-        socket.emit('hw_devices', hw_devices);
-
-      });
-    });
-
-    socket.setHandler('manual_add', (device) => {
-      if (typeof device.settings.homewizard_id == 'string' && device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-        // true
-        this.log(`Kakusensor added ${device.data.id}`);
-        // this.log(device);
-        // this.log(device.kakusensors);
-        // this.log(device.kakusensors[device.settings.kakusensors_id].type);
-
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-          // data: {
-          //      capabilities: [];
-          // }
-        };
-        // callback( null, devices );
-        socket.emit('success', device);
-        return devices;
-
+      if (!hwId || !sensorId) {
+        socket.emit('error', 'Invalid selection');
+        return;
       }
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
 
+      // Sensor type opslaan
+      const sensors = device.kakusensors;
+      const selected = sensors[sensorId];
+
+      if (!selected) {
+        socket.emit('error', 'Sensor not found');
+        return;
+      }
+
+      device.settings.kakusensor_type = selected.type;
+
+      socket.emit('success', device);
+      return device;
     });
 
-    socket.setHandler('disconnect', () => {
-      this.log('User aborted pairing, or pairing is finished');
-    });
+    socket.setHandler('disconnect', () => {});
   }
-
-  onPairListDevices(data, callback) {
-    const devices = [
-
-    ];
-
-    callback(null, devices);
-  }
-
 }
 
 module.exports = HomeWizardKakusensors;

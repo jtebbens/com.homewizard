@@ -8,24 +8,39 @@ const fetch = require('node-fetch');
 // const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 async function updateCapability(device, capability, value) {
-  const current = device.getCapabilityValue(capability);
+  try {
+    const current = device.getCapabilityValue(capability);
 
-  if (value == null) {
-    if (device.hasCapability(capability) && current !== null) {
-      await device.removeCapability(capability).catch(device.error);
-      device.log(`🗑️ Removed capability "${capability}"`);
+    // --- SAFE REMOVE ---
+    // Removal is allowed only when:
+    // 1) the new value is null
+    // 2) the current value in Homey is also null
+
+    if (value == null && current == null) {
+      if (device.hasCapability(capability)) {
+        await device.removeCapability(capability);
+        device.log(`🗑️ Removed capability "${capability}"`);
+      }
+      return;
     }
-    return;
-  }
 
-  if (!device.hasCapability(capability)) {
-    await device.addCapability(capability).catch(device.error);
-    device.log(`➕ Added capability "${capability}"`);
-  }
+    // --- ADD IF MISSING ---
+    if (!device.hasCapability(capability)) {
+      await device.addCapability(capability);
+      device.log(`➕ Added capability "${capability}"`);
+    }
 
-  if (current !== value) {
-    await device.setCapabilityValue(capability, value).catch(device.error);
-    // device.log(`✅ Updated "${capability}" from ${current} to ${value}`);
+    // --- UPDATE ---
+    if (current !== value) {
+      await device.setCapabilityValue(capability, value);
+    }
+
+  } catch (err) {
+    if (err.message === 'device_not_found') {
+      device.log(`⚠️ Skipping capability "${capability}" — device not found`);
+      return;
+    }
+    device.error(`❌ Failed updateCapability("${capability}")`, err);
   }
 }
 

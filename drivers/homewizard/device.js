@@ -16,7 +16,7 @@ function callnewAsync(
   device_id,
   uri_part,
   {
-    timeout = 4000,
+    timeout = 12000,
     retries = 2,
     retryDelay = 1500
   } = {},
@@ -230,6 +230,10 @@ class HomeWizardDevice extends Homey.Device {
         case 'socket_hangup':
         case 'error': msg = entry.error || 'socket hangup'; break;
         case 'circuit_open': {
+          if (!entry.openUntil) {
+            msg = 'circuit open';
+            break;
+          }
           const remaining = Math.max(0, Math.round((entry.openUntil - Date.now()) / 1000));
           msg = `circuit open (${remaining}s resterend)`;
           break;
@@ -309,8 +313,8 @@ class HomeWizardDevice extends Homey.Device {
       try {
         const dev = homewizard.self?.devices?.[device.getData().id];
         dev?.fetchLegacyDebug?.log({
-          type: 'device_error',
-          message: 'HomeWizard data corrupt',
+          type: err?.message || err || 'device_error',
+          message: 'poll_failed',
           error: err?.message || String(err),
           ts: Date.now()
         });

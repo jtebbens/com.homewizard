@@ -25,39 +25,29 @@ const SHARED_AGENT = new https.Agent({
  * @returns {Promise<any>} - Parsed JSON response.
  * @throws Will throw if the request times out or fetch fails.
  */
-
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+async function fetchWithTimeout(url, options = {}, timeout = 5000) {
   return new Promise((resolve, reject) => {
-    let settled = false;
-
     const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
+      reject(new Error('Fetch timeout'));
+    }, timeout);
 
     fetch(url, options)
       .then(async res => {
-        if (settled) return;
-        settled = true;
         clearTimeout(timer);
 
         const text = await res.text();
-        try { resolve(JSON.parse(text)); }
-        catch { resolve(text); }
+        try {
+          resolve(JSON.parse(text));
+        } catch {
+          resolve(text);
+        }
       })
       .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
+        clearTimeout(timer);
+        reject(err);
       });
   });
 }
-
 
 /**
  * WebSocketManager
@@ -69,18 +59,9 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
  *  - Reconnect with backoff on errors/close
  *  - Monitor heartbeat (last incoming measurement) to detect stalls
  *  - Expose start/stop/restart and helper checks
- *
- * Constructor expects callbacks and helpers from the device instance, keeping
- * the manager decoupled from Homey specifics:
- *  - url: base http(s) url of the device
- *  - token: bearer token for authorization
- *  - log, error: logging functions (e.g., device.log / device.error)
- *  - setAvailable: function to mark device available (returns promise)
- *  - getSetting: function to read device settings (if needed)
- *  - handleMeasurement, handleSystem, handleBatteries: callbacks to process incoming data
  */
 class WebSocketManager {
-    /**
+  /**
    * @param {object} opts
    * @param {string} opts.url
    * @param {string} opts.token
@@ -92,7 +73,7 @@ class WebSocketManager {
    * @param {function} opts.handleSystem
    * @param {function} opts.handleBatteries
    */
- constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
+  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
     this.device = device;
     this.url = url;
     this.token = token;
@@ -104,21 +85,19 @@ class WebSocketManager {
     this._handleMeasurement = handleMeasurement;
     this._handleSystem = handleSystem;
     this._handleBatteries = handleBatteries;
-    this.pendingMeasurement = null;   
-    this.pendingSystem = null;        
+
+    this.pendingMeasurement = null;
+    this.pendingSystem = null;
     this.pendingBatteries = null;
-    this._eventsThisSecond = 0; 
+
+    this._eventsThisSecond = 0;
     this._lastSecond = Math.floor(Date.now() / 1000);
 
-    
-    // WebSocket instance and state flags
     this.ws = null;
     this.wsActive = false;
     this.wsAuthorized = false;
     this.reconnectAttempts = 0;
     this.lastMeasurementAt = Date.now();
-
-    // Internal reconnect / restart guards
 
     this.reconnecting = false;
     this._restartCooldown = 0;
@@ -150,16 +129,12 @@ class WebSocketManager {
     this._timers.clear();
   }
 
-  
   /**
    * Start or restart the WebSocket connection.
    * Performs a small preflight check to ensure the device is reachable
    * and expects the system response structure before opening the WS.
    */
-
   async start() {
-    // If an existing socket is in CONNECTING state, skip starting again
-
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
       this.log('⏸️ WebSocket is already connecting — skipping start');
       return;
@@ -175,7 +150,6 @@ class WebSocketManager {
       this.ws = null;
       this.wsActive = false;
     }
-    // Allow URL to be obtained from settings if not provided initially
 
     const settingsUrl = this.getSetting('url');
     if (!this.url && settingsUrl) this.url = settingsUrl;
@@ -187,11 +161,13 @@ class WebSocketManager {
     const agent = SHARED_AGENT;
     const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
 
+    // Preflight met harde timeout
     try {
       const res = await fetchWithTimeout(`${this.url}/api/system`, {
         headers: { Authorization: `Bearer ${this.token}` },
         agent
       }, 3000);
+
       if (!res || typeof res.cloud_enabled === 'undefined') {
         this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
         return;
@@ -200,7 +176,7 @@ class WebSocketManager {
       this.error(`❌ Preflight check failed: ${err.message}`);
       return;
     }
-    
+
     // Create WebSocket instance
     try {
       this.ws = new WebSocket(wsUrl, {
@@ -235,10 +211,11 @@ class WebSocketManager {
     // WS open handler: authorize and setup heartbeat monitor
     this.ws.on('open', () => {
       this.wsActive = true;
-      this.reconnectAttempts = 0; // reset backoff after successful connect
-      this.log('🔌 WebSocket opened — waiting to authorize...');
-       const devId = this.device?.getData?.().id || 'unknown-device'; 
-       wsDebug.log('open', devId, 'WebSocket opened');
+      this.wsAuthorized = false;
+      this.reconnectAttempts = 0;
+
+      const devId = this.device?.getData?.().id || 'unknown-device';
+      wsDebug.log('open', devId, 'WebSocket opened');
 
       if (this.ws._socket) this.ws._socket.setKeepAlive(true, 30000);
 
@@ -248,54 +225,77 @@ class WebSocketManager {
         this.lastMeasurementAt = Date.now();
       });
 
+      // Heartbeat + zombie‑detectie — minder agressief
       this._safeSetInterval(() => {
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        if (!this.pongReceived) {
-            this.log('🧨 No pong — force closing zombie WebSocket');
 
-            try { this.ws.terminate(); } catch(e) {}
-            try { this.ws.close(); } catch(e) {}
+        const now = Date.now();
+        const idleFor = now - this.lastMeasurementAt;
 
-            this.ws = null;
-            this.wsActive = false;
-            this.wsAuthorized = false;
+        if (!this.pongReceived && idleFor > 60000) {
+          this.log(`🧨 No pong & idle ${idleFor}ms — force closing zombie WebSocket`);
 
-            this._scheduleReconnect();
-            return;
-          }
+          try { this.ws.terminate(); } catch (e) {}
+          try { this.ws.close(); } catch (e) {}
+
+          this.ws = null;
+          this.wsActive = false;
+          this.wsAuthorized = false;
+
+          this._scheduleReconnect();
+          return;
+        }
+
         this.pongReceived = false;
         try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
       }, 30000);
 
-      // ⬇️ Add this block for 2s measurement flush
+      // Measurement flush (2s)
       const updateInterval = this.getSetting('update_interval') || 2000;
       this._safeSetInterval(() => {
-        if (this.pendingMeasurement) {
-          this.lastMeasurementAt = Date.now();
-          this._handleMeasurement?.(this.pendingMeasurement);
-          this.pendingMeasurement = null;
+        if (!this.pendingMeasurement) return;
+
+        const data = this.pendingMeasurement;
+        this.pendingMeasurement = null;
+
+        this.lastMeasurementAt = Date.now();
+        try {
+          this._handleMeasurement?.(data);
+        } catch (e) {
+          this.error('❌ Error in measurement handler:', e);
         }
       }, updateInterval);
-      // ⬆️
-      // ⬇️ Add this block for buffered system + batteries flush (every 10s)
+
+      // Buffered system + batteries flush (10s)
       this._safeSetInterval(() => {
         if (this.pendingSystem) {
-          this._handleSystem?.(this.pendingSystem);
+          const sys = this.pendingSystem;
           this.pendingSystem = null;
+          try {
+            this._handleSystem?.(sys);
+          } catch (e) {
+            this.error('❌ Error in system handler:', e);
+          }
         }
 
         if (this.pendingBatteries) {
-          this._handleBatteries?.(this.pendingBatteries);
+          const bat = this.pendingBatteries;
           this.pendingBatteries = null;
+          try {
+            this._handleBatteries?.(bat);
+          } catch (e) {
+            this.error('❌ Error in batteries handler:', e);
+          }
         }
       }, 10000);
-      // ⬆️
 
       const maxRetries = 30;
       let retries = 0;
+
       const tryAuthorize = () => {
         if (!this.ws) return;
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+
+        if (this.ws.readyState === WebSocket.OPEN) {
           this.log('🔐 Sending WebSocket authorization');
           this._safeSend({ type: 'authorization', data: this.token });
         } else if (retries < maxRetries) {
@@ -303,137 +303,112 @@ class WebSocketManager {
           this._safeSetTimeout(tryAuthorize, 100);
         } else {
           this.error('❌ WebSocket failed to open after timeout — giving up');
-          this.ws.terminate();
+          try { this.ws.terminate(); } catch (e) {}
           this.wsActive = false;
         }
       };
+
       tryAuthorize();
     });
 
-this.ws.on('message', (msg) => {
-  const devId = this.device?.getData?.().id || 'unknown-device'; 
-  this._eventsThisSecond++;
-  let data;
-  try {
-    data = JSON.parse(msg.toString());
-  } catch (err) {
-    this.error('❌ Failed to parse WebSocket message:', err);
-    return;
-  }
+    this.ws.on('message', (msg) => {
+      const devId = this.device?.getData?.().id || 'unknown-device';
+      this._eventsThisSecond++;
 
-  // 🔍 Log 
-  if (debug) this.log(`[WS][${devId}] TYPE=${data.type}`);
+      let data;
+      try {
+        data = JSON.parse(msg.toString());
+      } catch (err) {
+        this.error('❌ Failed to parse WebSocket message:', err);
+        return;
+      }
 
-  // 🔐 Authorized → subscribe topics + start WS events/sec counter
-  if (data.type === 'authorized') {
-    const devId = this.device?.getData?.().id || 'unknown-device'; 
-    wsDebug.log('authorized', devId, 'WebSocket authorized');
-    this.wsAuthorized = true;
-    this.lastMeasurementAt = Date.now();
-    this._subscribeTopics();
-    this._startHeartbeatMonitor();
-  }
+      if (debug) this.log(`[WS][${devId}] TYPE=${data.type}`);
 
+      if (data.type === 'authorized') {
+        wsDebug.log('authorized', devId, 'WebSocket authorized');
+        this.wsAuthorized = true;
+        this.lastMeasurementAt = Date.now();
+        this._subscribeTopics();
+        this._startHeartbeatMonitor();
+      }
 
+      else if (data.type === 'measurement') {
+        const d = data.data || {};
+        if (debug) this.log(`[WS][${devId}] MEAS: ${JSON.stringify(d)}`);
+        this.pendingMeasurement = d;
+      }
 
+      else if (data.type === 'system') {
+        this.pendingSystem = data.data || {};
+      }
 
+      else if (data.type === 'batteries') {
+        const d = data.data || {};
+        if (debug) {
+          this.log(
+            `[WS][${devId}] BATTERY GROUP: mode=${d.mode}, ` +
+            `target=${d.target_power_w}, permissions=${JSON.stringify(d.permissions)}`
+          );
+        }
+        this.pendingBatteries = d;
+      }
 
-  // 📡 Measurement → batterijmetingen (P1 + plugin_battery)
-  else if (data.type === 'measurement') {
-    const d = data.data || {};
-    const devId = this.device?.getData?.().id || 'unknown-device';
-    if (debug) this.log(
-      `[WS][${devId}] MEAS: ${JSON.stringify(d)}`
-    );
+      else {
+        if (debug) this.log(`[WS][${devId}] UNKNOWN TYPE: ${data.type}`);
+      }
+    });
 
+    // Error handler
+    this.ws.on('error', (err) => {
+      this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
+      const devId = this.device?.getData?.().id || 'unknown-device';
+      wsDebug.log('error', devId, `${err.code || ''} ${err.message || err}`);
+      this.wsActive = false;
+      this.wsAuthorized = false;
+      this._scheduleReconnect();
+    });
 
-    this.pendingMeasurement = d; // keep latest only
-  }
-
-  // ⚙️ System → systeeminfo
-  else if (data.type === 'system') {
-    // this._handleSystem?.(data.data);
-    this.pendingSystem = data.data;
-  }
-
-  // 🔋 Batteries → battery group updates (P1 + plugin_battery)
-  else if (data.type === 'batteries') {
-    const d = data.data || {};
-    const devId = this.device?.getData?.().id || 'unknown-device';
-    if (debug) this.log(
-      `[WS][${devId}] BATTERY GROUP: mode=${d.mode}, target=${d.target_power_w}, permissions=${JSON.stringify(d.permissions)}`
-    );
-
-    // this._handleBatteries?.(d);
-    this.pendingBatteries = d; // buffer only latest
-  }
-
-  // ❓ Onbekend type
-  else {
-    const devId = this.device?.getData?.().id || 'unknown-device';
-    if (debug) this.log(`[WS][${devId}] UNKNOWN TYPE: ${data.type}`);
-
-  }
-});
-
-
-// 🛑 Error handler
-  this.ws.on('error', (err) => {
-    this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-    const devId = this.device?.getData?.().id || 'unknown-device'; 
-    wsDebug.log('error', devId, `${err.code || ''} ${err.message || err}`);
-    this.wsActive = false;
-    this.wsAuthorized = false;
-    this._scheduleReconnect();
-  });
-
-  this.ws.on('close', () => {
-    this.log('🔌 WebSocket closed — retrying');
-    const devId = this.device?.getData?.().id || 'unknown-device'; 
-    wsDebug.log('close', devId, 'WebSocket closed');
-    this.wsActive = false;
-    this.wsAuthorized = false;
-    this._scheduleReconnect();
-  });
-
+    this.ws.on('close', () => {
+      this.log('🔌 WebSocket closed — retrying');
+      const devId = this.device?.getData?.().id || 'unknown-device';
+      wsDebug.log('close', devId, 'WebSocket closed');
+      this.wsActive = false;
+      this.wsAuthorized = false;
+      this._scheduleReconnect();
+    });
   }
 
   _scheduleReconnect() {
-  const devId = this.device?.getData?.().id || 'unknown-device';
+    const devId = this.device?.getData?.().id || 'unknown-device';
 
-  // Already reconnecting → suppress
-  if (this.reconnecting) {
-    wsDebug.log('reconnect_suppressed', devId, 'Already reconnecting');
-    return;
+    if (this.reconnecting) {
+      wsDebug.log('reconnect_suppressed', devId, 'Already reconnecting');
+      return;
+    }
+
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      this.log('⏸️ reconnect suppressed — still CONNECTING');
+      wsDebug.log('reconnect_suppressed', devId, `State=${this.ws.readyState}`);
+      return;
+    }
+
+    this.reconnecting = true;
+    this.reconnectAttempts++;
+
+    const base = 5000 * this.reconnectAttempts;
+    const delay = Math.min(base, 180000);
+    const jitter = delay * (0.9 + Math.random() * 0.2);
+
+    this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter / 1000)}s`);
+    wsDebug.log('reconnect_scheduled', devId, `${Math.round(jitter / 1000)}s`);
+
+    this._safeSetTimeout(() => {
+      this.reconnecting = false;
+      wsDebug.log('reconnect_execute', devId, 'Restarting WebSocket');
+      this.restartWebSocket();
+    }, jitter);
   }
-
-  // Suppress reconnect ONLY if still CONNECTING
-  if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-    this.log('⏸️ reconnect suppressed — still CONNECTING');
-    wsDebug.log('reconnect_suppressed', devId, `State=${this.ws.readyState}`);
-    return;
-  }
-
-
-  this.reconnecting = true;
-  this.reconnectAttempts++;
-
-  const base = 5000 * this.reconnectAttempts;
-  const delay = Math.min(base, 180000); // cap at 3 minutes
-  const jitter = delay * (0.9 + Math.random() * 0.2);
-
-  this.log(`🔁 WS reconnect scheduled in ${Math.round(jitter / 1000)}s`);
-  wsDebug.log('reconnect_scheduled', devId, `${Math.round(jitter / 1000)}s`);
-
-  this._safeSetTimeout(() => {
-    this.reconnecting = false;
-    wsDebug.log('reconnect_execute', devId, 'Restarting WebSocket');
-    this.restartWebSocket();
-  }, jitter);
-}
-
-
-
 
   stop() {
     this._clearTimers();
@@ -475,82 +450,73 @@ this.ws.on('message', (msg) => {
     }, 30000);
   }
 
-
-
-
   isConnected() {
     return this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
   restartWebSocket() {
-  const devId = this.device?.getData?.().id || 'unknown-device';
+    const devId = this.device?.getData?.().id || 'unknown-device';
 
-  // ⏸️ Suppress restart ONLY if still CONNECTING
-  if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-    this.log('⏸️ WS is CONNECTING — skipping restart');
-    wsDebug.log('restart_suppressed', devId, `State=${this.ws.readyState}`);
-    return;
+    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      this.log('⏸️ WS is CONNECTING — skipping restart');
+      wsDebug.log('restart_suppressed', devId, `State=${this.ws.readyState}`);
+      return;
+    }
+
+    const now = Date.now();
+
+    // Iets mildere cooldown, maar nog steeds bescherming
+    if (now - this._restartCooldown < 1000) {
+      this.log('⏸️ Skipping restart — cooldown active');
+      wsDebug.log('restart_cooldown', devId, `${now - this._restartCooldown}ms since last restart`);
+      return;
+    }
+
+    this._restartCooldown = now;
+    wsDebug.log('restart_execute', devId, 'Restarting WebSocket');
+
+    this._clearTimers();
+    this._resetWebSocket();
+    this.start();
   }
-
-  const now = Date.now();
-
-  // ⏸️ Suppress restart if cooldown active
-  if (now - this._restartCooldown < 3000) {
-    this.log('⏸️ Skipping restart — cooldown active');
-    wsDebug.log('restart_cooldown', devId, `${now - this._restartCooldown}ms since last restart`);
-    return;
-  }
-
-  // 🔄 Restart allowed
-  this._restartCooldown = now;
-  wsDebug.log('restart_execute', devId, 'Restarting WebSocket');
-
-  this._clearTimers();
-  this._resetWebSocket();
-  this.start();
-}
-
 
   _resetWebSocket() {
-  if (!this.ws) return;
+    if (!this.ws) return;
 
-  const state = this.ws.readyState;
+    const state = this.ws.readyState;
 
-  // ❌ Nooit sockets killen die nog bezig zijn
-  if (state === WebSocket.CONNECTING) {
-    this.log('⏸️ WS is CONNECTING — skipping reset');
-    return;
-  }
-
-  if (state === WebSocket.CLOSING) {
-    this.log('⏸️ WS is CLOSING — skipping reset');
-    return;
-  }
-
-  // ❌ Nooit resetten als reconnect al bezig is
-  if (this.reconnecting) {
-    this.log('⏸️ WS reset suppressed — reconnect in progress');
-    return;
-  }
-
-  try {
-    if (state === WebSocket.OPEN) {
-      this.log(`🔄 Terminating active WebSocket (state: ${state})`);
-      this.ws.terminate();
-    } else if (state === WebSocket.CLOSED) {
-      this.log(`🔄 WS already CLOSED — skipping close`);
-    } else {
-      this.log(`🔄 Closing inactive WebSocket (state: ${state})`);
-      this.ws.close();
+    if (state === WebSocket.CONNECTING) {
+      this.log('⏸️ WS is CONNECTING — skipping reset');
+      return;
     }
-  } catch (err) {
-    this.error('❌ Failed to reset WebSocket:', err);
+
+    if (state === WebSocket.CLOSING) {
+      this.log('⏸️ WS is CLOSING — skipping reset');
+      return;
+    }
+
+    if (this.reconnecting) {
+      this.log('⏸️ WS reset suppressed — reconnect in progress');
+      return;
+    }
+
+    try {
+      if (state === WebSocket.OPEN) {
+        this.log(`🔄 Terminating active WebSocket (state: ${state})`);
+        this.ws.terminate();
+      } else if (state === WebSocket.CLOSED) {
+        this.log('🔄 WS already CLOSED — skipping close');
+      } else {
+        this.log(`🔄 Closing inactive WebSocket (state: ${state})`);
+        this.ws.close();
+      }
+    } catch (err) {
+      this.error('❌ Failed to reset WebSocket:', err);
+    }
+
+    this.ws = null;
+    this.wsActive = false;
   }
-
-  this.ws = null;
-  this.wsActive = false;
-}
-
 
   setBatteryMode(mode) {
     if (!this.isConnected()) {
@@ -559,7 +525,6 @@ this.ws.on('message', (msg) => {
       throw new Error(errMsg);
     }
 
-    // Map Homey mode → API mode + permissions
     let payloadData;
 
     switch (mode) {
@@ -595,24 +560,20 @@ this.ws.on('message', (msg) => {
       }
     };
 
-
     this.log(`🔋 WS → setBatteryMode("${mode}")`);
     this.log(`   Payload: ${JSON.stringify(payload)}`);
 
     try {
       this._safeSend(payload);
-      this.log(`✅ Battery mode command sent`);
+      this.log('✅ Battery mode command sent');
 
-      // ✅ Ensure Homey sees the mode change immediately
       this.device._handleBatteries(payload.data);
 
     } catch (err) {
       this.error(`❌ Failed to send battery mode command: ${err.message}`);
       throw err;
     }
-
   }
-
 
   requestBatteryStatus() {
     if (!this.isConnected()) {

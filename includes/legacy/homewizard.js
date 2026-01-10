@@ -57,7 +57,7 @@ module.exports = (function() {
         lastFailure: 0,
         openUntil: 0,
         threshold: 3,
-        cooldownMs: 120000
+        cooldownMs: 300000
       };
     }
   }
@@ -77,9 +77,16 @@ module.exports = (function() {
     c.lastFailure = now;
 
     if (c.failures >= c.threshold) {
-      c.openUntil = now + c.cooldownMs;
-      if (debug) console.log(`Circuit breaker OPEN for device (cooldown ${c.cooldownMs}ms)`);
-    }
+        c.openUntil = now + c.cooldownMs;
+
+        device.fetchLegacyDebug.log({
+          type: 'circuit_open',
+          openUntil: c.openUntil
+        });
+
+        if (debug) console.log(`Circuit breaker OPEN for device (cooldown ${c.cooldownMs}ms)`);
+      }
+
   }
 
   function circuitBreakerSuccess(device) {
@@ -114,13 +121,13 @@ module.exports = (function() {
     function getAdaptiveTimeout(device) {
       const avg = getAverageResponseTime(device);
 
-      if (!avg) return 6000;
+      if (!avg || device.responseStats.samples.length < 3) return 7000;
 
       // Adaptive timeout: 2.5 × avg
       const adaptive = avg * 2.5;
 
       // Hard min/max
-      return Math.min(Math.max(adaptive, 5000), 8000);
+      return Math.min(Math.max(adaptive, 7000), 12000);
     }
 
 
@@ -163,15 +170,10 @@ module.exports = (function() {
   const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
 
   if (!circuitBreakerAllows(device)) {
-    try {
-      device.fetchLegacyDebug.log({
-        type: 'circuit_open',
-        url,
-        openUntil: device.circuit.openUntil
-      });
-    } catch (_) {}
-    return callback('circuit_open', []);
-  }
+  // circuit_open dont log
+  return callback('circuit_open', []);
+}
+
 
   const timeoutDuration = getAdaptiveTimeout(device);
   const start = Date.now();
@@ -235,9 +237,21 @@ module.exports = (function() {
       return callback('json_parse_error', []);
     }
 
-    if (jsonData.status === 'ok') {
+    if (jsonData.status === 'ok' && jsonData.response) {
       return callback(null, jsonData.response);
     }
+
+    if (jsonData.status === 'ok' && !jsonData.response) {
+      device.fetchLegacyDebug.log({
+        type: 'empty_response',
+        url,
+        ms: duration,
+        payload: jsonData
+      });
+      return callback('timeout', []); // of 'empty_response'
+    }
+
+
 
     device.fetchLegacyDebug.log({
       type: 'invalid_data',
@@ -305,10 +319,18 @@ module.exports = (function() {
       const device = self.devices[device_id];
       if (!device) continue;
 
+      const HARD_MIN_POLL_SEC = 15;
+
       const userIntervalSec = device?.settings?.poll_interval || 30;
       const adaptiveTimeoutMs = getAdaptiveTimeout(device);
-      const minPollSec = Math.ceil((adaptiveTimeoutMs + 1000) / 1000);
-      const effectivePollSec = Math.max(userIntervalSec, minPollSec);
+      const adaptivePollSec = Math.ceil((adaptiveTimeoutMs + 1000) / 1000);
+
+      const effectivePollSec = Math.max(
+        userIntervalSec,
+        HARD_MIN_POLL_SEC,
+        adaptivePollSec
+      );
+
 
       if (self.polls[device_id]) {
         clearInterval(self.polls[device_id]);
@@ -335,7 +357,8 @@ module.exports = (function() {
       let response;
       try {
         response = await new Promise((resolve, reject) => {
-          homewizard.callnew(id, '/get-sensors', (err, response) => {
+          // homewizard.callnew(id, '/get-sensors', (err, response) => {
+            homewizard.callnew(id, '/get-status', (err, response) => {
             if (err == null) resolve(response);
             else reject(err);
           });

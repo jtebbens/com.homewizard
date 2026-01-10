@@ -35,22 +35,30 @@ async function updateCapability(device, capability, value) {
   try {
     const current = device.getCapabilityValue(capability);
 
-    if (value == null) {
-      if (device.hasCapability(capability) && current !== null) {
+    // --- SAFE REMOVE ---
+    // Removal is allowed only when:
+    // 1) the new value is null
+    // 2) the current value in Homey is also null
+
+    if (value == null && current == null) {
+      if (device.hasCapability(capability)) {
         await device.removeCapability(capability);
         device.log(`🗑️ Removed capability "${capability}"`);
       }
       return;
     }
 
+    // --- ADD IF MISSING ---
     if (!device.hasCapability(capability)) {
       await device.addCapability(capability);
       device.log(`➕ Added capability "${capability}"`);
     }
 
+    // --- UPDATE ---
     if (current !== value) {
       await device.setCapabilityValue(capability, value);
     }
+
   } catch (err) {
     if (err.message === 'device_not_found') {
       device.log(`⚠️ Skipping capability "${capability}" — device not found`);
@@ -59,6 +67,7 @@ async function updateCapability(device, capability, value) {
     device.error(`❌ Failed updateCapability("${capability}")`, err);
   }
 }
+
 
 async function setStoreValueSafe(device, key, value) {
   try {
@@ -1187,6 +1196,7 @@ async onDiscoveryAvailable(discoveryResult) {
       }
 
       this.log('🔁 Discovery: IP changed & reachable — restarting WebSocket');
+      await this.setAvailable();
       this.wsManager?.restartWebSocket();
 
     } catch (err) {
