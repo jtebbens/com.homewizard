@@ -75,18 +75,22 @@
     {
       "type": "group",
       "label": {
-        "en": "Socket Watt offset",
-        "nl": "Socket Watt compensatie"
+        "en": "Energy Socket settings",
+        "nl": "Energy Socket instellingen"
       },
       "children": [
         {
           "id": "offset_socket",
           "type": "number",
           "label": {
-            "en": "Offset socket Watt",
-            "nl": "Compensatie socket Watt"
+            "en": "Offset Watt usage",
+            "nl": "Compensatie watt gebruik"
           },
-          "value": 0
+          "value": 0,
+          "unit": {
+            "en": "watt",
+            "nl": "watt"
+          }
         },
         {
           "id": "offset_polling",

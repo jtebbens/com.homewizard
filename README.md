@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.10.4
+v3.10.6
 
 * Bugfix: Homewizard Legacy fetch (tab was empty, no entries while there were errors in the log)
 * Remove fetchQueue feature in favor of capture debug information in the app settings page
@@ -12,6 +12,10 @@ v3.10.4
 * Bugfix: Device Fetch Debug wasn't updating only showed "Loading..."
 * Bugfix: Circular Reference "device"
 * Bugfix: SDM230(p1mode) - updateCapability missed
+* Finetune debug log (ignore message circuit_open)
+* Energy_socket finetune, added a device queue as a replacement for the earlier centralized fetchQueue
+* Homewizard adaptive polling + tuning timeouts
+* Cleanup device drivers with overcomplicated checks that ended up with polling deadlocks
 
 v3.9.29
 

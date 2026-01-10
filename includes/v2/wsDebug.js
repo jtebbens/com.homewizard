@@ -3,6 +3,7 @@
 let HomeyRef = null;
 
 module.exports = {
+
   init(homeyInstance) {
     HomeyRef = homeyInstance;
   },
@@ -15,23 +16,20 @@ module.exports = {
 
     try {
       const stored = HomeyRef.settings.get('debug_ws');
-
-      // Reset buffer when settings were cleared
-      let dbg;
-      if (stored === null) {
-        dbg = [];
-      } else {
-        dbg = stored || [];
-      }
+      const dbg = Array.isArray(stored) ? stored : [];
 
       dbg.push({
-        ts: new Date().toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false }),
+        ts: new Date().toLocaleString('nl-NL', {
+          timeZone: 'Europe/Amsterdam',
+          hour12: false
+        }),
         type,
         deviceId,
         message
       });
 
       HomeyRef.settings.set('debug_ws', dbg.slice(-50));
+
     } catch (err) {
       console.error('wsDebug failed:', err.message);
     }

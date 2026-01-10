@@ -3,175 +3,161 @@
 const Homey = require('homey');
 const homewizard = require('../../includes/legacy/homewizard.js');
 
-// const { ManagerDrivers } = require('homey');
-// const driver = ManagerDrivers.getDriver('windmeter');
-
 let refreshIntervalId;
-const devices = {};
 const debug = false;
-// var temperature;
 
 class HomeWizardWindmeter extends Homey.Device {
 
   async onInit() {
 
-    // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
-
-    this.log(`HomeWizard Windmeter ${this.getName()} has been inited`);
+    this.log(`HomeWizard Windmeter ${this.getName()} initialized`);
 
     const devices = this.homey.drivers.getDriver('windmeter').getDevices();
-    devices.forEach((device) => {
-      this.log(`add device: ${JSON.stringify(device.getName())}`);
 
-      devices[device.getData().id] = device;
-      devices[device.getData().id].settings = device.getSettings();
-    });
-
-    // this.startPolling(devices);
-
+    // Start polling if there are devices
     if (Object.keys(devices).length > 0) {
       this.startPolling();
-		  }
-
+    }
   }
 
-  /*
-	startPolling() {
-		// Clear interval
-		if (this.refreshIntervalId) {
-		  clearInterval(this.refreshIntervalId);
-		}
+  startPolling() {
 
-		// Start polling for thermometer
-		this.refreshIntervalId = setInterval(() => {
-		  this.pollStatus();
-		}, 1000 * 20);
-	  }
-
-	  async pollStatus() {
-		try {
-		  await this.getStatus();
-		} catch (error) {
-		  // Handle error appropriately
-		}
-	  }
-	  */
-
-	  startPolling() {
-
-    // Clear interval
     if (this.refreshIntervalId) {
       clearInterval(this.refreshIntervalId);
     }
 
-    // Start polling for thermometer
     this.refreshIntervalId = setInterval(() => {
-      if (debug) { this.log('--Start Windmeter Polling-- '); }
-
-      // this.getStatus(devices);
+      if (debug) this.log('-- Windmeter Polling --');
       this.getStatus();
-
-    }, 1000 * 20);
-
+    }, 20 * 1000);
   }
 
-	  async getStatus(devices) {
-    if (this.getSetting('homewizard_id') !== undefined) {
-		  const homewizard_id = this.getSetting('homewizard_id');
-      
-		  try {
-        const callback = await homewizard.getDeviceData(homewizard_id, 'windmeters');
+  async getStatus() {
 
-        if (Object.keys(callback).length > 0) {
-
-          this.setAvailable().catch(this.error); 
-
-          // Check Battery
-          if (callback[0].lowBattery != undefined && callback[0].lowBattery != null) {
-            if (!this.hasCapability('alarm_battery')) {
-					  await this.addCapability('alarm_battery').catch(this.error);
-            }
-
-            const lowBattery_temp = callback[0].lowBattery;
-            const lowBattery_status = lowBattery_temp == 'yes';
-
-            if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
-					  if (debug) { this.log(`New status - ${lowBattery_status}`); }
-					  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
-            }
-				  } else if (this.hasCapability('alarm_battery')) {
-					  await this.removeCapability('alarm_battery').catch(this.error);
-          }
-
-          // Skip update if JSON.ws is not null
-          if ((callback[0].ws != null))
-          {
-
-            this.setAvailable().catch(this.error); // maybe this can be removed
-
-            const wind_angle_tmp = callback[0].dir;
-            const wind_angle_int = wind_angle_tmp.split(' ');
-            const wind_strength_current = callback[0].ws;
-            const wind_strength_min = callback[0]['ws-'];
-            const wind_strength_max = callback[0]['ws+'];
-            const gust_strength = callback[0].gu;
-            const temp_real = callback[0].te;
-            const temp_windchill = callback[0].wc;
-
-            const wind_angle_str = wind_angle_int[1];
-            const wind_angle = parseInt(wind_angle_str);
-
-            // Wind angle
-            if (this.getCapabilityValue('measure_wind_angle') !== wind_angle && wind_angle !== undefined) {
-              await this.setCapabilityValue('measure_wind_angle', wind_angle);
-            }
-            // Wind speed current
-            if (this.getCapabilityValue('measure_wind_strength.cur') !== wind_strength_current && wind_strength_current !== undefined) {
-              await this.setCapabilityValue('measure_wind_strength.cur', wind_strength_current);
-            }
-            // Wind speed min
-            if (this.getCapabilityValue('measure_wind_strength.min') !== wind_strength_min && wind_strength_min !== undefined) {
-              await this.setCapabilityValue('measure_wind_strength.min', wind_strength_min);
-            }
-            // Wind speed max
-            if (this.getCapabilityValue('measure_wind_strength.max') !== wind_strength_max && wind_strength_max !== undefined) {
-              await this.setCapabilityValue('measure_wind_strength.max', wind_strength_max);
-            }
-            // Wind speed
-            if (this.getCapabilityValue('measure_gust_strength') !== gust_strength && gust_strength !== undefined) {
-              await this.setCapabilityValue('measure_gust_strength', gust_strength);
-            }
-            // Temp real
-            if (this.getCapabilityValue('measure_temperature.real') !== temp_real && temp_real !== undefined) {
-              await this.setCapabilityValue('measure_temperature.real', temp_real);
-            }
-            // Temp Windchill
-            if (this.getCapabilityValue('measure_temperature.windchill') !== temp_windchill && temp_windchill !== undefined) {
-              await this.setCapabilityValue('measure_temperature.windchill', temp_windchill);
-            }
-
-          }
-        }
-		  } catch (err) {
-        this.log('ERROR WindMeter getStatus', err);
-        this.setUnavailable(err);
-		  }
-    } else {
-		  this.log('Windmeter settings not found, stop polling set unavailable');
-		  this.setUnavailable();
+    const homewizard_id = this.getSetting('homewizard_id');
+    if (!homewizard_id) {
+      this.log('Windmeter settings missing, stopping polling');
+      this.setUnavailable();
+      return;
     }
-	  }
+
+    try {
+      const callback = await homewizard.getDeviceData(homewizard_id, 'windmeters');
+
+      // No data → nothing to update
+      if (!Array.isArray(callback) || callback.length === 0) {
+        return;
+      }
+
+      const entry = callback[0];
+      if (!entry) return;
+
+      this.setAvailable().catch(this.error);
+
+      // -------------------------
+      // Battery
+      // -------------------------
+      if (entry.lowBattery !== undefined && entry.lowBattery !== null) {
+
+        if (!this.hasCapability('alarm_battery')) {
+          await this.addCapability('alarm_battery').catch(this.error);
+        }
+
+        const lowBatteryStatus = entry.lowBattery === 'yes';
+
+        if (this.getCapabilityValue('alarm_battery') !== lowBatteryStatus) {
+          await this.setCapabilityValue('alarm_battery', lowBatteryStatus).catch(this.error);
+        }
+
+      } else if (this.hasCapability('alarm_battery')) {
+        await this.removeCapability('alarm_battery').catch(this.error);
+      }
+
+      // -------------------------
+      // No windspeed → skip update
+      // -------------------------
+      if (entry.ws == null) {
+        return;
+      }
+
+      // -------------------------
+      // Wind direction (safe parsing)
+      // -------------------------
+      let windAngle = null;
+
+      if (entry.dir && typeof entry.dir === 'string') {
+        const parts = entry.dir.split(' ');
+        if (parts.length > 1) {
+          const parsed = parseInt(parts[1]);
+          if (!isNaN(parsed)) windAngle = parsed;
+        }
+      }
+
+      if (windAngle !== null) {
+        if (this.getCapabilityValue('measure_wind_angle') !== windAngle) {
+          await this.setCapabilityValue('measure_wind_angle', windAngle).catch(this.error);
+        }
+      }
+
+      // -------------------------
+      // Wind speeds
+      // -------------------------
+      if (entry.ws !== undefined) {
+        if (this.getCapabilityValue('measure_wind_strength.cur') !== entry.ws) {
+          await this.setCapabilityValue('measure_wind_strength.cur', entry.ws).catch(this.error);
+        }
+      }
+
+      if (entry['ws-'] !== undefined) {
+        if (this.getCapabilityValue('measure_wind_strength.min') !== entry['ws-']) {
+          await this.setCapabilityValue('measure_wind_strength.min', entry['ws-']).catch(this.error);
+        }
+      }
+
+      if (entry['ws+'] !== undefined) {
+        if (this.getCapabilityValue('measure_wind_strength.max') !== entry['ws+']) {
+          await this.setCapabilityValue('measure_wind_strength.max', entry['ws+']).catch(this.error);
+        }
+      }
+
+      // -------------------------
+      // Gust strength
+      // -------------------------
+      if (entry.gu !== undefined) {
+        if (this.getCapabilityValue('measure_gust_strength') !== entry.gu) {
+          await this.setCapabilityValue('measure_gust_strength', entry.gu).catch(this.error);
+        }
+      }
+
+      // -------------------------
+      // Temperature
+      // -------------------------
+      if (entry.te !== undefined) {
+        if (this.getCapabilityValue('measure_temperature.real') !== entry.te) {
+          await this.setCapabilityValue('measure_temperature.real', entry.te).catch(this.error);
+        }
+      }
+
+      // -------------------------
+      // Windchill
+      // -------------------------
+      if (entry.wc !== undefined) {
+        if (this.getCapabilityValue('measure_temperature.windchill') !== entry.wc) {
+          await this.setCapabilityValue('measure_temperature.windchill', entry.wc).catch(this.error);
+        }
+      }
+
+    } catch (err) {
+      this.log('ERROR Windmeter getStatus', err);
+      this.setUnavailable(err);
+    }
+  }
 
   onDeleted() {
-
-    if (Object.keys(devices).length === 0) {
-      clearInterval(refreshIntervalId);
-      this.log('--Stopped Polling--');
-    }
-
-    this.log(`deleted: ${JSON.stringify(this)}`);
+    clearInterval(refreshIntervalId);
+    this.log('-- Windmeter Polling Stopped --');
+    this.log(`Deleted: ${JSON.stringify(this)}`);
   }
-
 }
 
 module.exports = HomeWizardWindmeter;

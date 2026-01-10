@@ -217,11 +217,11 @@
         });
 
 
-/* ---- PER-DEVICE FETCH DEBUG (debug_logs) ---- */
+        /* ---- FETCH DEBUG (universeel) ---- */
 const fetchBox = document.getElementById('fetch-debug');
 
 function renderFetchDebug(settings) {
-  const logs = settings['debug_logs'] || [];
+  const logs = settings.debug_logs || [];
 
   if (!Array.isArray(logs) || logs.length === 0) {
     fetchBox.textContent = 'Geen fetch-logs beschikbaar.';
@@ -233,7 +233,6 @@ function renderFetchDebug(settings) {
 }
 
 renderFetchDebug(settings);
-
 
 /* Live updates */
 Homey.on('settings.set', changedKey => {
@@ -248,6 +247,8 @@ Homey.on('settings.set', changedKey => {
 document.getElementById('clear-fetch-btn').addEventListener('click', () => {
   Homey.set('debug_logs', []);
 });
+
+
 
 
 

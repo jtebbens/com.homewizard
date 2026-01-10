@@ -3,7 +3,7 @@
 const Homey = require('homey');
 
 module.exports = class FetchLegacyDebug {
-  constructor(device, size = 200) {
+  constructor(device, size = 100) {
     this.device = device;
     this.size = size;
 

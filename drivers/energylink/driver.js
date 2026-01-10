@@ -1,96 +1,76 @@
 'use strict';
 
 const Homey = require('homey');
-
-// const { ManagerDrivers } = require('homey');
-// const driver = ManagerDrivers.getDriver('homewizard');
-
 const homewizard = require('../../includes/legacy/homewizard.js');
 
-let homewizard_devices;
 const devices = {};
 
 class HomeWizardEnergyLink extends Homey.Driver {
 
   onInit() {
-    //this.log('HomeWizard EnergyLink has been inited');
+    // Driver initialized
   }
 
   async onPair(socket) {
-    // Show a specific view by ID
+
+    // Show initial view
     await socket.showView('start');
 
-    // Show the next view
-    await socket.nextView();
-
-    // Show the previous view
-    await socket.prevView();
-
-    // Close the pair session
-    await socket.done();
-
-    // Received when a view has changed
+    // View change logging
     socket.setHandler('showView', (viewId) => {
       this.log(`View: ${viewId}`);
-      // this.log("data", viewId);
     });
 
-    // socket.on('get_homewizards', function () {
-
+    // Request list of HomeWizard controllers
     socket.setHandler('get_homewizards', () => {
-      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
 
-      // homewizard_devices = driver.getDevices();
+      const hwControllers = this.homey.drivers.getDriver('homewizard').getDevices();
 
-      homewizard.getDevices((homewizard_devices) => {
-        const hw_devices = {};
+      homewizard.getDevices((hwDevices) => {
+        const result = {};
 
-        Object.keys(homewizard_devices).forEach((key) => {
-          const energylinks = JSON.stringify(homewizard_devices[key].polldata.energylinks);
+        Object.keys(hwDevices).forEach((key) => {
 
-          hw_devices[key] = homewizard_devices[key];
-          hw_devices[key].id = key;
-          hw_devices[key].polldata = {};
-          hw_devices[key].energylinks = energylinks;
+          const energylinks = hwDevices[key].polldata?.energylinks || {};
 
+          result[key] = {
+            id: key,
+            name: hwDevices[key].name,
+            settings: hwDevices[key].settings,
+            energylinks: energylinks
+          };
         });
 
-        socket.emit('hw_devices', hw_devices);
-
+        socket.emit('hw_devices', result);
       });
     });
 
+    // Manual add
     socket.setHandler('manual_add', (device) => {
 
-      this.log(device.settings.homewizard_id);
-      this.log(device.settings.homewizard_id.indexOf('HW_'));
+      const id = device.settings.homewizard_id;
 
-      this.log(device.settings.homewizard_id);
-      this.log(device.settings.homewizard_id.indexOf('HW'));
+      if (id.indexOf('HW_') === -1 && id.indexOf('HW') === 0) {
 
-      if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-        // true
-        this.log(`Energylink added ${device.data.id}`);
+        this.log(`EnergyLink added ${device.data.id}`);
 
         devices[device.data.id] = {
           id: device.data.id,
           name: 'EnergyLink',
           settings: device.settings,
         };
-        // callback( null, devices );
+
         socket.emit('success', device);
         return devices;
-
       }
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
 
+      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
     });
 
     socket.setHandler('disconnect', () => {
-      this.log('User aborted pairing, or pairing is finished');
+      this.log('Pairing aborted or finished');
     });
   }
-
 }
 
 module.exports = HomeWizardEnergyLink;

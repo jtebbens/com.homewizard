@@ -1,11 +1,18 @@
 'use strict';
 
 const fetch = require('node-fetch');
-
 const https = require('https');
 
-// Unified timeout wrapper — returns Response
-async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+module.exports = (function () {
+  const api = {};
+
+  const http_agent = new https.Agent({
+    keepAlive: true,
+    keepAliveMsecs: 11000,
+    rejectUnauthorized: false,
+  });
+
+  async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   return new Promise((resolve, reject) => {
     let settled = false;
 
@@ -34,17 +41,12 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   });
 }
 
-module.exports = (function () {
-  const api = {};
 
-  const http_agent = new https.Agent({
-    keepAlive: true,
-    keepAliveMsecs: 11000,
-    rejectUnauthorized: false,
-  });
-
-  async function fetchJSON(url, opts, timeout = 5000) {
-    const res = await fetchWithTimeout(url, opts, timeout);
+  /**
+   * Pure fetch → always returns parsed JSON or throws
+   */
+  async function fetchJSON(url, opts = {}) {
+    const res = await fetchWithTimeout(url, { agent: http_agent, ...opts });
 
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -67,8 +69,7 @@ module.exports = (function () {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
-      },
-      agent: http_agent,
+      }
     });
 
     if (typeof data !== 'object') {
@@ -81,8 +82,7 @@ module.exports = (function () {
   // -------------------------
   api.getMeasurement = async function (url, token) {
     return fetchJSON(`${url}/api/measurement`, {
-      headers: { Authorization: `Bearer ${token}` },
-      agent: http_agent,
+      headers: { Authorization: `Bearer ${token}` }
     });
   };
 
@@ -91,8 +91,7 @@ module.exports = (function () {
   // -------------------------
   api.getSystem = async function (url, token) {
     return fetchJSON(`${url}/api/system`, {
-      headers: { Authorization: `Bearer ${token}` },
-      agent: http_agent,
+      headers: { Authorization: `Bearer ${token}` }
     });
   };
 
@@ -101,8 +100,7 @@ module.exports = (function () {
   // -------------------------
   api.getInfo = async function (url, token) {
     return fetchJSON(`${url}/api`, {
-      headers: { Authorization: `Bearer ${token}` },
-      agent: http_agent,
+      headers: { Authorization: `Bearer ${token}` }
     });
   };
 
@@ -111,8 +109,7 @@ module.exports = (function () {
   // -------------------------
   api.getMode = async function (url, token) {
     const data = await fetchJSON(`${url}/api/batteries`, {
-      headers: { Authorization: `Bearer ${token}` },
-      agent: http_agent,
+      headers: { Authorization: `Bearer ${token}` }
     });
 
     if (Array.isArray(data.permissions)) {
@@ -138,13 +135,11 @@ module.exports = (function () {
   };
 
   // -------------------------
-  // SET MODE
+  // SET MODE (no retries)
   // -------------------------
   api.setMode = async function (url, token, selectedMode) {
-    const retries = 4;
-    let lastError;
-
     let body;
+
     switch (selectedMode) {
       case 'standby':
         body = { mode: 'standby', permissions: [] };
@@ -165,28 +160,18 @@ module.exports = (function () {
         body = { mode: selectedMode };
     }
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        return await fetchJSON(`${url}/api/batteries`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          agent: http_agent,
-          body: JSON.stringify(body),
-        });
-      } catch (err) {
-        lastError = err;
-        if (attempt < retries) await new Promise(r => setTimeout(r, 3000));
-      }
-    }
-
-    throw new Error(`Fetch failed after ${retries} attempts: ${lastError.message}`);
+    return fetchJSON(`${url}/api/batteries`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body)
+    });
   };
 
   // -------------------------
-  // CLOUD ON/OFF
+  // CLOUD ON/OFF (no retries)
   // -------------------------
   api.setCloudOn = async function (url, token) {
     return api._setCloud(url, token, true);
@@ -197,27 +182,14 @@ module.exports = (function () {
   };
 
   api._setCloud = async function (url, token, enabled) {
-    const retries = 3;
-    let lastError;
-
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        return await fetchJSON(`${url}/api/system`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          agent: http_agent,
-          body: JSON.stringify({ cloud_enabled: enabled }),
-        });
-      } catch (err) {
-        lastError = err;
-        if (attempt < retries) await new Promise(r => setTimeout(r, 2000));
-      }
-    }
-
-    throw new Error(`Fetch failed after ${retries} attempts: ${lastError.message}`);
+    return fetchJSON(`${url}/api/system`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cloud_enabled: enabled })
+    });
   };
 
   return api;
