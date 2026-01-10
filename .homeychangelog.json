@@ -841,5 +841,8 @@
   },
   "3.10.5": {
     "en": "Removed all retry/timeout code for fetch as it seems to lock up devices"
+  },
+  "3.10.6": {
+    "en": "Cleanup device drivers with overcomplicated checks that ended up with polling deadlocks"
   }
 }
