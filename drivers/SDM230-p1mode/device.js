@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const fetch = require('node-fetch');
+const http = require('http');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 
 
@@ -81,10 +82,10 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     this.pollingActive = false;
     this._debugLogs = [];
 
-        this.agent = new http.Agent({
-          keepAlive: true,
-          keepAliveMsecs: 10000,
-        });
+    this.agent = new http.Agent({
+      keepAlive: true,
+      keepAliveMsecs: 10000,
+    });
     
 
     const settings = this.getSettings();
@@ -224,78 +225,87 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   }
 
   /**
-   * GET /data
-   */
-  async onPoll() {
-    const settings = this.getSettings();
+ * GET /data
+ */
+async onPoll() {
+  const settings = this.getSettings();
 
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-      } else {
-        await this.setUnavailable('Missing URL');
-        return;
-      }
-    }
-
-    if (this.pollingActive) return;
-    this.pollingActive = true;
-
-    try {
-      const res = await fetchWithTimeout(`${this.url}/data`, {
-        agent: this.agent,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-
-      const data = await res.json();
-      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
-
-      // CAPABILITY UPDATES
-      await updateCapability(this, 'rssi', data.wifi_strength);
-
-      const power = this.getClass() === 'solarpanel'
-        ? data.active_power_w * -1
-        : data.active_power_w;
-
-      await updateCapability(this, 'measure_power', power);
-      this._onNewPowerValue(power);
-
-      await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
-
-      const l1 = this.getClass() === 'solarpanel'
-        ? data.active_power_l1_w * -1
-        : data.active_power_l1_w;
-
-      await updateCapability(this, 'measure_power.l1', l1);
-
-      if (data.total_power_export_t1_kwh > 1) {
-        await updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh);
-      }
-
-      const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
-      await updateCapability(this, 'meter_power', net);
-
-      if (data.active_voltage_v !== undefined) {
-        await updateCapability(this, 'measure_voltage', data.active_voltage_v);
-      }
-
-      if (data.active_current_a !== undefined) {
-        await updateCapability(this, 'measure_current', data.active_current_a);
-      }
-
-      await this.setAvailable();
-
-    } catch (err) {
-      this._debugLog(`Poll failed: ${err.message}`);
-      await this.setUnavailable(err.message || 'Polling error');
-
-    } finally {
-      this.pollingActive = false;
+  if (!this.url) {
+    if (settings.url) {
+      this.url = settings.url;
+    } else {
+      await this.setUnavailable('Missing URL');
+      return;
     }
   }
+
+  if (this.pollingActive) return;
+  this.pollingActive = true;
+
+  try {
+    const res = await fetchWithTimeout(`${this.url}/data`, {
+      agent: this.agent,
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+    const data = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+
+    // CAPABILITY UPDATES
+    await updateCapability(this, 'rssi', data.wifi_strength);
+
+    const power = this.getClass() === 'solarpanel'
+      ? data.active_power_w * -1
+      : data.active_power_w;
+
+    await updateCapability(this, 'measure_power', power);
+    this._onNewPowerValue(power);
+
+    await updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh);
+
+    const l1 = this.getClass() === 'solarpanel'
+      ? data.active_power_l1_w * -1
+      : data.active_power_l1_w;
+
+    await updateCapability(this, 'measure_power.l1', l1);
+
+    if (data.total_power_export_t1_kwh > 1) {
+      await updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh);
+    }
+
+    const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
+    await updateCapability(this, 'meter_power', net);
+
+    if (data.active_voltage_v !== undefined) {
+      await updateCapability(this, 'measure_voltage', data.active_voltage_v);
+    }
+
+    if (data.active_current_a !== undefined) {
+      await updateCapability(this, 'measure_current', data.active_current_a);
+    }
+
+    await this.setAvailable();
+
+    } catch (err) {
+
+    if (err.message === 'TIMEOUT') {
+      this._debugLog('SDM230 P1-mode timeout — no new telegrams, keeping last known values');
+      // No return — allow finally to run
+    } else {
+      this._debugLog(`Poll failed: ${err.message}`);
+      await this.setUnavailable(err.message || 'Polling error');
+    }
+
+  } finally {
+    this.pollingActive = false;
+  }
+
+
+}
+
 
   async onSettings(event) {
     const { newSettings, oldSettings, changedKeys } = event;
