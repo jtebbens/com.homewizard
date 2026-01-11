@@ -685,9 +685,6 @@ async _updateDaily() {
 
   const showGas = this.getSetting('show_gas') === true;
 
-  const m = this._cacheGet('last_measurement');
-  if (!m) return;
-
   const nowLocal = new Date(new Date().toLocaleString('en-US', {
     timeZone: 'Europe/Brussels'
   }));
@@ -695,19 +692,31 @@ async _updateDaily() {
   const hour = nowLocal.getHours();
   const minute = nowLocal.getMinutes();
 
+  // Always fetch last measurement ONCE
+  const m = this._cacheGet('last_measurement');
+
   // --- MIDNIGHT RESET ---
   if (hour === 0 && minute === 0) {
-    if (typeof m.energy_import_kwh === 'number') {
+
+    // Electricity baseline — always use last known value
+    if (m && typeof m.energy_import_kwh === 'number') {
       this._cacheSet('meter_start_day', m.energy_import_kwh);
     }
 
+    // Gas baseline — always use last known external value
     const lastExternal = this._cacheGet('external_last_result');
     const gas = lastExternal?.gas;
 
     if (showGas && typeof gas?.value === 'number') {
       this._cacheSet('gasmeter_start_day', gas.value);
     }
+
+    return; // do not continue daily logic in the same minute
   }
+
+  // --- ONLY NOW ---
+  // If no measurement, skip daily calculations (but reset already done)
+  if (!m) return;
 
   // --- DAILY ELECTRICITY ---
   const meterStart = this._cacheGet('meter_start_day');
@@ -768,6 +777,7 @@ async _updateDaily() {
     }
   }
 }
+
 
 
 

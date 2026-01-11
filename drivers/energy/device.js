@@ -488,31 +488,30 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this._phaseDetectCount = 0;
       }
 
-      // Midnight daily reset (store baseline)
+      // --- Midnight daily reset (store baseline) ---
       if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
+
+        // Electricity baseline
         if (data.total_power_import_kwh !== undefined) {
-          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
-        }
-        if (settings.show_gas && data._gasValue !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
+          tasks.push(
+            this.setStoreValue('meter_start_day', data.total_power_import_kwh)
+              .catch(this.error)
+          );
         }
 
-      } else {
-        const meterStartDay = await this.getStoreValue('meter_start_day');
-        let gasmeterStartDay = null;
-
+        // Gas baseline — always use last known value
         if (settings.show_gas) {
-          gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
-        }
+          const lastKnownGas =
+            data._gasValue ??
+            (await this.getStoreValue('gasmeter_start_day')) ??
+            0;
 
-        if (!meterStartDay && data.total_power_import_kwh !== undefined) {
-          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
+          tasks.push(
+            this.setStoreValue('gasmeter_start_day', lastKnownGas)
+          );
         }
-        if (settings.show_gas && !gasmeterStartDay && data._gasValue !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
-        }
-
       }
+
 
       // Gas 5‑minute delta
       if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
