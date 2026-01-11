@@ -844,5 +844,8 @@
   },
   "3.10.6": {
     "en": "Cleanup device drivers with overcomplicated checks that ended up with polling deadlocks"
+  },
+  "3.10.7": {
+    "en": "SDM230(p1mode) - Extra code handling for TIMEOUT issues"
   }
 }
