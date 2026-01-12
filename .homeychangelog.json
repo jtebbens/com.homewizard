@@ -847,5 +847,8 @@
   },
   "3.10.7": {
     "en": "SDM230(p1mode) - Extra code handling for TIMEOUT issues"
+  },
+  "3.10.8": {
+    "en": "SDM630 added per phase kwh meter tracking + daily kwh meter (estimate)"
   }
 }
