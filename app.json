@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.10.11",
+  "version": "3.10.12",
   "platforms": [
     "local"
   ],
@@ -2806,6 +2806,7 @@
         "identify",
         "measure_power",
         "meter_gas",
+        "meter_gas.daily",
         "meter_water",
         "meter_power",
         "meter_power.consumed.t1",
@@ -2870,6 +2871,13 @@
           "title": {
             "en": "Gasmeter",
             "nl": "Gasmeter"
+          }
+        },
+        "meter_gas.daily": {
+          "decimals": 3,
+          "title": {
+            "en": "Day Usage Gas",
+            "nl": "Dag verbruik Gas"
           }
         },
         "meter_water": {
