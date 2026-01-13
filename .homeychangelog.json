@@ -856,5 +856,8 @@
   },
   "3.10.10": {
     "en": "Bugfix: incorrect daily reset during day of gas usage"
+  },
+  "3.10.11": {
+    "en": "Cleanup first_run_logged key"
   }
 }
