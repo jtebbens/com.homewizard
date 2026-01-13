@@ -850,5 +850,8 @@
   },
   "3.10.8": {
     "en": "SDM630 added per phase kwh meter tracking + daily kwh meter (estimate)"
+  },
+  "3.10.9": {
+    "en": "More gas fix reset at night time (apiv1 and apiv2)"
   }
 }
