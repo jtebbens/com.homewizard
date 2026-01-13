@@ -853,5 +853,8 @@
   },
   "3.10.9": {
     "en": "More gas fix reset at night time (apiv1 and apiv2)"
+  },
+  "3.10.10": {
+    "en": "Bugfix: incorrect daily reset during day of gas usage"
   }
 }
