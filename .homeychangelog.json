@@ -859,5 +859,8 @@
   },
   "3.10.11": {
     "en": "Cleanup first_run_logged key"
+  },
+  "3.10.12": {
+    "en": "Bugfix: Energylink (watermeter) and Thermometer (battery)"
   }
 }
