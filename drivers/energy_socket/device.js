@@ -151,7 +151,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   /**
    * Debug logger
    */
-  _debugLog(msg) {
+_debugLog(msg) {
   try {
     const ts = new Date().toLocaleString('nl-NL', {
       hour12: false,
@@ -159,12 +159,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     });
 
     const driverName = this.driver.id;
+    const deviceName = this.getName();
 
     const safeMsg = typeof msg === 'string'
       ? msg
       : (msg instanceof Error ? msg.message : JSON.stringify(msg));
 
-    const line = `${ts} [${driverName}] ${safeMsg}`;
+    const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
 
     const logs = this.homey.settings.get('debug_logs') || [];
     logs.push(line);

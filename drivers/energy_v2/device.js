@@ -685,6 +685,7 @@ async _updateDaily() {
 
   const showGas = this.getSetting('show_gas') === true;
 
+  // Local time (Europe/Brussels)
   const nowLocal = new Date(new Date().toLocaleString('en-US', {
     timeZone: 'Europe/Brussels'
   }));
@@ -692,18 +693,30 @@ async _updateDaily() {
   const hour = nowLocal.getHours();
   const minute = nowLocal.getMinutes();
 
+  // Build LOCAL date string YYYY-MM-DD (no UTC!)
+  const todayLocal =
+    nowLocal.getFullYear() + '-' +
+    String(nowLocal.getMonth() + 1).padStart(2, '0') + '-' +
+    String(nowLocal.getDate()).padStart(2, '0');
+
+  const lastReset = this._cacheGet('daily_reset_date');
+
   // Always fetch last measurement ONCE
   const m = this._cacheGet('last_measurement');
 
-  // --- MIDNIGHT RESET ---
-  if (hour === 0 && minute === 0) {
+  // ----------------------------------------------------
+  // TRUE DAILY RESET (exactly once per day, at midnight)
+  // ----------------------------------------------------
+  if (todayLocal !== lastReset) {
 
-    // Electricity baseline — always use last known value
+    this._cacheSet('daily_reset_date', todayLocal);
+
+    // Electricity baseline
     if (m && typeof m.energy_import_kwh === 'number') {
       this._cacheSet('meter_start_day', m.energy_import_kwh);
     }
 
-    // Gas baseline — always use last known external value
+    // Gas baseline
     const lastExternal = this._cacheGet('external_last_result');
     const gas = lastExternal?.gas;
 
@@ -711,11 +724,10 @@ async _updateDaily() {
       this._cacheSet('gasmeter_start_day', gas.value);
     }
 
-    return; // do not continue daily logic in the same minute
+    return; // Do not continue daily logic in the same minute
   }
 
   // --- ONLY NOW ---
-  // If no measurement, skip daily calculations (but reset already done)
   if (!m) return;
 
   // --- DAILY ELECTRICITY ---
@@ -728,7 +740,7 @@ async _updateDaily() {
     }
   }
 
-  // --- DAILY GAS ---
+    // --- DAILY GAS ---
   if (showGas) {
     const lastExternal = this._cacheGet('external_last_result');
     const gas = lastExternal?.gas;
@@ -743,39 +755,43 @@ async _updateDaily() {
     }
   }
 
-  // --- GAS DELTA (5‑minute interval) ---
-  if (showGas && minute % 5 === 0) {
-    const lastMinute = this._cacheGet('last_gas_delta_minute');
-    if (lastMinute !== minute) {
-      this._cacheSet('last_gas_delta_minute', minute);
+  // --- GAS DELTA (triggered by new gas timestamp) ---
+if (showGas) {
+  const lastExternal = this._cacheGet('external_last_result');
+  const gas = lastExternal?.gas;
 
-      const lastExternal = this._cacheGet('external_last_result');
-      const gas = lastExternal?.gas;
+  if (gas && typeof gas.value === 'number') {
+    const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
 
-      if (gas && typeof gas.value === 'number') {
-        const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
+    // First run: store baseline
+    if (prevTimestamp == null) {
+      this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+      this._cacheSet('gasmeter_previous_reading', gas.value);
+    }
 
-        if (prevTimestamp == null) {
-          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-        } else if (gas.timestamp !== prevTimestamp) {
-          const prevReading = this._cacheGet('gasmeter_previous_reading');
+    // New gas sample detected
+    else if (gas.timestamp !== prevTimestamp) {
+      const prevReading = this._cacheGet('gasmeter_previous_reading');
 
-          if (typeof prevReading === 'number') {
-            const delta = gas.value - prevReading;
-            if (delta >= 0) {
-              const cur = this.getCapabilityValue('measure_gas');
-              if (cur !== delta) {
-                await updateCapability(this, 'measure_gas', delta).catch(this.error);
-              }
-            }
+      if (typeof prevReading === 'number') {
+        const delta = gas.value - prevReading;
+
+        if (delta >= 0) {
+          const cur = this.getCapabilityValue('measure_gas');
+          if (cur !== delta) {
+            await updateCapability(this, 'measure_gas', delta).catch(this.error);
           }
-
-          this._cacheSet('gasmeter_previous_reading', gas.value);
-          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
         }
       }
+
+      // Update baseline
+      this._cacheSet('gasmeter_previous_reading', gas.value);
+      this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
     }
   }
+}
+
+
 }
 
 
@@ -936,7 +952,7 @@ async _handleMeasurement(m) {
     cap('meter_power', net);
   }
 
-  // External meters (gas/water)
+    // External meters (gas/water)
   let gas = null;
   let water = null;
 
@@ -968,6 +984,8 @@ async _handleMeasurement(m) {
 
   // Cache external payload
   this._cacheSet('external_last_payload', m.external);
+
+
 
   // Run all updates in parallel
   if (tasks.length > 0) {

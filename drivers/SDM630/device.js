@@ -141,7 +141,7 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
   /**
    * Debug logger
    */
-  _debugLog(msg) {
+ _debugLog(msg) {
   try {
     const ts = new Date().toLocaleString('nl-NL', {
       hour12: false,
@@ -149,12 +149,13 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     });
 
     const driverName = this.driver.id;
+    const deviceName = this.getName();
 
     const safeMsg = typeof msg === 'string'
       ? msg
       : (msg instanceof Error ? msg.message : JSON.stringify(msg));
 
-    const line = `${ts} [${driverName}] ${safeMsg}`;
+    const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
 
     const logs = this.homey.settings.get('debug_logs') || [];
     logs.push(line);
@@ -254,6 +255,70 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
       tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
       tasks.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
       tasks.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
+
+      // --- Phase energy meters (derived kWh) ---
+      const intervalSec = Math.max(settings.polling_interval, 2);
+
+      // --- Local day detection (NO UTC) ---
+      const todayKey = new Date().toLocaleDateString('nl-NL', {
+        timeZone: 'Europe/Amsterdam'
+      });
+
+      const lastDayKey = this.getStoreValue('day_date');
+
+      // Daily reset when local calendar day changes
+      if (lastDayKey !== todayKey) {
+        await this.setStoreValue('day_l1', 0);
+        await this.setStoreValue('day_l2', 0);
+        await this.setStoreValue('day_l3', 0);
+        await this.setStoreValue('day_date', todayKey);
+        this.log('Daily phase energy counters reset (local day change)');
+      }
+
+      // Initialize total energy store values if missing
+      if (this.getStoreValue('meter_l1') == null) await this.setStoreValue('meter_l1', 0);
+      if (this.getStoreValue('meter_l2') == null) await this.setStoreValue('meter_l2', 0);
+      if (this.getStoreValue('meter_l3') == null) await this.setStoreValue('meter_l3', 0);
+
+      // Initialize daily energy store values if missing
+      if (this.getStoreValue('day_l1') == null) await this.setStoreValue('day_l1', 0);
+      if (this.getStoreValue('day_l2') == null) await this.setStoreValue('day_l2', 0);
+      if (this.getStoreValue('day_l3') == null) await this.setStoreValue('day_l3', 0);
+
+      // Convert W → kWh increment (can be negative = export)
+      const incL1 = (data.active_power_l1_w || 0) * (intervalSec / 3600);
+      const incL2 = (data.active_power_l2_w || 0) * (intervalSec / 3600);
+      const incL3 = (data.active_power_l3_w || 0) * (intervalSec / 3600);
+
+      // Update total kWh
+      const newL1 = this.getStoreValue('meter_l1') + incL1;
+      const newL2 = this.getStoreValue('meter_l2') + incL2;
+      const newL3 = this.getStoreValue('meter_l3') + incL3;
+
+      await this.setStoreValue('meter_l1', newL1);
+      await this.setStoreValue('meter_l2', newL2);
+      await this.setStoreValue('meter_l3', newL3);
+
+      // Update daily kWh
+      const newDayL1 = this.getStoreValue('day_l1') + incL1;
+      const newDayL2 = this.getStoreValue('day_l2') + incL2;
+      const newDayL3 = this.getStoreValue('day_l3') + incL3;
+
+      await this.setStoreValue('day_l1', newDayL1);
+      await this.setStoreValue('day_l2', newDayL2);
+      await this.setStoreValue('day_l3', newDayL3);
+
+      // Update capabilities (total)
+      tasks.push(updateCapability(this, 'meter_power.l1', newL1));
+      tasks.push(updateCapability(this, 'meter_power.l2', newL2));
+      tasks.push(updateCapability(this, 'meter_power.l3', newL3));
+
+      // Update capabilities (daily)
+      tasks.push(updateCapability(this, 'meter_power.day.l1', newDayL1));
+      tasks.push(updateCapability(this, 'meter_power.day.l2', newDayL2));
+      tasks.push(updateCapability(this, 'meter_power.day.l3', newDayL3));
+
+
 
       await Promise.allSettled(tasks);
 

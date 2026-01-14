@@ -352,7 +352,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   /**
    * Debug logger
    */
-  _debugLog(msg) {
+_debugLog(msg) {
   try {
     const ts = new Date().toLocaleString('nl-NL', {
       hour12: false,
@@ -360,12 +360,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     });
 
     const driverName = this.driver.id;
+    const deviceName = this.getName();
 
     const safeMsg = typeof msg === 'string'
       ? msg
       : (msg instanceof Error ? msg.message : JSON.stringify(msg));
 
-    const line = `${ts} [${driverName}] ${safeMsg}`;
+    const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
 
     const logs = this.homey.settings.get('debug_logs') || [];
     logs.push(line);
@@ -488,50 +489,81 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this._phaseDetectCount = 0;
       }
 
-      // --- Midnight daily reset (store baseline) ---
-      if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
+      // ------------------------------
+      // DAILY RESET (SAFE, RESTART-PROOF, LOCAL TIME)
+      // ------------------------------
 
-        // Electricity baseline
-        if (data.total_power_import_kwh !== undefined) {
-          tasks.push(
-            this.setStoreValue('meter_start_day', data.total_power_import_kwh)
-              .catch(this.error)
-          );
-        }
+      // Build LOCAL date string YYYY-MM-DD
+      const todayLocal =
+        nowLocal.getFullYear() + '-' +
+        String(nowLocal.getMonth() + 1).padStart(2, '0') + '-' +
+        String(nowLocal.getDate()).padStart(2, '0');
 
-        // Gas baseline — always use last known value
-        if (settings.show_gas) {
-          const lastKnownGas =
-            data._gasValue ??
-            (await this.getStoreValue('gasmeter_start_day')) ??
-            0;
+      const lastReset = await this.getStoreValue('daily_reset_date');
 
-          tasks.push(
-            this.setStoreValue('gasmeter_start_day', lastKnownGas)
-          );
-        }
+      // ----------------------------------------------------
+      // 1. FIRST-RUN PROTECTION
+      // Prevent baseline from being set in the middle of the day
+      // ----------------------------------------------------
+      if (lastReset == null && nowLocal.getHours() !== 0) {
+        return;
       }
 
 
+      // ----------------------------------------------------
+      // 2. TRUE DAILY RESET (only at midnight)
+      // ----------------------------------------------------
+      if (todayLocal !== lastReset && nowLocal.getHours() === 0) {
+
+        await this.setStoreValue('daily_reset_date', todayLocal).catch(this.error);
+
+        // Electricity baseline
+        if (data.total_power_import_kwh != null) {
+          await this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error);
+        }
+
+        // Gas baseline (only if valid)
+        if (settings.show_gas && data._gasValue != null) {
+          await this.setStoreValue('gasmeter_start_day', data._gasValue).catch(this.error);
+        }
+
+        this.log('ℹ️ Daily reset completed at midnight');
+        return;
+      }
+
+
+
+
       // Gas 5‑minute delta
-      if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
+      // --- GAS DELTA (triggered by new gas timestamp) ---
+      if (settings.show_gas && data._gasValue != null && data._gasTimestamp != null) {
+
         const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
 
+        // First run: store baseline
         if (prevTs == null) {
           tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
-        } else if (data._gasValue != null && prevTs !== data._gasTimestamp) {
+          tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
+        }
+
+        // New gas sample detected
+        else if (data._gasTimestamp !== prevTs) {
           const prevReading = await this.getStoreValue('gasmeter_previous_reading');
-          if (prevReading != null) {
+
+          if (typeof prevReading === 'number') {
             const gasDelta = data._gasValue - prevReading;
+
             if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
               tasks.push(updateCapability(this, 'measure_gas', gasDelta));
             }
           }
+
+          // Update baseline
           tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
           tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
         }
-
       }
+
 
       // Daily totals electra
         const meterStart = await this.getStoreValue('meter_start_day');

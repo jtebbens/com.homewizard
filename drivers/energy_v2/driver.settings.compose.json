@@ -1,31 +1,49 @@
 [
-  {
+    {
     "id": "mode",
     "type": "dropdown",
     "value": "plugin-battery",
-    "label": { "en": "Plugin Battery mode" },
+    "label": { 
+      "en": "Plugin Battery mode",
+      "nl": "Plugin‑batterijmodus"
+    },
     "values": [
       {
         "id": "zero",
-        "label": { "en": "Zero mode" }
+        "label": { 
+          "en": "Zero mode",
+          "nl": "Nul op de meter"
+        }
       },
       {
         "id": "to_full",
-        "label": { "en": "Full charge" }
+        "label": { 
+          "en": "Full charge",
+          "nl": "Volledig opladen"
+        }
       },
       {
         "id": "standby",
-        "label": { "en": "Standby" }
+        "label": { 
+          "en": "Standby",
+          "nl": "Stand‑by"
+        }
       },
       {
         "id": "zero_charge_only",
-        "label": { "en": "Zero mode, Charge allowed" } 
+        "label": { 
+          "en": "Zero mode, Charge allowed",
+          "nl": "Nul op de meter, laden toegestaan"
+        }
       },
       {
         "id": "zero_discharge_only",
-        "label": { "en": "Zero mode, Discharge allowed" } 
+        "label": { 
+          "en": "Zero mode, Discharge allowed",
+          "nl": "Nul op de meter, ontladen toegestaan"
+        }
       }
-    ] 
+    ]
   },
   {
     "id": "polling_interval",

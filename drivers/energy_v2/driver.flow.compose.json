@@ -20,7 +20,7 @@
       },
       "titleFormatted": {
         "en": "Set battery to Zero mode",
-        "nl": "Zet batterij in Zero modus"
+        "nl": "Zet batterij in Nul op de meter modus"
       },
       "args": []
     },
@@ -40,11 +40,11 @@
       "id": "set-battery-to-zero-charge-only-mode",
       "title": {
         "en": "Set battery to Zero Charge Only mode",
-        "nl": "Zet batterij in Alleen Opladen modus"
+        "nl": "Zet batterij in Nul op de meter alleen opladen modus"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Charge Only mode",
-        "nl": "Zet batterij in Alleen Opladen modus"
+        "nl": "Zet batterij in Nul op de meter alleen opladen modus"
       },
       "args": []
     },
@@ -52,11 +52,11 @@
       "id": "set-battery-to-zero-discharge-only-mode",
       "title": {
         "en": "Set battery to Zero Discharge Only mode",
-        "nl": "Zet batterij in Alleen Ontladen modus"
+        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Discharge Only mode",
-        "nl": "Zet batterij in Alleen Ontladen modus"
+        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
       },
       "args": []
     }
