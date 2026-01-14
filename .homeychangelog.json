@@ -868,5 +868,8 @@
   },
   "3.10.14": {
     "en": "Energy P1 changed to modular code"
+  },
+  "3.11.0": {
+    "en": "Modular code for P1 (both versions) & Heatlink set target_temperature fallback check"
   }
 }
