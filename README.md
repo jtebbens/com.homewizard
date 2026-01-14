@@ -4,6 +4,10 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.10.13
+
+* Rollback Daily gas reset for both P1 apiv1 and apiv2
+
 v3.10.12
 
 * Updated plugin battery mode names
