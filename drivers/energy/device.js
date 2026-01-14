@@ -381,403 +381,34 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   async onPoll() {
     if (this._deleted) return;
+
     const settings = this.getSettings();
-
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-        this.log(`Restored URL from settings: ${this.url}`);
-      } else {
-        await this.setUnavailable('Missing URL');
-        return;
-      }
-    }
-
-    if (this.pollingActive) return;
-    this.pollingActive = true;
+    if (!await this._prepareUrl(settings)) return;
+    if (!this._acquirePollLock()) return;
 
     try {
-      const tz = this.homey.clock.getTimezone();
-      const now = new Date();
-      const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-      const homeyLang = this.homey.i18n.getLanguage();
+      const { now, nowLocal, homeyLang } = this._getLocalTimeAndLang();
 
-      const res = await fetchWithTimeout(`${this.url}/data`, {
-        agent: this.agent,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!res || !res.ok) {
-        await updateCapability(this, 'connection_error', 'Fetch error');
-        throw new Error(res ? res.statusText : 'Unknown error during fetch');
-      }
-
-      // const data = await res.json();
-      // if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
-
-      let text;
-      let data;
-
-      try {
-        text = await res.text();
-        data = JSON.parse(text);
-      } catch (err) {
-        this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
-        throw new Error('Invalid JSON');
-      }
-
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid JSON');
-      }
-
-
+      const data = await this._fetchData();
       const tasks = [];
 
-      // ------------------------------
-      // GAS SOURCE SELECTION (FIX)
-      // ------------------------------
-      let gasValue = null;
-      let gasTimestamp = null;
+      this._processGasSourceSelection(data);
+      await this._processPhaseAutodetect(data, tasks);
+      await this._processMidnightDailyReset(data, tasks, settings, nowLocal);
+      await this._processGasDelta(data, tasks, settings, nowLocal);
+      await this._processDailyTotals(data, tasks, settings);
 
-      // 1. Prefer external gas meters with real timestamps
-      if (Array.isArray(data.external)) {
-        const gasMeters = data.external
-          .filter(e => e.type === 'gas_meter' && e.value != null && e.timestamp != null);
-
-        if (gasMeters.length > 0) {
-          // pick the most recent gas meter
-          gasMeters.sort((a, b) => b.timestamp - a.timestamp);
-          gasValue = gasMeters[0].value;
-          gasTimestamp = gasMeters[0].timestamp;
-        }
-      }
-
-      // 2. Fallback to administrative gas meter
-      if (gasValue == null && data.total_gas_m3 != null) {
-        gasValue = data.total_gas_m3;
-        gasTimestamp = data.gas_timestamp;
-      }
-
-      // Expose unified gas fields for the rest of the driver
-      data._gasValue = gasValue;
-      data._gasTimestamp = gasTimestamp;
-
-
-      // Autodetect 3 phases (only promote, never demote)
-      const hasRealL2 = typeof data.active_current_l2_a === 'number' && data.active_current_l2_a !== 0;
-      const hasRealL3 = typeof data.active_current_l3_a === 'number' && data.active_current_l3_a !== 0;
-
-      if (this._phases === 1 && (hasRealL2 || hasRealL3)) {
-        this._phaseDetectCount++;
-
-        // Require 5 consecutive polls with L2/L3 activity before promoting
-        if (this._phaseDetectCount >= 5) {
-          this._phases = 3;
-          await this.setSettings({ number_of_phases: 3 }).catch(this.error);
-
-          // Add all L2/L3/T3 capabilities
-          for (const cap of PHASE_CAPS) {
-            if (!this.hasCapability(cap)) {
-              await this.addCapability(cap).catch(this.error);
-            }
-          }
-
-          this.log('Autodetect: promoted to 3 phases');
-        }
-      } else {
-        this._phaseDetectCount = 0;
-      }
-
-      // Midnight daily reset (store baseline)
-      if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
-        if (data.total_power_import_kwh !== undefined) {
-          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
-        }
-        if (settings.show_gas && data._gasValue !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
-        }
-
-      } else {
-        const meterStartDay = await this.getStoreValue('meter_start_day');
-        let gasmeterStartDay = null;
-
-        if (settings.show_gas) {
-          gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
-        }
-
-        if (!meterStartDay && data.total_power_import_kwh !== undefined) {
-          tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
-        }
-        if (settings.show_gas && !gasmeterStartDay && data._gasValue !== undefined) {
-          tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
-        }
-
-      }
-
-      // Gas 5‑minute delta
-      if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
-        const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
-
-        if (prevTs == null) {
-          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
-        } else if (data._gasValue != null && prevTs !== data._gasTimestamp) {
-          const prevReading = await this.getStoreValue('gasmeter_previous_reading');
-          if (prevReading != null) {
-            const gasDelta = data._gasValue - prevReading;
-            if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
-              tasks.push(updateCapability(this, 'measure_gas', gasDelta));
-            }
-          }
-          tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
-          tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
-        }
-
-      }
-
-      // Daily totals electra
-        const meterStart = await this.getStoreValue('meter_start_day');
-        if (meterStart != null && data.total_power_import_kwh != null) {
-          const dailyImport = data.total_power_import_kwh - meterStart;
-          if (this._hasChanged('meter_power.daily', dailyImport)) {
-            tasks.push(updateCapability(this, 'meter_power.daily', dailyImport));
-          }
-        }
-
-        if (settings.show_gas) {
-
-          // Daily totals when gas is enabled
-          const gasStart = await this.getStoreValue('gasmeter_start_day');
-          if (data._gasValue != null && gasStart != null) {
-            const gasDiff = data._gasValue - gasStart;
-            if (this._hasChanged('meter_gas.daily', gasDiff)) {
-              tasks.push(updateCapability(this, 'meter_gas.daily', gasDiff));
-            }
-          }
-        }
-
-
-      // Core power + baseload
-      if (this._hasChanged('measure_power', data.active_power_w)) {
-        tasks.push(updateCapability(this, 'measure_power', data.active_power_w));
-        this._onNewPowerValue(data.active_power_w);
-      }
-
-      if (this._hasChanged('rssi', data.wifi_strength)) {
-        tasks.push(updateCapability(this, 'rssi', data.wifi_strength));
-      }
-
-      if (this._hasChanged('tariff', data.active_tariff)) {
-        tasks.push(updateCapability(this, 'tariff', data.active_tariff));
-      }
-
-      tasks.push(updateCapability(this, 'identify', 'identify'));
-
-      if (this._hasChanged('meter_power.consumed.t1', data.total_power_import_t1_kwh)) {
-        tasks.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
-      }
-      if (this._hasChanged('meter_power.consumed.t2', data.total_power_import_t2_kwh)) {
-        tasks.push(updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh));
-      }
-      if (this._hasChanged('meter_power.consumed', data.total_power_import_kwh)) {
-        tasks.push(updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh));
-      }
-
-      const wifiQuality = getWifiQuality(data.wifi_strength);
-      if (this._hasChanged('wifi_quality', wifiQuality)) {
-        tasks.push(updateCapability(this, 'wifi_quality', wifiQuality));
-      }
-
-      // Tariff flow trigger (store‑based, not cache‑based)
-      const lastTariff = await this.getStoreValue('last_active_tariff');
-      const currentTariff = data.active_tariff;
-      if (typeof currentTariff === 'number' && currentTariff !== lastTariff) {
-        this.flowTriggerTariff(this, { tariff_changed: currentTariff });
-        tasks.push(this.setStoreValue('last_active_tariff', currentTariff).catch(this.error));
-      }
-
-      // Gas meter if enabled
-      if (settings.show_gas && data._gasValue != null && this._hasChanged('meter_gas', data._gasValue)) {
-        tasks.push(updateCapability(this, 'meter_gas', data._gasValue));
-      }
-
-
-      // Export (produced)
-      if (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1) {
-        if (this._hasChanged('meter_power.produced.t1', data.total_power_export_t1_kwh)) {
-          tasks.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
-        }
-        if (this._hasChanged('meter_power.produced.t2', data.total_power_export_t2_kwh)) {
-          tasks.push(updateCapability(this, 'meter_power.produced.t2', data.total_power_export_t2_kwh));
-        }
-      }
-
-      // Aggregated meter for Power by the hour
-      const netImport = data.total_power_import_kwh === undefined
-        ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) -
-          (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
-        : data.total_power_import_kwh - data.total_power_export_kwh;
-
-      if (this._hasChanged('meter_power', netImport)) {
-        tasks.push(updateCapability(this, 'meter_power', netImport));
-      }
-
-      if (data.total_power_import_kwh !== undefined &&
-          this._hasChanged('meter_power.returned', data.total_power_export_kwh)) {
-        tasks.push(updateCapability(this, 'meter_power.returned', data.total_power_export_kwh));
-      }
-
-      // Import flow trigger (store‑based)
-      const lastImport = await this.getStoreValue('last_total_import_kwh');
-      const currentImport = data.total_power_import_kwh;
-      if (typeof currentImport === 'number' && currentImport !== lastImport) {
-        this.flowTriggerImport(this, { import_changed: currentImport });
-        tasks.push(this.setStoreValue('last_total_import_kwh', currentImport).catch(this.error));
-      }
-
-      // Export flow trigger (store‑based)
-      const lastExport = await this.getStoreValue('last_total_export_kwh');
-      const currentExport = data.total_power_export_kwh;
-      if (typeof currentExport === 'number' && currentExport !== lastExport) {
-        this.flowTriggerExport(this, { export_changed: currentExport });
-        tasks.push(this.setStoreValue('last_total_export_kwh', currentExport).catch(this.error));
-      }
-
-      // Belgium monthly peak
-      if (this._hasChanged('measure_power.montly_power_peak', data.montly_power_peak_w)) {
-        tasks.push(updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w));
-      }
-
-      // Phase 1 voltage/current/power
-      if (data.active_voltage_l1_v !== undefined &&
-          this._hasChanged('measure_voltage.l1', data.active_voltage_l1_v)) {
-        tasks.push(updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v));
-      }
-      if (data.active_current_l1_a !== undefined &&
-          this._hasChanged('measure_current.l1', data.active_current_l1_a)) {
-        tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
-      }
-      if (data.active_power_l1_w !== undefined &&
-          this._hasChanged('measure_power.l1', data.active_power_l1_w)) {
-        tasks.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));
-      }
-
-      if (data.long_power_fail_count !== undefined &&
-          this._hasChanged('long_power_fail_count', data.long_power_fail_count)) {
-        tasks.push(updateCapability(this, 'long_power_fail_count', data.long_power_fail_count));
-      }
-
-      if (data.voltage_sag_l1_count !== undefined &&
-          this._hasChanged('voltage_sag_l1', data.voltage_sag_l1_count)) {
-        tasks.push(updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count));
-      }
-
-      if (data.voltage_swell_l1_count !== undefined &&
-          this._hasChanged('voltage_swell_l1', data.voltage_swell_l1_count)) {
-        tasks.push(updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count));
-      }
-
-      // Phase overload L1
-      if (data.active_current_l1_a !== undefined) {
-        const load1 = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
-        if (this._hasChanged('net_load_phase1_pct', load1)) {
-          tasks.push(updateCapability(this, 'net_load_phase1_pct', load1));
-          this._handlePhaseOverload('l1', load1, homeyLang);
-        }
-      }
-
-      // Phases 2 and 3 — only when we truly run 3 phases
-      if (this._phases === 3 && (data.active_current_l2_a !== undefined || data.active_current_l3_a !== undefined)) {
-
-        if (data.voltage_sag_l2_count !== undefined &&
-            this._hasChanged('voltage_sag_l2', data.voltage_sag_l2_count)) {
-          tasks.push(updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count));
-        }
-        if (data.voltage_sag_l3_count !== undefined &&
-            this._hasChanged('voltage_sag_l3', data.voltage_sag_l3_count)) {
-          tasks.push(updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count));
-        }
-        if (data.voltage_swell_l2_count !== undefined &&
-            this._hasChanged('voltage_swell_l2', data.voltage_swell_l2_count)) {
-          tasks.push(updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count));
-        }
-        if (data.voltage_swell_l3_count !== undefined &&
-            this._hasChanged('voltage_swell_l3', data.voltage_swell_l3_count)) {
-          tasks.push(updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count));
-        }
-
-        if (data.active_power_l2_w !== undefined &&
-            this._hasChanged('measure_power.l2', data.active_power_l2_w)) {
-          tasks.push(updateCapability(this, 'measure_power.l2', data.active_power_l2_w));
-        }
-        if (data.active_power_l3_w !== undefined &&
-            this._hasChanged('measure_power.l3', data.active_power_l3_w)) {
-          tasks.push(updateCapability(this, 'measure_power.l3', data.active_power_l3_w));
-        }
-
-        if (data.active_voltage_l2_v !== undefined &&
-            this._hasChanged('measure_voltage.l2', data.active_voltage_l2_v)) {
-          tasks.push(updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v));
-        }
-        if (data.active_voltage_l3_v !== undefined &&
-            this._hasChanged('measure_voltage.l3', data.active_voltage_l3_v)) {
-          tasks.push(updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v));
-        }
-
-        if (data.active_current_l2_a !== undefined) {
-          const load2 = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
-          if (this._hasChanged('measure_current.l2', data.active_current_l2_a)) {
-            tasks.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
-          }
-          if (this._hasChanged('net_load_phase2_pct', load2)) {
-            tasks.push(updateCapability(this, 'net_load_phase2_pct', load2));
-            this._handlePhaseOverload('l2', load2, homeyLang);
-          }
-        }
-
-        if (data.active_current_l3_a !== undefined) {
-          const load3 = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
-          if (this._hasChanged('measure_current.l3', data.active_current_l3_a)) {
-            tasks.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
-          }
-          if (this._hasChanged('net_load_phase3_pct', load3)) {
-            tasks.push(updateCapability(this, 'net_load_phase3_pct', load3));
-            this._handlePhaseOverload('l3', load3, homeyLang);
-          }
-        }
-      }
-
-      // T3 import/export: only relevant if we actually run 3 phases
-      if (this._phases === 3) {
-        if (this._hasChanged('meter_power.consumed.t3', data.total_power_import_t3_kwh)) {
-          tasks.push(updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh));
-        }
-        if (this._hasChanged('meter_power.produced.t3', data.total_power_export_t3_kwh)) {
-          tasks.push(updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh));
-        }
-      }
-
-      // External water (if present)
-      const externalData = data.external;
-      if (Array.isArray(externalData)) {
-        const latestWater = externalData.reduce((prev, current) => {
-          if (current.type === 'water_meter') {
-            return !prev || current.timestamp > prev.timestamp ? current : prev;
-          }
-          return prev;
-        }, null);
-
-        if (latestWater && latestWater.value != null &&
-            this._hasChanged('meter_water', latestWater.value)) {
-          tasks.push(updateCapability(this, 'meter_water', latestWater.value));
-        }
-      }
-
-      // Sync URL if changed
-      if (this.url !== settings.url) {
-        this.log(`Energy - Updating settings url from ${settings.url} → ${this.url}`);
-        tasks.push(this.setSettings({ url: this.url }).catch(this.error));
-      }
+      this._processCorePowerAndWifi(data, tasks);
+      await this._processTariffAndFlows(data, tasks);
+      this._processGasLiveValue(data, tasks, settings);
+      this._processExportAndNetImport(data, tasks);
+      await this._processImportExportFlows(data, tasks);
+      this._processBelgiumMonthlyPeak(data, tasks);
+      this._processPhase1MetricsAndOverload(data, tasks, settings, homeyLang);
+      this._processPhases2And3(data, tasks, settings, homeyLang);
+      this._processT3ImportExport(data, tasks);
+      this._processExternalWater(data, tasks);
+      this._processUrlSync(tasks, settings);
 
       await Promise.allSettled(tasks);
 
@@ -786,42 +417,448 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       this.failCount = 0;
 
     } catch (err) {
-      this.error('Poll failed:', err);
-
-      await updateCapability(this, 'connection_error', err.message || 'Polling error');
-      this.failCount++;
-
-      if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
-        this.log('Timeout/connection reset detected — recreating HTTP agent and retrying');
-        try {
-          this.agent.destroy?.();
-          this.agent = new http.Agent({
-            keepAlive: true,
-            keepAliveMsecs: 10000,
-            maxSockets: 1
-          });
-        } catch (createErr) {
-          this.error('Failed to recreate agent:', createErr);
-        }
-
-        setTimeout(() => {
-          if (this._deleted) return;
-          this.onPoll();
-        }, 2000);
-      }
-
-      if (this.failCount > 3) {
-        if (this.onPollInterval) clearInterval(this.onPollInterval);
-        await this.setUnavailable('Device unreachable');
-      } else {
-        await this.setUnavailable(err.message || 'Polling error');
-        this._debugLog(`Poll failed: ${err.message}`);
-      }
-
+      this._handlePollError(err);
     } finally {
       this.pollingActive = false;
     }
   }
+
+  async _prepareUrl(settings) {
+    if (!this.url) {
+      if (settings.url) {
+        this.url = settings.url;
+        this.log(`Restored URL from settings: ${this.url}`);
+      } else {
+        await this.setUnavailable('Missing URL');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  _acquirePollLock() {
+    if (this.pollingActive) return false;
+    this.pollingActive = true;
+    return true;
+  }
+
+  _getLocalTimeAndLang() {
+    const tz = this.homey.clock.getTimezone();
+    const now = new Date();
+    const iso = now.toLocaleString('sv-SE', { timeZone: tz });
+    const nowLocal = new Date(iso);
+    const homeyLang = this.homey.i18n.getLanguage();
+    return { now, nowLocal, homeyLang };
+  }
+
+  async _fetchData() {
+    const res = await fetchWithTimeout(`${this.url}/data`, {
+      agent: this.agent,
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!res || !res.ok) {
+      await updateCapability(this, 'connection_error', 'Fetch error');
+      throw new Error(res ? res.statusText : 'Unknown error during fetch');
+    }
+
+    let text;
+    let data;
+
+    try {
+      text = await res.text();
+      data = JSON.parse(text);
+    } catch (err) {
+      this.error('JSON parse error:', err.message, 'Body:', text?.slice(0, 200));
+      throw new Error('Invalid JSON');
+    }
+
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid JSON');
+    }
+
+    return data;
+  }
+
+  _processGasSourceSelection(data) {
+    let gasValue = null;
+    let gasTimestamp = null;
+
+    if (Array.isArray(data.external)) {
+      const gasMeters = data.external
+        .filter(e => e.type === 'gas_meter' && e.value != null && e.timestamp != null);
+
+      if (gasMeters.length > 0) {
+        gasMeters.sort((a, b) => b.timestamp - a.timestamp);
+        gasValue = gasMeters[0].value;
+        gasTimestamp = gasMeters[0].timestamp;
+      }
+    }
+
+    if (gasValue == null && data.total_gas_m3 != null) {
+      gasValue = data.total_gas_m3;
+      gasTimestamp = data.gas_timestamp;
+    }
+
+    data._gasValue = gasValue;
+    data._gasTimestamp = gasTimestamp;
+  }
+
+  async _processPhaseAutodetect(data, tasks) {
+    const hasRealL2 = typeof data.active_current_l2_a === 'number' && data.active_current_l2_a !== 0;
+    const hasRealL3 = typeof data.active_current_l3_a === 'number' && data.active_current_l3_a !== 0;
+
+    if (this._phases === 1 && (hasRealL2 || hasRealL3)) {
+      this._phaseDetectCount++;
+
+      if (this._phaseDetectCount >= 5) {
+        this._phases = 3;
+        await this.setSettings({ number_of_phases: 3 }).catch(this.error);
+
+        for (const cap of PHASE_CAPS) {
+          if (!this.hasCapability(cap)) {
+            await this.addCapability(cap).catch(this.error);
+          }
+        }
+
+        this.log('Autodetect: promoted to 3 phases');
+      }
+    } else {
+      this._phaseDetectCount = 0;
+    }
+  }
+
+  async _processMidnightDailyReset(data, tasks, settings, nowLocal) {
+    if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
+      if (data.total_power_import_kwh !== undefined) {
+        tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
+      }
+      if (settings.show_gas && data._gasValue !== undefined) {
+        tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
+      }
+    } else {
+      const meterStartDay = await this.getStoreValue('meter_start_day');
+      let gasmeterStartDay = null;
+
+      if (settings.show_gas) {
+        gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
+      }
+
+      if (!meterStartDay && data.total_power_import_kwh !== undefined) {
+        tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
+      }
+      if (settings.show_gas && !gasmeterStartDay && data._gasValue !== undefined) {
+        tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
+      }
+    }
+  }
+
+  async _processGasDelta(data, tasks, settings, nowLocal) {
+    if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
+      const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
+
+      if (prevTs == null) {
+        tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
+      } else if (data._gasValue != null && prevTs !== data._gasTimestamp) {
+        const prevReading = await this.getStoreValue('gasmeter_previous_reading');
+        if (prevReading != null) {
+          const gasDelta = data._gasValue - prevReading;
+          if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
+            tasks.push(updateCapability(this, 'measure_gas', gasDelta));
+          }
+        }
+        tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
+        tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
+      }
+    }
+  }
+
+  async _processDailyTotals(data, tasks, settings) {
+    const meterStart = await this.getStoreValue('meter_start_day');
+    if (meterStart != null && data.total_power_import_kwh != null) {
+      const dailyImport = data.total_power_import_kwh - meterStart;
+      if (this._hasChanged('meter_power.daily', dailyImport)) {
+        tasks.push(updateCapability(this, 'meter_power.daily', dailyImport));
+      }
+    }
+
+    if (settings.show_gas) {
+      const gasStart = await this.getStoreValue('gasmeter_start_day');
+      if (data._gasValue != null && gasStart != null) {
+        const gasDiff = data._gasValue - gasStart;
+        if (this._hasChanged('meter_gas.daily', gasDiff)) {
+          tasks.push(updateCapability(this, 'meter_gas.daily', gasDiff));
+        }
+      }
+    }
+  }
+
+  _processCorePowerAndWifi(data, tasks) {
+    if (this._hasChanged('measure_power', data.active_power_w)) {
+      tasks.push(updateCapability(this, 'measure_power', data.active_power_w));
+      this._onNewPowerValue(data.active_power_w);
+    }
+
+    if (this._hasChanged('rssi', data.wifi_strength)) {
+      tasks.push(updateCapability(this, 'rssi', data.wifi_strength));
+    }
+
+    if (this._hasChanged('tariff', data.active_tariff)) {
+      tasks.push(updateCapability(this, 'tariff', data.active_tariff));
+    }
+
+    tasks.push(updateCapability(this, 'identify', 'identify'));
+
+    if (this._hasChanged('meter_power.consumed.t1', data.total_power_import_t1_kwh)) {
+      tasks.push(updateCapability(this, 'meter_power.consumed.t1', data.total_power_import_t1_kwh));
+    }
+    if (this._hasChanged('meter_power.consumed.t2', data.total_power_import_t2_kwh)) {
+      tasks.push(updateCapability(this, 'meter_power.consumed.t2', data.total_power_import_t2_kwh));
+    }
+    if (this._hasChanged('meter_power.consumed', data.total_power_import_kwh)) {
+      tasks.push(updateCapability(this, 'meter_power.consumed', data.total_power_import_kwh));
+    }
+
+    const wifiQuality = getWifiQuality(data.wifi_strength);
+    if (this._hasChanged('wifi_quality', wifiQuality)) {
+      tasks.push(updateCapability(this, 'wifi_quality', wifiQuality));
+    }
+  }
+
+  async _processTariffAndFlows(data, tasks) {
+    const lastTariff = await this.getStoreValue('last_active_tariff');
+    const currentTariff = data.active_tariff;
+    if (typeof currentTariff === 'number' && currentTariff !== lastTariff) {
+      this.flowTriggerTariff(this, { tariff_changed: currentTariff });
+      tasks.push(this.setStoreValue('last_active_tariff', currentTariff).catch(this.error));
+    }
+  }
+
+  _processGasLiveValue(data, tasks, settings) {
+    if (settings.show_gas && data._gasValue != null && this._hasChanged('meter_gas', data._gasValue)) {
+      tasks.push(updateCapability(this, 'meter_gas', data._gasValue));
+    }
+  }
+
+  _processExportAndNetImport(data, tasks) {
+    if (data.total_power_export_kwh > 1 || data.total_power_export_t2_kwh > 1) {
+      if (this._hasChanged('meter_power.produced.t1', data.total_power_export_t1_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.produced.t1', data.total_power_export_t1_kwh));
+      }
+      if (this._hasChanged('meter_power.produced.t2', data.total_power_export_t2_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.produced.t2', data.total_power_export_t2_kwh));
+      }
+    }
+
+    const netImport = data.total_power_import_kwh === undefined
+      ? (data.total_power_import_t1_kwh + data.total_power_import_t2_kwh) -
+        (data.total_power_export_t1_kwh + data.total_power_export_t2_kwh)
+      : data.total_power_import_kwh - data.total_power_export_kwh;
+
+    if (this._hasChanged('meter_power', netImport)) {
+      tasks.push(updateCapability(this, 'meter_power', netImport));
+    }
+
+    if (data.total_power_import_kwh !== undefined &&
+        this._hasChanged('meter_power.returned', data.total_power_export_kwh)) {
+      tasks.push(updateCapability(this, 'meter_power.returned', data.total_power_export_kwh));
+    }
+  }
+
+  async _processImportExportFlows(data, tasks) {
+    const lastImport = await this.getStoreValue('last_total_import_kwh');
+    const currentImport = data.total_power_import_kwh;
+    if (typeof currentImport === 'number' && currentImport !== lastImport) {
+      this.flowTriggerImport(this, { import_changed: currentImport });
+      tasks.push(this.setStoreValue('last_total_import_kwh', currentImport).catch(this.error));
+    }
+
+    const lastExport = await this.getStoreValue('last_total_export_kwh');
+    const currentExport = data.total_power_export_kwh;
+    if (typeof currentExport === 'number' && currentExport !== lastExport) {
+      this.flowTriggerExport(this, { export_changed: currentExport });
+      tasks.push(this.setStoreValue('last_total_export_kwh', currentExport).catch(this.error));
+    }
+  }
+
+  _processBelgiumMonthlyPeak(data, tasks) {
+    if (this._hasChanged('measure_power.montly_power_peak', data.montly_power_peak_w)) {
+      tasks.push(updateCapability(this, 'measure_power.montly_power_peak', data.montly_power_peak_w));
+    }
+  }
+
+  _processPhase1MetricsAndOverload(data, tasks, settings, homeyLang) {
+    if (data.active_voltage_l1_v !== undefined &&
+        this._hasChanged('measure_voltage.l1', data.active_voltage_l1_v)) {
+      tasks.push(updateCapability(this, 'measure_voltage.l1', data.active_voltage_l1_v));
+    }
+    if (data.active_current_l1_a !== undefined &&
+        this._hasChanged('measure_current.l1', data.active_current_l1_a)) {
+      tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
+    }
+    if (data.active_power_l1_w !== undefined &&
+        this._hasChanged('measure_power.l1', data.active_power_l1_w)) {
+      tasks.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));
+    }
+
+    if (data.long_power_fail_count !== undefined &&
+        this._hasChanged('long_power_fail_count', data.long_power_fail_count)) {
+      tasks.push(updateCapability(this, 'long_power_fail_count', data.long_power_fail_count));
+    }
+
+    if (data.voltage_sag_l1_count !== undefined &&
+        this._hasChanged('voltage_sag_l1', data.voltage_sag_l1_count)) {
+      tasks.push(updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count));
+    }
+
+    if (data.voltage_swell_l1_count !== undefined &&
+        this._hasChanged('voltage_swell_l1', data.voltage_swell_l1_count)) {
+      tasks.push(updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count));
+    }
+
+    if (data.active_current_l1_a !== undefined) {
+      const load1 = Math.abs((data.active_current_l1_a / settings.phase_capacity) * 100);
+      if (this._hasChanged('net_load_phase1_pct', load1)) {
+        tasks.push(updateCapability(this, 'net_load_phase1_pct', load1));
+        this._handlePhaseOverload('l1', load1, homeyLang);
+      }
+    }
+  }
+
+  _processPhases2And3(data, tasks, settings, homeyLang) {
+    if (this._phases === 3 && (data.active_current_l2_a !== undefined || data.active_current_l3_a !== undefined)) {
+
+      if (data.voltage_sag_l2_count !== undefined &&
+          this._hasChanged('voltage_sag_l2', data.voltage_sag_l2_count)) {
+        tasks.push(updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count));
+      }
+      if (data.voltage_sag_l3_count !== undefined &&
+          this._hasChanged('voltage_sag_l3', data.voltage_sag_l3_count)) {
+        tasks.push(updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count));
+      }
+      if (data.voltage_swell_l2_count !== undefined &&
+          this._hasChanged('voltage_swell_l2', data.voltage_swell_l2_count)) {
+        tasks.push(updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count));
+      }
+      if (data.voltage_swell_l3_count !== undefined &&
+          this._hasChanged('voltage_swell_l3', data.voltage_swell_l3_count)) {
+        tasks.push(updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count));
+      }
+
+      if (data.active_power_l2_w !== undefined &&
+          this._hasChanged('measure_power.l2', data.active_power_l2_w)) {
+        tasks.push(updateCapability(this, 'measure_power.l2', data.active_power_l2_w));
+      }
+      if (data.active_power_l3_w !== undefined &&
+          this._hasChanged('measure_power.l3', data.active_power_l3_w)) {
+        tasks.push(updateCapability(this, 'measure_power.l3', data.active_power_l3_w));
+      }
+
+      if (data.active_voltage_l2_v !== undefined &&
+          this._hasChanged('measure_voltage.l2', data.active_voltage_l2_v)) {
+        tasks.push(updateCapability(this, 'measure_voltage.l2', data.active_voltage_l2_v));
+      }
+      if (data.active_voltage_l3_v !== undefined &&
+          this._hasChanged('measure_voltage.l3', data.active_voltage_l3_v)) {
+        tasks.push(updateCapability(this, 'measure_voltage.l3', data.active_voltage_l3_v));
+      }
+
+      if (data.active_current_l2_a !== undefined) {
+        const load2 = Math.abs((data.active_current_l2_a / settings.phase_capacity) * 100);
+        if (this._hasChanged('measure_current.l2', data.active_current_l2_a)) {
+          tasks.push(updateCapability(this, 'measure_current.l2', data.active_current_l2_a));
+        }
+        if (this._hasChanged('net_load_phase2_pct', load2)) {
+          tasks.push(updateCapability(this, 'net_load_phase2_pct', load2));
+          this._handlePhaseOverload('l2', load2, homeyLang);
+        }
+      }
+
+      if (data.active_current_l3_a !== undefined) {
+        const load3 = Math.abs((data.active_current_l3_a / settings.phase_capacity) * 100);
+        if (this._hasChanged('measure_current.l3', data.active_current_l3_a)) {
+          tasks.push(updateCapability(this, 'measure_current.l3', data.active_current_l3_a));
+        }
+        if (this._hasChanged('net_load_phase3_pct', load3)) {
+          tasks.push(updateCapability(this, 'net_load_phase3_pct', load3));
+          this._handlePhaseOverload('l3', load3, homeyLang);
+        }
+      }
+    }
+  }
+
+  _processT3ImportExport(data, tasks) {
+    if (this._phases === 3) {
+      if (this._hasChanged('meter_power.consumed.t3', data.total_power_import_t3_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.consumed.t3', data.total_power_import_t3_kwh));
+      }
+      if (this._hasChanged('meter_power.produced.t3', data.total_power_export_t3_kwh)) {
+        tasks.push(updateCapability(this, 'meter_power.produced.t3', data.total_power_export_t3_kwh));
+      }
+    }
+  }
+
+  _processExternalWater(data, tasks) {
+    const externalData = data.external;
+    if (Array.isArray(externalData)) {
+      const latestWater = externalData.reduce((prev, current) => {
+        if (current.type === 'water_meter') {
+          return !prev || current.timestamp > prev.timestamp ? current : prev;
+        }
+        return prev;
+      }, null);
+
+      if (latestWater && latestWater.value != null &&
+          this._hasChanged('meter_water', latestWater.value)) {
+        tasks.push(updateCapability(this, 'meter_water', latestWater.value));
+      }
+    }
+  }
+
+  _processUrlSync(tasks, settings) {
+    if (this.url !== settings.url) {
+      this.log(`Energy - Updating settings url from ${settings.url} → ${this.url}`);
+      tasks.push(this.setSettings({ url: this.url }).catch(this.error));
+    }
+  }
+
+  _handlePollError(err) {
+    this.error('Poll failed:', err);
+
+    updateCapability(this, 'connection_error', err.message || 'Polling error');
+    this.failCount++;
+
+    if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
+      this.log('Timeout/connection reset detected — recreating HTTP agent and retrying');
+      try {
+        this.agent.destroy?.();
+        this.agent = new http.Agent({
+          keepAlive: true,
+          keepAliveMsecs: 10000,
+          maxSockets: 1
+        });
+      } catch (createErr) {
+        this.error('Failed to recreate agent:', createErr);
+      }
+
+      setTimeout(() => {
+        if (this._deleted) return;
+        this.onPoll();
+      }, 2000);
+    }
+
+    if (this.failCount > 3) {
+      if (this.onPollInterval) clearInterval(this.onPollInterval);
+      this.setUnavailable('Device unreachable');
+    } else {
+      this.setUnavailable(err.message || 'Polling error');
+      this._debugLog(`Poll failed: ${err.message}`);
+    }
+  }
+
+
+
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
     if (!this._phaseOverloadNotificationsEnabled) return;
