@@ -15,6 +15,7 @@
     "identify",
     "measure_power",
     "meter_gas",
+    "meter_gas.daily",
     "meter_water",
     "meter_power",
     "meter_power.consumed.t1",
@@ -79,6 +80,13 @@
       "title": {
         "en": "Gasmeter",
         "nl": "Gasmeter"
+      }
+    },
+    "meter_gas.daily": {
+      "decimals": 3,
+      "title": {
+        "en": "Day Usage Gas",
+        "nl": "Dag verbruik Gas"
       }
     },
     "meter_water": {

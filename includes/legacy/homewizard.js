@@ -357,8 +357,7 @@ module.exports = (function() {
       let response;
       try {
         response = await new Promise((resolve, reject) => {
-          // homewizard.callnew(id, '/get-sensors', (err, response) => {
-            homewizard.callnew(id, '/get-status', (err, response) => {
+          homewizard.callnew(id, '/get-sensors', (err, response) => {
             if (err == null) resolve(response);
             else reject(err);
           });

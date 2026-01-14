@@ -14,9 +14,15 @@
   "capabilities": [
     "measure_power",
     "meter_power",
+    "meter_power.l1",
+    "meter_power.l2",
+    "meter_power.l3",
     "measure_power.l1",
     "measure_power.l2",
     "measure_power.l3",
+    "meter_power.day.l1",
+    "meter_power.day.l2",
+    "meter_power.day.l3",
     "measure_current.l1",
     "measure_current.l2",
     "measure_current.l3",
@@ -51,6 +57,27 @@
         "nl": "Huidig gebruik fase 3"
       }
     },
+    "meter_power.day.l1": {
+      "decimals": 3,
+      "title": {
+        "en": "Daily usage Phase 1",
+        "nl": "Dagverbruik Fase 1"
+      }
+    },
+    "meter_power.day.l2": {
+      "decimals": 3,
+      "title": {
+        "en": "Daily usage Phase 2",
+        "nl": "Dagverbruik Fase 2"
+      }
+    },
+    "meter_power.day.l3": {
+      "decimals": 3,
+      "title": {
+        "en": "Daily usage Phase 3",
+        "nl": "Dagverbruik Fase 3"
+      }
+    },
     "meter_power.consumed.t1": {
       "decimals": 3,
       "title": {
@@ -70,6 +97,27 @@
       "title": {
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh"
+      }
+    },
+    "meter_power.l1": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh Phase 1",
+        "nl": "Totaal verbruik KWh Fase 1"
+      }
+    },
+    "meter_power.l2": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh Phase 2",
+        "nl": "Totaal verbruik KWh Fase 2"
+      }
+    },
+    "meter_power.l3": {
+      "decimals": 3,
+      "title": {
+        "en": "Total usage KWh Phase 3",
+        "nl": "Totaal verbruik KWh Fase 3"
       }
     },
     "measure_current.l1": {

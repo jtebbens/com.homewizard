@@ -4,6 +4,16 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.10.12
+
+* Updated plugin battery mode names
+* Added device name to debug messages
+* SDM630 added per phase kwh meter tracking + daily kwh meter (estimate)
+* More gas fix reset at night time (apiv1 and apiv2)
+* Bugfix: incorrect daily reset during day of gas usage
+* Bugfix: Energylink (watermeter) and Thermometer (battery)
+NOTE: This is an estimate based on polling interval. If bad wifi or Homey can't reach the SDM630 the measured value will be lower than the actual data.
+
 v3.10.7
 
 * Bugfix: Homewizard Legacy fetch (tab was empty, no entries while there were errors in the log)
