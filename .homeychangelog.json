@@ -862,5 +862,8 @@
   },
   "3.10.12": {
     "en": "Bugfix: Energylink (watermeter) and Thermometer (battery)"
+  },
+  "3.10.13": {
+    "en": "Rollback Daily gas reset for both P1 apiv1 and apiv2"
   }
 }
