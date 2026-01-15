@@ -874,5 +874,8 @@
   },
   "3.11.1": {
     "en": "P1, changed order of processing, eletric first then gas/water"
+  },
+  "3.11.2": {
+    "en": "P1 energy tuning"
   }
 }
