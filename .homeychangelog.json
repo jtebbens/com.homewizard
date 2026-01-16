@@ -877,5 +877,8 @@
   },
   "3.11.2": {
     "en": "P1 energy tuning"
+  },
+  "3.11.3": {
+    "en": "P1 missed call in onPoll interval to reset daily calculation"
   }
 }
