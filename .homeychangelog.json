@@ -880,5 +880,8 @@
   },
   "3.11.3": {
     "en": "P1 missed call in onPoll interval to reset daily calculation"
+  },
+  "3.11.4": {
+    "en": "Bugfix: P1 (apiv2) polling mode - Charge mode fixes & Extra log information on Group Battery State of Charge"
   }
 }
