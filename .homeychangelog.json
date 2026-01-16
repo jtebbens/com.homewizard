@@ -892,5 +892,8 @@
   },
   "3.11.7": {
     "en": "Fallback Plugin battery Soc (api fetch)"
+  },
+  "3.11.8": {
+    "en": "Fetch based group soc state"
   }
 }
