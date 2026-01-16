@@ -883,5 +883,8 @@
   },
   "3.11.4": {
     "en": "Bugfix: P1 (apiv2) polling mode - Charge mode fixes & Extra log information on Group Battery State of Charge"
+  },
+  "3.11.5": {
+    "en": "Bugfix: Group Battery State of Charge (increased timestamp check)"
   }
 }
