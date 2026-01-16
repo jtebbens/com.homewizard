@@ -886,5 +886,8 @@
   },
   "3.11.5": {
     "en": "Bugfix: Group Battery State of Charge (increased timestamp check)"
+  },
+  "3.11.6": {
+    "en": "Troubleshooting user plugin battery group"
   }
 }
