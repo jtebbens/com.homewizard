@@ -895,5 +895,8 @@
   },
   "3.11.8": {
     "en": "Fetch based group soc state"
+  },
+  "3.11.9": {
+    "en": "Realtime pull from all batteries as fallback Battery Group State"
   }
 }
