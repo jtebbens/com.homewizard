@@ -276,11 +276,11 @@ class HomeWizardDevice extends Homey.Device {
   try {
     const id = device.getData().id;
 
-    // Altijd via /get-status, nooit meer via legacy wrapper
+    // Always via /get-status, never via legacy wrapper again
     const sensors = await this.callnewAsyncBound(id, '/get-status', { timeout: 8000 });
     const hwPreset = sensors?.response?.preset;
 
-    // Markeer dat HW ooit een geldige preset heeft teruggegeven
+    // Mark that HW has ever returned a valid preset
     if (hwPreset !== null && hwPreset !== undefined && hwPreset !== '') {
       homeWizard_devices[id].hasEverReturnedPreset = true;
     }
@@ -295,7 +295,7 @@ class HomeWizardDevice extends Homey.Device {
       continue;
     }
 
-    // Als HW geen preset geeft → stil blijven
+    // If HW doesn't return a preset → stay silent
     if (hwPreset === undefined || hwPreset === null || hwPreset === '') {
       if (debug && homeWizard_devices[id].hasEverReturnedPreset) {
         if (debug) this.log(`check_preset: HW returned no preset, using Homey preset=${homeyPreset}`);
@@ -303,13 +303,13 @@ class HomeWizardDevice extends Homey.Device {
       continue;
     }
 
-    // Alleen loggen bij echte afwijking
+    // Only log on real deviation
     if (hwPreset !== homeyPreset) {
       this.log(`WARN: HW preset ${hwPreset} differs from Homey preset ${homeyPreset}. Ignoring.`);
     }
 
     } catch (err) {
-      // Log naar legacy debug buffer
+      // Log to legacy debug buffer
       try {
         const dev = homewizard.self?.devices?.[device.getData().id];
         dev?.fetchLegacyDebug?.log({
@@ -320,10 +320,10 @@ class HomeWizardDevice extends Homey.Device {
         });
       } catch (_) {}
 
-      // Sync naar settings zodat het zichtbaar wordt in de UI
+      // Sync to settings so it's visible in the UI
       this.syncLegacyDebugToSettings?.();
 
-      // Alleen in debug naar de Homey-log
+      // Only in debug to the Homey log
       if (debug) {
         this.log('HomeWizard data corrupt');
         this.log(err);

@@ -6,9 +6,15 @@ const https = require('https');
 const WebSocketManager = require('../../includes/v2/Ws');
 const wsDebug = require('../../includes/v2/wsDebug');
 const api = require('../../includes/v2/Api');
+const debug = false;
 
 // Shared HTTPS agent (no timeout wrapper)
-const agent = new https.Agent({ rejectUnauthorized: false });
+const agent = new https.Agent({
+  rejectUnauthorized: false,
+  keepAlive: true,
+  keepAliveMsecs: 15000
+});
+
 
 // ---------------------------------------------------------
 // estimateBatteryKWh (unchanged)
@@ -80,6 +86,20 @@ async function updateCapability(device, capability, value) {
     await device.setCapabilityValue(capability, value).catch(device.error);
   }
 }
+
+
+// ---------------------------------------------------------
+// fetchWithTimeout (unchanged)
+// ---------------------------------------------------------
+
+function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timeout));
+}
+
 
 // ---------------------------------------------------------
 // DEVICE CLASS
@@ -180,10 +200,26 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   }
 
   onDeleted() {
-    if (this._wsWatchdog) clearInterval(this._wsWatchdog);
-    if (this._wsIdleWatchdog) clearInterval(this._wsIdleWatchdog);
-    if (this.onPollInterval) clearInterval(this.onPollInterval);
-    if (this._batteryGroupInterval) clearInterval(this._batteryGroupInterval);
+    if (this._wsWatchdog) {
+      clearInterval(this._wsWatchdog);
+      this._wsWatchdog = null;
+    }
+    if (this._wsIdleWatchdog) {
+      clearInterval(this._wsIdleWatchdog);
+      this._wsIdleWatchdog = null;
+    }
+    if (this._wsReconnectTimeout) {
+      clearTimeout(this._wsReconnectTimeout);
+      this._wsReconnectTimeout = null;
+    }
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
+    if (this._batteryGroupInterval) {
+      clearInterval(this._batteryGroupInterval);
+      this._batteryGroupInterval = null;
+    }
 
     if (this.wsManager) {
       this.wsManager.stop();
@@ -308,6 +344,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.log('⚠️ Ignoring measurement: device no longer exists');
       return;
     }
+
+    if (debug) this.log('HANDLE MEASUREMENT:', data);
 
     const now = Date.now();
     this.lastMeasurementAt = now;
@@ -506,33 +544,53 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    * Handle system events (wifi, cloud, etc.)
    */
   _handleSystem(data) {
-    if (!this.getData() || !this.getData().id) {
-      this.log('⚠️ Ignoring system event: device no longer exists');
-      return;
-    }
+  if (!this.getData() || !this.getData().id) {
+    this.log('⚠️ Ignoring system event: device no longer exists');
+    return;
+  }
 
-    const now = Date.now();
+  const now = Date.now();
 
-    // ---------------------------------------------------------
-    // 1. WiFi RSSI (debounced: max 1× per 5 sec)
-    // ---------------------------------------------------------
-    if (typeof data.wifi_rssi_db === 'number') {
-      if (!this._wifiLastUpdate || now - this._wifiLastUpdate > 5000) {
-        const curRssi = this.getCapabilityValue('rssi');
-        if (curRssi !== data.wifi_rssi_db) {
-          updateCapability(this, 'rssi', data.wifi_rssi_db);
-        }
-
-        const quality = getWifiQuality(data.wifi_rssi_db);
-        const curQuality = this.getCapabilityValue('wifi_quality');
-        if (curQuality !== quality) {
-          updateCapability(this, 'wifi_quality', quality);
-        }
-
-        this._wifiLastUpdate = now;
+  // ---------------------------------------------------------
+  // 1. WiFi RSSI (debounced: max 1× per 5 sec)
+  // ---------------------------------------------------------
+  if (typeof data.wifi_rssi_db === 'number') {
+    if (!this._wifiLastUpdate || now - this._wifiLastUpdate > 5000) {
+      const curRssi = this.getCapabilityValue('rssi');
+      if (curRssi !== data.wifi_rssi_db) {
+        updateCapability(this, 'rssi', data.wifi_rssi_db);
       }
+
+      const quality = getWifiQuality(data.wifi_rssi_db);
+      const curQuality = this.getCapabilityValue('wifi_quality');
+      if (curQuality !== quality) {
+        updateCapability(this, 'wifi_quality', quality);
+      }
+
+      this._wifiLastUpdate = now;
     }
   }
+
+  // ---------------------------------------------------------
+  // LED brightness → Homey dim (0–1)
+  // ---------------------------------------------------------
+  if (typeof data.status_led_brightness_pct === 'number') {
+    const apiValue = data.status_led_brightness_pct; // 0–100
+    const dimValue = apiValue / 100;                 // 0–1
+
+    if (!this._dimLastUpdate || now - this._dimLastUpdate > 5000) {
+      const cur = this.getCapabilityValue('dim');
+
+      if (cur !== dimValue) {
+        updateCapability(this, 'dim', dimValue);
+      }
+
+      this._dimLastUpdate = now;
+    }
+  }
+
+}
+
 
 
   /**
@@ -541,6 +599,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   async _updateCapabilities() {
     const caps = [
       'identify',
+      'dim',
       'meter_power.import',
       'meter_power.export',
       'measure_power',
@@ -564,32 +623,104 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
   }
 
+async _fetchFallbackSoC() {
+  try {
+    const res = await fetchWithTimeout(`${this.url}/api/measurement`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent
+    });
+
+    if (!res.ok) {
+      this.log(`⚠️ Fallback SoC fetch failed: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    if (typeof data.state_of_charge_pct === 'number') {
+      this.log(`✅ Fallback SoC available: ${data.state_of_charge_pct}%`);
+      return data.state_of_charge_pct;
+    } else {
+      this.log(`⚠️ Fallback SoC not present in API response`);
+      return null;
+    }
+  } catch (err) {
+    this.error('Fallback SoC fetch error:', err.message);
+    return null;
+  }
+}
+
+
 
   /**
    * Update battery group every 10 seconds
    */
-  _updateBatteryGroup() {
-    const batteryId = this.getData()?.id;
-    if (!batteryId) return;
+async _updateBatteryGroup() {
+  const batteryId = this.getData()?.id;
+  if (!batteryId) return;
 
-    const info = {
-      id: batteryId,
-      capacity_kwh: 2.8,
-      cycles: this._lastCycles,
-      power_w: this._lastPower,
-      soc_pct: this._lastSoC,
-      updated_at: Date.now()
-    };
+  // 1. Start with WS SoC (can be null)
+  let soc = (typeof this._lastSoC === 'number') ? this._lastSoC : null;
 
-    let group = this.homey.settings.get('pluginBatteryGroup') || {};
-    const prev = JSON.stringify(group[batteryId]);
-    const next = JSON.stringify(info);
+  // 2. ALWAYS do extra API call
+  let apiSoc = null;
+  try {
+    const res = await fetchWithTimeout(`${this.url}/api/measurement`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent
+    });
 
-    if (prev !== next) {
-      group[batteryId] = info;
-      this.homey.settings.set('pluginBatteryGroup', group);
+    if (res.ok) {
+      const data = await res.json();
+
+      // Only accept API SoC if > 0
+      if (typeof data.state_of_charge_pct === 'number' && data.state_of_charge_pct > 0) {
+        apiSoc = data.state_of_charge_pct;
+        if (debug) this.log(`🔄 Extra API SoC: ${apiSoc}%`);
+      } else {
+        if (debug) this.log(`⚠️ Extra API SoC missing or is 0 — exception`);
+      }
+    } else {
+      if (debug) this.log(`⚠️ Extra API SoC fetch failed: ${res.status}`);
     }
+  } catch (err) {
+    this.error('Extra API SoC fetch error:', err.message);
   }
+
+  // 3. API SoC takes precedence (but 0 is invalid)
+  if (typeof apiSoc === 'number' && apiSoc > 0) {
+    soc = apiSoc;
+  }
+
+  // 4. Last fallback
+  if (typeof soc !== 'number' || soc < 0) soc = 0;
+
+  const info = {
+    id: batteryId,
+    capacity_kwh: 2.8,
+    cycles: typeof this._lastCycles === 'number' ? this._lastCycles : 0,
+    power_w: typeof this._lastPower === 'number' ? this._lastPower : 0,
+    soc_pct: Math.round(soc),
+    updated_at: Date.now()
+  };
+
+  let group = this.homey.settings.get('pluginBatteryGroup') || {};
+  const prev = JSON.stringify(group[batteryId]);
+  const next = JSON.stringify(info);
+
+  if (prev !== next) {
+    group[batteryId] = info;
+    this.homey.settings.set('pluginBatteryGroup', group);
+  }
+}
+
+
+
 
 
   /**
@@ -597,7 +728,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    */
   async _fallbackPoll() {
     try {
-      const measurementRes = await fetch(`${this.url}/api/measurement`, {
+      const measurementRes = await fetchWithTimeout(`${this.url}/api/measurement`, {
         headers: {
           Authorization: `Bearer ${this.token}`,
           'X-Api-Version': '2'
@@ -610,7 +741,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         this._handleMeasurement(measurement);
       }
 
-      const systemRes = await fetch(`${this.url}/api/system`, {
+      const systemRes = await fetchWithTimeout(`${this.url}/api/system`, {
         headers: {
           Authorization: `Bearer ${this.token}`,
           'X-Api-Version': '2'
@@ -629,51 +760,81 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.error('Fallback poll error:', err.message);
     }
   }
+
   /**
    * Polling (pure fetch, no timeout wrapper)
    */
   async onPoll() {
-    try {
-      const measurementRes = await fetch(`${this.url}/api/measurement`, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'X-Api-Version': '2'
-        },
-        agent
-      });
-
-      if (measurementRes.ok) {
-        const measurement = await measurementRes.json();
-        this._handleMeasurement(measurement);
-      }
-
-      const systemRes = await fetch(`${this.url}/api/system`, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          'X-Api-Version': '2'
-        },
-        agent
-      });
-
-      if (systemRes.ok) {
-        const system = await systemRes.json();
-        this._handleSystem(system);
-      }
-
-    } catch (err) {
-      this.error('Polling error:', err.message);
-    }
-  }
-
-
-  /**
-   * Register capability listeners.
-   */
-  async _registerCapabilityListeners() {
-    this.registerCapabilityListener('identify', async () => {
-      await api.identify(this.url, this.token);
+  try {
+    const measurementRes = await fetchWithTimeout(`${this.url}/api/measurement`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent
     });
+
+    if (measurementRes.ok) {
+      const measurement = await measurementRes.json();
+
+      if (debug) this.log('📡 POLL MEASUREMENT:', measurement);
+
+      this._handleMeasurement(measurement);
+    } else {
+      if (debug) this.log('❌ POLL measurementRes NOT OK:', measurementRes.status);
+    }
+
+    const systemRes = await fetchWithTimeout(`${this.url}/api/system`, {
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        'X-Api-Version': '2'
+      },
+      agent
+    });
+
+    if (systemRes.ok) {
+      const system = await systemRes.json();
+
+      if (debug) this.log('📡 POLL SYSTEM:', system);
+
+      this._handleSystem(system);
+    } else {
+      if (debug) this.log('❌ POLL systemRes NOT OK:', systemRes.status);
+    }
+
+  } catch (err) {
+    this.error('Polling error:', err.message);
   }
+}
+
+
+
+/**
+ * Register capability listeners.
+ */
+async _registerCapabilityListeners() {
+
+  // IDENTIFY
+  this.registerCapabilityListener('identify', async () => {
+    await api.identify(this.url, this.token);
+  });
+
+  // LED BRIGHTNESS
+  this.registerCapabilityListener('dim', async (value) => {
+    // value is 0–1 → API wil 0–100
+    const brightness = Math.round(value * 100);
+
+    try {
+      await api.setLedBrightness(this.url, this.token, brightness);
+      this.log(`LED brightness set to ${brightness}%`);
+    } catch (err) {
+      this.error('LED brightness set error:', err.message);
+      throw new Error('Failed to set LED brightness');
+    }
+  });
+
+}
+
 
 
   /**

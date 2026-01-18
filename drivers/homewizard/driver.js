@@ -26,7 +26,7 @@ class HomeWizardDriver extends Homey.Driver {
     const flowPreset = String(args.preset);
 
     //
-    // 1. Eerst proberen de unit te lezen
+    // 1. Try to read the unit first
     //
     try {
       const response = await new Promise((resolve, reject) => {
@@ -47,7 +47,7 @@ class HomeWizardDriver extends Homey.Driver {
     }
 
     //
-    // 2. Als HW faalt → capability fallback
+    // 2. If HW fails → capability fallback
     //
     catch (err) {
       if (debug) this.log(`check_preset: HW error "${err.message}", falling back to capability`);
@@ -90,7 +90,7 @@ class HomeWizardDriver extends Homey.Driver {
         });
       });
 
-      // 2. Verificatie
+      // 2. Verification
       let hwPreset = null;
       try {
         const status = await new Promise((resolve, reject) => {
@@ -109,7 +109,7 @@ class HomeWizardDriver extends Homey.Driver {
         this.log(`WARN: HW returned preset ${hwPreset} but action set ${presetId}. Homey remains authoritative.`);
       }
 
-      // ⭐ 4. Capability bijwerken (en daarmee storevalue via device.js)
+      // ⭐ 4. Update capability (and with it storevalue via device.js)
       await device.setCapabilityValue('preset', String(presetId));
       await device.setStoreValue('preset', presetId);
 

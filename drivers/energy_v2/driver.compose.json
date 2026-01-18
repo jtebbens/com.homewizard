@@ -61,7 +61,8 @@
     "connection_error",
     "battery_group_total_capacity_kwh",
     "battery_group_average_soc",
-    "battery_group_state"
+    "battery_group_state",
+    "battery_group_charge_mode"
   ],
   "energy": {
     "cumulative": true,

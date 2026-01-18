@@ -10,9 +10,9 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 let homewizard_devices;
 
 function callnewAsync(device_id, uri_part, {
-  timeout = 3000,
+  timeout = 5000,
   retries = 2,
-  retryDelay = 2000
+  retryDelay = 3000
 } = {}) {
 
   return new Promise((resolve, reject) => {

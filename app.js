@@ -7,7 +7,7 @@ const Homey = require('homey');
 const Testing = false;
 
 class HomeWizardApp extends Homey.App {
-  onInit() {
+  async onInit() {
     this.log('HomeWizard app ready!');
     this.baseloadMonitor = null;
     this.p1Source = null;

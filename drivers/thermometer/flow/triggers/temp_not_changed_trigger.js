@@ -2,8 +2,8 @@
 
 module.exports = {
   async runListener(args, state) {
-    // Homey gebruikt runListener voor triggers
-    // We matchen op hours zodat de trigger alleen afgaat als de gebruiker dat getal instelt
+    // Homey uses runListener for triggers
+    // We match on hours so the trigger only fires if the user sets that number
     return args.hours === state.hours;
   }
 };
