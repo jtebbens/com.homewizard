@@ -192,5 +192,37 @@ module.exports = (function () {
     });
   };
 
+  // GET LED BRIGHTNESS
+api.getLedBrightness = async function (url, token) {
+  const data = await fetchJSON(`${url}/api/system`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (typeof data.status_led_brightness_pct === 'number') {
+    return data.status_led_brightness_pct / 100; // Homey expects 0–1
+  }
+
+  throw new Error('LED brightness not present in system response');
+};
+
+
+
+  // SET LED BRIGHTNESS
+api.setLedBrightness = async function (url, token, brightnessPct) {
+  return fetchJSON(`${url}/api/system`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      status_led_brightness_pct: brightnessPct
+    })
+  });
+};
+
+
+
+
   return api;
 }());

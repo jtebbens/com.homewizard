@@ -242,14 +242,23 @@ module.exports = (function() {
     }
 
     if (jsonData.status === 'ok' && !jsonData.response) {
+      // Treat as success for write-only endpoints
+      if (
+        uri_part.startsWith('/hl/0/settarget') ||
+        uri_part.startsWith('/preset/')
+      ) {
+        return callback(null, jsonData);
+      }
+
       device.fetchLegacyDebug.log({
         type: 'empty_response',
         url,
         ms: duration,
         payload: jsonData
       });
-      return callback('timeout', []); // of 'empty_response'
+      return callback('empty_response', []);
     }
+
 
 
 

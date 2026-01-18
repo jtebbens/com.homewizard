@@ -6,9 +6,9 @@ const homewizard = require('../../includes/legacy/homewizard.js');
 const debug = false;
 
 function callnewAsync(device_id, uri_part, {
-  timeout = 3000,
+  timeout = 5000,
   retries = 2,
-  retryDelay = 2000
+  retryDelay = 3000
 } = {}) {
 
   return new Promise((resolve, reject) => {
@@ -51,6 +51,43 @@ function callnewAsync(device_id, uri_part, {
 
 class HomeWizardHeatlink extends Homey.Device {
 
+
+  async retrySetTarget(homewizard_id, temperature, {
+      maxAttempts = 5,
+      delay = 3000
+    } = {}) {
+
+      const path = `/hl/0/settarget/${temperature}`;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+
+        try {
+          this.log(`Attempt ${attempt}/${maxAttempts}: ${path}`);
+          await callnewAsync(homewizard_id, path);
+          return true; // success
+        }
+
+        catch (err) {
+          const msg = err?.message || String(err);
+
+          // Circuit breaker open → wait and retry
+          if (msg.includes('circuit_open')) {
+            this.log(`Circuit open, retrying in ${delay}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+
+          // Real error → stop immediately
+          this.log(`Non-retryable error: ${msg}`);
+          throw err;
+        }
+      }
+
+      throw new Error('Failed after retries (circuit still open)');
+  }
+
+
+
   async onInit() {
 
     this.log(`Heatlink init: ${this.getName()}`);
@@ -58,30 +95,36 @@ class HomeWizardHeatlink extends Homey.Device {
     this.startPolling();
 
     this.registerCapabilityListener('target_temperature', async (temperature) => {
-      if (!temperature) return false;
+        if (!temperature) return false;
 
-      if (temperature < 5) temperature = 5;
-      else if (temperature > 35) temperature = 35;
+        if (temperature < 5) temperature = 5;
+        else if (temperature > 35) temperature = 35;
 
-      temperature = Math.round(temperature.toFixed(1) * 2) / 2;
+        temperature = Math.round(temperature.toFixed(1) * 2) / 2;
 
-      const homewizard_id = this.getSetting('homewizard_id');
-      const path = `/hl/0/settarget/${temperature}`;
-      this.log(path);
+        const homewizard_id = this.getSetting('homewizard_id');
 
-      try {
-        await callnewAsync(homewizard_id, path);
-        this.log('settarget target_temperature -> true');
-        return true;
+        try {
+          const ok = await this.retrySetTarget(homewizard_id, temperature);
 
-      } catch (err) {
-        this.log('ERR settarget target_temperature -> false');
-        this.error(
-          `Heatlink ${this.getName()} (${this.getData().id}) settarget failed: ${err.message || err}`
-        );
-        return false;
-      }
-    });
+          if (ok) {
+            this.log('settarget target_temperature -> true');
+            await this.setStoreValue('setTemperature', temperature);
+            return true;
+          }
+
+        } catch (err) {
+          this.log('ERR settarget target_temperature -> false');
+          this.error(`Heatlink ${this.getName()} settarget failed: ${err.message}`);
+
+          await this.setStoreValue('setTemperature', 0);
+          this.getStatus().catch(this.error);
+          return false;
+        }
+      });
+
+
+
   }
 
   startPolling() {
@@ -134,14 +177,33 @@ class HomeWizardHeatlink extends Homey.Device {
         this.setStoreValue('thermTemperature', rsp).catch(this.error);
       }
 
-      if (this.getStoreValue('setTemperature') != tte) {
-        if (tte > 0) {
+      const override = await this.getStoreValue('setTemperature');
+
+      // If override is active but Heatlink reports a different tte → clear override
+      if (override > 0 && tte !== override) {
+        this.log('Heatlink rejected override, clearing override flag');
+        await this.setStoreValue('setTemperature', 0).catch(this.error);
+
+        // Immediately sync Homey to real Heatlink value
+        promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
+      }
+
+
+      if (override > 0) {
+        // Override active → Homey must follow the override
+        if (tte === override) {
+          // Heatlink has accepted the override
           promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
         } else {
-          promises.push(this.setCapabilityValue('target_temperature', this.getStoreValue('thermTemperature')).catch(this.error));
+          // Heatlink has NOT accepted the override yet
+          // Do NOT overwrite Homey with stale tte
+          // Let polling try again later
         }
-        this.setStoreValue('setTemperature', tte).catch(this.error);
+      } else {
+        // No override → follow thermostat setpoint (rsp)
+        promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
       }
+
 
       if (!this.hasCapability('measure_temperature.boiler')) {
         promises.push(this.addCapability('measure_temperature.boiler').catch(this.error));

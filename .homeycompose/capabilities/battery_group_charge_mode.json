@@ -1,0 +1,49 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Battery Group Charge Mode",
+    "nl": "Battery Groep Oplaadmodus"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "picker",
+  "insights": true,
+  "icon": "assets/battery.svg",
+  "values": [
+    {
+      "id": "zero",
+      "title": {
+        "en": "Zero (Net Zero)",
+        "nl": "Nul op de meter"
+      }
+    },
+    {
+      "id": "zero_charge_only",
+      "title": {
+        "en": "Zero – Charge Only",
+        "nl": "NOM – Alleen laden"
+      }
+    },
+    {
+      "id": "zero_discharge_only",
+      "title": {
+        "en": "Zero – Discharge Only",
+        "nl": "NOM – Alleen ontladen"
+      }
+    },
+    {
+      "id": "standby",
+      "title": {
+        "en": "Standby",
+        "nl": "Stand‑by"
+      }
+    },
+    {
+      "id": "to_full",
+      "title": {
+        "en": "Full Charge",
+        "nl": "Volledig laden"
+      }
+    }
+  ]
+}

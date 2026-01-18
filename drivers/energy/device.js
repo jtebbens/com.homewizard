@@ -273,37 +273,54 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
-  onDiscoveryAvailable(discoveryResult) {
-    if (this._deleted) return;
-    try {
-      if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
-        throw new Error('Invalid discovery result: missing address, port, or path');
-      }
+onDiscoveryAvailable(discoveryResult) {
+  if (this._deleted) return;
 
-      this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-      this.log(`Discovered device URL: ${this.url}`);
-      this.onPoll();
-
-    } catch (err) {
-      this.log(`Discovery failed: ${err.message}`);
-    }
+  if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
+    this.log('Invalid discovery result');
+    return;
   }
 
-  onDiscoveryAddressChanged(discoveryResult) {
-    if (this._deleted) return;
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+  const newUrl = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+
+  // Only update if the URL actually changed
+  if (this.url !== newUrl) {
+    this.url = newUrl;
+    this.log(`Discovered device URL: ${this.url}`);
+  }
+
+  this.setAvailable();
+}
+
+
+onDiscoveryAddressChanged(discoveryResult) {
+  if (this._deleted) return;
+
+  const newUrl = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+
+  // Only update if the URL actually changed
+  if (this.url !== newUrl) {
+    this.url = newUrl;
     this.log(`URL updated: ${this.url}`);
     this._debugLog(`Discovery address changed: ${this.url}`);
-    this.onPoll();
+  }
+}
+
+
+onDiscoveryLastSeenChanged(discoveryResult) {
+  if (this._deleted) return;
+
+  const newUrl = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+
+  // Only update if the URL actually changed
+  if (this.url !== newUrl) {
+    this.url = newUrl;
+    this.log(`URL restored: ${this.url}`);
   }
 
-  onDiscoveryLastSeenChanged(discoveryResult) {
-    if (this._deleted) return;
-    this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
-    this.log(`URL restored: ${this.url}`);
-    this.setAvailable();
-    this.onPoll();
-  }
+  this.setAvailable();
+}
+
 
   async setCloudOn() {
     if (!this.url) return;
@@ -386,28 +403,34 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (!await this._prepareUrl(settings)) return;
     if (!this._acquirePollLock()) return;
 
-    try {
-      const { now, nowLocal, homeyLang } = this._getLocalTimeAndLang();
+    let data, nowLocal, homeyLang;
 
-      const data = await this._fetchData();
+    try {
+      const t = this._getLocalTimeAndLang();
+      nowLocal = t.nowLocal;
+      homeyLang = t.homeyLang;
+      data = await this._fetchData();
+    } catch (err) {
+      this._handlePollError(err);
+      this.pollingActive = false;
+      return;
+    }
+
+    //
+    // ⚡ ELECTRICITY FIRST — MUST NEVER BE BLOCKED BY GAS/WATER
+    //
+    try {
       const tasks = [];
 
-      this._processGasSourceSelection(data);
-      await this._processPhaseAutodetect(data, tasks);
-      await this._processMidnightDailyReset(data, tasks, settings, nowLocal);
-      await this._processGasDelta(data, tasks, settings, nowLocal);
-      await this._processDailyTotals(data, tasks, settings);
-
+      // Electricity-only processing
       this._processCorePowerAndWifi(data, tasks);
       await this._processTariffAndFlows(data, tasks);
-      this._processGasLiveValue(data, tasks, settings);
       this._processExportAndNetImport(data, tasks);
       await this._processImportExportFlows(data, tasks);
       this._processBelgiumMonthlyPeak(data, tasks);
       this._processPhase1MetricsAndOverload(data, tasks, settings, homeyLang);
       this._processPhases2And3(data, tasks, settings, homeyLang);
       this._processT3ImportExport(data, tasks);
-      this._processExternalWater(data, tasks);
       this._processUrlSync(tasks, settings);
 
       await Promise.allSettled(tasks);
@@ -417,11 +440,34 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       this.failCount = 0;
 
     } catch (err) {
-      this._handlePollError(err);
-    } finally {
-      this.pollingActive = false;
+      this.error('Electricity processing failed:', err);
     }
+
+    //
+    // 💧 GAS/WATER — MUST NEVER BLOCK ELECTRICITY
+    //
+    try {
+      this._processGasSourceSelection(data);
+
+      const gasTasks = [];
+
+      await this._processMidnightDailyReset(data, gasTasks, settings, nowLocal);
+      this._processExternalWater(data, gasTasks);
+      this._processGasLiveValue(data, gasTasks, settings);
+      this._processGasDelta(data, gasTasks, settings, nowLocal);
+      this._processDailyTotals(data, gasTasks, settings);
+
+      await Promise.allSettled(gasTasks);
+
+    } catch (err) {
+      this.error('Gas/Water processing failed:', err);
+    }
+
+
+    this.pollingActive = false;
   }
+
+
 
   async _prepareUrl(settings) {
     if (!this.url) {
@@ -530,29 +576,57 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   }
 
   async _processMidnightDailyReset(data, tasks, settings, nowLocal) {
-    if (nowLocal.getHours() === 0 && nowLocal.getMinutes() === 0) {
-      if (data.total_power_import_kwh !== undefined) {
-        tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
-      }
-      if (settings.show_gas && data._gasValue !== undefined) {
-        tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
-      }
-    } else {
-      const meterStartDay = await this.getStoreValue('meter_start_day');
-      let gasmeterStartDay = null;
+  // Format today's date as YYYY-MM-DD
+  const today = nowLocal.toISOString().slice(0, 10);
 
-      if (settings.show_gas) {
-        gasmeterStartDay = await this.getStoreValue('gasmeter_start_day');
-      }
+  // Read last reset date
+  const lastReset = await this.getStoreValue('last_reset_date');
 
-      if (!meterStartDay && data.total_power_import_kwh !== undefined) {
-        tasks.push(this.setStoreValue('meter_start_day', data.total_power_import_kwh).catch(this.error));
-      }
-      if (settings.show_gas && !gasmeterStartDay && data._gasValue !== undefined) {
-        tasks.push(this.setStoreValue('gasmeter_start_day', data._gasValue));
-      }
+  // First run or new day → perform reset
+  if (lastReset !== today) {
+
+    // Reset electricity baseline
+    if (data.total_power_import_kwh !== undefined) {
+      tasks.push(
+        this.setStoreValue('meter_start_day', data.total_power_import_kwh)
+          .catch(this.error)
+      );
+    }
+
+    // Reset gas baseline
+    if (settings.show_gas && data._gasValue !== undefined) {
+      tasks.push(
+        this.setStoreValue('gasmeter_start_day', data._gasValue)
+      );
+    }
+
+    // Store today's date so we don't reset again
+    tasks.push(
+      this.setStoreValue('last_reset_date', today)
+    );
+
+    return;
+  }
+
+  // If baseline missing (e.g. after reinstall), initialize it
+  const meterStartDay = await this.getStoreValue('meter_start_day');
+  if (!meterStartDay && data.total_power_import_kwh !== undefined) {
+    tasks.push(
+      this.setStoreValue('meter_start_day', data.total_power_import_kwh)
+        .catch(this.error)
+    );
+  }
+
+  if (settings.show_gas) {
+    const gasStartDay = await this.getStoreValue('gasmeter_start_day');
+    if (!gasStartDay && data._gasValue !== undefined) {
+      tasks.push(
+        this.setStoreValue('gasmeter_start_day', data._gasValue)
+      );
     }
   }
+}
+
 
   async _processGasDelta(data, tasks, settings, nowLocal) {
     if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
@@ -697,6 +771,12 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         this._hasChanged('measure_current.l1', data.active_current_l1_a)) {
       tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
     }
+    // Legacy measure_current (mirror of L1)
+    if (data.active_current_l1_a !== undefined &&
+        this._hasChanged('measure_current', data.active_current_l1_a)) {
+      tasks.push(updateCapability(this, 'measure_current', data.active_current_l1_a));
+    }
+
     if (data.active_power_l1_w !== undefined &&
         this._hasChanged('measure_power.l1', data.active_power_l1_w)) {
       tasks.push(updateCapability(this, 'measure_power.l1', data.active_power_l1_w));

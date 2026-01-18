@@ -4,11 +4,20 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.11.10
+
+* P1 energy modified to modular
+* P1 energy_v2 modified to modular
+* Heatlink additional code check on set target_temperature
+* P1, changed order of processing, eletric first then gas/water
+* P1 missed call in onPoll interval to reset daily calculation
+* Bugfix: P1 (apiv2) polling mode - Charge mode fixes
+* Bugfix: Group Battery State of Charge (increased timestamp check)
+* Realtime pull from all batteries as fallback Battery Group State
+* Baseload ignore return power
+* Plugin Battery LED brightness adjustment
+
 v3.10.13
-
-* Rollback Daily gas reset for both P1 apiv1 and apiv2
-
-v3.10.12
 
 * Updated plugin battery mode names
 * Added device name to debug messages

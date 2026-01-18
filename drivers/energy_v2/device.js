@@ -219,26 +219,32 @@ async function applyMeasurementCapabilities(device, m) {
  * @returns {string} normalized mode string
  */
 function normalizeBatteryMode(data) {
-  // ✅ Already normalized (string)
+  // If already normalized (string), return as-is
   if (typeof data === 'string') {
-    return data;
+    return data.trim();
   }
 
-  let mode = typeof data.mode === 'string'
+  // Extract mode
+  let rawMode = typeof data.mode === 'string'
     ? data.mode.trim().replace(/^["']+|["']+$/g, '')
-    : data.mode;
-
-  const perms = Array.isArray(data.permissions)
-    ? [...data.permissions].sort().join(',')
     : null;
 
+  const mode = rawMode ? rawMode.toLowerCase() : null;
+
+  // Extract permissions (sorted for deterministic comparison)
+  const perms = Array.isArray(data.permissions)
+    ? [...data.permissions].map(p => p.toLowerCase()).sort().join(',')
+    : null;
+
+  // Direct modes
   if (mode === 'standby') return 'standby';
   if (mode === 'to_full') return 'to_full';
 
-  if (mode === 'zero_charge_only' || mode === 'zero_discharge_only') {
-    mode = 'zero';
-  }
+  // Vendor sometimes sends these directly
+  if (mode === 'zero_charge_only') return 'zero_charge_only';
+  if (mode === 'zero_discharge_only') return 'zero_discharge_only';
 
+  // Normalize "zero" family
   if (mode === 'zero') {
     switch (perms) {
       case 'charge_allowed,discharge_allowed':
@@ -251,12 +257,13 @@ function normalizeBatteryMode(data) {
       case null:
         return 'zero';
       default:
-        console.log(`⚠️ Unknown permissions mode=zero: ${perms}`);
+        console.log(`⚠️ Unknown permissions for mode=zero: ${perms}`);
         return 'zero';
     }
   }
 
-  console.log(`⚠️ Unknown mode+permissions combination: ${JSON.stringify(data)}`);
+  // Unknown combination
+  console.log(`⚠️ Unknown battery mode: ${JSON.stringify(data)}`);
   return 'standby';
 }
 
@@ -269,7 +276,22 @@ function normalizeBatteryMode(data) {
 
 
 
+
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
+
+_hashExternal(external) {
+if (!Array.isArray(external)) return 'none';
+
+return external
+  .map(e => {
+    const type = e?.type ?? 'unknown';
+    const value = e?.value ?? 'null';
+    const ts = e?.timestamp ?? 'null';
+    return `${type}:${value}:${ts}`;
+  })
+  .join('|');
+}
+
 
  async onInit() {
     wsDebug.init(this.homey);
@@ -353,12 +375,35 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
       }
     }
 
-    // ✅ Fallback: HTTP
+    // Fallback: HTTP
     const response = await api.getMode(url, token);
-    if (!response) return false;
+    if (!response || typeof response !== 'object') {
+      device.log('⚠️ Invalid battery mode response:', response);
+      return false;
+    }
 
+    // Update cache so condition cards see the correct mode
+    device._cacheSet('last_battery_state', {
+      mode: response.mode,
+      permissions: response.permissions,
+      battery_count: response.battery_count ?? 1
+    });
+
+    // Normalize
     const normalized = normalizeBatteryMode(response);
+
+    // Update capability
+    await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+    // Trigger flow on change
+    if (normalized !== device._cacheGet('last_battery_mode')) {
+      device.flowTriggerBatteryMode(device);
+      device._cacheSet('last_battery_mode', normalized);
+    }
+
     return mode === normalized;
+
+
 
   } catch (error) {
     device?.error('Error retrieving mode:', error);
@@ -376,20 +421,48 @@ module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
     device.log('ActionCard: Set Battery to Zero Mode');
 
     try {
-      // ✅ Prefer WebSocket when available
       const { wsManager, url, token } = device;
 
+      // --- Prefer WebSocket ---
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero');
         device.log('Set mode to zero via WebSocket');
         return 'zero';
       }
 
-      // ✅ Fallback to HTTP
+      // --- HTTP fallback: set mode ---
       const response = await api.setMode(url, token, 'zero');
-      if (!response) return false;
+      if (!response) {
+        device.log('Invalid response from setMode()');
+        return false;
+      }
 
-      await device._handleBatteries(response);
+      // --- Fetch real battery state after setting mode ---
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') {
+        device.log('⚠️ Invalid battery mode response after setMode:', modeResponse);
+        return false;
+      }
+
+      // --- Update cache ---
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // --- Normalize ---
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // --- Update capability ---
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // --- Trigger flow on change ---
+      if (normalized !== device._cacheGet('last_battery_mode')) {
+        device.flowTriggerBatteryMode(device);
+        device._cacheSet('last_battery_mode', normalized);
+      }
+
       device.log('Set mode to zero via HTTP');
       return 'zero';
 
@@ -410,19 +483,40 @@ this.homey.flow
     try {
       const { wsManager, url, token } = device;
 
+      // --- Prefer WebSocket ---
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('standby');
         device.log('Set mode to standby via WebSocket');
         return 'standby';
       }
 
+      // --- HTTP fallback: set mode ---
       const response = await api.setMode(url, token, 'standby');
-      if (!response) {
-        device.log('Invalid response, returning false');
-        return false;
+      if (!response) return false;
+
+      // --- Fetch real battery state ---
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') return false;
+
+      // --- Update cache ---
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // --- Normalize ---
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // --- Update capability ---
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // --- Trigger flow on change ---
+      if (normalized !== device._cacheGet('last_battery_mode')) {
+        device.flowTriggerBatteryMode(device);
+        device._cacheSet('last_battery_mode', normalized);
       }
 
-      await device._handleBatteries(response);
       device.log('Set mode to standby via HTTP');
       return 'standby';
 
@@ -434,6 +528,7 @@ this.homey.flow
 
 
 
+
 this.homey.flow
   .getActionCard('set-battery-to-full-charge-mode')
   .registerRunListener(async ({ device }) => {
@@ -442,21 +537,40 @@ this.homey.flow
     try {
       const { wsManager, url, token } = device;
 
-      // ✅ Prefer WebSocket
+      // --- Prefer WebSocket ---
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('to_full');
         device.log('Set mode to full charge via WebSocket');
         return 'to_full';
       }
 
-      // ✅ Fallback to HTTP
+      // --- HTTP fallback ---
       const response = await api.setMode(url, token, 'to_full');
-      if (!response) {
-        device.log('Invalid response, returning false');
-        return false;
+      if (!response) return false;
+
+      // --- Fetch real battery state ---
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') return false;
+
+      // --- Update cache ---
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // --- Normalize ---
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // --- Update capability ---
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // --- Trigger flow on change ---
+      if (normalized !== device._cacheGet('last_battery_mode')) {
+        device.flowTriggerBatteryMode(device);
+        device._cacheSet('last_battery_mode', normalized);
       }
 
-      await device._handleBatteries(response);
       device.log('Set mode to full charge via HTTP');
       return 'to_full';
 
@@ -468,7 +582,8 @@ this.homey.flow
 
 
 
-    this.homey.flow
+
+   this.homey.flow
   .getActionCard('set-battery-to-zero-charge-only-mode')
   .registerRunListener(async ({ device }) => {
     device.log('ActionCard: Set Battery to Zero Charge Only Mode');
@@ -476,21 +591,40 @@ this.homey.flow
     try {
       const { wsManager, url, token } = device;
 
-      // ✅ Prefer WebSocket
+      // --- Prefer WebSocket ---
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero_charge_only');
         device.log('Set mode to zero_charge_only via WebSocket');
         return 'zero_charge_only';
       }
 
-      // ✅ Fallback to HTTP
+      // --- HTTP fallback ---
       const response = await api.setMode(url, token, 'zero_charge_only');
-      if (!response) {
-        device.log('Invalid response, returning false');
-        return false;
+      if (!response) return false;
+
+      // --- Fetch real battery state ---
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') return false;
+
+      // --- Update cache ---
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // --- Normalize ---
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // --- Update capability ---
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // --- Trigger flow on change ---
+      if (normalized !== device._cacheGet('last_battery_mode')) {
+        device.flowTriggerBatteryMode(device);
+        device._cacheSet('last_battery_mode', normalized);
       }
 
-      await device._handleBatteries(response);
       device.log('Set mode to zero_charge_only via HTTP');
       return 'zero_charge_only';
 
@@ -502,6 +636,7 @@ this.homey.flow
 
 
 
+
 this.homey.flow
   .getActionCard('set-battery-to-zero-discharge-only-mode')
   .registerRunListener(async ({ device }) => {
@@ -510,21 +645,40 @@ this.homey.flow
     try {
       const { wsManager, url, token } = device;
 
-      // ✅ Prefer WebSocket
+      // --- Prefer WebSocket ---
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero_discharge_only');
         device.log('Set mode to zero_discharge_only via WebSocket');
         return 'zero_discharge_only';
       }
 
-      // ✅ Fallback to HTTP
+      // --- HTTP fallback ---
       const response = await api.setMode(url, token, 'zero_discharge_only');
-      if (!response) {
-        device.log('Invalid response, returning false');
-        return false;
+      if (!response) return false;
+
+      // --- Fetch real battery state ---
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') return false;
+
+      // --- Update cache ---
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // --- Normalize ---
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // --- Update capability ---
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // --- Trigger flow on change ---
+      if (normalized !== device._cacheGet('last_battery_mode')) {
+        device.flowTriggerBatteryMode(device);
+        device._cacheSet('last_battery_mode', normalized);
       }
 
-      await device._handleBatteries(response);
       device.log('Set mode to zero_discharge_only via HTTP');
       return 'zero_discharge_only';
 
@@ -533,6 +687,7 @@ this.homey.flow
       return false;
     }
   });
+
 
 
 
@@ -574,7 +729,7 @@ this.homey.flow
       this.wsManager.start();
     }
     
-    if (debug) setInterval(() => {
+    if (debug) this._debugInterval = setInterval(() => {
       this.log(
         'CPU diag:',
         'ws=', this.wsManager?.isConnected(),
@@ -654,23 +809,88 @@ this.homey.flow
     this._flowTriggerExport.trigger(device, { export: value }).catch(this.error);
   }
 
+_getRealtimePluginBatteryData() {
+  const driver = this.homey.drivers.getDriver('plugin_battery');
+  if (!driver) return [];
+
+  const devices = driver.getDevices();
+  if (!devices || devices.length === 0) return [];
+
+  return devices.map(dev => ({
+    id: dev.getData()?.id,
+    soc: typeof dev._lastSoC === 'number' && dev._lastSoC > 0 ? dev._lastSoC : null,
+    power: typeof dev._lastPower === 'number' ? dev._lastPower : null,
+    cycles: typeof dev._lastCycles === 'number' ? dev._lastCycles : null,
+    capacity: 2.8
+  })).filter(b => b.id);
+}
+
+_mergeBatterySources(realtime, group) {
+  const merged = [];
+
+  for (const rt of realtime) {
+    const g = group[rt.id] || {};
+
+    merged.push({
+      id: rt.id,
+      capacity_kwh: rt.capacity ?? g.capacity_kwh ?? 2.8,
+      soc_pct: rt.soc ?? g.soc_pct ?? 0,
+      power_w: rt.power ?? g.power_w ?? 0,
+      cycles: rt.cycles ?? g.cycles ?? 0,
+    });
+  }
+
+  return merged;
+}
+
+
+
 async _updateBatteryGroup() {
   const dataObj = this.getData();
-  if (!dataObj || !dataObj.id) return;
+  if (!dataObj?.id) return;
 
+  // 1. Realtime pluginBattery data
+  const realtime = this._getRealtimePluginBatteryData();
+
+  // 2. Fallback batteryGroup data
   const group = this.homey.settings.get('pluginBatteryGroup') || {};
-  if (!group || Object.keys(group).length === 0) return;
 
-  const batteries = Object.values(group).filter(b => Date.now() - b.updated_at < 60000);
+  if (debug) this.log('🔍 pluginBatteryGroup:', JSON.stringify(group, null, 2));
+
+  // 3. Merge beide bronnen
+  const batteries = this._mergeBatterySources(realtime, group);
+
+  if (debug) this.log('🔍 realtime pluginBattery:', JSON.stringify(realtime, null, 2));
+
+
   if (batteries.length === 0) return;
 
-  const totalCapacity = batteries.reduce((sum, b) => sum + b.capacity_kwh, 0);
-  const averageSoC = batteries.reduce((sum, b) => sum + b.soc_pct, 0) / batteries.length;
-  const totalPowerW = batteries.reduce((sum, b) => sum + b.power_w, 0);
+  // --- Weighted SoC calculation ---
+  let totalCapacity = 0;
+  let weightedSoC = 0;
+  let totalPower = 0;
 
-  let chargeState = 'idle';
-  if (totalPowerW > 0) chargeState = 'charging';
-  else if (totalPowerW < 0) chargeState = 'discharging';
+  for (const b of batteries) {
+    const cap = (typeof b.capacity_kwh === 'number' && b.capacity_kwh > 0)
+      ? b.capacity_kwh
+      : 1;
+
+    const soc = typeof b.soc_pct === 'number' ? b.soc_pct : 0;
+    const power = typeof b.power_w === 'number' ? b.power_w : 0;
+
+    totalCapacity += cap;
+    weightedSoC += cap * soc;
+    totalPower += power;
+  }
+
+  const averageSoC = totalCapacity > 0
+    ? Math.round(weightedSoC / totalCapacity)
+    : 0;
+
+  const chargeState =
+    totalPower > 0 ? 'charging' :
+    totalPower < 0 ? 'discharging' :
+    'idle';
 
   await Promise.allSettled([
     this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity),
@@ -679,23 +899,48 @@ async _updateBatteryGroup() {
   ]);
 }
 
+
+
+
+
+
+_processBatteryGroupChargeMode(data, tasks) {
+  const group = data.battery_group;
+  if (!group || !group.charge_mode) return;
+
+  const mode = this.normalizeBatteryMode(group.charge_mode);
+
+  if (this._hasChanged('battery_group_charge_mode', mode)) {
+    tasks.push(updateCapability(this, 'battery_group_charge_mode', mode));
+  }
+}
+
+
+
 async _updateDaily() {
-  const dataObj = this.getData();
-  if (!dataObj || !dataObj.id) return;
+  if (!this._validateMeasurementContext()) return;
 
   const showGas = this.getSetting('show_gas') === true;
-
   const m = this._cacheGet('last_measurement');
   if (!m) return;
 
-  const nowLocal = new Date(new Date().toLocaleString('en-US', {
-    timeZone: 'Europe/Brussels'
-  }));
-
+  const nowLocal = this._getLocalTimeSafe();
   const hour = nowLocal.getHours();
   const minute = nowLocal.getMinutes();
 
-  // --- MIDNIGHT RESET ---
+  this._dailyMidnightReset(m, showGas, hour, minute);
+  await this._dailyElectricity(m);
+  await this._dailyGas(m, showGas);
+  await this._dailyGasDelta(showGas, minute);
+}
+
+_getLocalTimeSafe() {
+  const tz = 'Europe/Brussels';
+  const iso = new Date().toLocaleString('sv-SE', { timeZone: tz });
+  return new Date(iso);
+}
+
+_dailyMidnightReset(m, showGas, hour, minute) {
   if (hour === 0 && minute === 0) {
     if (typeof m.energy_import_kwh === 'number') {
       this._cacheSet('meter_start_day', m.energy_import_kwh);
@@ -708,8 +953,9 @@ async _updateDaily() {
       this._cacheSet('gasmeter_start_day', gas.value);
     }
   }
+}
 
-  // --- DAILY ELECTRICITY ---
+async _dailyElectricity(m) {
   const meterStart = this._cacheGet('meter_start_day');
   if (meterStart != null && typeof m.energy_import_kwh === 'number') {
     const dailyImport = m.energy_import_kwh - meterStart;
@@ -718,59 +964,60 @@ async _updateDaily() {
       await updateCapability(this, 'meter_power.daily', dailyImport).catch(this.error);
     }
   }
+}
 
-  // --- DAILY GAS ---
-  if (showGas) {
-    const lastExternal = this._cacheGet('external_last_result');
-    const gas = lastExternal?.gas;
-    const gasStart = this._cacheGet('gasmeter_start_day');
+async _dailyGas(m, showGas) {
+  if (!showGas) return;
 
-    if (gas?.value != null && gasStart != null) {
-      const gasDiff = gas.value - gasStart;
-      const cur = this.getCapabilityValue('meter_gas.daily');
-      if (cur !== gasDiff) {
-        await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
-      }
-    }
-  }
+  const lastExternal = this._cacheGet('external_last_result');
+  const gas = lastExternal?.gas;
+  const gasStart = this._cacheGet('gasmeter_start_day');
 
-  // --- GAS DELTA (5‑minute interval) ---
-  if (showGas && minute % 5 === 0) {
-    const lastMinute = this._cacheGet('last_gas_delta_minute');
-    if (lastMinute !== minute) {
-      this._cacheSet('last_gas_delta_minute', minute);
-
-      const lastExternal = this._cacheGet('external_last_result');
-      const gas = lastExternal?.gas;
-
-      if (gas && typeof gas.value === 'number') {
-        const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
-
-        if (prevTimestamp == null) {
-          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-        } else if (gas.timestamp !== prevTimestamp) {
-          const prevReading = this._cacheGet('gasmeter_previous_reading');
-
-          if (typeof prevReading === 'number') {
-            const delta = gas.value - prevReading;
-            if (delta >= 0) {
-              const cur = this.getCapabilityValue('measure_gas');
-              if (cur !== delta) {
-                await updateCapability(this, 'measure_gas', delta).catch(this.error);
-              }
-            }
-          }
-
-          this._cacheSet('gasmeter_previous_reading', gas.value);
-          this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
-        }
-      }
+  if (gas?.value != null && gasStart != null) {
+    const gasDiff = gas.value - gasStart;
+    const cur = this.getCapabilityValue('meter_gas.daily');
+    if (cur !== gasDiff) {
+      await updateCapability(this, 'meter_gas.daily', gasDiff).catch(this.error);
     }
   }
 }
 
+async _dailyGasDelta(showGas, minute) {
+  if (!showGas || minute % 5 !== 0) return;
 
+  const lastMinute = this._cacheGet('last_gas_delta_minute');
+  if (lastMinute === minute) return;
 
+  this._cacheSet('last_gas_delta_minute', minute);
+
+  const lastExternal = this._cacheGet('external_last_result');
+  const gas = lastExternal?.gas;
+  if (!gas || typeof gas.value !== 'number') return;
+
+  const prevTimestamp = this._cacheGet('gasmeter_previous_reading_timestamp');
+
+  if (prevTimestamp == null) {
+    this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+    return;
+  }
+
+  if (gas.timestamp === prevTimestamp) return;
+
+  const prevReading = this._cacheGet('gasmeter_previous_reading');
+
+  if (typeof prevReading === 'number') {
+    const delta = gas.value - prevReading;
+    if (delta >= 0) {
+      const cur = this.getCapabilityValue('measure_gas');
+      if (cur !== delta) {
+        await updateCapability(this, 'measure_gas', delta).catch(this.error);
+      }
+    }
+  }
+
+  this._cacheSet('gasmeter_previous_reading', gas.value);
+  this._cacheSet('gasmeter_previous_reading_timestamp', gas.timestamp);
+}
 
 
 async _handleExternalMeters(external) {
@@ -829,30 +1076,46 @@ async _handleExternalMeters(external) {
   return { gas, water };
 }
 
-
-
-
-
 async _handleMeasurement(m) {
+  if (!this._validateMeasurementContext()) return;
+
   const now = Date.now();
   const settings = this.getSettings();
   const showGas = settings.show_gas === true;
-  const homey_lang = this.homey.i18n.getLanguage();
-  this._cacheSet('last_measurement', m);
+  const homeyLang = this.homey.i18n.getLanguage();
 
-  // Skip if device was deleted
+  this._measurementCache(m, now);
+  const tasks = [];
+
+  this._measurementPower(m, tasks);
+  this._measurementPhases(m, tasks, settings, homeyLang);
+  this._measurementFullRefresh(m, tasks, now);
+  this._measurementFlows(m, now);
+  this._measurementNetPower(m, tasks);
+
+  const { gas, water } = await this._measurementExternalMeters(m, tasks);
+  await this._measurementGasWater(gas, water, tasks, showGas);
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks);
+  }
+}
+
+_validateMeasurementContext() {
   const dataObj = this.getData();
   if (!dataObj || !dataObj.id) {
     this.log('⚠️ Ignoring measurement: device no longer exists');
-    return;
+    return false;
   }
+  return true;
+}
 
+_measurementCache(m, now) {
+  this._cacheSet('last_measurement', m);
   this.lastMeasurementAt = now;
+}
 
-  // Collect all capability updates here
-  const tasks = [];
-
-  // Helper: push capability update tasks instead of awaiting them
+_measurementPower(m, tasks) {
   const cap = (name, value) => {
     const cur = this.getCapabilityValue(name);
     if (cur !== value) {
@@ -860,7 +1123,6 @@ async _handleMeasurement(m) {
     }
   };
 
-  // Power and phases (only when measure_power changes)
   const currentPower = this.getCapabilityValue('measure_power');
   if (currentPower !== m.power_w) {
     cap('measure_power', m.power_w);
@@ -868,34 +1130,43 @@ async _handleMeasurement(m) {
     cap('measure_power.l2', m.power_l2_w);
     cap('measure_power.l3', m.power_l3_w);
   }
+}
 
-  // Phase loads
+_measurementPhases(m, tasks, settings, homeyLang) {
+  const cap = (name, value) => {
+    const cur = this.getCapabilityValue(name);
+    if (cur !== value) {
+      tasks.push(updateCapability(this, name, value).catch(this.error));
+    }
+  };
+
   if (m.current_l1_a !== undefined) {
     const load1 = Math.abs((m.current_l1_a / settings.grid_phase_amps) * 100);
     cap('net_load_phase1_pct', load1);
-    this._handlePhaseOverload('l1', load1, homey_lang);
+    this._handlePhaseOverload('l1', load1, homeyLang);
   }
 
   if (m.current_l2_a !== undefined) {
     const load2 = Math.abs((m.current_l2_a / settings.grid_phase_amps) * 100);
     cap('net_load_phase2_pct', load2);
-    this._handlePhaseOverload('l2', load2, homey_lang);
+    this._handlePhaseOverload('l2', load2, homeyLang);
   }
 
   if (m.current_l3_a !== undefined) {
     const load3 = Math.abs((m.current_l3_a / settings.grid_phase_amps) * 100);
     cap('net_load_phase3_pct', load3);
-    this._handlePhaseOverload('l3', load3, homey_lang);
+    this._handlePhaseOverload('l3', load3, homeyLang);
   }
+}
 
-  // Every 10 seconds: full refresh (now parallel)
+_measurementFullRefresh(m, tasks, now) {
   if (!this._lastFullUpdate || now - this._lastFullUpdate > 10000) {
     tasks.push(applyMeasurementCapabilities(this, m).catch(this.error));
     this._lastFullUpdate = now;
   }
+}
 
-  // Flow triggers (no awaits needed)
-  // Throttle flow triggers to once every 5 seconds
+_measurementFlows(m, now) {
   if (!this._lastFlowTrigger || now - this._lastFlowTrigger > 5000) {
 
     if (typeof m.energy_import_kwh === 'number' &&
@@ -918,52 +1189,56 @@ async _handleMeasurement(m) {
 
     this._lastFlowTrigger = now;
   }
+}
 
-
-  // Net power
+_measurementNetPower(m, tasks) {
   if (m.energy_import_kwh !== undefined && m.energy_export_kwh !== undefined) {
     const net = m.energy_import_kwh - m.energy_export_kwh;
-    cap('meter_power', net);
+    const cur = this.getCapabilityValue('meter_power');
+    if (cur !== net) {
+      tasks.push(updateCapability(this, 'meter_power', net).catch(this.error));
+    }
   }
+}
 
-  // External meters (gas/water)
+async _measurementExternalMeters(m, tasks) {
   let gas = null;
   let water = null;
 
-  const previousExternal = this._cacheGet('external_last_payload');
-  const prevHash = previousExternal?.map(e => e.timestamp).join('|') ?? null;
-  const newHash  = m.external?.map(e => e.timestamp).join('|') ?? null;
+  const prevHash = this._cacheGet('external_last_hash') ?? null;
+  const newHash  = this._hashExternal(m.external);
 
   if (prevHash === newHash) {
+    // Geen verandering → gebruik cache
     const lastResult = this._cacheGet('external_last_result');
     gas = lastResult?.gas ?? null;
     water = lastResult?.water ?? null;
   } else {
-    tasks.push((async () => {
-      const result = await this._handleExternalMeters(m.external);
-      gas = result.gas;
-      water = result.water;
-      this._cacheSet('external_last_payload', m.external);
-      this._cacheSet('external_last_result', result);
-    })());
+    // Verandering → opnieuw verwerken
+    const result = await this._handleExternalMeters(m.external);
+    gas = result.gas;
+    water = result.water;
+
+    this._cacheSet('external_last_payload', m.external);
+    this._cacheSet('external_last_result', result);
+    this._cacheSet('external_last_hash', newHash);
   }
 
-  // Gas disabled → remove capabilities
+  return { gas, water };
+}
+
+
+async _measurementGasWater(gas, water, tasks, showGas) {
   if (!showGas) {
     if (this.hasCapability('meter_gas')) tasks.push(this.removeCapability('meter_gas').catch(this.error));
     if (this.hasCapability('measure_gas')) tasks.push(this.removeCapability('measure_gas').catch(this.error));
     if (this.hasCapability('meter_gas.daily')) tasks.push(this.removeCapability('meter_gas.daily').catch(this.error));
-    gas = null;
+    return;
   }
 
-  // Cache external payload
-  this._cacheSet('external_last_payload', m.external);
-
-  // Run all updates in parallel
-  if (tasks.length > 0) {
-    await Promise.allSettled(tasks);
-  }
+  // (No extra logic — everything happens in _handleExternalMeters)
 }
+
 
 
 
@@ -987,125 +1262,168 @@ _handleSystem(data) {
   
 }
 
+async _ensureBatteryCapabilities() {
+  const caps = [
+    'measure_power.battery_group_power_w',
+    'measure_power.battery_group_target_power_w',
+    'measure_power.battery_group_max_consumption_w',
+    'measure_power.battery_group_max_production_w',
+    'battery_group_total_capacity_kwh',
+    'battery_group_average_soc',
+    'battery_group_state',
+    'battery_group_charge_mode'
+  ];
 
-async _handleBatteries(data) {
-  // Soft guard: ignore events if the device no longer exists in Homey
-  const dataObj = this.getData();
-  if (!dataObj || !dataObj.id) {
-    this.log('⚠️ Ignoring batteries event: device no longer exists');
-    return;
-  }
-
-  // Hard guard: verify the device still exists in the driver registry
-  let deviceInstance;
-  try {
-    const driver = this.homey.drivers.getDriver('energy_v2');
-    deviceInstance = driver?.getDevice(dataObj);
-  } catch (err) {
-    // Homey throws "Could not get device" when the device was deleted
-    if (err.message?.includes('Could not get device')) {
-      this.log('⚠️ Ignoring batteries event: device lookup failed');
-      return;
+  for (const cap of caps) {
+    if (!this.hasCapability(cap)) {
+      await this.addCapability(cap).catch(this.error);
     }
-    throw err; // Unexpected error → rethrow
-  }
-
-  if (!deviceInstance) {
-    this.log('⚠️ Ignoring batteries event: device was deleted (driver lookup)');
-    return;
-  }
-
-  // If the payload is an array, use the first element
-  const battery = Array.isArray(data) ? data[0] : data;
-
-  // If the payload is a string, merge it into the original object
-  const payload = typeof battery === 'string'
-    ? { ...data, mode: battery, permissions: [] }
-    : battery;
-
-  // Normalize the battery mode (handles mode + permissions combinations)
-  const normalizedMode = normalizeBatteryMode(payload);
-
-  // Retrieve the previously stored normalized mode
-  const lastBatteryMode = this._cacheGet('last_battery_mode');
-
-  // Trigger flow and update settings only when the mode actually changes
-  if (normalizedMode !== lastBatteryMode) {
-    try {
-      this.flowTriggerBatteryMode(this);
-      this._cacheSet('last_battery_mode', normalizedMode);
-      await this.setSettings({ mode: normalizedMode });
-    } catch (err) {
-      this.error('❌ Failed to update setting "mode":', err);
-    }
-  }
-
-  // Update battery‑related power capabilities
-  await updateCapability(this, 'measure_power.battery_group_power_w', payload.power_w ?? 0).catch(this.error);
-  await updateCapability(this, 'measure_power.battery_group_target_power_w', payload.target_power_w ?? 0).catch(this.error);
-  await updateCapability(this, 'measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0).catch(this.error);
-  await updateCapability(this, 'measure_power.battery_group_max_production_w', payload.max_production_w ?? 0).catch(this.error);
-
-  const settings = this.getSettings();
-
-  // Ensure Homey settings reflect the current normalized mode
-  if (settings.mode !== normalizedMode) {
-    this.log('Battery mode changed to:', normalizedMode);
-    try {
-      await this.setSettings({ mode: normalizedMode });
-    } catch (err) {
-      this.error('❌ Failed to update setting "mode":', err);
-    }
-  }
-
-  // Store raw WS battery state for condition cards
-  this._cacheSet('last_battery_state', {
-    mode: payload.mode,
-    permissions: payload.permissions
-  });
-
-  // Retrieve the battery group from Homey settings
-  const group = this.homey.settings.get('pluginBatteryGroup') || {};
-  const batteries = Object.values(group);
-
-  // Conditions for detecting a battery error
-  const isGridReturn = (payload.power_w ?? 0) < -400;          // Grid is receiving power
-  const batteriesPresent = batteries.length > 0;               // At least one battery in the group
-  const shouldBeCharging = (payload.target_power_w ?? 0) > 0;  // System expects charging
-  const isNotStandby = normalizedMode !== 'standby';           // Battery mode is active
-
-  const now = Date.now();
-
-  // Detect prolonged mismatch between expected charging and actual grid return
-  if (isGridReturn && batteriesPresent && shouldBeCharging && isNotStandby) {
-    if (!this.gridReturnStart) {
-      this.gridReturnStart = now; // Start timing the mismatch
-    }
-
-    const duration = now - this.gridReturnStart;
-
-    // If mismatch persists for >30 seconds → trigger battery error flow
-    if (duration > 30000 && !this.batteryErrorTriggered) {
-      this.batteryErrorTriggered = true;
-      this.log('❌ Battery error: batteries should be charging and grid is receiving power');
-
-      this.homey.flow
-        .getDeviceTriggerCard('battery_error_detected')
-        .trigger(this, {}, {
-          power: payload.power_w,
-          target: payload.target_power_w,
-          mode: normalizedMode,
-          batteryCount: batteries.length
-        })
-        .catch(this.error);
-    }
-
-  } else {
-    // Reset mismatch tracking when conditions no longer apply
-    this.gridReturnStart = null;
-    this.batteryErrorTriggered = false;
   }
 }
+
+
+async _handleBatteries(data) {
+  try {
+    if (debug) this.log('⚡ Battery event data:', data);
+
+    // --- Device existence guards ---
+    const dataObj = this.getData();
+    if (!dataObj?.id) return;
+
+    let deviceInstance;
+    try {
+      const driver = this.homey.drivers.getDriver('energy_v2');
+      deviceInstance = driver?.getDevice(dataObj);
+    } catch (err) {
+      if (err.message?.includes('Could not get device')) return;
+      throw err;
+    }
+    if (!deviceInstance) return;
+
+    // --- Normalize payload ---
+    const battery = Array.isArray(data) ? data[0] : data;
+    const payload = typeof battery === 'string'
+      ? { ...data, mode: battery, permissions: [] }
+      : battery;
+
+    if (debug) this.log('⚡ Battery event payload:', payload);
+
+    // --- Skip everything if this P1 has no battery ---
+    if (!payload.battery_count || payload.battery_count === 0) {
+      if (debug) this.log('🔋 No battery linked — removing battery capabilities');
+
+      const caps = [
+        'measure_power.battery_group_power_w',
+        'measure_power.battery_group_target_power_w',
+        'measure_power.battery_group_max_consumption_w',
+        'measure_power.battery_group_max_production_w',
+        'battery_group_total_capacity_kwh',
+        'battery_group_average_soc',
+        'battery_group_state',
+        'battery_group_charge_mode'
+      ];
+
+      for (const cap of caps) {
+        if (this.hasCapability(cap)) {
+          this.removeCapability(cap).catch(this.error);
+        }
+      }
+
+      // Reset cache
+      this._cacheSet('last_battery_mode', null);
+      this._cacheSet('last_battery_state', null);
+
+      return;
+    }
+
+    // --- Ensure battery capabilities exist ---
+    await this._ensureBatteryCapabilities();
+
+    // --- Normalize mode ---
+    const normalizedMode = normalizeBatteryMode(payload);
+    const lastBatteryMode = this._cacheGet('last_battery_mode');
+    
+    // --- Update capability battery_group_charge_mode ---
+    try {
+      await updateCapability(this, 'battery_group_charge_mode', normalizedMode);
+    } catch (err) {
+      this.error('❌ Failed to update battery_group_charge_mode:', err);
+    }
+
+
+    // --- Trigger flow only on real mode change ---
+    if (normalizedMode !== lastBatteryMode) {
+      this.flowTriggerBatteryMode(this);
+      this._cacheSet('last_battery_mode', normalizedMode);
+
+      try {
+        await this.setSettings({ mode: normalizedMode });
+      } catch (err) {
+        this.error('❌ Failed to update setting "mode":', err);
+      }
+    }
+
+    // --- Update battery power capabilities ---
+    await this._setCapabilityValue('measure_power.battery_group_power_w', payload.power_w ?? 0);
+    await this._setCapabilityValue('measure_power.battery_group_target_power_w', payload.target_power_w ?? 0);
+    await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0);
+    await this._setCapabilityValue('measure_power.battery_group_max_production_w', payload.max_production_w ?? 0);
+
+    // --- Store raw WS battery state for condition cards ---
+    const prev = this._cacheGet('last_battery_state') || {};
+
+    this._cacheSet('last_battery_state', {
+      mode: payload.mode ?? prev.mode,
+      permissions: Array.isArray(payload.permissions)
+        ? payload.permissions
+        : prev.permissions,
+      battery_count: payload.battery_count ?? prev.battery_count
+    });
+
+
+    // --- Battery error detection ---
+    const group = this.homey.settings.get('pluginBatteryGroup') || {};
+    const batteries = Object.values(group);
+
+    const isGridReturn = (payload.power_w ?? 0) < -400;
+    const batteriesPresent = batteries.length > 0;
+    const shouldBeCharging = (payload.target_power_w ?? 0) > 0;
+    const isNotStandby = normalizedMode !== 'standby';
+
+    const now = Date.now();
+
+    if (isGridReturn && batteriesPresent && shouldBeCharging && isNotStandby) {
+      if (!this.gridReturnStart) this.gridReturnStart = now;
+
+      const duration = now - this.gridReturnStart;
+
+      if (duration > 30000 && !this.batteryErrorTriggered) {
+        this.batteryErrorTriggered = true;
+
+        this.log('❌ Battery error: batteries should be charging and grid is receiving power');
+
+        this.homey.flow
+          .getDeviceTriggerCard('battery_error_detected')
+          .trigger(this, {}, {
+            power: payload.power_w,
+            target: payload.target_power_w,
+            mode: normalizedMode,
+            batteryCount: batteries.length
+          })
+          .catch(this.error);
+      }
+
+    } else {
+      this.gridReturnStart = null;
+      this.batteryErrorTriggered = false;
+    }
+
+  } catch (err) {
+    this.error('❌ _handleBatteries failed:', err);
+  }
+}
+
+
 
 
 
@@ -1134,9 +1452,9 @@ async _handleBatteries(data) {
       clearInterval(this._wsWatchdog);
       this._wsWatchdog = null;
     }
-    if (this.wsManager) {
-      this.wsManager.stop();
-      this.wsManager = null;
+    if (this._cacheFlushInterval) {
+      clearInterval(this._cacheFlushInterval);
+      this._cacheFlushInterval = null;
     }
     if (this._batteryGroupInterval) {
       clearInterval(this._batteryGroupInterval);
@@ -1146,8 +1464,14 @@ async _handleBatteries(data) {
       clearInterval(this._dailyInterval);
       this._dailyInterval = null;
     }
-
-
+    if (this._debugInterval) {
+      clearInterval(this._debugInterval);
+      this._debugInterval = null;
+    }
+    if (this.wsManager) {
+      this.wsManager.stop();
+      this.wsManager = null;
+    }
   }
 
 
@@ -1213,7 +1537,7 @@ async onDiscoveryAvailable(discoveryResult) {
 async onDiscoveryAddressChanged(discoveryResult) {
   const newIP = discoveryResult.address;
 
-  // Alleen reageren als het IP echt veranderd is
+  // Only respond if the IP actually changed
   if (this._lastDiscoveryIP === newIP) {
     this.log(`🌐 AddressChanged: IP unchanged (${newIP}) — ignoring`);
     return;
@@ -1334,20 +1658,15 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
    * @param {*} value The value to set
    * @returns {Promise<void>} A promise that resolves when the capability is set
    */
-  async _setCapabilityValue(capability, value) {
-    // Test if value is undefined, if so, we don't set the capability
-    if (value === undefined) {
-      return;
-    }
+async _setCapabilityValue(capability, value) {
+  if (value === undefined) return;
 
-    // Create a new capability if it doesn't exist
-    if (!this.hasCapability(capability)) {
-      await this.addCapability(capability).catch(this.error);
-    }
+  // Only update if the capability exists
+  if (!this.hasCapability(capability)) return;
 
-    // Set the capability value
-    await this.setCapabilityValue(capability, value).catch(this.error);
-  }
+  await this.setCapabilityValue(capability, value).catch(this.error);
+}
+
 
   /**
    * Helper function to trigger flows on change.

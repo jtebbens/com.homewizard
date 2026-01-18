@@ -144,14 +144,23 @@ class BaseloadMonitor {
     };
   }
 
-  _processNightSample(ts,power) {
-    this.currentNightSamples.push({ts,power});
+  _processNightSample(ts, power) {
+    // NEW: ignore export for baseload logic
+    if (power < 0) {
+      // mark as invalid sample but do NOT trigger nightInvalid
+      this.currentNightSamples.push({ ts, power });
+      return;
+    }
+
+    this.currentNightSamples.push({ ts, power });
+
     this._detectHighPlateau();
     this._detectNegativeLong();
     this._detectNearZeroLong();
     this._detectOscillation();
     this._detectPVStartup();
   }
+
 
   _detectHighPlateau() {
     if (this.currentNightSamples.length<2) return;
