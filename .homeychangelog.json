@@ -898,5 +898,8 @@
   },
   "3.11.9": {
     "en": "Realtime pull from all batteries as fallback Battery Group State"
+  },
+  "3.12.0": {
+    "en": "Baseload ignore return power. Plugin battery LED bridghtness. Websocket & cache improvements. "
   }
 }
