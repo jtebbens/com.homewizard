@@ -904,5 +904,8 @@
   },
   "3.12.1": {
     "en": "Bug fix: Battery Group (SoC missed when there are fetch errors)"
+  },
+  "3.12.2": {
+    "en": "Bug fix: Polling deadlock fix for (energy, energy_socket, SDM230, SDM630, watermeter)"
   }
 }
