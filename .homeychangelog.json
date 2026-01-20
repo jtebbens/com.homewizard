@@ -901,5 +901,8 @@
   },
   "3.12.0": {
     "en": "Baseload ignore return power. Plugin battery LED bridghtness. Websocket & cache improvements. "
+  },
+  "3.12.1": {
+    "en": "Bug fix: Battery Group (SoC missed when there are fetch errors)"
   }
 }
