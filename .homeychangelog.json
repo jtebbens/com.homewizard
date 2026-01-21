@@ -907,5 +907,8 @@
   },
   "3.12.2": {
     "en": "Bug fix: Polling deadlock fix for (energy, energy_socket, SDM230, SDM630, watermeter)"
+  },
+  "3.12.3": {
+    "en": "setAvailable fix for energy_sockets"
   }
 }
