@@ -910,5 +910,8 @@
   },
   "3.12.3": {
     "en": "setAvailable fix for energy_sockets"
+  },
+  "3.12.4": {
+    "en": "Bugfix: _cacheSet undefined"
   }
 }
