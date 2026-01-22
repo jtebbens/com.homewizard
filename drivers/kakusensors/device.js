@@ -107,6 +107,9 @@ class HomeWizardKakusensors extends Homey.Device {
   }
 
   onDeleted() {
+    const deviceId = this.getData().id;
+    homewizard.removeDevice(deviceId);
+    
     if (this.refreshIntervalId) clearInterval(this.refreshIntervalId);
   }
 }

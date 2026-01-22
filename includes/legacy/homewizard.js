@@ -102,11 +102,12 @@ module.exports = (function() {
     }
 
     const stats = device.responseStats;
-    stats.samples.push(durationMs);
-
-    if (stats.samples.length > stats.maxSamples) {
+    
+    // Atomic bounds check + push to prevent exceeding maxSamples
+    if (stats.samples.length >= stats.maxSamples) {
       stats.samples.shift();
     }
+    stats.samples.push(durationMs);
   }
 
   function getAverageResponseTime(device) {
@@ -141,6 +142,49 @@ module.exports = (function() {
     self.devices[device_id].deviceInstance = deviceInstance;
   };
 
+  /**
+   * Remove a device from the legacy polling system and clean up references
+   * Call this from device onDeleted() handlers
+   */
+  homewizard.removeDevice = function(device_id) {
+    if (!self.devices[device_id]) return;
+
+    const device = self.devices[device_id];
+
+    // Stop polling this device
+    if (self.polls[device_id]) {
+      clearInterval(self.polls[device_id]);
+      self.polls[device_id] = null;
+    }
+
+    // Clear fetchLegacyDebug reference
+    if (device.fetchLegacyDebug) {
+      device.fetchLegacyDebug.clear();
+      device.fetchLegacyDebug = null;
+    }
+
+    // Clear polldata
+    if (device.polldata) {
+      device.polldata = null;
+    }
+
+    // Clear response stats
+    if (device.responseStats) {
+      device.responseStats.samples = [];
+      device.responseStats = null;
+    }
+
+    // Clear circuit breaker
+    if (device.circuit) {
+      device.circuit = null;
+    }
+
+    // Remove from global device map
+    delete self.devices[device_id];
+
+    if (debug) console.log(`[homewizard.removeDevice] Cleaned up device ${device_id}`);
+  };
+
 
 
   // ---------------------------------------------------------------------------
@@ -150,6 +194,7 @@ module.exports = (function() {
   homewizard.callnew = async function(device_id, uri_part, callback) {
   let timeout = null;
   let controller = null;
+  let callbackCalled = false;
 
   const device = self.devices[device_id];
   if (!device || !device.settings) {
@@ -174,6 +219,18 @@ module.exports = (function() {
   return callback('circuit_open', []);
 }
 
+  // Wrap callback to ensure it's only called once and to clean up references
+  const safeCallback = (err, data) => {
+    if (callbackCalled) return;
+    callbackCalled = true;
+    
+    // Clear references immediately to allow GC
+    clearTimeout(timeout);
+    timeout = null;
+    controller = null;
+    
+    callback(err, data);
+  };
 
   const timeoutDuration = getAdaptiveTimeout(device);
   const start = Date.now();
@@ -206,7 +263,7 @@ module.exports = (function() {
         ms: duration,
         status: response.status
       });
-      return callback('http_error', []);
+      return safeCallback('http_error', []);
     }
 
     const text = await response.text();
@@ -234,11 +291,11 @@ module.exports = (function() {
         error: e.message,
         bodySnippet: text.slice(0, 300)
       });
-      return callback('json_parse_error', []);
+      return safeCallback('json_parse_error', []);
     }
 
     if (jsonData.status === 'ok' && jsonData.response) {
-      return callback(null, jsonData.response);
+      return safeCallback(null, jsonData.response);
     }
 
     if (jsonData.status === 'ok' && !jsonData.response) {
@@ -247,7 +304,7 @@ module.exports = (function() {
         uri_part.startsWith('/hl/0/settarget') ||
         uri_part.startsWith('/preset/')
       ) {
-        return callback(null, jsonData);
+        return safeCallback(null, jsonData);
       }
 
       device.fetchLegacyDebug.log({
@@ -256,7 +313,7 @@ module.exports = (function() {
         ms: duration,
         payload: jsonData
       });
-      return callback('empty_response', []);
+      return safeCallback('empty_response', []);
     }
 
 
@@ -268,7 +325,7 @@ module.exports = (function() {
       ms: duration,
       payload: jsonData
     });
-    return callback('invalid_data', []);
+    return safeCallback('invalid_data', []);
 
   } catch (error) {
     clearTimeout(timeout);
@@ -284,8 +341,8 @@ module.exports = (function() {
         ms: duration,
         timeout: timeoutDuration
       });
-      // geen "user aborted" log, geen dubbele entry
-      return callback('timeout', []);
+      // keine "user aborted" log, keine dubbele entry
+      return safeCallback('timeout', []);
     }
 
     device.fetchLegacyDebug.log({
@@ -296,7 +353,7 @@ module.exports = (function() {
       code: error.code || null
     });
 
-    return callback(error, []);
+    return safeCallback(error, []);
   }
 };
 

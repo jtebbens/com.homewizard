@@ -140,6 +140,17 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.wsManager = null;
     }
 
+    // Bind handler functions ONCE to avoid creating new function objects on every reconnect (memory leak)
+    this._boundLog = this.log.bind(this);
+    this._boundError = this.error.bind(this);
+    this._boundSetAvailable = this.setAvailable.bind(this);
+    this._boundGetSetting = this.getSetting.bind(this);
+    this._boundHandleMeasurement = (data) => {
+      this.lastWsMeasurementAt = Date.now();
+      this._handleMeasurement(data);
+    };
+    this._boundHandleSystem = this._handleSystem.bind(this);
+
     // -----------------------------------------------------
     // SELECT DATA SOURCE
     // -----------------------------------------------------
@@ -159,15 +170,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         device: this,
         url: this.url,
         token: this.token,
-        log: this.log.bind(this),
-        error: this.error.bind(this),
-        setAvailable: this.setAvailable.bind(this),
-        getSetting: this.getSetting.bind(this),
-        handleMeasurement: (data) => {
-          this.lastWsMeasurementAt = Date.now();
-          this._handleMeasurement(data);
-        },
-        handleSystem: this._handleSystem.bind(this),
+        log: this._boundLog,
+        error: this._boundError,
+        setAvailable: this._boundSetAvailable,
+        getSetting: this._boundGetSetting,
+        handleMeasurement: this._boundHandleMeasurement,
+        handleSystem: this._boundHandleSystem,
       });
 
       this.wsManager.start();
@@ -320,15 +328,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         device: this,
         url: this.url,
         token: this.token,
-        log: this.log.bind(this),
-        error: this.error.bind(this),
-        setAvailable: this.setAvailable.bind(this),
-        getSetting: this.getSetting.bind(this),
-        handleMeasurement: (data) => {
-          this.lastWsMeasurementAt = Date.now();
-          this._handleMeasurement(data);
-        },
-        handleSystem: this._handleSystem.bind(this),
+        log: this._boundLog,
+        error: this._boundError,
+        setAvailable: this._boundSetAvailable,
+        getSetting: this._boundGetSetting,
+        handleMeasurement: this._boundHandleMeasurement,
+        handleSystem: this._boundHandleSystem,
       });
 
       this.wsManager.start();
@@ -892,15 +897,12 @@ async _registerCapabilityListeners() {
           device: this,
           url: this.url,
           token: this.token,
-          log: this.log.bind(this),
-          error: this.error.bind(this),
-          setAvailable: this.setAvailable.bind(this),
-          getSetting: this.getSetting.bind(this),
-          handleMeasurement: (data) => {
-            this.lastWsMeasurementAt = Date.now();
-            this._handleMeasurement(data);
-          },
-          handleSystem: this._handleSystem.bind(this),
+          log: this._boundLog,
+          error: this._boundError,
+          setAvailable: this._boundSetAvailable,
+          getSetting: this._boundGetSetting,
+          handleMeasurement: this._boundHandleMeasurement,
+          handleSystem: this._boundHandleSystem,
         });
 
         this.log('🔌 Starting WebSocket (polling disabled)');

@@ -59,6 +59,10 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       });
     }
 
+    // Register flow card listeners only once (prevent "already registered" warnings)
+    if (!this.homey.app._flowListenersRegistered_SDM230) {
+      this.homey.app._flowListenersRegistered_SDM230 = true;
+
     // Condition Card
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
     ConditionCardCheckBatteryMode.registerRunListener(async (args, state) => {
@@ -182,6 +186,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         }
       });
 
+    } // End of _flowListenersRegistered_SDM230 guard
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 

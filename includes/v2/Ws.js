@@ -191,6 +191,13 @@ class WebSocketManager {
       return;
     }
 
+    // Remove any previously registered event listeners to prevent duplicates on reconnect
+    this.ws.removeAllListeners('open');
+    this.ws.removeAllListeners('message');
+    this.ws.removeAllListeners('error');
+    this.ws.removeAllListeners('close');
+    this.ws.removeAllListeners('pong');
+
     this._safeSend = (obj) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
       try {

@@ -7,32 +7,23 @@ const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
-
-    fetch(url, options)
-      .then(res => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(res);
-        }
-      })
-      .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('TIMEOUT');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -163,32 +154,38 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   }
 
   /**
-   * Debug logger
+   * Debug logger (batched writes)
    */
 _debugLog(msg) {
   try {
-    const ts = new Date().toLocaleString('nl-NL', {
-      hour12: false,
-      timeZone: 'Europe/Amsterdam'
-    });
-
+    if (!this._debugBuffer) this._debugBuffer = [];
+    const ts = new Date().toLocaleString('nl-NL', { hour12: false, timeZone: 'Europe/Amsterdam' });
     const driverName = this.driver.id;
     const deviceName = this.getName();
-
-    const safeMsg = typeof msg === 'string'
-      ? msg
-      : (msg instanceof Error ? msg.message : JSON.stringify(msg));
-
+    const safeMsg = typeof msg === 'string' ? msg : (msg instanceof Error ? msg.message : JSON.stringify(msg));
     const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
-
-    const logs = this.homey.settings.get('debug_logs') || [];
-    logs.push(line);
-    if (logs.length > 200) logs.shift();
-
-    this.homey.settings.set('debug_logs', logs);
-
+    this._debugBuffer.push(line);
+    if (this._debugBuffer.length > 20) this._debugBuffer.shift();
+    if (!this._debugFlushTimeout) {
+      this._debugFlushTimeout = setTimeout(() => {
+        this._flushDebugLogs();
+        this._debugFlushTimeout = null;
+      }, 5000);
+    }
   } catch (err) {
     this.error('Failed to write debug logs:', err.message || err);
+  }
+}
+_flushDebugLogs() {
+  if (!this._debugBuffer || this._debugBuffer.length === 0) return;
+  try {
+    const logs = this.homey.settings.get('debug_logs') || [];
+    logs.push(...this._debugBuffer);
+    if (logs.length > 500) logs.splice(0, logs.length - 500);
+    this.homey.settings.set('debug_logs', logs);
+    this._debugBuffer = [];
+  } catch (err) {
+    this.error('Failed to flush debug logs:', err.message || err);
   }
 }
 
@@ -240,10 +237,11 @@ async onPoll() {
     }
   }
 
-  if (this.pollingActive) return;
-  this.pollingActive = true;
-
   try {
+    if (this.pollingActive) return;
+    this.pollingActive = true;
+
+
     const res = await fetchWithTimeout(`${this.url}/data`, {
       agent: this.agent,
       method: 'GET',
@@ -297,7 +295,7 @@ async onPoll() {
       // No return — allow finally to run
     } else {
       this._debugLog(`Poll failed: ${err.message}`);
-      await this.setUnavailable(err.message || 'Polling error');
+      this.setUnavailable(err.message || 'Polling error').catch(this.error);
     }
 
   } finally {
