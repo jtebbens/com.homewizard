@@ -916,5 +916,8 @@
   },
   "3.12.5": {
     "en": "P1 tuning for TIMEOUT and Unreachable problem"
+  },
+  "3.12.6": {
+    "en": "Extra P1 logging"
   }
 }
