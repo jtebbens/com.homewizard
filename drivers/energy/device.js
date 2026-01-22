@@ -19,33 +19,25 @@ const PHASE_CAPS = [
 ];
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
-
-    fetch(url, options)
-      .then(res => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(res);
-        }
-      })
-      .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('TIMEOUT');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
+
 
 
 async function updateCapability(device, capability, value) {
@@ -97,6 +89,14 @@ function getWifiQuality(percent) {
 }
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
+
+  _watchdogReset() {
+  if (this.pollingActive && Date.now() - this._pollStartTs > 30000) {
+    this.log('⚠️ PollingActive stuck >30s — watchdog reset');
+    this.pollingActive = false;
+  }
+}
+
 
   async onInit() {
     this.pollingActive = false;
@@ -367,44 +367,61 @@ onDiscoveryLastSeenChanged(discoveryResult) {
   }
 
   /**
-   * Debug logger
+   * Debug logger (batched writes)
    */
   _debugLog(msg) {
   try {
-    const ts = new Date().toLocaleString('nl-NL', {
-      hour12: false,
-      timeZone: 'Europe/Amsterdam'
-    });
-
+    if (!this._debugBuffer) this._debugBuffer = [];
+    const ts = new Date().toLocaleString('nl-NL', { hour12: false, timeZone: 'Europe/Amsterdam' });
     const driverName = this.driver.id;
     const deviceName = this.getName();
-
-    const safeMsg = typeof msg === 'string'
-      ? msg
-      : (msg instanceof Error ? msg.message : JSON.stringify(msg));
-
+    const safeMsg = typeof msg === 'string' ? msg : (msg instanceof Error ? msg.message : JSON.stringify(msg));
     const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
-
-    const logs = this.homey.settings.get('debug_logs') || [];
-    logs.push(line);
-    if (logs.length > 200) logs.shift();
-
-    this.homey.settings.set('debug_logs', logs);
-
+    this._debugBuffer.push(line);
+    if (this._debugBuffer.length > 20) this._debugBuffer.shift();
+    if (!this._debugFlushTimeout) {
+      this._debugFlushTimeout = setTimeout(() => {
+        this._flushDebugLogs();
+        this._debugFlushTimeout = null;
+      }, 5000);
+    }
   } catch (err) {
     this.error('Failed to write debug logs:', err.message || err);
   }
 }
+_flushDebugLogs() {
+  if (!this._debugBuffer || this._debugBuffer.length === 0) return;
+  try {
+    const logs = this.homey.settings.get('debug_logs') || [];
+    logs.push(...this._debugBuffer);
+    if (logs.length > 500) logs.splice(0, logs.length - 500);
+    this.homey.settings.set('debug_logs', logs);
+    this._debugBuffer = [];
+  } catch (err) {
+    this.error('Failed to flush debug logs:', err.message || err);
+  }
+}
 
-  async onPoll() {
-    if (this._deleted) return;
+async onPoll() {
+  if (this._deleted) return;
 
-    const settings = this.getSettings();
-    if (!await this._prepareUrl(settings)) return;
+  // Watchdog: reset stuck lock
+  this._watchdogReset();
+
+  const settings = this.getSettings();
+
+  // --- EARLY RETURN SAFE ---
+  if (!await this._prepareUrl(settings)) {
+    return;
+  }
+
+  // --- LOCK BINNEN TRY ---
+  try {
     if (!this._acquirePollLock()) return;
 
     let data, nowLocal, homeyLang;
 
+    // --- FETCH DATA ---
     try {
       const t = this._getLocalTimeAndLang();
       nowLocal = t.nowLocal;
@@ -412,17 +429,15 @@ onDiscoveryLastSeenChanged(discoveryResult) {
       data = await this._fetchData();
     } catch (err) {
       this._handlePollError(err);
-      this.pollingActive = false;
       return;
     }
 
     //
-    // ⚡ ELECTRICITY FIRST — MUST NEVER BE BLOCKED BY GAS/WATER
+    // ⚡ ELECTRICITY FIRST
     //
     try {
       const tasks = [];
 
-      // Electricity-only processing
       this._processCorePowerAndWifi(data, tasks);
       await this._processTariffAndFlows(data, tasks);
       this._processExportAndNetImport(data, tasks);
@@ -444,7 +459,7 @@ onDiscoveryLastSeenChanged(discoveryResult) {
     }
 
     //
-    // 💧 GAS/WATER — MUST NEVER BLOCK ELECTRICITY
+    // 💧 GAS/WATER
     //
     try {
       this._processGasSourceSelection(data);
@@ -458,14 +473,17 @@ onDiscoveryLastSeenChanged(discoveryResult) {
       this._processDailyTotals(data, gasTasks, settings);
 
       await Promise.allSettled(gasTasks);
+      
 
     } catch (err) {
       this.error('Gas/Water processing failed:', err);
     }
 
-
+  } finally {
+    // --- DE CRUCIALE FIX ---
     this.pollingActive = false;
   }
+}
 
 
 
@@ -485,8 +503,10 @@ onDiscoveryLastSeenChanged(discoveryResult) {
   _acquirePollLock() {
     if (this.pollingActive) return false;
     this.pollingActive = true;
+    this._pollStartTs = Date.now();
     return true;
   }
+
 
   _getLocalTimeAndLang() {
     const tz = this.homey.clock.getTimezone();

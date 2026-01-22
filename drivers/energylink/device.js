@@ -284,6 +284,9 @@ class HomeWizardEnergylink extends Homey.Device {
   }
 
   onDeleted() {
+    const deviceId = this.getData().id;
+    homewizard.removeDevice(deviceId);
+    
     clearInterval(this.refreshIntervalId);
     clearInterval(this.refreshIntervalIdReadings);
     this.log('-- EnergyLink Polling Stopped --');

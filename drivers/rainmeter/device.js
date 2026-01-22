@@ -175,6 +175,8 @@ class HomeWizardRainmeter extends Homey.Device {
 	*/
 
   onDeleted() {
+    const deviceId = this.getData().id;
+    homewizard.removeDevice(deviceId);
 
     if (Object.keys(devices).length === 0) {
       clearInterval(refreshIntervalId);

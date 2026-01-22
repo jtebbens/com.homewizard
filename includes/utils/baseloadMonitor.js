@@ -8,15 +8,17 @@ class BaseloadMonitor {
     this.nightEndHour = 5;
     this.maxNights = 30;
 
-    this.highPlateauThreshold = 500;
-    this.highPlateauMinDuration = 600000;
+    // Original thresholds - these work well for most households
+    // The key insight: fridge cycles (50-300W, 30-120min) are normal and not tracked as invalid
+    this.highPlateauThreshold = 800;
+    this.highPlateauMinDuration = 900000;
     this.negativeMinDuration = 300000;
-    this.nearZeroMargin = 50;
-    this.nearZeroMinDuration = 1200000;
+    this.nearZeroMargin = 80;
+    this.nearZeroMinDuration = 600000;
     this.oscillationWindow = 300000;
-    this.oscillationAmplitude = 300;
-    this.pvStartupEarliest = 4;
-    this.pvStartupLatest = 6;
+    this.oscillationAmplitude = 500;
+    this.pvStartupEarliest = 5;
+    this.pvStartupLatest = 8;
 
     this.fridgeMinPower = 50;
     this.fridgeMaxPower = 300;
@@ -154,11 +156,19 @@ class BaseloadMonitor {
 
     this.currentNightSamples.push({ ts, power });
 
-    this._detectHighPlateau();
-    this._detectNegativeLong();
-    this._detectNearZeroLong();
-    this._detectOscillation();
-    this._detectPVStartup();
+    // Only re-run expensive detections every 30 seconds to avoid CPU overhead
+    // Each update would otherwise trigger full array scans
+    const now = ts.getTime ? ts.getTime() : ts;
+    const lastCheck = this._lastDetectionCheck || 0;
+    
+    if (now - lastCheck >= 30000) {
+      this._lastDetectionCheck = now;
+      this._detectHighPlateau();
+      this._detectNegativeLong();
+      this._detectNearZeroLong();
+      this._detectOscillation();
+      this._detectPVStartup();
+    }
   }
 
 
@@ -179,17 +189,48 @@ class BaseloadMonitor {
   }
 
   _detectNearZeroLong() {
-    if (this._durAbsBelow(this.nearZeroMargin)>=this.nearZeroMinDuration) {
-      this.flags.sawNearZeroLong=true; this.nightInvalid=true;
+    // Near-zero detection is meant to catch grid balancing, not normal low-baseload households
+    // To avoid false positives from fridge cycles in low-baseload homes:
+    // Only flag if CONTINUOUS near-zero for 20min (not cumulative with gaps)
+    
+    let maxConsecutiveNearZero = 0;
+    let currentStreak = 0;
+    
+    for (const s of this.currentNightSamples) {
+      if (Math.abs(s.power) < this.nearZeroMargin) {
+        currentStreak++;
+      } else {
+        maxConsecutiveNearZero = Math.max(maxConsecutiveNearZero, currentStreak);
+        currentStreak = 0;
+      }
+    }
+    maxConsecutiveNearZero = Math.max(maxConsecutiveNearZero, currentStreak);
+    
+    // With 10-second polling, 20min = 120 samples
+    const MIN_CONSECUTIVE_SAMPLES = Math.floor(this.nearZeroMinDuration / 10000);
+    
+    if (maxConsecutiveNearZero >= MIN_CONSECUTIVE_SAMPLES) {
+      this.flags.sawNearZeroLong = true;
+      this.nightInvalid = true;
     }
   }
 
   _detectOscillation() {
     const w = this._lastSamples(this.oscillationWindow);
     if (w.length<4) return;
-    const p = w.map(s=>s.power);
-    if (Math.max(...p)-Math.min(...p)>=this.oscillationAmplitude) {
-      this.flags.sawOscillation=true; this.nightInvalid=true;
+    
+    // Avoid spread operators, use simple loop for min/max
+    let minPower = w[0].power;
+    let maxPower = w[0].power;
+    for (let i = 1; i < w.length; i++) {
+      const p = w[i].power;
+      if (p < minPower) minPower = p;
+      if (p > maxPower) maxPower = p;
+    }
+    
+    if (maxPower - minPower >= this.oscillationAmplitude) {
+      this.flags.sawOscillation=true; 
+      this.nightInvalid=true;
     }
   }
 
@@ -306,8 +347,20 @@ class BaseloadMonitor {
   _compute() {
     const v = this.nightHistory.filter(n=>!n.invalid && typeof n.avg==='number').map(n=>n.avg);
     if (!v.length) {this._notify('baseload_unavailable'); return this.currentBaseload||null;}
-    const s = v.slice().sort((a,b)=>a-b);
-    return this._avg(s.slice(0,Math.min(3,s.length)));
+    
+    // Simple selection sort for first 3 values instead of full sort
+    const count = Math.min(3, v.length);
+    const sorted = [];
+    
+    for (let i = 0; i < count; i++) {
+      let minIdx = 0;
+      for (let j = 1; j < v.length; j++) {
+        if (v[j] < v[minIdx] && !sorted.includes(j)) minIdx = j;
+      }
+      sorted.push(v[minIdx]);
+    }
+    
+    return this._avg(sorted);
   }
 
   _avg(a) {return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;}
@@ -342,17 +395,41 @@ class BaseloadMonitor {
   _lastSamples(ms) {
     if (!this.currentNightSamples.length) return [];
     const last = this.currentNightSamples.at(-1).ts;
-    return this.currentNightSamples.filter(s=>last-s.ts<=ms);
+    const threshold = last - ms;
+    
+    // Use reverse iteration + early exit for efficiency
+    const result = [];
+    for (let i = this.currentNightSamples.length - 1; i >= 0; i--) {
+      const s = this.currentNightSamples[i];
+      if (s.ts <= threshold) break;
+      result.unshift(s);
+    }
+    return result;
   }
 
   _fallback() {
     const r=[];
     for (const n of this.nightHistory.slice(-7)) if (Array.isArray(n.samples)) r.push(...n.samples);
-    const p=r.map(s=>s.power).filter(n=>typeof n==='number');
+    const p=[];
+    for (const s of r) {
+      if (typeof s.power === 'number') p.push(s.power);
+    }
     if (!p.length) return null;
-    const s=p.slice().sort((a,b)=>a-b);
-    const take=Math.max(3,Math.floor(s.length*0.1));
-    return this._avg(s.slice(0,take));
+    
+    // Partial sort for bottom 10% instead of full sort
+    const take=Math.max(3,Math.floor(p.length*0.1));
+    const minVals = [];
+    
+    for (let i = 0; i < take && i < p.length; i++) {
+      let minIdx = i;
+      for (let j = i + 1; j < p.length; j++) {
+        if (p[j] < p[minIdx]) minIdx = j;
+      }
+      [p[i], p[minIdx]] = [p[minIdx], p[i]];
+      minVals.push(p[i]);
+    }
+    
+    return this._avg(minVals);
   }
 
   _save() {

@@ -154,6 +154,9 @@ class HomeWizardWindmeter extends Homey.Device {
   }
 
   onDeleted() {
+    const deviceId = this.getData().id;
+    homewizard.removeDevice(deviceId);
+    
     clearInterval(refreshIntervalId);
     this.log('-- Windmeter Polling Stopped --');
     this.log(`Deleted: ${JSON.stringify(this)}`);

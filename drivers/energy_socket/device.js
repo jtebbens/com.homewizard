@@ -5,33 +5,25 @@ const fetch = require('node-fetch');
 const http = require('http');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
-
-    fetch(url, options)
-      .then(res => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(res);
-        }
-      })
-      .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('TIMEOUT');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
+
 
 /**
  * Safe capability updater
@@ -80,6 +72,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.pollingActive = false;
     this._lastStatePoll = 0;
     this._debugLogs = [];
+    this.__deleted = false;
 
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
@@ -94,10 +87,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
+    this.onPollInterval = setInterval(() => {
+      this.onPoll().catch(this.error);
+    }, interval * 1000);
+
     setTimeout(() => {
-      this.onPoll();
-      this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+      this.onPoll().catch(this.error);
     }, offset);
+
 
     if (this.getClass() === 'sensor') {
       this.setClass('socket');
@@ -123,9 +120,28 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   onDeleted() {
+    this.__deleted = true;
+
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
+    }
+    if (this._debugFlushTimeout) {
+      clearTimeout(this._debugFlushTimeout);
+      this._debugFlushTimeout = null;
+    }
+    // Flush remaining logs before device deletion
+    if (this._debugBuffer && this._debugBuffer.length > 0) {
+      this._flushDebugLogs();
+    }
+    // Destroy HTTP agent to close keep-alive sockets
+    if (this.agent) {
+      this.agent.destroy();
+      this.agent = null;
+    }
+    // Clear debug buffer
+    if (this._debugBuffer) {
+      this._debugBuffer = null;
     }
   }
 
@@ -149,32 +165,39 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   /**
-   * Debug logger
+   * Debug logger (batched writes to shared app settings)
    */
 _debugLog(msg) {
   try {
-    const ts = new Date().toLocaleString('nl-NL', {
-      hour12: false,
-      timeZone: 'Europe/Amsterdam'
-    });
-
+    if (!this._debugBuffer) this._debugBuffer = [];
+    const ts = new Date().toLocaleString('nl-NL', { hour12: false, timeZone: 'Europe/Amsterdam' });
     const driverName = this.driver.id;
     const deviceName = this.getName();
-
-    const safeMsg = typeof msg === 'string'
-      ? msg
-      : (msg instanceof Error ? msg.message : JSON.stringify(msg));
-
+    const safeMsg = typeof msg === 'string' ? msg : (msg instanceof Error ? msg.message : JSON.stringify(msg));
     const line = `${ts} [${driverName}] [${deviceName}] ${safeMsg}`;
-
-    const logs = this.homey.settings.get('debug_logs') || [];
-    logs.push(line);
-    if (logs.length > 200) logs.shift();
-
-    this.homey.settings.set('debug_logs', logs);
-
+    this._debugBuffer.push(line);
+    if (this._debugBuffer.length > 20) this._debugBuffer.shift();
+    if (!this._debugFlushTimeout) {
+      this._debugFlushTimeout = setTimeout(() => {
+        this._flushDebugLogs();
+        this._debugFlushTimeout = null;
+      }, 5000);
+    }
   } catch (err) {
     this.error('Failed to write debug logs:', err.message || err);
+  }
+}
+
+_flushDebugLogs() {
+  if (!this._debugBuffer || this._debugBuffer.length === 0) return;
+  try {
+    const logs = this.homey.settings.get('debug_logs') || [];
+    logs.push(...this._debugBuffer);
+    if (logs.length > 500) logs.splice(0, logs.length - 500);
+    this.homey.settings.set('debug_logs', logs);
+    this._debugBuffer = [];
+  } catch (err) {
+    this.error('Failed to flush debug logs:', err.message || err);
   }
 }
 
@@ -270,112 +293,122 @@ _debugLog(msg) {
    * GET /data + GET /state
    */
   async onPoll() {
-    const settings = this.getSettings();
+  if (this.__deleted) return;
 
-    if (!this.url) {
-      if (settings.url) {
-        this.url = settings.url;
-      } else {
-        await this.setUnavailable('Missing URL');
-        return;
-      }
+  const settings = this.getSettings();
+
+  // URL herstellen indien nodig
+  if (!this.url) {
+    if (settings.url) {
+      this.url = settings.url;
+    } else {
+      // Geen URL → device unavailable, maar pollingActive mag nooit blijven hangen
+      this.setUnavailable('Missing URL').catch(this.error);
+      return;
     }
+  }
 
+  try {
+    // --- LOCK BINNEN TRY ---
     if (this.pollingActive) return;
     this.pollingActive = true;
 
-    try {
-      // -----------------------------
-      // GET /data
-      // -----------------------------
-      const res = await fetchWithTimeout(`${this.url}/data`, {
-        agent: this.agent,
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // -----------------------------
+    // GET /data
+    // -----------------------------
+    const res = await fetchWithTimeout(`${this.url}/data`, {
+      agent: this.agent,
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-      const data = await res.json();
-      if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+    const data = await res.json();
+    if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
 
-      const offset = Number(this.getSetting('offset_socket')) || 0;
-      const watt = data.active_power_w + offset;
+    const offset = Number(this.getSetting('offset_socket')) || 0;
+    const watt = data.active_power_w + offset;
 
-      const tasks = [];
+    const tasks = [];
+    const cap = (name, value) => {
+      if (value === undefined || value === null) return;
+      const cur = this.getCapabilityValue(name);
+      if (cur !== value) tasks.push(updateCapability(this, name, value));
+    };
 
-      const cap = (name, value) => {
-        if (value === undefined || value === null) return;
-        const cur = this.getCapabilityValue(name);
-        if (cur !== value) tasks.push(updateCapability(this, name, value));
-      };
+    cap('measure_power', watt);
+    cap('meter_power.consumed.t1', data.total_power_import_t1_kwh);
+    cap('measure_power.l1', data.active_power_l1_w);
+    cap('rssi', data.wifi_strength);
 
-      cap('measure_power', watt);
-      cap('meter_power.consumed.t1', data.total_power_import_t1_kwh);
-      cap('measure_power.l1', data.active_power_l1_w);
-      cap('rssi', data.wifi_strength);
-
-      if (data.total_power_export_t1_kwh > 1) {
-        cap('meter_power.produced.t1', data.total_power_export_t1_kwh);
-      }
-
-      const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
-      cap('meter_power', net);
-
-      cap('measure_voltage', data.active_voltage_v);
-      cap('measure_current', data.active_current_a);
-
-      // -----------------------------
-      // GET /state (max 1× per 30s)
-      // -----------------------------
-      const now = Date.now();
-      const mustPollState =
-        !this._lastStatePoll ||
-        (now - this._lastStatePoll) > 30000;
-
-      if (mustPollState) {
-        this._lastStatePoll = now;
-
-        try {
-          const resState = await fetchWithTimeout(`${this.url}/state`, {
-            agent: this.agent,
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
-
-          if (!resState.ok) throw new Error(`HTTP ${resState.status}: ${resState.statusText}`);
-
-          const state = await resState.json();
-          if (!state || typeof state !== 'object') throw new Error('Invalid JSON');
-
-          cap('onoff', state.power_on);
-          cap('dim', state.brightness / 255);
-          cap('locked', state.switch_lock);
-
-        } catch (err) {
-          this._debugLog(`State poll failed: ${err.message}`);
-          cap('connection_error', err.message || 'State polling error');
-        }
-      }
-
-      if (this.url !== settings.url) {
-        await this.setSettings({ url: this.url }).catch(this.error);
-      }
-
-      cap('connection_error', 'No errors');
-      this.setAvailable();
-
-      if (tasks.length > 0) await Promise.allSettled(tasks);
-
-    } catch (err) {
-      this._debugLog(`Poll failed: ${err.message}`);
-      await updateCapability(this, 'connection_error', err.message || 'Polling error');
-      await this.setUnavailable(err.message || 'Polling error');
-
-    } finally {
-      this.pollingActive = false;
+    if (data.total_power_export_t1_kwh > 1) {
+      cap('meter_power.produced.t1', data.total_power_export_t1_kwh);
     }
+
+    const net = data.total_power_import_t1_kwh - data.total_power_export_t1_kwh;
+    cap('meter_power', net);
+
+    cap('measure_voltage', data.active_voltage_v);
+    cap('measure_current', data.active_current_a);
+
+    // -----------------------------
+    // GET /state (max 1× per 30s)
+    // -----------------------------
+    const now = Date.now();
+    const mustPollState =
+      !this._lastStatePoll ||
+      (now - this._lastStatePoll) > 30000;
+
+    if (mustPollState) {
+      this._lastStatePoll = now;
+
+      try {
+        const resState = await fetchWithTimeout(`${this.url}/state`, {
+          agent: this.agent,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!resState.ok) throw new Error(`HTTP ${resState.status}: ${resState.statusText}`);
+
+        const state = await resState.json();
+        if (!state || typeof state !== 'object') throw new Error('Invalid JSON');
+
+        cap('onoff', state.power_on);
+        cap('dim', state.brightness / 255);
+        cap('locked', state.switch_lock);
+
+      } catch (err) {
+        this._debugLog(`State poll failed: ${err.message}`);
+        cap('connection_error', err.message || 'State polling error');
+      }
+    }
+
+    if (!this.__deleted && this.url !== settings.url) {
+      this.setSettings({ url: this.url }).catch(this.error);
+    }
+
+    cap('connection_error', 'No errors');
+
+    if (tasks.length > 0) await Promise.allSettled(tasks);
+    this.setAvailable().catch(this.error);
+
+  } catch (err) {
+    if (!this.__deleted) {
+      this._debugLog(`Poll failed: ${err.message}`);
+      updateCapability(this, 'connection_error', err.message || 'Polling error')
+        .catch(this.error);
+      this.setUnavailable(err.message || 'Polling error')
+        .catch(this.error);
+    }
+
+  } finally {
+    // --- DE CRUCIALE FIX ---
+    this.pollingActive = false;
   }
+}
+
 
   /**
    * Settings handler
@@ -395,10 +428,13 @@ _debugLog(msg) {
       }
 
       if (key === 'offset_polling') {
-        if (this.onPollInterval) clearInterval(this.onPollInterval);
+        if (this.onPollInterval) {
+          clearInterval(this.onPollInterval);
+          this.onPollInterval = null;
+        }
 
         const interval = Number(newSettings.offset_polling);
-        if (interval > 0) {
+        if (interval >= 2) {  // Enforce minimum 2 second interval
           this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
         }
       }

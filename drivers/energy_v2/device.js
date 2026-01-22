@@ -97,36 +97,24 @@ async function getStoreValueSafe(device, key) {
 
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
-
-    fetch(url, options)
-      .then(async res => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-
-        const text = await res.text();
-        try { resolve(JSON.parse(text)); }
-        catch { resolve(text); }
-      })
-      .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-  });
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('TIMEOUT');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
-
 
 
 
@@ -280,20 +268,23 @@ function normalizeBatteryMode(data) {
 module.exports = class HomeWizardEnergyDeviceV2 extends Homey.Device {
 
 _hashExternal(external) {
-if (!Array.isArray(external)) return 'none';
+  if (!Array.isArray(external) || external.length === 0) return 'none';
 
-return external
-  .map(e => {
+  // Only hash if there's actually data to process
+  let hash = '';
+  for (let i = 0; i < external.length; i++) {
+    const e = external[i];
     const type = e?.type ?? 'unknown';
     const value = e?.value ?? 'null';
     const ts = e?.timestamp ?? 'null';
-    return `${type}:${value}:${ts}`;
-  })
-  .join('|');
+    hash += (hash ? '|' : '') + `${type}:${value}:${ts}`;
+  }
+  return hash;
 }
 
 
  async onInit() {
+    this.pollingActive = false;
     wsDebug.init(this.homey);
     this.onPollInterval = null;
     this.gridReturnStart = null;
@@ -330,6 +321,8 @@ return external
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
+    await this._ensureBatteryCapabilities();
+
 
     const settings = this.getSettings();
     this.log('Settings for P1 apiv2: ', settings.polling_interval);
@@ -353,10 +346,17 @@ return external
 
     
 
+    // Store flow listener references for cleanup in onDeleted()
+    this._flowListenerReferences = [];
+
+    // Register flow card listeners only once (prevent "already registered" warnings)
+    if (!this.homey.app._flowListenersRegistered) {
+      this.homey.app._flowListenersRegistered = true;
+
     // Condition Card
     const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
 
-    ConditionCardCheckBatteryMode.registerRunListener(async ({ device, mode }) => {
+    const conditionListener = ConditionCardCheckBatteryMode.registerRunListener(async ({ device, mode }) => {
   if (!device) return false; // ✅ Prevents crashes
 
   device.log('ConditionCard: Check Battery Mode');
@@ -694,6 +694,8 @@ this.homey.flow
 
 
 
+    } // End of _flowListenersRegistered guard
+
     // this.flowTriggerBatteryMode
     
     this._flowTriggerBatteryMode = this.homey.flow.getDeviceTriggerCard('battery_mode_changed');
@@ -704,6 +706,15 @@ this.homey.flow
 
   
     this._triggerFlowPrevious = {};
+
+    // Bind handler functions ONCE to avoid creating new function objects on every reconnect (memory leak)
+    this._boundHandleMeasurement = this._handleMeasurement.bind(this);
+    this._boundHandleSystem = this._handleSystem.bind(this);
+    this._boundHandleBatteries = this._handleBatteries.bind(this);
+    this._boundLog = this.log.bind(this);
+    this._boundError = this.error.bind(this);
+    this._boundSetAvailable = this.setAvailable.bind(this);
+    this._boundGetSetting = this.getSetting.bind(this);
 
     // this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
@@ -717,13 +728,13 @@ this.homey.flow
         device: this,
         url: this.url,
         token: this.token,
-        log: this.log.bind(this),
-        error: this.error.bind(this),
-        setAvailable: this.setAvailable.bind(this),
-        getSetting: this.getSetting.bind(this),
-        handleMeasurement: this._handleMeasurement.bind(this),
-        handleSystem: this._handleSystem.bind(this),
-        handleBatteries: this._handleBatteries.bind(this)
+        log: this._boundLog,
+        error: this._boundError,
+        setAvailable: this._boundSetAvailable,
+        getSetting: this._boundGetSetting,
+        handleMeasurement: this._boundHandleMeasurement,
+        handleSystem: this._boundHandleSystem,
+        handleBatteries: this._boundHandleBatteries
       });
 
       this.wsManager.start();
@@ -738,7 +749,7 @@ this.homey.flow
         'external=', !!this._cache.external_last_payload,
         'lastWS=', Date.now() - (this.wsManager?.lastMeasurementAt || 0)
       );
-    }, 10000);
+    }, 60000);  // Reduced frequency: every 60s instead of 10s
 
 
     // 🕒 Driver-side watchdog
@@ -763,9 +774,11 @@ this.homey.flow
       if (!this._cacheDirty) return;
       this._cacheDirty = false;
 
-      for (const [key, value] of Object.entries(this._cache)) {
-        await setStoreValueSafe(this, key, value);
-      }
+      // Batch all store operations in parallel instead of sequential awaits
+      const storePromises = Object.entries(this._cache).map(
+        ([key, value]) => setStoreValueSafe(this, key, value)
+      );
+      await Promise.all(storePromises).catch(this.error);
     }, 30000);
 
     this._batteryGroupInterval = setInterval(() => {
@@ -784,9 +797,10 @@ this.homey.flow
   }
 
   _cacheSet(key, value) {
-    this._cache[key] = value;
+    this._cache[key] = (value === undefined ? null : value);
     this._cacheDirty = true;
   }
+
 
 
   flowTriggerBatteryMode(device, tokens) {
@@ -814,16 +828,41 @@ _getRealtimePluginBatteryData() {
   if (!driver) return [];
 
   const devices = driver.getDevices();
-  if (!devices || devices.length === 0) return [];
+  const result = [];
 
-  return devices.map(dev => ({
-    id: dev.getData()?.id,
-    soc: typeof dev._lastSoC === 'number' && dev._lastSoC > 0 ? dev._lastSoC : null,
-    power: typeof dev._lastPower === 'number' ? dev._lastPower : null,
-    cycles: typeof dev._lastCycles === 'number' ? dev._lastCycles : null,
-    capacity: 2.8
-  })).filter(b => b.id);
+  for (const dev of devices) {
+    const id = dev.getData()?.id;
+    if (!id) continue;
+
+    // Explicit realtime values
+    const soc = (typeof dev._lastSoC === 'number')
+      ? dev._lastSoC   // 0% is valid
+      : null;
+
+    const power = (typeof dev._lastPower === 'number')
+      ? dev._lastPower
+      : null;
+
+    const capacity = (typeof dev._lastCapacity === 'number' && dev._lastCapacity > 0)
+      ? dev._lastCapacity
+      : null;
+
+    const cycles = (typeof dev._lastCycles === 'number')
+      ? dev._lastCycles
+      : null;
+
+    result.push({
+      id,
+      soc,
+      power,
+      capacity,
+      cycles,
+    });
+  }
+
+  return result;
 }
+
 
 _mergeBatterySources(realtime, group) {
   const merged = [];
@@ -831,17 +870,43 @@ _mergeBatterySources(realtime, group) {
   for (const rt of realtime) {
     const g = group[rt.id] || {};
 
+    // Explicit realtime vs fallback selection
+    const capacity = (typeof rt.capacity === 'number' && rt.capacity > 0)
+      ? rt.capacity
+      : (typeof g.capacity_kwh === 'number' && g.capacity_kwh > 0)
+        ? g.capacity_kwh
+        : 2.8; // default
+
+    const soc = (typeof rt.soc === 'number')
+      ? rt.soc   // realtime 0% is valid
+      : (typeof g.soc_pct === 'number')
+        ? g.soc_pct
+        : 0;
+
+    const power = (typeof rt.power === 'number')
+      ? rt.power
+      : (typeof g.power_w === 'number')
+        ? g.power_w
+        : 0;
+
+    const cycles = (typeof rt.cycles === 'number')
+      ? rt.cycles
+      : (typeof g.cycles === 'number')
+        ? g.cycles
+        : 0;
+
     merged.push({
       id: rt.id,
-      capacity_kwh: rt.capacity ?? g.capacity_kwh ?? 2.8,
-      soc_pct: rt.soc ?? g.soc_pct ?? 0,
-      power_w: rt.power ?? g.power_w ?? 0,
-      cycles: rt.cycles ?? g.cycles ?? 0,
+      capacity_kwh: capacity,
+      soc_pct: soc,
+      power_w: power,
+      cycles: cycles,
     });
   }
 
   return merged;
 }
+
 
 
 
@@ -852,20 +917,53 @@ async _updateBatteryGroup() {
   // 1. Realtime pluginBattery data
   const realtime = this._getRealtimePluginBatteryData();
 
-  // 2. Fallback batteryGroup data
-  const group = this.homey.settings.get('pluginBatteryGroup') || {};
+  // 2. Fallback batteryGroup data (cached)
+  const cachedGroup = this._cacheGet('pluginBatteryGroup_cache');
+  const group = cachedGroup || (this.homey.settings.get('pluginBatteryGroup') || {});
 
-  if (debug) this.log('🔍 pluginBatteryGroup:', JSON.stringify(group, null, 2));
+  // Refresh cache every 60s
+  if (!this._lastBatteryGroupCacheUpdate || Date.now() - this._lastBatteryGroupCacheUpdate > 60000) {
+    this._cacheSet('pluginBatteryGroup_cache', group);
+    this._lastBatteryGroupCacheUpdate = Date.now();
+  }
 
-  // 3. Merge beide bronnen
+  // 3. Merge both sources
   const batteries = this._mergeBatterySources(realtime, group);
 
-  if (debug) this.log('🔍 realtime pluginBattery:', JSON.stringify(realtime, null, 2));
+  const realtimeCount = realtime.length;
+  const fallbackCount = Object.keys(group).length;
 
+  // 4. Vendor battery_count gate (soft)
+  const vendorCount = this._cacheGet('last_battery_state')?.battery_count;
 
+  // --- Only remove capabilities if ALL sources agree there is no battery ---
+  if (vendorCount === 0 && fallbackCount === 0) {
+    if (debug) this.log('🔋 No battery detected — removing battery capabilities');
+
+    const caps = [
+      'measure_power.battery_group_power_w',
+      'measure_power.battery_group_target_power_w',
+      'measure_power.battery_group_max_consumption_w',
+      'measure_power.battery_group_max_production_w',
+      'battery_group_total_capacity_kwh',
+      'battery_group_average_soc',
+      'battery_group_state',
+      'battery_group_charge_mode'
+    ];
+
+    for (const cap of caps) {
+      if (this.hasCapability(cap)) {
+        this.removeCapability(cap).catch(this.error);
+      }
+    }
+
+    return;
+  }
+
+  // --- If we have ANY batteries, continue ---
   if (batteries.length === 0) return;
 
-  // --- Weighted SoC calculation ---
+  // 5. Weighted SoC calculation
   let totalCapacity = 0;
   let weightedSoC = 0;
   let totalPower = 0;
@@ -875,8 +973,13 @@ async _updateBatteryGroup() {
       ? b.capacity_kwh
       : 1;
 
-    const soc = typeof b.soc_pct === 'number' ? b.soc_pct : 0;
-    const power = typeof b.power_w === 'number' ? b.power_w : 0;
+    const soc = (typeof b.soc_pct === 'number')
+      ? b.soc_pct
+      : 0;
+
+    const power = (typeof b.power_w === 'number')
+      ? b.power_w
+      : 0;
 
     totalCapacity += cap;
     weightedSoC += cap * soc;
@@ -888,14 +991,15 @@ async _updateBatteryGroup() {
     : 0;
 
   const chargeState =
-    totalPower > 0 ? 'charging' :
-    totalPower < 0 ? 'discharging' :
+    totalPower > 20 ? 'charging' :
+    totalPower < -20 ? 'discharging' :
     'idle';
 
+  // 6. Update capabilities
   await Promise.allSettled([
-    this._setCapabilityValue('battery_group_total_capacity_kwh', totalCapacity),
-    this._setCapabilityValue('battery_group_average_soc', averageSoC),
-    this._setCapabilityValue('battery_group_state', chargeState),
+    updateCapability(this, 'battery_group_total_capacity_kwh', totalCapacity),
+    updateCapability(this, 'battery_group_average_soc', averageSoC),
+    updateCapability(this, 'battery_group_state', chargeState),
   ]);
 }
 
@@ -1023,25 +1127,33 @@ async _dailyGasDelta(showGas, minute) {
 async _handleExternalMeters(external) {
   const tasks = [];
 
-  // Determine structural presence of gas/water meters
-  const gasExists = external?.some(e => e.type === 'gas_meter');
-  const waterExists = external?.some(e => e.type === 'water_meter');
+  // Single pass through external meters - extract latest for each type
+  const latest = {};
+  let gasExists = false;
+  let waterExists = false;
 
-  // Extract latest values (if any)
-  const latest = (type) => {
-    let newest = null;
-    for (const { type: t, value, timestamp } of external ?? []) {
-      if (t === type && typeof value === 'number') {
-        if (!newest || timestamp > newest.timestamp) {
-          newest = { type: t, value, timestamp };
+  for (const meter of (external ?? [])) {
+    if (meter.type === 'gas_meter') {
+      gasExists = true;
+      if (meter.value != null && meter.timestamp != null) {
+        const current = latest['gas_meter'];
+        if (!current || meter.timestamp > current.timestamp) {
+          latest['gas_meter'] = meter;
+        }
+      }
+    } else if (meter.type === 'water_meter') {
+      waterExists = true;
+      if (meter.value != null && meter.timestamp != null) {
+        const current = latest['water_meter'];
+        if (!current || meter.timestamp > current.timestamp) {
+          latest['water_meter'] = meter;
         }
       }
     }
-    return newest;
-  };
+  }
 
-  const gas = latest('gas_meter');
-  const water = latest('water_meter');
+  const gas = latest['gas_meter'];
+  const water = latest['water_meter'];
 
   // GAS CAPABILITY MANAGEMENT (structural)
   if (gasExists && !this.hasCapability('meter_gas')) {
@@ -1275,8 +1387,13 @@ async _ensureBatteryCapabilities() {
   ];
 
   for (const cap of caps) {
-    if (!this.hasCapability(cap)) {
-      await this.addCapability(cap).catch(this.error);
+    try {
+      if (!this.hasCapability(cap)) {
+        await this.addCapability(cap);
+        this.log(`✔ Capability added: ${cap}`);
+      }
+    } catch (err) {
+      this.error(`❌ Failed to ensure capability "${cap}":`, err);
     }
   }
 }
@@ -1308,48 +1425,22 @@ async _handleBatteries(data) {
 
     if (debug) this.log('⚡ Battery event payload:', payload);
 
-    // --- Skip everything if this P1 has no battery ---
-    if (!payload.battery_count || payload.battery_count === 0) {
-      if (debug) this.log('🔋 No battery linked — removing battery capabilities');
+    // --- IMPORTANT ---
+    // NEVER remove capabilities here.
+    // vendorCount is handled in _updateBatteryGroup().
+    // WS payloads are unreliable (missing fields, mode-only, reconnects, etc.)
 
-      const caps = [
-        'measure_power.battery_group_power_w',
-        'measure_power.battery_group_target_power_w',
-        'measure_power.battery_group_max_consumption_w',
-        'measure_power.battery_group_max_production_w',
-        'battery_group_total_capacity_kwh',
-        'battery_group_average_soc',
-        'battery_group_state',
-        'battery_group_charge_mode'
-      ];
-
-      for (const cap of caps) {
-        if (this.hasCapability(cap)) {
-          this.removeCapability(cap).catch(this.error);
-        }
-      }
-
-      // Reset cache
-      this._cacheSet('last_battery_mode', null);
-      this._cacheSet('last_battery_state', null);
-
-      return;
-    }
-
-    // --- Ensure battery capabilities exist ---
-    await this._ensureBatteryCapabilities();
-
+    
     // --- Normalize mode ---
     const normalizedMode = normalizeBatteryMode(payload);
     const lastBatteryMode = this._cacheGet('last_battery_mode');
-    
+
     // --- Update capability battery_group_charge_mode ---
     try {
       await updateCapability(this, 'battery_group_charge_mode', normalizedMode);
     } catch (err) {
       this.error('❌ Failed to update battery_group_charge_mode:', err);
     }
-
 
     // --- Trigger flow only on real mode change ---
     if (normalizedMode !== lastBatteryMode) {
@@ -1372,14 +1463,17 @@ async _handleBatteries(data) {
     // --- Store raw WS battery state for condition cards ---
     const prev = this._cacheGet('last_battery_state') || {};
 
+    // Only update fields that exist in the payload.
+    // Never overwrite vendorCount with undefined or incomplete WS frames.
     this._cacheSet('last_battery_state', {
       mode: payload.mode ?? prev.mode,
       permissions: Array.isArray(payload.permissions)
         ? payload.permissions
         : prev.permissions,
-      battery_count: payload.battery_count ?? prev.battery_count
+      battery_count: (typeof payload.battery_count === 'number')
+        ? payload.battery_count
+        : prev.battery_count
     });
-
 
     // --- Battery error detection ---
     const group = this.homey.settings.get('pluginBatteryGroup') || {};
@@ -1422,6 +1516,7 @@ async _handleBatteries(data) {
     this.error('❌ _handleBatteries failed:', err);
   }
 }
+
 
 
 
@@ -1471,6 +1566,16 @@ async _handleBatteries(data) {
     if (this.wsManager) {
       this.wsManager.stop();
       this.wsManager = null;
+    }
+
+    // Unregister flow card listeners to prevent memory leak
+    if (this._flowListenerReferences) {
+      for (const listener of this._flowListenerReferences) {
+        try {
+          listener.unregister?.();
+        } catch (_) {}
+      }
+      this._flowListenerReferences = null;
     }
   }
 
@@ -1715,6 +1820,7 @@ async _setCapabilityValue(capability, value) {
     this._cacheSet(`last_${flow_id}`, value);
   }
 
+ 
 
   // onPoll method if websocket is to heavy for Homey unit
   async onPoll() {
@@ -1737,6 +1843,9 @@ async _setCapabilityValue(capability, value) {
     }
 
     try {
+       if (this.pollingActive) return; 
+       this.pollingActive = true;
+
       const [measurement, system, batteries] = await Promise.all([
         api.getMeasurement(this.url, this.token),
         api.getSystem(this.url, this.token),
@@ -1764,9 +1873,14 @@ async _setCapabilityValue(capability, value) {
         await this._handleBatteries(batteries);
       }
 
-    } catch (err) {
-      this.error('Polling error:', err.message || err);
-    }
+      await this.setAvailable();
+
+     } catch (err) { 
+      this.log(`Polling error: ${err.message}`); 
+      this.setUnavailable(err.message || 'Polling error').catch(this.error); 
+    } finally { 
+      this.pollingActive = false; 
+    } 
   }
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
@@ -1852,13 +1966,13 @@ async _setCapabilityValue(capability, value) {
           this.wsManager = new WebSocketManager({
             url: this.url,
             token: this.token,
-            log: this.log.bind(this),
-            error: this.error.bind(this),
-            setAvailable: this.setAvailable.bind(this),
-            getSetting: this.getSetting.bind(this),
-            handleMeasurement: this._handleMeasurement.bind(this),
-            handleSystem: this._handleSystem.bind(this),
-            handleBatteries: this._handleBatteries.bind(this)
+            log: this._boundLog,
+            error: this._boundError,
+            setAvailable: this._boundSetAvailable,
+            getSetting: this._boundGetSetting,
+            handleMeasurement: this._boundHandleMeasurement,
+            handleSystem: this._boundHandleSystem,
+            handleBatteries: this._boundHandleBatteries
           });
         }
 

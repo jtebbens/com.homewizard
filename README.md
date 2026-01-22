@@ -4,7 +4,26 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.11.10
+v3.12.4
+
+* Baseload ignore return power (compensate battery return to grid datapoints)
+* Plugin Battery LED brightness adjustment (user request)
+* Bug fix: Battery Group (SoC missed when there are fetch errors)
+* Bug fix: Polling deadlock fix for (energy, energy_socket, SDM230, SDM630, watermeter)
+* Energy socket setAvailable fix
+* Bugfix: _cacheSet undefined
+
+(Websocket & caching)
+
+* Optimized external meters hash calculation (eliminates array.map() garbage collection pressure)
+* Battery group settings now cached with 60-second refresh
+
+Baseload / sluipverbruik
+
+* Detection algorithms now run every 30 seconds instead of on every power sample
+* Eliminates expensive array scans during night hours
+
+v3.11.9
 
 * P1 energy modified to modular
 * P1 energy_v2 modified to modular
@@ -14,8 +33,6 @@ v3.11.10
 * Bugfix: P1 (apiv2) polling mode - Charge mode fixes
 * Bugfix: Group Battery State of Charge (increased timestamp check)
 * Realtime pull from all batteries as fallback Battery Group State
-* Baseload ignore return power
-* Plugin Battery LED brightness adjustment
 
 v3.10.13
 
