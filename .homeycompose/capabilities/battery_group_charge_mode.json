@@ -5,7 +5,7 @@
     "nl": "Battery Groep Oplaadmodus"
   },
   "getable": true,
-  "setable": false,
+  "setable": true,
   "uiComponent": "picker",
   "insights": true,
   "icon": "assets/battery.svg",
