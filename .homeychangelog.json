@@ -922,5 +922,8 @@
   },
   "3.12.7": {
     "en": "Removed pollingActive check, unwanted side effect"
+  },
+  "3.12.8": {
+    "en": "Plugin battery charge mode now selectable from UI"
   }
 }
