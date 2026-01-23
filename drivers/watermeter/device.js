@@ -48,7 +48,6 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
 
-    this.pollingActive = false;
     this._debugLogs = [];
 
     this.agent = new http.Agent({
@@ -199,9 +198,6 @@ _flushDebugLogs() {
 
     try {
 
-      if (this.pollingActive) return;
-      this.pollingActive = true;
-
       const res = await fetchWithTimeout(`${this.url}/data`, {
         agent: this.agent,
         method: 'GET',
@@ -237,9 +233,6 @@ _flushDebugLogs() {
       this._debugLog(`❌ ${err.code || ''} ${err.message || err}`);
       this.error('Polling failed:', err);
       this.setUnavailable(err.message || 'Polling error').catch(this.error);
-
-    } finally {
-      this.pollingActive = false;
     }
   }
 

@@ -4,6 +4,11 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
+v3.12.7
+
+* P1 tuning TIMEOUT & Unreachable
+* Removed pollingActive, unwanted side effect
+
 v3.12.4
 
 * Baseload ignore return power (compensate battery return to grid datapoints)

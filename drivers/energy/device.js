@@ -90,17 +90,7 @@ function getWifiQuality(percent) {
 
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
-  _watchdogReset() {
-  if (this.pollingActive && Date.now() - this._pollStartTs > 30000) {
-    this.log('⚠️ PollingActive stuck >30s — watchdog reset');
-    this.pollingActive = false;
-  }
-}
-
-
   async onInit() {
-    this.pollingActive = false;
-    this.failCount = 0;
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
 
@@ -172,16 +162,25 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       }
     }
 
-    const interval = Math.max(this.getSettings().polling_interval, 2);
+    const interval = Math.max(this.getSettings().polling_interval || 10, 2);
     const offset = Math.floor(Math.random() * interval * 1000);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
+    // First poll offset
     setTimeout(() => {
       if (this._deleted) return;
-      this.onPoll();
-      this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+      this.onPoll().catch(this.error);
+
+      // Daarna vaste interval zonder lock
+      this.onPollInterval = setInterval(() => {
+        if (!this._deleted) {
+          this.onPoll().catch(this.error);
+        }
+      }, interval * 1000);
+
     }, offset);
+
 
     this._flowTriggerTariff = this.homey.flow.getDeviceTriggerCard('tariff_changed');
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
@@ -405,9 +404,6 @@ _flushDebugLogs() {
 async onPoll() {
   if (this._deleted) return;
 
-  // Watchdog: reset stuck lock
-  this._watchdogReset();
-
   const settings = this.getSettings();
 
   // --- EARLY RETURN SAFE ---
@@ -415,73 +411,64 @@ async onPoll() {
     return;
   }
 
-  // --- LOCK BINNEN TRY ---
+  let data, nowLocal, homeyLang;
+
+  //
+  // --- FETCH DATA ---
+  //
   try {
-    if (!this._acquirePollLock()) return;
+    const t = this._getLocalTimeAndLang();
+    nowLocal = t.nowLocal;
+    homeyLang = t.homeyLang;
+    data = await this._fetchData();
+  } catch (err) {
+    this._handlePollError(err);
+    return;
+  }
 
-    let data, nowLocal, homeyLang;
+  //
+  // ⚡ ELECTRICITY FIRST
+  //
+  try {
+    const tasks = [];
 
-    // --- FETCH DATA ---
-    try {
-      const t = this._getLocalTimeAndLang();
-      nowLocal = t.nowLocal;
-      homeyLang = t.homeyLang;
-      data = await this._fetchData();
-    } catch (err) {
-      this._handlePollError(err);
-      return;
-    }
+    this._processCorePowerAndWifi(data, tasks);
+    await this._processTariffAndFlows(data, tasks);
+    this._processExportAndNetImport(data, tasks);
+    await this._processImportExportFlows(data, tasks);
+    this._processBelgiumMonthlyPeak(data, tasks);
+    this._processPhase1MetricsAndOverload(data, tasks, settings, homeyLang);
+    this._processPhases2And3(data, tasks, settings, homeyLang);
+    this._processT3ImportExport(data, tasks);
+    this._processUrlSync(tasks, settings);
 
-    //
-    // ⚡ ELECTRICITY FIRST
-    //
-    try {
-      const tasks = [];
+    await Promise.allSettled(tasks);
 
-      this._processCorePowerAndWifi(data, tasks);
-      await this._processTariffAndFlows(data, tasks);
-      this._processExportAndNetImport(data, tasks);
-      await this._processImportExportFlows(data, tasks);
-      this._processBelgiumMonthlyPeak(data, tasks);
-      this._processPhase1MetricsAndOverload(data, tasks, settings, homeyLang);
-      this._processPhases2And3(data, tasks, settings, homeyLang);
-      this._processT3ImportExport(data, tasks);
-      this._processUrlSync(tasks, settings);
+    await updateCapability(this, 'connection_error', 'No errors');
+    await this.setAvailable();
 
-      await Promise.allSettled(tasks);
+  } catch (err) {
+    this.error('Electricity processing failed:', err);
+  }
 
-      await updateCapability(this, 'connection_error', 'No errors');
-      await this.setAvailable();
-      this.failCount = 0;
+  //
+  // 💧 GAS/WATER
+  //
+  try {
+    this._processGasSourceSelection(data);
 
-    } catch (err) {
-      this.error('Electricity processing failed:', err);
-    }
+    const gasTasks = [];
 
-    //
-    // 💧 GAS/WATER
-    //
-    try {
-      this._processGasSourceSelection(data);
+    await this._processMidnightDailyReset(data, gasTasks, settings, nowLocal);
+    this._processExternalWater(data, gasTasks);
+    this._processGasLiveValue(data, gasTasks, settings);
+    this._processGasDelta(data, gasTasks, settings, nowLocal);
+    this._processDailyTotals(data, gasTasks, settings);
 
-      const gasTasks = [];
+    await Promise.allSettled(gasTasks);
 
-      await this._processMidnightDailyReset(data, gasTasks, settings, nowLocal);
-      this._processExternalWater(data, gasTasks);
-      this._processGasLiveValue(data, gasTasks, settings);
-      this._processGasDelta(data, gasTasks, settings, nowLocal);
-      this._processDailyTotals(data, gasTasks, settings);
-
-      await Promise.allSettled(gasTasks);
-      
-
-    } catch (err) {
-      this.error('Gas/Water processing failed:', err);
-    }
-
-  } finally {
-    // --- DE CRUCIALE FIX ---
-    this.pollingActive = false;
+  } catch (err) {
+    this.error('Gas/Water processing failed:', err);
   }
 }
 
@@ -499,14 +486,6 @@ async onPoll() {
     }
     return true;
   }
-
-  _acquirePollLock() {
-    if (this.pollingActive) return false;
-    this.pollingActive = true;
-    this._pollStartTs = Date.now();
-    return true;
-  }
-
 
   _getLocalTimeAndLang() {
     const tz = this.homey.clock.getTimezone();
@@ -924,41 +903,17 @@ async onPoll() {
   }
 
   _handlePollError(err) {
-    this.error('Poll failed:', err);
+    
+    updateCapability(this, 'connection_error', err.message || 'Polling error')
+      .catch(this.error);
 
-    updateCapability(this, 'connection_error', err.message || 'Polling error');
-    this.failCount++;
+    this.setUnavailable(err.message || 'Polling error')
+      .catch(this.error);
 
-    if (['ETIMEDOUT', 'ECONNRESET'].includes(err.code)) {
-      this.log('Timeout/connection reset detected — recreating HTTP agent and retrying');
-      try {
-        this.agent.destroy?.();
-        this.agent = new http.Agent({
-          keepAlive: true,
-          keepAliveMsecs: 10000,
-          maxSockets: 1
-        });
-      } catch (createErr) {
-        this.error('Failed to recreate agent:', createErr);
-      }
-
-      setTimeout(() => {
-        if (this._deleted) return;
-        this.onPoll();
-      }, 2000);
-    }
-
-    if (this.failCount > 3) {
-      if (this.onPollInterval) clearInterval(this.onPollInterval);
-      this.setUnavailable('Device unreachable');
-    } else {
-      this.setUnavailable(err.message || 'Polling error');
-      this._debugLog(`Poll failed: ${err.message}`);
-    }
+    // Debug logging
+    this._debugLog(`Poll failed: ${err.message || err}`);
+    this.log(`Poll failed: ${err.message || err}`);
   }
-
-
-
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
     if (!this._phaseOverloadNotificationsEnabled) return;
