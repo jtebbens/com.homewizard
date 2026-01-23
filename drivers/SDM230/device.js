@@ -72,8 +72,6 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
   async onInit() {
     this._debugLogs = []; 
 
-    this.pollingActive = false;
-
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
       keepAlive: true,
@@ -250,9 +248,6 @@ _flushDebugLogs() {
 
     try {
 
-      if (this.pollingActive) return;
-      this.pollingActive = true;
-
       const res = await fetchWithTimeout(`${this.url}/data`, {
         agent: this.agent,
         method: 'GET',
@@ -307,8 +302,7 @@ _flushDebugLogs() {
       this._debugLog(`❌ ${err.code || ''} ${err.message || err}`);
       this.error('Polling failed:', err);
       this.setUnavailable(err.message || 'Polling error').catch(this.error);
-    } finally {
-      this.pollingActive = false;
+    
     }
 
   }

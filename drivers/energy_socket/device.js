@@ -69,7 +69,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
 
-    this.pollingActive = false;
     this._lastStatePoll = 0;
     this._debugLogs = [];
     this.__deleted = false;
@@ -297,22 +296,18 @@ _flushDebugLogs() {
 
   const settings = this.getSettings();
 
-  // URL herstellen indien nodig
+  // URL restore when needed
   if (!this.url) {
     if (settings.url) {
       this.url = settings.url;
     } else {
-      // Geen URL → device unavailable, maar pollingActive mag nooit blijven hangen
       this.setUnavailable('Missing URL').catch(this.error);
       return;
     }
   }
 
   try {
-    // --- LOCK BINNEN TRY ---
-    if (this.pollingActive) return;
-    this.pollingActive = true;
-
+    
     // -----------------------------
     // GET /data
     // -----------------------------
@@ -402,10 +397,6 @@ _flushDebugLogs() {
       this.setUnavailable(err.message || 'Polling error')
         .catch(this.error);
     }
-
-  } finally {
-    // --- DE CRUCIALE FIX ---
-    this.pollingActive = false;
   }
 }
 

@@ -284,7 +284,6 @@ _hashExternal(external) {
 
 
  async onInit() {
-    this.pollingActive = false;
     wsDebug.init(this.homey);
     this.onPollInterval = null;
     this.gridReturnStart = null;
@@ -1843,9 +1842,7 @@ async _setCapabilityValue(capability, value) {
     }
 
     try {
-       if (this.pollingActive) return; 
-       this.pollingActive = true;
-
+       
       const [measurement, system, batteries] = await Promise.all([
         api.getMeasurement(this.url, this.token),
         api.getSystem(this.url, this.token),
@@ -1878,8 +1875,7 @@ async _setCapabilityValue(capability, value) {
      } catch (err) { 
       this.log(`Polling error: ${err.message}`); 
       this.setUnavailable(err.message || 'Polling error').catch(this.error); 
-    } finally { 
-      this.pollingActive = false; 
+    
     } 
   }
 

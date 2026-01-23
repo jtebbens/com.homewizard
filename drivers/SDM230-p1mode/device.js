@@ -70,7 +70,6 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
-    this.pollingActive = false;
     this._debugLogs = [];
 
     this.agent = new http.Agent({
@@ -238,10 +237,7 @@ async onPoll() {
   }
 
   try {
-    if (this.pollingActive) return;
-    this.pollingActive = true;
-
-
+    
     const res = await fetchWithTimeout(`${this.url}/data`, {
       agent: this.agent,
       method: 'GET',
@@ -295,13 +291,10 @@ async onPoll() {
       // No return — allow finally to run
     } else {
       this._debugLog(`Poll failed: ${err.message}`);
+      this.log('Polling error:', err.message || err);
       this.setUnavailable(err.message || 'Polling error').catch(this.error);
     }
-
-  } finally {
-    this.pollingActive = false;
   }
-
 
 }
 
