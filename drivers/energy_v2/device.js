@@ -1000,6 +1000,31 @@ async _updateBatteryGroup() {
     updateCapability(this, 'battery_group_average_soc', averageSoC),
     updateCapability(this, 'battery_group_state', chargeState),
   ]);
+
+  // 7. Vendor-native charge mode update
+  const lastVendorState = this._cacheGet('last_battery_state');
+
+  if (lastVendorState && typeof lastVendorState === 'object') {
+    const normalized = normalizeBatteryMode(lastVendorState);
+
+    // Alleen updaten als de waarde echt veranderd is
+    const prev = this.getCapabilityValue('battery_group_charge_mode');
+    if (prev !== normalized) {
+      await updateCapability(this, 'battery_group_charge_mode', normalized);
+
+      // Cache bijwerken
+      this._cacheSet('last_battery_mode', normalized);
+
+      // Flow triggeren
+      this.flowTriggerBatteryMode(this, { mode: normalized });
+
+      if (debug) this.log(`🔋 Updated battery_group_charge_mode → ${normalized}`);
+    }
+  }
+
+
+
+
 }
 
 
@@ -1744,11 +1769,72 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
    * Helper function to register capability listeners.
    * This function is called when the device is initialized.
    */
-  async _registerCapabilityListeners() {
-    this.registerCapabilityListener('identify', async (value) => {
-      await api.identify(this.url, this.token);
-    });
-  }
+async _registerCapabilityListeners() {
+
+  // Existing listener
+  this.registerCapabilityListener('identify', async () => {
+    await api.identify(this.url, this.token);
+  });
+
+  // Battery mode picker listener
+  this.registerCapabilityListener('battery_group_charge_mode', async (value) => {
+    this.log(`UI changed battery_group_charge_mode → ${value}`);
+
+    try {
+      const { wsManager, url, token } = this;
+
+      // 1. Prefer WebSocket
+      if (wsManager?.isConnected()) {
+        wsManager.setBatteryMode(value);
+        this.log(`Set battery mode via WS → ${value}`);
+      } else {
+        // 2. HTTP fallback
+        const response = await api.setMode(url, token, value);
+        if (!response) {
+          this.log(`⚠️ Invalid response from setMode(${value})`);
+          return false;
+        }
+      }
+
+      // 3. Fetch real vendor state
+      const modeResponse = await api.getMode(url, token);
+
+      if (!modeResponse) {
+        this.log('⚠️ Invalid battery mode response after UI change:', modeResponse);
+        return false;
+      }
+
+      // 4. Normalize (string OR object)
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // 5. Update cache in object-safe form
+      this._cacheSet('last_battery_state', {
+        mode: typeof modeResponse === 'object' ? modeResponse.mode : normalized,
+        permissions: typeof modeResponse === 'object' ? modeResponse.permissions : [],
+        battery_count: typeof modeResponse === 'object'
+          ? (modeResponse.battery_count ?? 1)
+          : 1
+      });
+
+      // 6. Update capability to the *real* vendor state
+      await updateCapability(this, 'battery_group_charge_mode', normalized);
+
+      // 7. Trigger flow if changed
+      const prev = this._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        this.flowTriggerBatteryMode(this, { mode: normalized });
+        this._cacheSet('last_battery_mode', normalized);
+      }
+
+      return normalized;
+
+    } catch (err) {
+      this.error('❌ Failed to set battery_group_charge_mode via UI:', err);
+      return false;
+    }
+  });
+}
+
 
   /**
    * Helper function for 'optional' capabilities.
