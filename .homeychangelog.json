@@ -925,5 +925,8 @@
   },
   "3.12.8": {
     "en": "Plugin battery charge mode now selectable from UI"
+  },
+  "3.12.9": {
+    "en": "Energy(apiv2) guard for add / remove \"battery_group_charge_mode\""
   }
 }
