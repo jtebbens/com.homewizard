@@ -5,7 +5,7 @@
     "nl": "Watermeter (cloud)"
   },
   "class": "sensor",
-  "platforms": [ "local", "cloud" ],
+  "platforms": [ "local"],
   "capabilities": [
     "meter_water",
     "meter_water.daily"
