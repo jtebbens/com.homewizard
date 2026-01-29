@@ -928,5 +928,8 @@
   },
   "3.12.9": {
     "en": "Energy(apiv2) guard for add / remove \"battery_group_charge_mode\""
+  },
+  "3.13.0": {
+    "en": "Watermeter battery mode support (via hwenergy cloud)"
   }
 }
