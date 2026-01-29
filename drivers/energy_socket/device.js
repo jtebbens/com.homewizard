@@ -5,14 +5,18 @@ const fetch = require('node-fetch');
 const http = require('http');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const incomingSignal = options.signal;
+  let controller;
+  let timer;
+
+  if (!incomingSignal) {
+    controller = new AbortController();
+    options = { ...options, signal: controller.signal };
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  }
 
   try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
+    const res = await fetch(url, options);
     return res;
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -20,9 +24,10 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
     }
     throw err;
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
+
 
 
 /**
@@ -80,6 +85,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     });
 
     await updateCapability(this, 'connection_error', 'No errors');
+    await updateCapability(this, 'alarm_connectivity', false);
 
     const interval = Math.max(this.getSetting('offset_polling') || 10, 2);
     const offset = Math.floor(Math.random() * interval * 1000);
@@ -377,6 +383,7 @@ _flushDebugLogs() {
       } catch (err) {
         this._debugLog(`State poll failed: ${err.message}`);
         cap('connection_error', err.message || 'State polling error');
+        await updateCapability(this, 'alarm_connectivity', true);
       }
     }
 
@@ -385,6 +392,7 @@ _flushDebugLogs() {
     }
 
     cap('connection_error', 'No errors');
+    await updateCapability(this, 'alarm_connectivity', false);
 
     if (tasks.length > 0) await Promise.allSettled(tasks);
     this.setAvailable().catch(this.error);
@@ -396,6 +404,7 @@ _flushDebugLogs() {
         .catch(this.error);
       this.setUnavailable(err.message || 'Polling error')
         .catch(this.error);
+      await updateCapability(this, 'alarm_connectivity', true);
     }
   }
 }

@@ -22,7 +22,8 @@
     "meter_power.produced.t1",
     "measure_power.l1",
     "rssi",
-    "connection_error"
+    "connection_error",
+    "alarm_connectivity"
   ],
   "energy": {
     "meterPowerImportedCapability": "meter_power.consumed.t1",

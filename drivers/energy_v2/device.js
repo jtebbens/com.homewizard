@@ -35,11 +35,17 @@ async function updateCapability(device, capability, value) {
   try {
     const current = device.getCapabilityValue(capability);
 
-    // --- SAFE REMOVE ---
-    // Removal is allowed only when:
-    // 1) the new value is null
-    // 2) the current value in Homey is also null
+    // --- SPECIAL CASE: battery_group_charge_mode ---
+    // This capability is managed exclusively by _updateBatteryGroup().
+    if (capability === 'battery_group_charge_mode') {
+      // Only update value, never add/remove
+      if (value != null && current !== value) {
+        await device.setCapabilityValue(capability, value);
+      }
+      return;
+    }
 
+    // --- SAFE REMOVE ---
     if (value == null && current == null) {
       if (device.hasCapability(capability)) {
         await device.removeCapability(capability);
@@ -67,6 +73,7 @@ async function updateCapability(device, capability, value) {
     device.error(`❌ Failed updateCapability("${capability}")`, err);
   }
 }
+
 
 
 async function setStoreValueSafe(device, key, value) {
@@ -1021,10 +1028,6 @@ async _updateBatteryGroup() {
       if (debug) this.log(`🔋 Updated battery_group_charge_mode → ${normalized}`);
     }
   }
-
-
-
-
 }
 
 

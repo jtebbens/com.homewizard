@@ -8,6 +8,7 @@
     "small": "drivers/wattcher/assets/images/small.jpg"
   },
   "class": "sensor",
+  "platforms": [ "local"],
   "capabilities": [
     "measure_power",
     "meter_power"

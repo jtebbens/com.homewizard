@@ -8,6 +8,7 @@
     "small": "drivers/heatlink/assets/images/small.jpg"
   },
   "class": "thermostat",
+  "platforms": [ "local"],
   "capabilities": [
     "measure_temperature",
     "target_temperature",

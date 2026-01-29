@@ -1,0 +1,102 @@
+{
+  "id": "cloud-watermeter",
+  "name": {
+    "en": "Watermeter (cloud)",
+    "nl": "Watermeter (cloud)"
+  },
+  "class": "sensor",
+  "platforms": [ "local", "cloud" ],
+  "capabilities": [
+    "meter_water",
+    "meter_water.daily"
+  ],
+  "capabilitiesOptions": {
+    "meter_water.daily": {
+      "decimals": 3,
+      "title": {
+        "en": "Water usage today",
+        "nl": "Waterverbruik vandaag"
+      }
+    },
+    "meter_water": {
+      "decimals": 3,
+      "title": {
+        "en": "Water usage total",
+        "nl": "Waterverbruik totaal"
+      }
+    }
+  },
+  "energy": {
+    "cumulative": true
+  },
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "login",
+      "template": "login_credentials",
+      "options": {
+        "title": {
+          "en": "Login to HomeWizard",
+          "nl": "Inloggen bij HomeWizard"
+        },
+        "usernameLabel": {
+          "en": "Email",
+          "nl": "E-mail"
+        },
+        "usernamePlaceholder": {
+          "en": "your@email.com",
+          "nl": "jouw@email.com"
+        },
+        "passwordLabel": {
+          "en": "Password",
+          "nl": "Wachtwoord"
+        },
+        "passwordPlaceholder": {
+          "en": "Password",
+          "nl": "Wachtwoord"
+        }
+      }
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "General settings",
+        "nl": "Algemene instellingen"
+      },
+      "children": [
+        {
+          "id": "poll_interval",
+          "type": "number",
+          "label": {
+            "en": "Polling interval (seconds)",
+            "nl": "Polling interval (seconden)"
+          },
+          "value": 900,
+          "min": 900,
+          "max": 3600,
+          "hint": {
+            "en": "How often to fetch data from HomeWizard Cloud (default: 900s / 15 min)",
+            "nl": "Hoe vaak data ophalen van HomeWizard Cloud (standaard: 900s / 15 min)"
+          }
+        }
+      ]
+    }
+  ]
+}

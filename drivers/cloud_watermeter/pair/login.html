@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      padding: 20px;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+    
+    .error {
+      color: #f44336;
+      font-size: 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    
+    .info {
+      background-color: #e3f2fd;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="info">
+    Enter your HomeWizard Energy account credentials to connect your cloud-based watermeter.
+  </div>
+
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="username">Email</label>
+      <input 
+        type="email" 
+        id="username" 
+        name="username" 
+        placeholder="your@email.com"
+        required
+        autocomplete="username"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        name="password" 
+        placeholder="Your password"
+        required
+        autocomplete="current-password"
+      >
+    </div>
+
+    <button type="submit" id="submitBtn">Login</button>
+    
+    <div class="error" id="errorMsg"></div>
+  </form>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+
+      // Disable form
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in...';
+      errorMsg.style.display = 'none';
+
+      try {
+        await Homey.emit('login', { username, password });
+        // Success - Homey will move to next step
+      } catch (err) {
+        // Show error
+        errorMsg.textContent = err.message || 'Login failed. Please check your credentials.';
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Login';
+      }
+    });
+
+    // Handle back button
+    Homey.on('continue', () => {
+      // This should never be called on login screen
+    });
+  </script>
+</body>
+</html>
