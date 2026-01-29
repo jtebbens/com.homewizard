@@ -940,5 +940,8 @@
   },
   "3.13.3": {
     "en": "Platform update cloud and local"
+  },
+  "3.13.4": {
+    "en": "Process error account not allowed to publish cloud app"
   }
 }

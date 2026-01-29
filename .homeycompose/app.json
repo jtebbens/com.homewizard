@@ -3,10 +3,9 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.3",
+  "version": "3.13.4",
   "platforms": [
-    "local",
-    "cloud"
+    "local"
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
