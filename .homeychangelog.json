@@ -934,5 +934,8 @@
   },
   "3.13.1": {
     "en": "Update platform settings cloud and local"
+  },
+  "3.13.2": {
+    "en": "platform update cloud and local"
   }
 }
