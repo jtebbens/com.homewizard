@@ -19,14 +19,18 @@ const PHASE_CAPS = [
 ];
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const incomingSignal = options.signal;
+  let controller;
+  let timer;
+
+  if (!incomingSignal) {
+    controller = new AbortController();
+    options = { ...options, signal: controller.signal };
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  }
 
   try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
+    const res = await fetch(url, options);
     return res;
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -34,7 +38,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
     }
     throw err;
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -100,6 +104,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     });
 
     await updateCapability(this, 'connection_error', 'No errors');
+    await updateCapability(this, 'alarm_connectivity', false);
 
     // Remove legacy capabilities once
     for (const cap of ['net_load_phase1', 'net_load_phase2', 'net_load_phase3']) {
@@ -263,6 +268,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
       if (!res || !res.ok) {
         await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
@@ -334,6 +340,7 @@ onDiscoveryLastSeenChanged(discoveryResult) {
 
       if (!res || !res.ok) {
         await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
@@ -356,6 +363,7 @@ onDiscoveryLastSeenChanged(discoveryResult) {
 
       if (!res || !res.ok) {
         await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
@@ -445,6 +453,7 @@ async onPoll() {
     await Promise.allSettled(tasks);
 
     await updateCapability(this, 'connection_error', 'No errors');
+    await updateCapability(this, 'alarm_connectivity', false);
     await this.setAvailable();
 
   } catch (err) {
@@ -480,7 +489,10 @@ async onPoll() {
         this.url = settings.url;
         this.log(`Restored URL from settings: ${this.url}`);
       } else {
-        await this.setUnavailable('Missing URL');
+        //await this.setUnavailable('Missing URL');
+        this._debugLog(`Missing URL in settings for device "${this.getName()}"`);
+        this.log('Polling skipped: missing URL in settings');
+        updateCapability(this, 'alarm_connectivity', true).catch(this.error);
         return false;
       }
     }
@@ -505,6 +517,7 @@ async onPoll() {
 
     if (!res || !res.ok) {
       await updateCapability(this, 'connection_error', 'Fetch error');
+      await updateCapability(this, 'alarm_connectivity', true);
       throw new Error(res ? res.statusText : 'Unknown error during fetch');
     }
 
@@ -904,11 +917,10 @@ async onPoll() {
 
   _handlePollError(err) {
     
-    updateCapability(this, 'connection_error', err.message || 'Polling error')
-      .catch(this.error);
+    updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
 
-    this.setUnavailable(err.message || 'Polling error')
-      .catch(this.error);
+    //this.setUnavailable(err.message || 'Polling error').catch(this.error);
+    updateCapability(this, 'alarm_connectivity', true).catch(this.error);
 
     // Debug logging
     this._debugLog(`Poll failed: ${err.message || err}`);

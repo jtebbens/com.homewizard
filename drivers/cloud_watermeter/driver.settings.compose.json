@@ -1,0 +1,39 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "General settings",
+      "nl": "Algemene instellingen"
+    },
+    "children": [
+      {
+        "id": "poll_interval",
+        "type": "number",
+        "label": {
+          "en": "Polling interval (seconds)",
+          "nl": "Polling interval (seconden)"
+        },
+        "value": 900,
+        "min": 300,
+        "max": 3600,
+        "hint": {
+          "en": "How often to fetch data from HomeWizard Cloud (default: 900s / 15 min)",
+          "nl": "Hoe vaak data ophalen van HomeWizard Cloud (standaard: 900s / 15 min)"
+        }
+      },
+      {
+        "id": "manual_offset",
+        "type": "number",
+        "label": {
+          "en": "Manual offset (m³)",
+          "nl": "Handmatige correctie (m³)"
+        },
+        "value": 0,
+        "hint": {
+          "en": "Add or subtract from the total meter reading. Use this to match your water company's meter reading.",
+          "nl": "Tel op of trek af van de totale meterstand. Gebruik dit om overeen te komen met de meterstand van je waterbedrijf."
+        }
+      }
+    ]
+  }
+]

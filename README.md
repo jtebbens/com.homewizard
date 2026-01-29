@@ -4,9 +4,16 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.12.8
+v3.13.0
+
+* Watermeter - battery based (via cloud hwenergy only 4x updates a day)
+NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
+If Homewizard Energy is down or is under maintenance you get errors or incorrect data.
+
+v3.12.9
 
 * Plugin battery charge mode now selectable from UI
+* Energy(apiv2) guard for add / remove "battery_group_charge_mode"
 
 v3.12.7
 

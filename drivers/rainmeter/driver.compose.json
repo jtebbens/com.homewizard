@@ -8,6 +8,7 @@
     "small": "drivers/rainmeter/assets/images/small.jpg"
   },
   "class": "sensor",
+  "platforms": [ "local"],
   "capabilities": [
     "measure_rain.last3h",
     "measure_rain.total"

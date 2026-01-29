@@ -54,7 +54,8 @@
     "voltage_swell_l2",
     "voltage_swell_l3",
     "connection_error",
-    "measure_frequency"
+    "measure_frequency",
+    "alarm_connectivity"
   ],
   "energy": {
     "cumulative": true,
