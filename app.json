@@ -4,9 +4,10 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.0",
+  "version": "3.13.1",
   "platforms": [
-    "local"
+    "local",
+    "cloud"
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
@@ -2288,18 +2289,24 @@
         "nl": "Watermeter (cloud)"
       },
       "class": "sensor",
+      "platforms": [
+        "local",
+        "cloud"
+      ],
       "capabilities": [
         "meter_water",
         "meter_water.daily"
       ],
       "capabilitiesOptions": {
         "meter_water.daily": {
+          "decimals": 3,
           "title": {
             "en": "Water usage today",
             "nl": "Waterverbruik vandaag"
           }
         },
         "meter_water": {
+          "decimals": 3,
           "title": {
             "en": "Water usage total",
             "nl": "Waterverbruik totaal"
@@ -3410,6 +3417,9 @@
         "small": "drivers/energylink/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power.used",
@@ -3628,6 +3638,9 @@
         "small": "drivers/heatlink/assets/images/small.jpg"
       },
       "class": "thermostat",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_temperature",
         "target_temperature",
@@ -3772,6 +3785,9 @@
         "small": "drivers/kakusensors/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [],
       "pair": [
         {
@@ -4003,6 +4019,9 @@
         "small": "drivers/rainmeter/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_rain.last3h",
         "measure_rain.total"
@@ -4049,6 +4068,9 @@
         "small": "drivers/thermometer/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_temperature",
         "measure_humidity"
@@ -4235,6 +4257,9 @@
         "small": "drivers/wattcher/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power"
@@ -4281,6 +4306,9 @@
         "small": "drivers/windmeter/assets/images/small.jpg"
       },
       "class": "sensor",
+      "platforms": [
+        "local"
+      ],
       "capabilities": [
         "measure_wind_angle",
         "measure_wind_strength.cur",
