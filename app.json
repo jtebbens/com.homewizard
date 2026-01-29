@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.12.9",
+  "version": "3.13.0",
   "platforms": [
     "local"
   ],
@@ -2282,6 +2282,118 @@
       ]
     },
     {
+      "id": "cloud_watermeter",
+      "name": {
+        "en": "Watermeter (cloud)",
+        "nl": "Watermeter (cloud)"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "meter_water",
+        "meter_water.daily"
+      ],
+      "capabilitiesOptions": {
+        "meter_water.daily": {
+          "title": {
+            "en": "Water usage today",
+            "nl": "Waterverbruik vandaag"
+          }
+        },
+        "meter_water": {
+          "title": {
+            "en": "Water usage total",
+            "nl": "Waterverbruik totaal"
+          }
+        }
+      },
+      "energy": {
+        "cumulative": true
+      },
+      "images": {
+        "small": "/drivers/cloud_watermeter/assets/images/small.png",
+        "large": "/drivers/cloud_watermeter/assets/images/large.png",
+        "xlarge": "/drivers/cloud_watermeter/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "login",
+          "template": "login_credentials",
+          "options": {
+            "title": {
+              "en": "Login to HomeWizard",
+              "nl": "Inloggen bij HomeWizard"
+            },
+            "usernameLabel": {
+              "en": "Email",
+              "nl": "E-mail"
+            },
+            "usernamePlaceholder": {
+              "en": "your@email.com",
+              "nl": "jouw@email.com"
+            },
+            "passwordLabel": {
+              "en": "Password",
+              "nl": "Wachtwoord"
+            },
+            "passwordPlaceholder": {
+              "en": "Password",
+              "nl": "Wachtwoord"
+            }
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "General settings",
+            "nl": "Algemene instellingen"
+          },
+          "children": [
+            {
+              "id": "poll_interval",
+              "type": "number",
+              "label": {
+                "en": "Polling interval (seconds)",
+                "nl": "Polling interval (seconden)"
+              },
+              "value": 900,
+              "min": 300,
+              "max": 3600,
+              "hint": {
+                "en": "How often to fetch data from HomeWizard Cloud (default: 900s / 15 min)",
+                "nl": "Hoe vaak data ophalen van HomeWizard Cloud (standaard: 900s / 15 min)"
+              }
+            },
+            {
+              "id": "manual_offset",
+              "type": "number",
+              "label": {
+                "en": "Manual offset (m³)",
+                "nl": "Handmatige correctie (m³)"
+              },
+              "value": 0,
+              "hint": {
+                "en": "Add or subtract from the total meter reading. Use this to match your water company's meter reading.",
+                "nl": "Tel op of trek af van de totale meterstand. Gebruik dit om overeen te komen met de meterstand van je waterbedrijf."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": {
         "en": "P1 Meter"
       },
@@ -2337,7 +2449,8 @@
         "voltage_swell_l2",
         "voltage_swell_l3",
         "connection_error",
-        "measure_frequency"
+        "measure_frequency",
+        "alarm_connectivity"
       ],
       "energy": {
         "cumulative": true,
@@ -2676,7 +2789,8 @@
         "meter_power.produced.t1",
         "measure_power.l1",
         "rssi",
-        "connection_error"
+        "connection_error",
+        "alarm_connectivity"
       ],
       "energy": {
         "meterPowerImportedCapability": "meter_power.consumed.t1",
