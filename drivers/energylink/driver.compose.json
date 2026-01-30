@@ -7,6 +7,9 @@
     "large": "drivers/energylink/assets/images/large.jpg",
     "small": "drivers/energylink/assets/images/small.jpg"
   },
+  "platforms": [
+    "local"
+  ],
   "class": "sensor",
   "capabilities": [
     "measure_power",
