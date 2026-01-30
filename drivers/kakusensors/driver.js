@@ -45,7 +45,7 @@ class HomeWizardKakusensors extends Homey.Driver {
       const sensorId = device.settings.kakusensors_id;
 
       if (!hwId || !sensorId) {
-        socket.emit('error', 'Invalid selection');
+        socket.emit('error', this.homey.__("settings.selection_error"));
         return;
       }
 
@@ -54,7 +54,7 @@ class HomeWizardKakusensors extends Homey.Driver {
       const selected = sensors[sensorId];
 
       if (!selected) {
-        socket.emit('error', 'Sensor not found');
+        socket.emit('error', this.homey.__("settings.notfound_error"));
         return;
       }
 

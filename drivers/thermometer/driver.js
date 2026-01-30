@@ -14,24 +14,6 @@ class HomeWizardThermometer extends Homey.Driver {
 
   async onPair(socket) {
     let homewizard_devices;
-    // Show a specific view by ID
-    await socket.showView('start');
-
-    // Show the next view
-    // await socket.nextView();
-
-    // Show the previous view
-    // await socket.prevView();
-
-    // Close the pair session
-    // await socket.done();
-
-    // Received when a view has changed
-    await socket.setHandler('showView', (viewId) => {
-      this.log(`View: ${viewId}`);
-      // this.log("data", viewId);
-    });
-
     // socket.on('get_homewizards', function () {
     await socket.setHandler('get_homewizards', async () => {
       const fetchedDevices = homewizard.self.devices || {};
@@ -72,20 +54,20 @@ class HomeWizardThermometer extends Homey.Driver {
   const sensorId = device.settings.thermometer_id;
 
   if (!hwId || sensorId === undefined) {
-    socket.emit('error', 'Invalid selection');
+    socket.emit('error', this.homey.__("settings.selection_error"));
     return;
   }
 
   // Zoek thermometer opnieuw via /get-sensors
   homewizard.callnew(hwId, '/get-sensors', (err, response) => {
     if (err || !response) {
-      socket.emit('error', 'Could not read sensors');
+      socket.emit('error', this.homey.__("settings.fetch_error"));
       return;
     }
 
     const selected = (response.thermometers || []).find(t => t.id == sensorId);
     if (!selected) {
-      socket.emit('error', 'Thermometer not found');
+      socket.emit('error', this.homey.__("settings.thermometer_notfound_error"));
       return;
     }
 

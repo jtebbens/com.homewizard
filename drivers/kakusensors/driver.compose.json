@@ -7,6 +7,9 @@
     "large": "drivers/kakusensors/assets/images/large.jpg",
     "small": "drivers/kakusensors/assets/images/small.jpg"
   },
+  "platforms": [
+    "local"
+  ],
   "class": "sensor",
   "capabilities": [],
   "pair": [

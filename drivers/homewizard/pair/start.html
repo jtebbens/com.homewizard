@@ -7,6 +7,11 @@ function saveSettings () {
     } else {
         var homewizard_ledring = false;   
     }
+    if (!$('#homewizard_ip').val()) {
+        $('#error').html(Homey.__("settings.no_ip"));
+        $('#save').prop('disabled', false);
+        return;
+    }
     Homey.emit('manual_add', {
     data: { id: 'HW'+Math.floor(Date.now() / 1000) },
     settings: {
@@ -66,14 +71,6 @@ function saveSettings () {
             box-sizing: border-box;
             }
 
-            button {
-            font-size: 18px;
-            padding: 12px 20px;
-            background-color: #ddd;
-            border: 1px solid #ccc;
-            cursor: pointer;
-            }
-
             label {
             font-size: 16px;
             margin-bottom: 5px;
@@ -93,12 +90,12 @@ function saveSettings () {
     <body>
         <p data-i18n="settings.intro"></p>
             <div class="field row">
-                <label for="homewizard_ip">HomeWizard's IP</label>
-                <input id="homewizard_ip" type="text" value="" />
+                <label for="homewizard_ip" class="homey-form-label">HomeWizard's IP</label>
+                <input id="homewizard_ip" class="homey-form-input" type="text" value="" />
             </div>
             <div class="field row">
-                <label for="homewizard_pass" data-i18n="settings.password"></label>
-                <input id="homewizard_pass" type="password" value="" />
+                <label for="homewizard_pass" class="homey-form-label" data-i18n="settings.password"></label>
+                <input id="homewizard_pass" class="homey-form-input" type="password" value="" />
             </div>
             <br>
             <div class="field row">
@@ -107,6 +104,6 @@ function saveSettings () {
             </div>
             <br>
             <p id="error"></p>
-        <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
+        <button class="homey-button-primary-full" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>
