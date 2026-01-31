@@ -10,6 +10,15 @@
     "use_ledring": "Gebruik ledring",
     "use_ledring_explain": "Ledring licht groen op indien de preset aangepast is, rood indien niet succesvol",
     "save": "Opslaan",
+    "no_ip": "Voer het IP-adres van de HomeWizard in",
+    "select": "Selecteer HomeWizard",
+    "select_sensor": "Selecteer Sensor",
+    "select_thermometer": "Selecteer Thermometer",
+    "error": "Fout: ",
+    "selection_error": "Ongeldige selectie",
+    "notfound_error": "Sensor niet gevonden",
+    "thermometer_notfound_error": "Thermometer niet gevonden",
+    "fetch_error": "Sensoren uitlezen mislukt",
     "changelog": {
       "label": "📜 Bekijk Changelog"
     },

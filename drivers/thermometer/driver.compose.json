@@ -7,6 +7,9 @@
     "large": "drivers/thermometer/assets/images/large.jpg",
     "small": "drivers/thermometer/assets/images/small.jpg"
   },
+  "platforms": [
+    "local"
+  ],
   "class": "sensor",
   "platforms": [ "local"],
   "capabilities": [
