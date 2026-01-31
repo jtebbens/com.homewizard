@@ -17,6 +17,7 @@
     "measure_current",
     "measure_power.l1",
     "measure_voltage",
+    "alarm_connectivity",
     "rssi"
   ],
   "capabilitiesOptions": {
