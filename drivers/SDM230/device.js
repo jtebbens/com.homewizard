@@ -240,7 +240,9 @@ _flushDebugLogs() {
         this.url = settings.url;
         this.log(`Restored URL from settings: ${this.url}`);
       } else {
-        this.setUnavailable('Missing URL').catch(this.error);
+        //this.setUnavailable('Missing URL').catch(this.error);
+        this.log('❌ Missing URL, skipping poll');
+        await updateCapability(this, 'alarm_connectivity', true);
         return;
       }
     }
@@ -272,6 +274,7 @@ _flushDebugLogs() {
 
       
       await updateCapability(this, 'rssi', data.wifi_strength);
+      await updateCapability(this, 'alarm_connectivity', false);
 
       const power = this.getClass() === 'solarpanel'
         ? data.active_power_w * -1
@@ -301,8 +304,9 @@ _flushDebugLogs() {
     } catch (err) {
       this._debugLog(`❌ ${err.code || ''} ${err.message || err}`);
       this.error('Polling failed:', err);
-      this.setUnavailable(err.message || 'Polling error').catch(this.error);
-    
+      //this.setUnavailable(err.message || 'Polling error').catch(this.error);
+      await updateCapability(this, 'alarm_connectivity', true);
+          
     }
 
   }
