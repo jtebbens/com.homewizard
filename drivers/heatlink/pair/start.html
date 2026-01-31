@@ -9,7 +9,7 @@ $( document ).ready(function() {
 
         hw_device_list = hw_devices;
         $('#homewizard_select').find('option').remove();
-        $('#homewizard_select').append('<option>Select HomeWizard</option>');
+        $('#homewizard_select').append('<option>' + Homey.__("settings.select") + '</option>');
         $.each(hw_devices, function( index, value ) {
             $('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
         });
@@ -51,7 +51,7 @@ function saveSettings () {
     });
     
     Homey.on('error', function(message){
-        $('#error').html('Error: '+message);
+        $('#error').html(Homey.__("settings.error")+message);
         $('#save').prop('disabled', false);
     });
 }
@@ -60,19 +60,6 @@ function saveSettings () {
 <html>
     <head>
         <style>
-            label {
-                width: 150px;
-                display:inline-block !important;   
-            }
-            input {
-                border: 1px solid #ccc;
-                padding: 3px;
-            }
-            button {
-                padding: 10px;
-                background-color: #ddd;
-                border: 1px solid #ccc;
-            }
             #error {
                 color: red;
             }
@@ -81,12 +68,12 @@ function saveSettings () {
     <body>
         <p data-i18n="settings.heatlink_intro"></p>
             <div class="field row">
-				<select id="homewizard_select">
-					<option>Select HomeWizard</option>
+				<select class="homey-form-select" id="homewizard_select">
+					<option data-i18n="settings.select"></option>
 				</select>
             </div>
             <br>
             <p id="error"></p>
-        <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
+        <button class="homey-button-primary-full" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>

@@ -3,7 +3,7 @@ $(document).ready(function () {
   Homey.emit('get_homewizards');
 
   Homey.on('thermometer_list', function (list) {
-    $('#thermometer_select').empty().append('<option>Selecteer Thermometer</option>');
+    $('#thermometer_select').empty().append('<option>' + Homey.__("settings.select_thermometer") +'</option>');
     list.forEach((t) => {
       $('#thermometer_select').append(
         $('<option>')
@@ -49,7 +49,7 @@ function saveSettings() {
   });
 
   Homey.on('error', function (message) {
-    $('#error').html('Error: ' + message);
+    $('#error').html(Homey.__("settings.error")+ message);
     $('#save').prop('disabled', false);
   });
 }
@@ -59,23 +59,6 @@ function saveSettings() {
 <html>
     <head>
         <style>
-            select {
-            font-size: 18px;
-            padding: 10px;
-            width: 100%;
-            margin-bottom: 15px;
-            height: 50px;
-            box-sizing: border-box;
-            }
-
-            button {
-            font-size: 18px;
-            padding: 12px 20px;
-            background-color: #ddd;
-            border: 1px solid #ccc;
-            cursor: pointer;
-            }
-
             label {
             font-size: 16px;
             margin-bottom: 5px;
@@ -96,12 +79,12 @@ function saveSettings() {
         <p data-i18n="settings.thermometer_intro"></p>
             <div class="field row">
             <label for="thermometer_select">Thermometer</label>
-            <select id="thermometer_select">
-                <option>Selecteer Thermometer</option>
+            <select class="homey-form-select" id="thermometer_select">
+                <option data-i18n="select_thermometer"></option>
             </select>
             </div>
             <br>
             <p id="error"></p>
-        <button class="right" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
+        <button class="homey-button-primary-full" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>

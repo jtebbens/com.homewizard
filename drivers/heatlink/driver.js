@@ -80,25 +80,6 @@ class HomeWizardHeatlink extends Homey.Driver {
   }
 
   async onPair(socket) {
-
-    // Show a specific view by ID
-    await socket.showView('start');
-
-    // Show the next view
-    await socket.nextView();
-
-    // Show the previous view
-    await socket.prevView();
-
-    // Close the pair session
-    await socket.done();
-
-    // Received when a view has changed
-    await socket.setHandler('showView', (viewId) => {
-      this.log(`View: ${viewId}`);
-      // this.log("data", viewId);
-    });
-
     // socket.on('get_homewizards', function () {
     await socket.setHandler('get_homewizards', () => {
 

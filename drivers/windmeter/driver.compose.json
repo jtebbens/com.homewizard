@@ -7,6 +7,9 @@
     "large": "drivers/windmeter/assets/images/large.jpg",
     "small": "drivers/windmeter/assets/images/small.jpg"
   },
+  "platforms": [
+    "local"
+  ],
   "class": "sensor",
   "platforms": [ "local"],
   "capabilities": [
