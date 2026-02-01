@@ -1386,6 +1386,7 @@
         "measure_current",
         "measure_power.l1",
         "measure_voltage",
+        "alarm_connectivity",
         "rssi"
       ],
       "capabilitiesOptions": {
@@ -2280,6 +2281,200 @@
           }
         }
       ]
+    },
+    {
+      "name": {
+        "en": "P1 Meter (Cloud)",
+        "nl": "P1 Meter (Cloud)"
+      },
+      "class": "sensor",
+      "capabilities": [
+        "measure_power",
+        "meter_power",
+        "meter_power.peak",
+        "meter_power.offpeak",
+        "meter_power.producedPeak",
+        "meter_power.producedOffpeak",
+        "measure_voltage.l1",
+        "measure_current.l1",
+        "meter_gas"
+      ],
+      "capabilitiesOptions": {
+        "meter_power.peak": {
+          "title": {
+            "en": "Power meter tariff 1",
+            "nl": "Energiemeter tarief 1"
+          }
+        },
+        "meter_power.offpeak": {
+          "title": {
+            "en": "Power meter tariff 2",
+            "nl": "Energiemeter tarief 2"
+          }
+        },
+        "meter_power.producedPeak": {
+          "title": {
+            "en": "Production tariff 1",
+            "nl": "Productie tarief 1"
+          }
+        },
+        "meter_power.producedOffpeak": {
+          "title": {
+            "en": "Production tariff 2",
+            "nl": "Productie tarief 2"
+          }
+        },
+        "measure_voltage.l1": {
+          "title": {
+            "en": "Voltage L1",
+            "nl": "Spanning L1"
+          }
+        },
+        "measure_current.l1": {
+          "title": {
+            "en": "Current L1",
+            "nl": "Stroom L1"
+          }
+        }
+      },
+      "energy": {
+        "cumulative": true
+      },
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [
+        "cloud"
+      ],
+      "images": {
+        "small": "/drivers/cloud_p1/assets/images/small.png",
+        "large": "/drivers/cloud_p1/assets/images/large.png",
+        "xlarge": "/drivers/cloud_p1/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "login"
+        }
+      ],
+      "repair": [
+        {
+          "id": "login"
+        }
+      ],
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Cloud Connection",
+            "nl": "Cloud Verbinding"
+          },
+          "children": [
+            {
+              "id": "cloud_email",
+              "type": "text",
+              "label": {
+                "en": "Email",
+                "nl": "E-mail"
+              },
+              "value": "",
+              "hint": {
+                "en": "Your HomeWizard Energy account email",
+                "nl": "Uw HomeWizard Energy account e-mail"
+              }
+            },
+            {
+              "id": "cloud_password",
+              "type": "password",
+              "label": {
+                "en": "Password",
+                "nl": "Wachtwoord"
+              },
+              "value": "",
+              "hint": {
+                "en": "Your HomeWizard Energy account password",
+                "nl": "Uw HomeWizard Energy account wachtwoord"
+              }
+            },
+            {
+              "id": "location_id",
+              "type": "text",
+              "label": {
+                "en": "Location ID",
+                "nl": "Locatie ID"
+              },
+              "value": "",
+              "hint": {
+                "en": "Internal location identifier",
+                "nl": "Interne locatie-identificatie"
+              }
+            },
+            {
+              "id": "location_name",
+              "type": "text",
+              "label": {
+                "en": "Location Name",
+                "nl": "Locatie Naam"
+              },
+              "value": "",
+              "hint": {
+                "en": "Name of your home in HomeWizard Energy app",
+                "nl": "Naam van uw woning in HomeWizard Energy app"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Device Settings",
+            "nl": "Apparaat Instellingen"
+          },
+          "children": [
+            {
+              "id": "enable_realtime",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable real-time updates (1 second interval)",
+                "nl": "Schakel real-time updates in (1 seconde interval)"
+              },
+              "value": false,
+              "hint": {
+                "en": "Receive power updates every second instead of every 40 seconds. May increase data usage.",
+                "nl": "Ontvang stroomverbruik updates elke seconde in plaats van elke 40 seconden. Kan dataverbruik verhogen."
+              }
+            },
+            {
+              "id": "number_of_phases",
+              "type": "number",
+              "label": {
+                "en": "Number of phases",
+                "nl": "Aantal fasen"
+              },
+              "value": 1,
+              "min": 1,
+              "max": 3,
+              "hint": {
+                "en": "Number of electrical phases (1 or 3)",
+                "nl": "Aantal elektrische fasen (1 of 3)"
+              }
+            },
+            {
+              "id": "wifi_strength",
+              "type": "number",
+              "label": {
+                "en": "WiFi Signal Strength",
+                "nl": "WiFi Signaalsterkte"
+              },
+              "value": 0,
+              "hint": {
+                "en": "Current WiFi signal strength (updated automatically)",
+                "nl": "Huidige WiFi signaalsterkte (automatisch bijgewerkt)"
+              }
+            }
+          ]
+        }
+      ],
+      "id": "cloud_p1"
     },
     {
       "id": "cloud_watermeter",
@@ -3414,10 +3609,10 @@
         "large": "drivers/energylink/assets/images/large.jpg",
         "small": "drivers/energylink/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [
         "measure_power",
         "meter_power.used",
@@ -3635,10 +3830,10 @@
         "large": "drivers/heatlink/assets/images/large.jpg",
         "small": "drivers/heatlink/assets/images/small.jpg"
       },
-      "class": "thermostat",
       "platforms": [
         "local"
       ],
+      "class": "thermostat",
       "capabilities": [
         "measure_temperature",
         "target_temperature",
@@ -3782,10 +3977,10 @@
         "large": "drivers/kakusensors/assets/images/large.jpg",
         "small": "drivers/kakusensors/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [],
       "pair": [
         {
@@ -4016,10 +4211,10 @@
         "large": "drivers/rainmeter/assets/images/large.jpg",
         "small": "drivers/rainmeter/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [
         "measure_rain.last3h",
         "measure_rain.total"
@@ -4065,10 +4260,10 @@
         "large": "drivers/thermometer/assets/images/large.jpg",
         "small": "drivers/thermometer/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [
         "measure_temperature",
         "measure_humidity"
@@ -4254,10 +4449,10 @@
         "large": "drivers/wattcher/assets/images/large.jpg",
         "small": "drivers/wattcher/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [
         "measure_power",
         "meter_power"
@@ -4303,10 +4498,10 @@
         "large": "drivers/windmeter/assets/images/large.jpg",
         "small": "drivers/windmeter/assets/images/small.jpg"
       },
-      "class": "sensor",
       "platforms": [
         "local"
       ],
+      "class": "sensor",
       "capabilities": [
         "measure_wind_angle",
         "measure_wind_strength.cur",

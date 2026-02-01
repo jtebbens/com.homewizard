@@ -1,0 +1,193 @@
+{
+  "name": {
+    "en": "P1 Meter (Cloud)",
+    "nl": "P1 Meter (Cloud)"
+  },
+  "class": "sensor",
+  "capabilities": [
+    "measure_power",
+    "meter_power",
+    "meter_power.peak",
+    "meter_power.offpeak",
+    "meter_power.producedPeak",
+    "meter_power.producedOffpeak",
+    "measure_voltage.l1",
+    "measure_current.l1",
+    "meter_gas"
+  ],
+  "capabilitiesOptions": {
+    "meter_power.peak": {
+      "title": {
+        "en": "Power meter tariff 1",
+        "nl": "Energiemeter tarief 1"
+      }
+    },
+    "meter_power.offpeak": {
+      "title": {
+        "en": "Power meter tariff 2",
+        "nl": "Energiemeter tarief 2"
+      }
+    },
+    "meter_power.producedPeak": {
+      "title": {
+        "en": "Production tariff 1",
+        "nl": "Productie tarief 1"
+      }
+    },
+    "meter_power.producedOffpeak": {
+      "title": {
+        "en": "Production tariff 2",
+        "nl": "Productie tarief 2"
+      }
+    },
+    "measure_voltage.l1": {
+      "title": {
+        "en": "Voltage L1",
+        "nl": "Spanning L1"
+      }
+    },
+    "measure_current.l1": {
+      "title": {
+        "en": "Current L1",
+        "nl": "Stroom L1"
+      }
+    }
+  },
+  "energy": {
+    "cumulative": true
+  },
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [
+    "cloud"
+  ],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "login"
+    }
+  ],
+  "repair": [
+    {
+      "id": "login"
+    }
+  ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "Cloud Connection",
+        "nl": "Cloud Verbinding"
+      },
+      "children": [
+        {
+          "id": "cloud_email",
+          "type": "text",
+          "label": {
+            "en": "Email",
+            "nl": "E-mail"
+          },
+          "value": "",
+          "hint": {
+            "en": "Your HomeWizard Energy account email",
+            "nl": "Uw HomeWizard Energy account e-mail"
+          }
+        },
+        {
+          "id": "cloud_password",
+          "type": "password",
+          "label": {
+            "en": "Password",
+            "nl": "Wachtwoord"
+          },
+          "value": "",
+          "hint": {
+            "en": "Your HomeWizard Energy account password",
+            "nl": "Uw HomeWizard Energy account wachtwoord"
+          }
+        },
+        {
+          "id": "location_id",
+          "type": "text",
+          "label": {
+            "en": "Location ID",
+            "nl": "Locatie ID"
+          },
+          "value": "",
+          "hint": {
+            "en": "Internal location identifier",
+            "nl": "Interne locatie-identificatie"
+          }
+        },
+        {
+          "id": "location_name",
+          "type": "text",
+          "label": {
+            "en": "Location Name",
+            "nl": "Locatie Naam"
+          },
+          "value": "",
+          "hint": {
+            "en": "Name of your home in HomeWizard Energy app",
+            "nl": "Naam van uw woning in HomeWizard Energy app"
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Device Settings",
+        "nl": "Apparaat Instellingen"
+      },
+      "children": [
+        {
+          "id": "enable_realtime",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable real-time updates (1 second interval)",
+            "nl": "Schakel real-time updates in (1 seconde interval)"
+          },
+          "value": false,
+          "hint": {
+            "en": "Receive power updates every second instead of every 40 seconds. May increase data usage.",
+            "nl": "Ontvang stroomverbruik updates elke seconde in plaats van elke 40 seconden. Kan dataverbruik verhogen."
+          }
+        },
+        {
+          "id": "number_of_phases",
+          "type": "number",
+          "label": {
+            "en": "Number of phases",
+            "nl": "Aantal fasen"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 3,
+          "hint": {
+            "en": "Number of electrical phases (1 or 3)",
+            "nl": "Aantal elektrische fasen (1 of 3)"
+          }
+        },
+        {
+          "id": "wifi_strength",
+          "type": "number",
+          "label": {
+            "en": "WiFi Signal Strength",
+            "nl": "WiFi Signaalsterkte"
+          },
+          "value": 0,
+          "hint": {
+            "en": "Current WiFi signal strength (updated automatically)",
+            "nl": "Huidige WiFi signaalsterkte (automatisch bijgewerkt)"
+          }
+        }
+      ]
+    }
+  ]
+}
