@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+        }
+        
+        .step {
+            display: none;
+        }
+        
+        .step.active {
+            display: block;
+        }
+        
+        .error {
+            color: #c62828;
+            background-color: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Step 1: Login -->
+    <div id="step-login" class="step active">
+        <h2>HomeWizard Cloud Login</h2>
+        
+        <div class="info-box">
+            <p style="margin: 0;">Enter your HomeWizard Energy account credentials.</p>
+        </div>
+
+        <div id="login-error" class="error"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required autocomplete="email">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="login-btn" class="homey-button-primary-full">Login</button>
+        </form>
+    </div>
+
+    <!-- Step 2: Select Home -->
+    <div id="step-homes" class="step">
+        <fieldset id="selectFieldset" class="homey-form-fieldset">
+            <legend class="homey-form-legend">Select your home</legend>
+        </fieldset>
+        
+        <p id="no-homes" class="error">You have no homes! Please create a home in the HomeWizard Energy app first.</p>
+        <p id="fetch-error" class="error">Failed to load homes. Please try again.</p>
+
+        <button id="save-btn" class="homey-button-primary-full" onclick="saveClicked()">Continue</button>
+    </div>
+
+    <script type="text/javascript">
+        let selectedHome = null;
+
+        // Step 1: Handle login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('login-btn');
+            const errorDiv = document.getElementById('login-error');
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Authenticating...';
+            loginBtn.className = 'homey-button-primary-full is-loading';
+            errorDiv.style.display = 'none';
+
+            try {
+                console.log('Calling cloud_login...');
+                const result = await Homey.emit('cloud_login', { email, password });
+                console.log('Login result:', result);
+
+                // Move to next step
+                document.getElementById('step-login').classList.remove('active');
+                document.getElementById('step-homes').classList.add('active');
+
+                // Load homes
+                await loadHomes();
+
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = error.message || 'Login failed. Please check your credentials.';
+                errorDiv.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+                loginBtn.className = 'homey-button-primary-full';
+            }
+        });
+
+        // Step 2: Load homes
+        async function loadHomes() {
+            const fieldset = document.getElementById('selectFieldset');
+            const noHomesError = document.getElementById('no-homes');
+            const fetchError = document.getElementById('fetch-error');
+            const saveBtn = document.getElementById('save-btn');
+
+            noHomesError.style.display = 'none';
+            fetchError.style.display = 'none';
+
+            try {
+                console.log('Calling list_locations...');
+                const locations = await Homey.emit('list_locations');
+                console.log('Locations:', locations);
+
+                if (!locations || locations.length === 0) {
+                    noHomesError.style.display = 'block';
+                    saveBtn.style.display = 'none';
+                    return;
+                }
+
+                // Create radio buttons for each home
+                locations.forEach(location => {
+                    const wrapper = document.createElement('label');
+                    wrapper.className = 'homey-form-radio';
+
+                    const input = document.createElement('input');
+                    input.className = 'homey-form-radio-input';
+                    input.type = 'radio';
+                    input.name = 'home-selection';
+                    input.value = location.id;
+
+                    const checkmark = document.createElement('span');
+                    checkmark.className = 'homey-form-radio-checkmark';
+
+                    const text = document.createElement('span');
+                    text.className = 'homey-form-radio-text';
+                    text.textContent = `${location.name} (${location.deviceCount} device${location.deviceCount !== 1 ? 's' : ''})`;
+
+                    input.addEventListener('change', () => {
+                        selectedHome = location.id;
+                        console.log('Selected home:', selectedHome);
+                    });
+
+                    wrapper.appendChild(input);
+                    wrapper.appendChild(checkmark);
+                    wrapper.appendChild(text);
+                    fieldset.appendChild(wrapper);
+                });
+
+                // Auto-select if only one home
+                if (locations.length === 1) {
+                    const input = fieldset.querySelector('input[type="radio"]');
+                    input.checked = true;
+                    selectedHome = locations[0].id;
+                }
+
+            } catch (error) {
+                console.error('Load homes error:', error);
+                fetchError.textContent = error.message || 'Failed to load homes';
+                fetchError.style.display = 'block';
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        // Step 3: Save selection and add devices
+        async function saveClicked() {
+            console.log('Save button clicked, selected:', selectedHome);
+
+            if (!selectedHome) {
+                console.log('No home selected');
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-btn');
+            const fetchError = document.getElementById('fetch-error');
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Loading devices...';
+            saveBtn.className = 'homey-button-primary-full is-loading';
+            fetchError.style.display = 'none';
+
+            try {
+                console.log('Calling list_devices_for_location...');
+                const devices = await Homey.emit('list_devices_for_location', {
+                    locationId: selectedHome
+                });
+                console.log('Devices:', devices);
+
+                if (!devices || devices.length === 0) {
+                    fetchError.textContent = 'No P1 meters found in this home. Please add devices in the HomeWizard Energy app first.';
+                    fetchError.style.display = 'block';
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Continue';
+                    saveBtn.className = 'homey-button-primary-full';
+                    return;
+                }
+
+                // Add devices
+                console.log('Adding devices...');
+                
+                // Homey expects us to call addDevice for each device
+                for (const device of devices) {
+                    console.log('Adding device:', device.name);
+                    await Homey.addDevice(device);
+                }
+                
+                console.log('All devices added, calling Homey.done()...');
+                await Homey.done();
+
+            } catch (error) {
+                console.error('Save error:', error);
+                fetchError.textContent = error.message || 'Failed to add devices';
+                fetchError.style.display = 'block';
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Continue';
+                saveBtn.className = 'homey-button-primary-full';
+            }
+        }
+
+        // Initialize
+        Homey.ready(() => {
+            console.log('Homey ready');
+        });
+    </script>
+</body>
+</html>
