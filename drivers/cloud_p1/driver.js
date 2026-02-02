@@ -177,7 +177,6 @@ class CloudP1Driver extends Driver {
             cloud_password: sd.credentials.password,
             location_id: locationId,
             location_name: location.name,
-            enable_realtime: false,
             number_of_phases: 1
           },
           store: {

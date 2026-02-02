@@ -6,11 +6,12 @@ NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENER
 
 v3.13.4
 
-* Watermeter - battery based (via cloud hwenergy only 4x updates a day)
-NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
-If Homewizard Energy is down or is under maintenance you get errors or incorrect data.
 * Homewizard Legacy Device updates (CSS, flow and language) - thanks smarthomesvan
-* **Cloud Integration**: P1 meters can now be connected via HomeWizard cloud API (Based on cloud API research by Sven Serlier)
+* Watermeter - battery based (via cloud hwenergy only 4x updates a day)
+* P1 meters can now be connected via HomeWizard cloud API (Based on cloud API research by Sven Serlier)
+
+NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
+If Homewizard Energy is down or is under maintenance or change their hwenergy web frontend you get errors or incorrect data.
 
 v3.12.9
 
