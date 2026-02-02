@@ -8,6 +8,7 @@ const TSDB_URL = 'https://tsdb-reader.homewizard.com';
 const TOKEN_REFRESH_MARGIN = 60; // seconds
 const MAX_RETRY_ATTEMPTS = 5;
 const INITIAL_RETRY_DELAY = 30000; // 30 seconds
+const debug = false
 
 module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
 
@@ -175,7 +176,7 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
         if (attempt > 0) {
           this.log(`Fetching water data from TSDB (retry ${attempt}/${MAX_RETRY_ATTEMPTS})...`);
         } else {
-          this.log(`Fetching water data from TSDB...`);
+          if (debug) this.log(`Fetching water data from TSDB...`);
         }
 
         const response = await fetch(url, {
@@ -204,7 +205,7 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
         }
 
         const data = await response.json();
-        this.log(`TSDB data received: ${data.values?.length || 0} datapoints`);
+        if (debug) this.log(`TSDB data received: ${data.values?.length || 0} datapoints`);
         
         // Process the data
         await this.processWaterData(data);
@@ -268,7 +269,7 @@ async processWaterData(data) {
       // Get the latest reading if we haven't found one yet
       if (latestWaterValue === null && datapoint.water > 0) {
         latestWaterValue = datapoint.water;
-        this.log(`Latest water reading: ${latestWaterValue}L at ${datapoint.time}`);
+        if (debug) this.log(`Latest water reading: ${latestWaterValue}L at ${datapoint.time}`);
       }
     }
   }
@@ -276,11 +277,11 @@ async processWaterData(data) {
   // Convert daily total from liters to m³
   const dailyTotalM3 = dailyTotal / 1000;
   
-  this.log(`Daily water usage: ${dailyTotalM3.toFixed(3)} m³ (${dailyTotal.toFixed(1)}L)`);
+  if (debug) this.log(`Daily water usage: ${dailyTotalM3.toFixed(3)} m³ (${dailyTotal.toFixed(1)}L)`);
 
   // Check if day changed - if so, add previous day's total to cumulative
   if (lastDate !== today) {
-    this.log(`Day changed from ${lastDate} to ${today}`);
+    if (debug) this.log(`Day changed from ${lastDate} to ${today}`);
     
     // Add previous day's usage to cumulative total
     const cumulativeWater = this.getStoreValue('cumulative_water') || 0;
@@ -289,7 +290,7 @@ async processWaterData(data) {
     await this.setStoreValue('cumulative_water', newCumulative);
     await this.setStoreValue('last_date', today);
     
-    this.log(`Added ${previousDailyUsage.toFixed(3)} m³ to cumulative. New total: ${newCumulative.toFixed(3)} m³`);
+    if (debug) this.log(`Added ${previousDailyUsage.toFixed(3)} m³ to cumulative. New total: ${newCumulative.toFixed(3)} m³`);
   }
 
   // Store current daily usage for next day rollover
@@ -298,7 +299,7 @@ async processWaterData(data) {
   // Update daily water usage capability
   if (this.hasCapability('meter_water.daily')) {
     await this.setCapabilityValue('meter_water.daily', dailyTotalM3);
-    this.log(`Daily water meter updated: ${dailyTotalM3.toFixed(3)} m³`);
+    if (debug) this.log(`Daily water meter updated: ${dailyTotalM3.toFixed(3)} m³`);
   }
 
   // Update cumulative water usage capability (including manual offset)
@@ -308,7 +309,7 @@ async processWaterData(data) {
     const totalWater = cumulativeWater + dailyTotalM3 + manualOffset;
     
     await this.setCapabilityValue('meter_water', totalWater);
-    this.log(`Cumulative water meter updated: ${totalWater.toFixed(3)} m³ (cumulative: ${cumulativeWater.toFixed(3)} m³, daily: ${dailyTotalM3.toFixed(3)} m³, offset: ${manualOffset.toFixed(3)} m³)`);
+    if (debug) this.log(`Cumulative water meter updated: ${totalWater.toFixed(3)} m³ (cumulative: ${cumulativeWater.toFixed(3)} m³, daily: ${dailyTotalM3.toFixed(3)} m³, offset: ${manualOffset.toFixed(3)} m³)`);
   }
 }
 

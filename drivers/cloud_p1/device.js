@@ -18,6 +18,8 @@
 const { Device } = require('homey');
 const HomeWizardCloudAPI = require('../../lib/homewizard-cloud-api');
 
+const debug = false;
+
 class CloudP1Device extends Device {
 
   /**
@@ -38,6 +40,14 @@ class CloudP1Device extends Device {
     // Track last update to detect stale data
     this.lastUpdate = null;
     this.staleDataTimeout = null;
+
+    // Update rate monitoring to prevent spam
+    this.updateCount = 0;
+    this.updateRateWindow = 10000; // 10 seconds
+    this.updateRateThreshold = 8; // More than 8 updates in 10s = too fast (< 1.25s average)
+    this.updateRateTimer = null;
+    this.spamDetected = false;
+    this.spamLogged = false;
 
     // Initialize capabilities if needed
     await this.initializeCapabilities();
@@ -130,11 +140,8 @@ class CloudP1Device extends Device {
       // Subscribe to this device
       this.cloudAPI.subscribeToDevice(this.deviceId);
 
-      // Optionally connect to realtime WebSocket for second-by-second updates
-      if (this.getSetting('enable_realtime') === true) {
-        const threePhases = this.getSetting('number_of_phases') === 3;
-        await this.cloudAPI.connectRealtimeWebSocket(this.deviceId, threePhases);
-      }
+      // Note: Realtime WebSocket (1-second updates) is not used
+      // to avoid potential cloud-side issues and excessive update rates
 
       // Mark device as available
       await this.setAvailable();
@@ -159,6 +166,7 @@ class CloudP1Device extends Device {
     // Handle full device updates
     this.cloudAPI.on('device_update', (deviceData) => {
       if (deviceData.device === this.deviceId) {
+        this.log('[MAIN WS] Full device update received');
         this.handleDeviceUpdate(deviceData);
       }
     });
@@ -166,14 +174,8 @@ class CloudP1Device extends Device {
     // Handle incremental updates (JSON patches)
     this.cloudAPI.on('device_patch', (patchData) => {
       if (patchData.deviceId === this.deviceId) {
+        if (debug) this.log('[MAIN WS] JSON patch received');
         this.handleDeviceUpdate(patchData.state);
-      }
-    });
-
-    // Handle realtime power updates (if enabled)
-    this.cloudAPI.on('realtime_power', (powerData) => {
-      if (powerData.deviceId === this.deviceId) {
-        this.handleRealtimePower(powerData);
       }
     });
 
@@ -199,6 +201,10 @@ class CloudP1Device extends Device {
   handleDeviceUpdate(deviceData) {
     try {
       this.lastUpdate = Date.now();
+      
+      // Monitor update rate and potentially unsubscribe if spam detected
+      //this.monitorUpdateRate();
+      
       const state = deviceData.state;
 
       if (!state) {
@@ -282,7 +288,7 @@ class CloudP1Device extends Device {
         this.setSettings({ wifi_strength: deviceData.wifi_strength }).catch(this.error);
       }
 
-      //this.log('Device updated successfully');
+      if (debug) this.log('Device updated successfully');
 
     } catch (error) {
       this.error('Failed to handle device update:', error);
@@ -290,30 +296,49 @@ class CloudP1Device extends Device {
   }
 
   /**
-   * Handle realtime power updates (every second)
+   * Monitor update rate and stop spam
    */
-  handleRealtimePower(powerData) {
-    try {
-      // Update main power measurement
-      if (powerData.wattage !== undefined) {
-        this.setCapabilityValue('measure_power', powerData.wattage).catch(this.error);
-      }
+  monitorUpdateRate() {
+    // Increment update counter
+    this.updateCount++;
 
-      // Update phase-specific power if available
-      if (powerData.wattages) {
-        if (powerData.wattages.l1 !== undefined) {
-          this.setCapabilityValue('measure_power.l1', powerData.wattages.l1).catch(this.error);
+    // Start timer on first update
+    if (!this.updateRateTimer) {
+      this.updateRateTimer = setTimeout(() => {
+        // Check if we exceeded threshold
+        if (this.updateCount > this.updateRateThreshold && !this.spamDetected) {
+          this.spamDetected = true;
+          const updatesPerSecond = (this.updateCount / (this.updateRateWindow / 1000)).toFixed(2);
+          this.log(`⚠️ Excessive update rate detected: ${this.updateCount} updates in ${this.updateRateWindow/1000}s (${updatesPerSecond}/s)`);
+          this.log('Unsubscribing from device to stop spam. Will retry in 60 seconds...');
+          
+          // Unsubscribe from this device to stop the updates
+          if (this.cloudAPI) {
+            this.cloudAPI.unsubscribeFromDevice(this.deviceId);
+          }
+          
+          // Set warning
+          this.setWarning('Excessive updates detected. Paused for 60 seconds.').catch(this.error);
+          
+          // Resubscribe after 60 seconds
+          setTimeout(() => {
+            this.log('Resubscribing to device after spam cooldown...');
+            if (this.cloudAPI) {
+              // Re-add to subscribed devices set
+              this.cloudAPI.subscribedDevices.add(this.deviceId);
+              // Send subscribe message
+              this.cloudAPI._sendSubscribeMessage(this.deviceId);
+            }
+            this.spamDetected = false;
+            this.spamLogged = false;
+            this.unsetWarning().catch(this.error);
+          }, 60000); // 60 seconds
         }
-        if (powerData.wattages.l2 !== undefined) {
-          this.setCapabilityValue('measure_power.l2', powerData.wattages.l2).catch(this.error);
-        }
-        if (powerData.wattages.l3 !== undefined) {
-          this.setCapabilityValue('measure_power.l3', powerData.wattages.l3).catch(this.error);
-        }
-      }
-
-    } catch (error) {
-      this.error('Failed to handle realtime power update:', error);
+        
+        // Reset counter
+        this.updateCount = 0;
+        this.updateRateTimer = null;
+      }, this.updateRateWindow);
     }
   }
 
@@ -334,7 +359,18 @@ class CloudP1Device extends Device {
       if (timeSinceUpdate > maxStaleTime) {
         this.log('Data appears stale, marking device as unavailable');
         this.setUnavailable('No recent data from cloud');
+
+        // Forceer een harde WebSocket reset
+        if (this.cloudAPI && this.cloudAPI.mainWs) {
+          this.log('Data stale → forcing WebSocket reconnect');
+          try {
+            this.cloudAPI.mainWs.terminate(); // hard close
+          } catch (err) {
+            this.error('Failed to terminate WS:', err);
+          }
+        }
       }
+
     }, 60000); // Check every minute
   }
 
@@ -387,16 +423,6 @@ class CloudP1Device extends Device {
       }
       await this.connectToCloud();
     }
-
-    // If realtime setting changed
-    if (changedKeys.includes('enable_realtime')) {
-      if (newSettings.enable_realtime && this.cloudAPI) {
-        const threePhases = this.getSetting('number_of_phases') === 3;
-        await this.cloudAPI.connectRealtimeWebSocket(this.deviceId, threePhases);
-      } else if (this.cloudAPI && this.cloudAPI.realtimeWs) {
-        this.cloudAPI.realtimeWs.close();
-      }
-    }
   }
 
   /**
@@ -412,9 +438,13 @@ class CloudP1Device extends Device {
   async onDeleted() {
     this.log('CloudP1Device has been deleted');
 
-    // Clean up
+    // Clean up timers
     if (this.staleDataTimeout) {
       clearInterval(this.staleDataTimeout);
+    }
+    
+    if (this.updateRateTimer) {
+      clearTimeout(this.updateRateTimer);
     }
 
     if (this.cloudAPI) {

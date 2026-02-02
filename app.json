@@ -2422,56 +2422,6 @@
               }
             }
           ]
-        },
-        {
-          "type": "group",
-          "label": {
-            "en": "Device Settings",
-            "nl": "Apparaat Instellingen"
-          },
-          "children": [
-            {
-              "id": "enable_realtime",
-              "type": "checkbox",
-              "label": {
-                "en": "Enable real-time updates (1 second interval)",
-                "nl": "Schakel real-time updates in (1 seconde interval)"
-              },
-              "value": false,
-              "hint": {
-                "en": "Receive power updates every second instead of every 40 seconds. May increase data usage.",
-                "nl": "Ontvang stroomverbruik updates elke seconde in plaats van elke 40 seconden. Kan dataverbruik verhogen."
-              }
-            },
-            {
-              "id": "number_of_phases",
-              "type": "number",
-              "label": {
-                "en": "Number of phases",
-                "nl": "Aantal fasen"
-              },
-              "value": 1,
-              "min": 1,
-              "max": 3,
-              "hint": {
-                "en": "Number of electrical phases (1 or 3)",
-                "nl": "Aantal elektrische fasen (1 of 3)"
-              }
-            },
-            {
-              "id": "wifi_strength",
-              "type": "number",
-              "label": {
-                "en": "WiFi Signal Strength",
-                "nl": "WiFi Signaalsterkte"
-              },
-              "value": 0,
-              "hint": {
-                "en": "Current WiFi signal strength (updated automatically)",
-                "nl": "Huidige WiFi signaalsterkte (automatisch bijgewerkt)"
-              }
-            }
-          ]
         }
       ],
       "id": "cloud_p1"
