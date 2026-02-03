@@ -18,7 +18,7 @@
 const { Device } = require('homey');
 const HomeWizardCloudAPI = require('../../lib/homewizard-cloud-api');
 
-const debug = false;
+const debug = true;
 
 class CloudP1Device extends Device {
 
@@ -69,6 +69,7 @@ class CloudP1Device extends Device {
     const requiredCapabilities = [
       'measure_power',
       'meter_power',
+      'meter_power.returned',
       'meter_power.peak',
       'meter_power.offpeak',
       'meter_power.producedPeak',
@@ -243,6 +244,7 @@ class CloudP1Device extends Device {
       
       this.setCapabilityValue('meter_power.producedPeak', exportTariff1).catch(this.error);
       this.setCapabilityValue('meter_power.producedOffpeak', exportTariff2).catch(this.error);
+      this.setCapabilityValue('meter_power.returned', exportTariff1 + exportTariff2).catch(this.error);
 
       // Update voltage and current (L1)
       if (state.active_voltage_l1_v !== null && state.active_voltage_l1_v !== undefined) {
@@ -351,10 +353,10 @@ class CloudP1Device extends Device {
       clearTimeout(this.staleDataTimeout);
     }
 
-    // Check for stale data every 2 minutes
+    // Check for stale data every 3 minutes
     this.staleDataTimeout = setInterval(() => {
       const timeSinceUpdate = Date.now() - (this.lastUpdate || 0);
-      const maxStaleTime = 120000; // 2 minutes
+      const maxStaleTime = 180000; // 3 minutes
 
       if (timeSinceUpdate > maxStaleTime) {
         this.log('Data appears stale, marking device as unavailable');

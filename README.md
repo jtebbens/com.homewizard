@@ -9,6 +9,7 @@ v3.13.4
 * Homewizard Legacy Device updates (CSS, flow and language) - thanks smarthomesvan
 * Watermeter - battery based (via cloud hwenergy only 4x updates a day)
 * P1 meters can now be connected via HomeWizard cloud API (Based on cloud API research by Sven Serlier)
+* P1 (apiv2) - tariff trigger fix
 
 NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
 If Homewizard Energy is down or is under maintenance or change their hwenergy web frontend you get errors or incorrect data.
