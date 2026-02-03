@@ -189,12 +189,20 @@ async function applyMeasurementCapabilities(device, m) {
     // Collect all capability updates as promises
     const tasks = [];
 
-    for (const [capability, value] of Object.entries(mappings)) {
+    for (const [capability, valueRaw] of Object.entries(mappings)) {
+      let value = valueRaw;
+
+      // Normalize tariff (critical for triggers)
+      if (capability === 'tariff' && value != null) {
+        value = Number(value);
+      }
+
       const cur = device.getCapabilityValue(capability);
       if (cur !== value) {
         tasks.push(updateCapability(device, capability, value ?? null));
       }
     }
+
 
     // Run all updates in parallel
     await Promise.allSettled(tasks);
@@ -1320,11 +1328,16 @@ _measurementFlows(m, now) {
       this.flowTriggerExport(this, m.energy_export_kwh);
     }
 
-    if (typeof m.active_tariff === 'number' &&
-        this._triggerFlowPrevious.tariff !== m.active_tariff) {
-      this._triggerFlowPrevious.tariff = m.active_tariff;
-      this.flowTriggerTariff(this, m.active_tariff);
+    if (typeof m.tariff !== 'undefined') {
+      const newTariff = Number(m.tariff);
+      const prevTariff = this._triggerFlowPrevious.tariff;
+
+      if (prevTariff !== newTariff) {
+        this._triggerFlowPrevious.tariff = newTariff;
+        this.flowTriggerTariff(this, newTariff);
+      }
     }
+
 
     this._lastFlowTrigger = now;
   }

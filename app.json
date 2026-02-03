@@ -2291,6 +2291,7 @@
       "capabilities": [
         "measure_power",
         "meter_power",
+        "meter_power.returned",
         "meter_power.peak",
         "meter_power.offpeak",
         "meter_power.producedPeak",
@@ -2324,6 +2325,12 @@
             "nl": "Productie tarief 2"
           }
         },
+        "meter_power.returned": {
+          "title": {
+            "en": "Returned Power",
+            "nl": "Teruggeleverde Energie"
+          }
+        },
         "measure_voltage.l1": {
           "title": {
             "en": "Voltage L1",
@@ -2338,7 +2345,9 @@
         }
       },
       "energy": {
-        "cumulative": true
+        "cumulative": true,
+        "cumulativeImportedCapability": "meter_power",
+        "cumulativeExportedCapability": "meter_power.returned"
       },
       "platforms": [
         "local"
