@@ -943,5 +943,8 @@
   },
   "3.13.4": {
     "en": "Process error account not allowed to publish cloud app"
+  },
+  "3.13.5": {
+    "en": "Cloud_p1 (experimental release) and tariff trigger fix (energy_v2)"
   }
 }
