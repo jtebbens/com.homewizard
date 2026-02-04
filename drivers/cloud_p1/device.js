@@ -18,7 +18,7 @@
 const { Device } = require('homey');
 const HomeWizardCloudAPI = require('../../lib/homewizard-cloud-api');
 
-const debug = true;
+const debug = false;
 
 class CloudP1Device extends Device {
 
