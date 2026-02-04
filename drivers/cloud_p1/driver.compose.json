@@ -4,18 +4,9 @@
     "nl": "P1 Meter (Cloud)"
   },
   "class": "sensor",
-  "capabilities": [
-    "measure_power",
-    "meter_power",
-    "meter_power.returned",
-    "meter_power.peak",
-    "meter_power.offpeak",
-    "meter_power.producedPeak",
-    "meter_power.producedOffpeak",
-    "measure_voltage.l1",
-    "measure_current.l1",
-    "meter_gas"
-  ],
+
+  "capabilities": [],
+
   "capabilitiesOptions": {
     "meter_power.peak": {
       "title": {
@@ -60,32 +51,30 @@
       }
     }
   },
+
   "energy": {
     "cumulative": true,
     "cumulativeImportedCapability": "meter_power",
     "cumulativeExportedCapability": "meter_power.returned"
   },
-  "platforms": [
-    "local"
-  ],
-  "connectivity": [
-    "cloud"
-  ],
+
+  "platforms": ["local"],
+  "connectivity": ["cloud"],
+
   "images": {
     "small": "{{driverAssetsPath}}/images/small.png",
     "large": "{{driverAssetsPath}}/images/large.png",
     "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
   },
+
   "pair": [
-    {
-      "id": "login"
-    }
+    { "id": "login" }
   ],
+
   "repair": [
-    {
-      "id": "login"
-    }
+    { "id": "login" }
   ],
+
   "settings": [
     {
       "type": "group",
@@ -97,10 +86,7 @@
         {
           "id": "cloud_email",
           "type": "text",
-          "label": {
-            "en": "Email",
-            "nl": "E-mail"
-          },
+          "label": { "en": "Email", "nl": "E-mail" },
           "value": "",
           "hint": {
             "en": "Your HomeWizard Energy account email",
@@ -110,10 +96,7 @@
         {
           "id": "cloud_password",
           "type": "password",
-          "label": {
-            "en": "Password",
-            "nl": "Wachtwoord"
-          },
+          "label": { "en": "Password", "nl": "Wachtwoord" },
           "value": "",
           "hint": {
             "en": "Your HomeWizard Energy account password",
@@ -123,10 +106,7 @@
         {
           "id": "location_id",
           "type": "text",
-          "label": {
-            "en": "Location ID",
-            "nl": "Locatie ID"
-          },
+          "label": { "en": "Location ID", "nl": "Locatie ID" },
           "value": "",
           "hint": {
             "en": "Internal location identifier",
@@ -136,10 +116,7 @@
         {
           "id": "location_name",
           "type": "text",
-          "label": {
-            "en": "Location Name",
-            "nl": "Locatie Naam"
-          },
+          "label": { "en": "Location Name", "nl": "Locatie Naam" },
           "value": "",
           "hint": {
             "en": "Name of your home in HomeWizard Energy app",
