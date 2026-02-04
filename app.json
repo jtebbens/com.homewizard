@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.5",
+  "version": "3.13.6",
   "platforms": [
     "local"
   ],
@@ -2288,18 +2288,7 @@
         "nl": "P1 Meter (Cloud)"
       },
       "class": "sensor",
-      "capabilities": [
-        "measure_power",
-        "meter_power",
-        "meter_power.returned",
-        "meter_power.peak",
-        "meter_power.offpeak",
-        "meter_power.producedPeak",
-        "meter_power.producedOffpeak",
-        "measure_voltage.l1",
-        "measure_current.l1",
-        "meter_gas"
-      ],
+      "capabilities": [],
       "capabilitiesOptions": {
         "meter_power.peak": {
           "title": {
