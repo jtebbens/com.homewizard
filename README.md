@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.13.4
+v3.13.5
 
 * Homewizard Legacy Device updates (CSS, flow and language) - thanks smarthomesvan
 * Watermeter - battery based (via cloud hwenergy only 4x updates a day)
