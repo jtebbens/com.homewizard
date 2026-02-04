@@ -949,5 +949,8 @@
   },
   "3.13.6": {
     "en": "Bugfix: capability_already_exists (cloud_p1)"
+  },
+  "3.13.7": {
+    "en": "Addtional check on capability_already_exists error"
   }
 }
