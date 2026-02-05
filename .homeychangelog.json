@@ -952,5 +952,8 @@
   },
   "3.13.7": {
     "en": "Addtional check on capability_already_exists error"
+  },
+  "3.13.8": {
+    "en": "Plugin Battery state of charge icon added as tile for dashboard"
   }
 }
