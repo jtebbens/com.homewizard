@@ -19,18 +19,14 @@ const PHASE_CAPS = [
 ];
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  const incomingSignal = options.signal;
-  let controller;
-  let timer;
-
-  if (!incomingSignal) {
-    controller = new AbortController();
-    options = { ...options, signal: controller.signal };
-    timer = setTimeout(() => controller.abort(), timeoutMs);
-  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
     return res;
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -38,9 +34,10 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
     }
     throw err;
   } finally {
-    if (timer) clearTimeout(timer);
+    clearTimeout(timer);
   }
 }
+
 
 
 
@@ -78,6 +75,25 @@ async function updateCapability(device, capability, value) {
       return;
     }
     device.error(`❌ Failed updateCapability("${capability}")`, err);
+  }
+}
+
+
+/**
+ * Safe add capability helper — avoids race 409 errors
+ */
+async function safeAddCapability(device, capability) {
+  try {
+    if (!device.hasCapability(capability)) {
+      await device.addCapability(capability);
+      device.log(`➕ Safely added capability "${capability}"`);
+    }
+  } catch (err) {
+    if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+      device.log(`Capability already exists: ${capability} — ignoring`);
+      return;
+    }
+    throw err;
   }
 }
 
@@ -150,7 +166,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     if (this._phases === 3) {
       for (const cap of PHASE_CAPS) {
         if (!this.hasCapability(cap)) {
-          await this.addCapability(cap).catch(this.error);
+          await safeAddCapability(this, cap).catch(this.error);
         }
       }
     }
@@ -576,7 +592,7 @@ async onPoll() {
 
         for (const cap of PHASE_CAPS) {
           if (!this.hasCapability(cap)) {
-            await this.addCapability(cap).catch(this.error);
+              await safeAddCapability(this, cap).catch(this.error);
           }
         }
 
@@ -1030,7 +1046,7 @@ async onPoll() {
         if (this._phases === 3) {
           for (const cap of PHASE_CAPS) {
             if (!this.hasCapability(cap)) {
-              await this.addCapability(cap).catch(this.error);
+              await safeAddCapability(this, cap).catch(this.error);
             }
           }
         }

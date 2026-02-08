@@ -283,8 +283,16 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
    */
   async _updateCapabilities() {
     if (!this.hasCapability('identify')) {
-      await this.addCapability('identify').catch(this.error);
-      this.log(`created capability identify for ${this.getName()}`);
+      try {
+        await this.addCapability('identify');
+        this.log(`created capability identify for ${this.getName()}`);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          this.log(`Capability already exists: identify — ignoring`);
+        } else {
+          this.error(err);
+        }
+      }
     }
 
     // Remove capabilities that are not needed
@@ -324,7 +332,15 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
     // Create a new capability if it doesn't exist
     if (!this.hasCapability(capability)) {
-      await this.addCapability(capability).catch(this.error);
+      try {
+        await this.addCapability(capability);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          this.log(`Capability already exists: ${capability} — ignoring`);
+        } else {
+          this.error(err);
+        }
+      }
     }
 
     // Set the capability value

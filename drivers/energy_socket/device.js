@@ -5,18 +5,14 @@ const fetch = require('node-fetch');
 const http = require('http');
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  const incomingSignal = options.signal;
-  let controller;
-  let timer;
-
-  if (!incomingSignal) {
-    controller = new AbortController();
-    options = { ...options, signal: controller.signal };
-    timer = setTimeout(() => controller.abort(), timeoutMs);
-  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
     return res;
   } catch (err) {
     if (err.name === 'AbortError') {
@@ -24,7 +20,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
     }
     throw err;
   } finally {
-    if (timer) clearTimeout(timer);
+    clearTimeout(timer);
   }
 }
 
@@ -52,8 +48,16 @@ async function updateCapability(device, capability, value) {
 
     // --- ADD IF MISSING ---
     if (!device.hasCapability(capability)) {
-      await device.addCapability(capability);
-      device.log(`➕ Added capability "${capability}"`);
+      try {
+        await device.addCapability(capability);
+        device.log(`➕ Added capability "${capability}"`);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          device.log(`Capability already exists: ${capability} — ignoring`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     // --- UPDATE ---

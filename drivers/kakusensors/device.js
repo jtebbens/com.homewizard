@@ -41,7 +41,15 @@ class HomeWizardKakusensors extends Homey.Device {
       // Motion
       if (sensorType === 'motion') {
         if (!this.hasCapability('alarm_motion')) {
-          await this.addCapability('alarm_motion');
+          try {
+            await this.addCapability('alarm_motion');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_motion — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_motion') !== status) {
           await this.setCapabilityValue('alarm_motion', status);
@@ -51,7 +59,15 @@ class HomeWizardKakusensors extends Homey.Device {
       // Smoke
       if (sensorType === 'smoke' || sensorType === 'smoke868') {
         if (!this.hasCapability('alarm_smoke')) {
-          await this.addCapability('alarm_smoke');
+          try {
+            await this.addCapability('alarm_smoke');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_smoke — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_smoke') !== status) {
           await this.setCapabilityValue('alarm_smoke', status);
@@ -61,7 +77,15 @@ class HomeWizardKakusensors extends Homey.Device {
       // Water leakage
       if (sensorType === 'leakage') {
         if (!this.hasCapability('alarm_water')) {
-          await this.addCapability('alarm_water');
+          try {
+            await this.addCapability('alarm_water');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_water — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_water') !== status) {
           await this.setCapabilityValue('alarm_water', status);
@@ -71,7 +95,15 @@ class HomeWizardKakusensors extends Homey.Device {
       // Contact
       if (sensorType === 'contact' || sensorType === 'contact868') {
         if (!this.hasCapability('alarm_contact')) {
-          await this.addCapability('alarm_contact');
+          try {
+            await this.addCapability('alarm_contact');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_contact — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_contact') !== status) {
           await this.setCapabilityValue('alarm_contact', status);
@@ -81,7 +113,15 @@ class HomeWizardKakusensors extends Homey.Device {
       // Doorbell
       if (sensorType === 'doorbell') {
         if (!this.hasCapability('alarm_generic')) {
-          await this.addCapability('alarm_generic');
+          try {
+            await this.addCapability('alarm_generic');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_generic — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_generic') !== status) {
           await this.setCapabilityValue('alarm_generic', status);
@@ -92,7 +132,15 @@ class HomeWizardKakusensors extends Homey.Device {
       if (entry.lowBattery !== undefined) {
         const low = entry.lowBattery === 'yes';
         if (!this.hasCapability('alarm_battery')) {
-          await this.addCapability('alarm_battery');
+          try {
+            await this.addCapability('alarm_battery');
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log('Capability already exists: alarm_battery — ignoring');
+            } else {
+              throw err;
+            }
+          }
         }
         if (this.getCapabilityValue('alarm_battery') !== low) {
           await this.setCapabilityValue('alarm_battery', low);

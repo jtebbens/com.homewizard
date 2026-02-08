@@ -114,11 +114,14 @@ class WebSocketManager {
 
     this._timers = new Set();
     this.pongReceived = true;
+
+    this._stopped = false; // NEW: global stopped flag
   }
 
   _safeSetTimeout(fn, ms) {
     const id = setTimeout(() => {
       this._timers.delete(id);
+      if (this._stopped) return;
       fn();
     }, ms);
     this._timers.add(id);
@@ -126,7 +129,10 @@ class WebSocketManager {
   }
 
   _safeSetInterval(fn, ms) {
-    const id = setInterval(fn, ms);
+    const id = setInterval(() => {
+      if (this._stopped) return;
+      fn();
+    }, ms);
     this._timers.add(id);
     return id;
   }
@@ -145,6 +151,8 @@ class WebSocketManager {
    * and expects the system response structure before opening the WS.
    */
   async start() {
+    if (this._stopped) return;
+
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
       this.log('⏸️ WebSocket is already connecting — skipping start');
       return;
@@ -209,6 +217,7 @@ class WebSocketManager {
     this.ws.removeAllListeners('pong');
 
     this._safeSend = (obj) => {
+      if (this._stopped) return false;
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
       try {
         const buffered = this.ws._socket?.bufferSize || this.ws.bufferedAmount || 0;
@@ -227,6 +236,8 @@ class WebSocketManager {
 
     // WS open handler: authorize and setup heartbeat monitor
     this.ws.on('open', () => {
+      if (this._stopped) return;
+
       this.wsActive = true;
       this.wsAuthorized = false;
       this.reconnectAttempts = 0;
@@ -238,12 +249,14 @@ class WebSocketManager {
 
       this.pongReceived = true;
       this.ws.on('pong', () => {
+        if (this._stopped) return;
         this.pongReceived = true;
         this.lastMeasurementAt = Date.now();
       });
 
       // Heartbeat + zombie‑detectie — minder agressief
       this._safeSetInterval(() => {
+        if (this._stopped) return;
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
         const now = Date.now();
@@ -270,6 +283,7 @@ class WebSocketManager {
       // Measurement flush (2s)
       const updateInterval = this.getSetting('update_interval') || 2000;
       this._safeSetInterval(() => {
+        if (this._stopped) return;
         if (!this.pendingMeasurement) return;
 
         const data = this.pendingMeasurement;
@@ -285,6 +299,8 @@ class WebSocketManager {
 
       // Buffered system + batteries flush (10s)
       this._safeSetInterval(() => {
+        if (this._stopped) return;
+
         if (this.pendingSystem) {
           const sys = this.pendingSystem;
           this.pendingSystem = null;
@@ -310,6 +326,7 @@ class WebSocketManager {
       let retries = 0;
 
       const tryAuthorize = () => {
+        if (this._stopped) return;
         if (!this.ws) return;
 
         if (this.ws.readyState === WebSocket.OPEN) {
@@ -329,6 +346,8 @@ class WebSocketManager {
     });
 
     this.ws.on('message', (msg) => {
+      if (this._stopped) return;
+
       const devId = this.device?.getData?.().id || 'unknown-device';
       this._eventsThisSecond++;
 
@@ -378,6 +397,8 @@ class WebSocketManager {
 
     // Error handler
     this.ws.on('error', (err) => {
+      if (this._stopped) return;
+
       this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
       const devId = this.device?.getData?.().id || 'unknown-device';
       wsDebug.log('error', devId, `${err.code || ''} ${err.message || err}`);
@@ -387,6 +408,8 @@ class WebSocketManager {
     });
 
     this.ws.on('close', () => {
+      if (this._stopped) return;
+
       this.log('🔌 WebSocket closed — retrying');
       const devId = this.device?.getData?.().id || 'unknown-device';
       wsDebug.log('close', devId, 'WebSocket closed');
@@ -397,6 +420,8 @@ class WebSocketManager {
   }
 
   _scheduleReconnect() {
+    if (this._stopped) return;
+
     const devId = this.device?.getData?.().id || 'unknown-device';
 
     if (this.reconnecting) {
@@ -421,6 +446,7 @@ class WebSocketManager {
     wsDebug.log('reconnect_scheduled', devId, `${Math.round(jitter / 1000)}s`);
 
     this._safeSetTimeout(() => {
+      if (this._stopped) return;
       this.reconnecting = false;
       wsDebug.log('reconnect_execute', devId, 'Restarting WebSocket');
       this.restartWebSocket();
@@ -428,9 +454,13 @@ class WebSocketManager {
   }
 
   stop() {
+    this._stopped = true;
+
     this._clearTimers();
+
     if (this.ws) {
       try {
+        this.ws.removeAllListeners();
         if (this.ws.readyState === WebSocket.OPEN) this.ws.close();
         else this.ws.terminate();
       } catch (err) {
@@ -438,10 +468,13 @@ class WebSocketManager {
       }
       this.ws = null;
       this.wsActive = false;
+      this.wsAuthorized = false;
     }
   }
 
   _subscribeTopics() {
+    if (this._stopped) return;
+
     ['system', 'measurement', 'batteries'].forEach((topic) => {
       this._safeSend({ type: 'subscribe', data: topic });
     });
@@ -451,6 +484,8 @@ class WebSocketManager {
 
   _startHeartbeatMonitor() {
     this._safeSetInterval(() => {
+      if (this._stopped) return;
+
       const now = Date.now();
 
       if (!this.wsAuthorized) return;
@@ -468,10 +503,12 @@ class WebSocketManager {
   }
 
   isConnected() {
-    return this.ws && this.ws.readyState === WebSocket.OPEN;
+    return !this._stopped && this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
   restartWebSocket() {
+    if (this._stopped) return;
+
     const devId = this.device?.getData?.().id || 'unknown-device';
 
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {

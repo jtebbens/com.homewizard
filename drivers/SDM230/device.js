@@ -114,7 +114,15 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
     for (const cap of requiredCaps) {
       if (!this.hasCapability(cap)) {
-        await this.addCapability(cap).catch(this.error);
+        try {
+          await this.addCapability(cap);
+        } catch (err) {
+          if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+            this.log(`Capability already exists: ${cap} — ignoring`);
+          } else {
+            this.error(err);
+          }
+        }
       }
     }
   }
