@@ -40,8 +40,17 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
     }
 
     // Add meter_water.daily capability if it doesn't exist
+    // Safe add: guard against race / 409 errors
     if (!this.hasCapability('meter_water.daily')) {
-      await this.addCapability('meter_water.daily');
+      try {
+        await this.addCapability('meter_water.daily');
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          this.log('Capability already exists: meter_water.daily — ignoring');
+        } else {
+          throw err;
+        }
+      }
     }
     
     // Initial data fetch

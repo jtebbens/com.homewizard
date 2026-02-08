@@ -150,6 +150,24 @@
       }
     }
   },
+  "widgets": [
+    {
+      "id": "battery_soc_widget",
+      "name": {
+        "en": "Battery State of Charge",
+        "nl": "Batterij laadniveau"
+      },
+      "description": {
+        "en": "Display battery percentage charge level",
+        "nl": "Toon batterij laadpercentage"
+      },
+      "template": "generic",
+      "class": "battery",
+      "capabilities": [
+        "measure_battery"
+      ]
+    }
+  ],
   "pair": [
     {
       "id": "list_devices",

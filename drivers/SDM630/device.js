@@ -56,8 +56,16 @@ async function updateCapability(device, capability, value) {
 
     // --- ADD IF MISSING ---
     if (!device.hasCapability(capability)) {
-      await device.addCapability(capability);
-      device.log(`➕ Added capability "${capability}"`);
+      try {
+        await device.addCapability(capability);
+        device.log(`➕ Added capability "${capability}"`);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          device.log(`Capability already exists: ${capability} — ignoring`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     // --- UPDATE ---

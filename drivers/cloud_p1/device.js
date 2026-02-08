@@ -81,9 +81,15 @@ class CloudP1Device extends Device {
 
     for (const capability of requiredCapabilities) {
       if (!this.hasCapability(capability)) {
-        await this.addCapability(capability).catch(err => {
-          this.error(`Failed to add capability ${capability}:`, err);
-        });
+        try {
+          await this.addCapability(capability);
+        } catch (err) {
+          if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+            this.log(`Capability already exists: ${capability} — ignoring`);
+          } else {
+            this.error(`Failed to add capability ${capability}:`, err);
+          }
+        }
       }
     }
 
@@ -102,9 +108,15 @@ class CloudP1Device extends Device {
 
       for (const capability of phaseCapabilities) {
         if (!this.hasCapability(capability)) {
-          await this.addCapability(capability).catch(err => {
-            this.error(`Failed to add capability ${capability}:`, err);
-          });
+          try {
+            await this.addCapability(capability);
+          } catch (err) {
+            if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+              this.log(`Capability already exists: ${capability} — ignoring`);
+            } else {
+              this.error(`Failed to add capability ${capability}:`, err);
+            }
+          }
         }
       }
     }

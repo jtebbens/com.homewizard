@@ -66,8 +66,16 @@ async function updateCapability(device, capability, value) {
 
     // --- ADD IF MISSING ---
     if (!device.hasCapability(capability)) {
-      await device.addCapability(capability);
-      device.log(`➕ Added capability "${capability}"`);
+      try {
+        await device.addCapability(capability);
+        device.log(`➕ Added capability "${capability}"`);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          device.log(`Capability already exists: ${capability} — ignoring`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     // --- UPDATE ---
@@ -81,6 +89,25 @@ async function updateCapability(device, capability, value) {
       return;
     }
     device.error(`❌ Failed updateCapability("${capability}")`, err);
+  }
+}
+
+
+/**
+ * Safe add capability helper — avoids race 409 errors
+ */
+async function safeAddCapability(device, capability) {
+  try {
+    if (!device.hasCapability(capability)) {
+      await device.addCapability(capability);
+      device.log(`➕ Safely added capability "${capability}"`);
+    }
+  } catch (err) {
+    if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+      device.log(`Capability already exists: ${capability} — ignoring`);
+      return;
+    }
+    throw err;
   }
 }
 
@@ -120,7 +147,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   try {
     const res = await fetch(url, {
       ...options,
-      signal: controller.signal,
+      signal: controller.signal
     });
     return res;
   } catch (err) {
@@ -1202,7 +1229,7 @@ async _handleExternalMeters(external) {
 
   // GAS CAPABILITY MANAGEMENT (structural)
   if (gasExists && !this.hasCapability('meter_gas')) {
-    tasks.push(this.addCapability('meter_gas').catch(this.error));
+    tasks.push(safeAddCapability(this, 'meter_gas').catch(this.error));
   }
   if (!gasExists && this.hasCapability('meter_gas')) {
     tasks.push(this.removeCapability('meter_gas').catch(this.error));
@@ -1216,7 +1243,7 @@ async _handleExternalMeters(external) {
 
   // WATER CAPABILITY MANAGEMENT (structural)
   if (waterExists && !this.hasCapability('meter_water')) {
-    tasks.push(this.addCapability('meter_water').catch(this.error));
+    tasks.push(safeAddCapability(this, 'meter_water').catch(this.error));
   }
   if (!waterExists && this.hasCapability('meter_water')) {
     tasks.push(this.removeCapability('meter_water').catch(this.error));
@@ -1438,10 +1465,7 @@ async _ensureBatteryCapabilities() {
 
   for (const cap of caps) {
     try {
-      if (!this.hasCapability(cap)) {
-        await this.addCapability(cap);
-        this.log(`✔ Capability added: ${cap}`);
-      }
+      await safeAddCapability(this, cap);
     } catch (err) {
       this.error(`❌ Failed to ensure capability "${cap}":`, err);
     }
@@ -1629,7 +1653,6 @@ async _handleBatteries(data) {
     }
   }
 
-
 async onDiscoveryAvailable(discoveryResult) {
   const newIP = discoveryResult.address;
 
@@ -1762,12 +1785,12 @@ async onDiscoveryLastSeenChanged(discoveryResult) {
    */
   async _updateCapabilities() {
     if (!this.hasCapability('identify')) {
-      await this.addCapability('identify').catch(this.error);
+      await safeAddCapability(this, 'identify').catch(this.error);
       console.log(`created capability identify for ${this.getName()}`);
     }
 
     if (!this.hasCapability('measure_power')) {
-      await this.addCapability('measure_power').catch(this.error);
+      await safeAddCapability(this, 'measure_power').catch(this.error);
       console.log(`created capability measure_power for ${this.getName()}`);
     }
 

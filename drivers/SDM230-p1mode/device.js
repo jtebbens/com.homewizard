@@ -48,8 +48,16 @@ async function updateCapability(device, capability, value) {
 
     // --- ADD IF MISSING ---
     if (!device.hasCapability(capability)) {
-      await device.addCapability(capability);
-      device.log(`➕ Added capability "${capability}"`);
+      try {
+        await device.addCapability(capability);
+        device.log(`➕ Added capability "${capability}"`);
+      } catch (err) {
+        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+          device.log(`Capability already exists: ${capability} — ignoring`);
+        } else {
+          throw err;
+        }
+      }
     }
 
     // --- UPDATE ---
@@ -105,7 +113,15 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
     for (const cap of requiredCaps) {
       if (!this.hasCapability(cap)) {
-        await this.addCapability(cap).catch(this.error);
+        try {
+          await this.addCapability(cap);
+        } catch (err) {
+          if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+            this.log(`Capability already exists: ${cap} — ignoring`);
+          } else {
+            this.error(err);
+          }
+        }
       }
     }
 
