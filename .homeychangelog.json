@@ -955,5 +955,8 @@
   },
   "3.13.8": {
     "en": "Plugin Battery state of charge icon added as tile for dashboard"
+  },
+  "3.13.9": {
+    "en": "Battery-policy (virtual driver) - Experimental"
   }
 }
