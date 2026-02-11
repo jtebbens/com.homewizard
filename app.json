@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.8",
+  "version": "3.13.9",
   "platforms": [
     "local"
   ],
@@ -192,6 +192,123 @@
           }
         ],
         "tokens": []
+      },
+      {
+        "id": "policy_recommendation_changed",
+        "title": {
+          "en": "Recommendation changed"
+        },
+        "titleFormatted": {
+          "en": "Recommendation changed"
+        },
+        "hint": {
+          "en": "Triggers when the policy engine changes its recommendation"
+        },
+        "tokens": [
+          {
+            "name": "mode",
+            "type": "string",
+            "title": {
+              "en": "Mode"
+            },
+            "example": {
+              "en": "charge"
+            }
+          },
+          {
+            "name": "confidence",
+            "type": "number",
+            "title": {
+              "en": "Confidence"
+            },
+            "example": 75
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason"
+            },
+            "example": {
+              "en": "Strong sunlight expected"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "policy_mode_applied",
+        "title": {
+          "en": "Mode applied to battery"
+        },
+        "titleFormatted": {
+          "en": "Mode applied to battery"
+        },
+        "hint": {
+          "en": "Triggers when the policy engine applies a mode to the battery"
+        },
+        "tokens": [
+          {
+            "name": "mode",
+            "type": "string",
+            "title": {
+              "en": "Mode"
+            },
+            "example": {
+              "en": "discharge"
+            }
+          },
+          {
+            "name": "confidence",
+            "type": "number",
+            "title": {
+              "en": "Confidence"
+            },
+            "example": 85
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "policy_override_set",
+        "title": {
+          "en": "Manual override activated"
+        },
+        "titleFormatted": {
+          "en": "Manual override activated"
+        },
+        "hint": {
+          "en": "Triggers when manual override is set"
+        },
+        "tokens": [
+          {
+            "name": "duration",
+            "type": "number",
+            "title": {
+              "en": "Duration"
+            },
+            "example": 60
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
       },
       {
         "id": "tariff_changed",
@@ -897,6 +1014,124 @@
         "id": "check-battery-mode"
       },
       {
+        "id": "policy_is_enabled",
+        "title": {
+          "en": "Policy is !{{enabled|disabled}}"
+        },
+        "titleFormatted": {
+          "en": "Policy is !{{enabled|disabled}}"
+        },
+        "hint": {
+          "en": "Check if the policy engine is active"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "confidence_above",
+        "title": {
+          "en": "Confidence is above"
+        },
+        "titleFormatted": {
+          "en": "Confidence is above [[threshold]]"
+        },
+        "hint": {
+          "en": "Check if recommendation confidence exceeds threshold"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "threshold",
+            "type": "number",
+            "placeholder": {
+              "en": "70"
+            },
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": "recommended_mode_is",
+        "title": {
+          "en": "Recommended mode is"
+        },
+        "titleFormatted": {
+          "en": "Recommended mode is [[mode]]"
+        },
+        "hint": {
+          "en": "Check if current recommendation matches a specific mode"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "charge",
+                "label": {
+                  "en": "Charge"
+                }
+              },
+              {
+                "id": "discharge",
+                "label": {
+                  "en": "Discharge"
+                }
+              },
+              {
+                "id": "preserve",
+                "label": {
+                  "en": "Preserve"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sun_score_above",
+        "title": {
+          "en": "Sun score is above"
+        },
+        "titleFormatted": {
+          "en": "Sun score is above [[threshold]]"
+        },
+        "hint": {
+          "en": "Check if sunshine availability exceeds threshold"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "threshold",
+            "type": "number",
+            "placeholder": {
+              "en": "50"
+            },
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
         "id": "check_preset",
         "title": {
           "en": "Preset !{{is|isn't}}",
@@ -1157,6 +1392,265 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=SDM630_v2"
+          }
+        ]
+      },
+      {
+        "id": "enable_policy",
+        "title": {
+          "en": "Enable policy"
+        },
+        "titleFormatted": {
+          "en": "Enable policy"
+        },
+        "hint": {
+          "en": "Enable the battery policy engine"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "disable_policy",
+        "title": {
+          "en": "Disable policy"
+        },
+        "titleFormatted": {
+          "en": "Disable policy"
+        },
+        "hint": {
+          "en": "Disable the battery policy engine"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "set_policy_mode",
+        "title": {
+          "en": "Set policy mode to"
+        },
+        "titleFormatted": {
+          "en": "Set policy mode to [[mode]]"
+        },
+        "hint": {
+          "en": "Change the policy optimization mode"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "mode",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "eco",
+                "label": {
+                  "en": "Eco"
+                }
+              },
+              {
+                "id": "balanced",
+                "label": {
+                  "en": "Balanced"
+                }
+              },
+              {
+                "id": "aggressive",
+                "label": {
+                  "en": "Aggressive"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "enable_auto_apply",
+        "title": {
+          "en": "Enable auto-apply"
+        },
+        "titleFormatted": {
+          "en": "Enable auto-apply"
+        },
+        "hint": {
+          "en": "Automatically apply policy recommendations"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "disable_auto_apply",
+        "title": {
+          "en": "Disable auto-apply"
+        },
+        "titleFormatted": {
+          "en": "Disable auto-apply"
+        },
+        "hint": {
+          "en": "Stop automatically applying recommendations"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "set_override",
+        "title": {
+          "en": "Set manual override for"
+        },
+        "titleFormatted": {
+          "en": "Set manual override for [[duration]] minutes"
+        },
+        "hint": {
+          "en": "Prevent automatic policy changes for a duration"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "duration",
+            "type": "number",
+            "placeholder": {
+              "en": "60"
+            },
+            "min": 15,
+            "max": 1440,
+            "units": {
+              "en": "minutes"
+            }
+          }
+        ]
+      },
+      {
+        "id": "clear_override",
+        "title": {
+          "en": "Clear manual override"
+        },
+        "titleFormatted": {
+          "en": "Clear manual override"
+        },
+        "hint": {
+          "en": "Resume automatic policy management"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "force_policy_check",
+        "title": {
+          "en": "Run policy check now"
+        },
+        "titleFormatted": {
+          "en": "Run policy check now"
+        },
+        "hint": {
+          "en": "Force immediate policy recalculation"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "refresh_weather",
+        "title": {
+          "en": "Refresh weather forecast"
+        },
+        "titleFormatted": {
+          "en": "Refresh weather forecast"
+        },
+        "hint": {
+          "en": "Fetch latest weather data immediately"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
+        "id": "set_weather_override",
+        "title": {
+          "en": "Set weather override"
+        },
+        "titleFormatted": {
+          "en": "Set weather override to [[override]]"
+        },
+        "hint": {
+          "en": "Override the weather forecast for policy decisions"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "override",
+            "type": "dropdown",
+            "title": {
+              "en": "Weather condition"
+            },
+            "values": [
+              {
+                "id": "auto",
+                "title": {
+                  "en": "Auto (use forecast)"
+                }
+              },
+              {
+                "id": "sunny",
+                "title": {
+                  "en": "Sunny"
+                }
+              },
+              {
+                "id": "cloudy",
+                "title": {
+                  "en": "Cloudy"
+                }
+              },
+              {
+                "id": "rainy",
+                "title": {
+                  "en": "Rainy"
+                }
+              }
+            ]
           }
         ]
       },
@@ -2279,6 +2773,349 @@
           "unit": {
             "en": "s"
           }
+        }
+      ]
+    },
+    {
+      "id": "battery-policy",
+      "name": {
+        "en": "Battery Policy Manager"
+      },
+      "class": "other",
+      "capabilities": [
+        "policy_enabled",
+        "policy_mode",
+        "auto_apply",
+        "recommended_mode",
+        "sun_score",
+        "predicted_sun_hours",
+        "confidence_score",
+        "explanation_summary",
+        "battery_soc_mirror",
+        "grid_power_mirror",
+        "last_update",
+        "override_until",
+        "weather_override"
+      ],
+      "pair": [
+        {
+          "id": "select_battery",
+          "template": "list_devices",
+          "navigation": {
+            "next": "configure_policy"
+          },
+          "options": {
+            "singular": true,
+            "title": {
+              "en": "Select Battery Device"
+            },
+            "instruction": {
+              "en": "Select the HomeWizard battery device to manage"
+            }
+          }
+        },
+        {
+          "id": "configure_policy",
+          "template": "add_devices",
+          "navigation": {
+            "prev": "select_battery"
+          }
+        }
+      ],
+      "images": {
+        "large": "drivers/battery-policy/assets/images/large.png",
+        "small": "drivers/battery-policy/assets/images/small.png"
+      },
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Battery Device",
+            "nl": "Batterijapparaat"
+          },
+          "children": [
+            {
+              "id": "p1_device_id",
+              "type": "label",
+              "label": {
+                "en": "Linked P1 (Energy v2)",
+                "nl": "Gekoppelde P1 (Energy v2)"
+              },
+              "value": "Not configured",
+              "hint": {
+                "en": "The HomeWizard P1 (energy_v2) device this policy uses for grid & battery group data. Use the repair tool to change.",
+                "nl": "Het HomeWizard P1‑apparaat (energy_v2) dat deze policy gebruikt voor net‑ en batterijgroepgegevens. Gebruik de reparatietool om dit te wijzigen."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Policy Behavior",
+            "nl": "Policy‑gedrag"
+          },
+          "children": [
+            {
+              "id": "policy_interval",
+              "type": "number",
+              "label": {
+                "en": "Policy Check Interval",
+                "nl": "Policy‑controle‑interval"
+              },
+              "units": {
+                "en": "minutes",
+                "nl": "minuten"
+              },
+              "value": 15,
+              "min": 5,
+              "max": 60,
+              "step": 5
+            },
+            {
+              "id": "min_confidence_threshold",
+              "type": "number",
+              "label": {
+                "en": "Minimum Confidence",
+                "nl": "Minimale zekerheid"
+              },
+              "units": {
+                "en": "%",
+                "nl": "%"
+              },
+              "value": 60,
+              "min": 0,
+              "max": 100,
+              "step": 5
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Tariff Configuration",
+            "nl": "Tariefinstellingen"
+          },
+          "children": [
+            {
+              "id": "tariff_type",
+              "type": "dropdown",
+              "label": {
+                "en": "Tariff Type",
+                "nl": "Type tarief"
+              },
+              "value": "fixed",
+              "values": [
+                {
+                  "id": "fixed",
+                  "label": {
+                    "en": "Fixed Rate (Peak Shaving)",
+                    "nl": "Vast tarief (Peak Shaving)"
+                  }
+                },
+                {
+                  "id": "dynamic",
+                  "label": {
+                    "en": "Dynamic Pricing",
+                    "nl": "Dynamische prijzen"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "peak_hours",
+              "type": "text",
+              "label": {
+                "en": "Peak Hours",
+                "nl": "Piekuren"
+              },
+              "value": "17:00-21:00",
+              "visible": {
+                "when": "tariff_type",
+                "is": "fixed"
+              }
+            },
+            {
+              "id": "enable_dynamic_pricing",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable Dynamic Pricing Provider",
+                "nl": "Dynamische prijsprovider inschakelen"
+              },
+              "value": false,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "max_charge_price",
+              "type": "number",
+              "label": {
+                "en": "Max Charge Price (€/kWh)",
+                "nl": "Maximale laadprijs (€/kWh)"
+              },
+              "value": 0.15,
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "min_discharge_price",
+              "type": "number",
+              "label": {
+                "en": "Min Discharge Price (€/kWh)",
+                "nl": "Minimale ontlaadprijs (€/kWh)"
+              },
+              "value": 0.25,
+              "min": 0,
+              "max": 1,
+              "step": 0.01,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Weather Forecasting",
+            "nl": "Weersvoorspelling"
+          },
+          "visible": {
+            "when": "tariff_type",
+            "is": "dynamic"
+          },
+          "children": [
+            {
+              "id": "weather_location",
+              "type": "text",
+              "label": {
+                "en": "Weather Location",
+                "nl": "Weerlocatie"
+              },
+              "hint": {
+                "en": "City name used for solar forecasting (Open‑Meteo).",
+                "nl": "Plaatsnaam voor zonne‑energievoorspelling (Open‑Meteo)."
+              },
+              "value": ""
+            },
+            {
+              "id": "weather_update_interval",
+              "type": "number",
+              "label": {
+                "en": "Weather Update Interval",
+                "nl": "Update‑interval weersvoorspelling"
+              },
+              "units": {
+                "en": "hours",
+                "nl": "uur"
+              },
+              "value": 3,
+              "min": 1,
+              "max": 24,
+              "step": 1
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Battery Limits",
+            "nl": "Batterijlimieten"
+          },
+          "children": [
+            {
+              "id": "min_soc",
+              "type": "number",
+              "label": {
+                "en": "Minimum Battery %",
+                "nl": "Minimale batterij‑%"
+              },
+              "hint": {
+                "en": "0% means no minimum — battery is allowed to fully discharge.",
+                "nl": "0% betekent geen minimum — de batterij mag volledig ontladen."
+              },
+              "units": {
+                "en": "%",
+                "nl": "%"
+              },
+              "value": 0,
+              "min": 0,
+              "max": 50,
+              "step": 5,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "max_soc",
+              "type": "number",
+              "label": {
+                "en": "Maximum Battery %",
+                "nl": "Maximale batterij‑%"
+              },
+              "units": {
+                "en": "%",
+                "nl": "%"
+              },
+              "value": 95,
+              "min": 80,
+              "max": 100,
+              "step": 5,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "preserve_cycles",
+              "type": "checkbox",
+              "label": {
+                "en": "Preserve Battery Cycles",
+                "nl": "Batterijcycli sparen"
+              },
+              "value": true,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Advanced",
+            "nl": "Geavanceerd"
+          },
+          "children": [
+            {
+              "id": "enable_logging",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable Detailed Logging",
+                "nl": "Gedetailleerde logging inschakelen"
+              },
+              "value": false
+            },
+            {
+              "id": "enable_policy_notifications",
+              "type": "checkbox",
+              "label": {
+                "en": "Post policy decisions to timeline",
+                "nl": "Policy‑beslissingen naar tijdlijn sturen"
+              },
+              "value": false
+            }
+          ]
         }
       ]
     },
@@ -4541,6 +5378,21 @@
     }
   ],
   "capabilities": {
+    "auto_apply": {
+      "type": "boolean",
+      "title": {
+        "en": "Auto-Apply",
+        "nl": "Automatisch Toepassen"
+      },
+      "desc": {
+        "en": "Automatically apply policy recommendations to battery",
+        "nl": "Pas beleidsaanbevelingen automatisch toe op batterij"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "assets/icon.svg"
+    },
     "battery_group_average_soc": {
       "type": "number",
       "title": {
@@ -4632,6 +5484,28 @@
       "icon": "assets/battery.svg",
       "uiComponent": "sensor"
     },
+    "battery_soc_mirror": {
+      "type": "number",
+      "title": {
+        "en": "Battery Level",
+        "nl": "Batterijniveau"
+      },
+      "desc": {
+        "en": "Current battery state of charge",
+        "nl": "Huidige batterij laadstatus"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
     "central_heating_flame": {
       "type": "boolean",
       "title": {
@@ -4655,6 +5529,28 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/central_heating.svg"
+    },
+    "confidence_score": {
+      "type": "number",
+      "title": {
+        "en": "Confidence",
+        "nl": "Vertrouwen"
+      },
+      "desc": {
+        "en": "Confidence in current recommendation (0-100%)",
+        "nl": "Vertrouwen in huidige aanbeveling (0-100%)"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "connection_error": {
       "type": "string",
@@ -4699,6 +5595,41 @@
         "nl": "kWh"
       }
     },
+    "explanation_summary": {
+      "type": "string",
+      "title": {
+        "en": "Decision Reason",
+        "nl": "Beslissingsreden"
+      },
+      "desc": {
+        "en": "Explanation of current policy decision",
+        "nl": "Uitleg van huidige beleidsbeslissing"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
+    "grid_power_mirror": {
+      "type": "number",
+      "title": {
+        "en": "Grid Power",
+        "nl": "Netvermogen"
+      },
+      "desc": {
+        "en": "Current grid import/export power",
+        "nl": "Huidig net import/export vermogen"
+      },
+      "units": {
+        "en": "W",
+        "nl": "W"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
     "identify": {
       "type": "boolean",
       "title": {
@@ -4710,6 +5641,21 @@
       "uiComponent": "button",
       "insights": false,
       "icon": "assets/magnify.svg"
+    },
+    "last_update": {
+      "type": "string",
+      "title": {
+        "en": "Last Update",
+        "nl": "Laatste Update"
+      },
+      "desc": {
+        "en": "Timestamp of last policy check",
+        "nl": "Tijdstempel van laatste beleidscontrole"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "long_power_fail_count": {
       "type": "number",
@@ -4902,6 +5848,99 @@
       },
       "icon": "assets/icon.svg"
     },
+    "override_until": {
+      "type": "string",
+      "title": {
+        "en": "Override Until",
+        "nl": "Overschrijven Tot"
+      },
+      "desc": {
+        "en": "Manual override expiry time",
+        "nl": "Handmatige overschrijving vervaltijd"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
+    "policy_enabled": {
+      "type": "boolean",
+      "title": {
+        "en": "Policy Enabled",
+        "nl": "Beleid Ingeschakeld"
+      },
+      "desc": {
+        "en": "Enable or disable the battery policy automation",
+        "nl": "Schakel batterijbeleid automatisering in of uit"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "toggle",
+      "icon": "assets/icon.svg"
+    },
+    "policy_mode": {
+      "id": "policy_mode",
+      "type": "enum",
+      "title": {
+        "en": "Policy Mode",
+        "nl": "Beleidsmodus"
+      },
+      "values": [
+        {
+          "id": "off",
+          "title": {
+            "en": "Off",
+            "nl": "Uit"
+          }
+        },
+        {
+          "id": "balanced",
+          "title": {
+            "en": "Balanced",
+            "nl": "Gebalanceerd"
+          }
+        },
+        {
+          "id": "zero_basic",
+          "title": {
+            "en": "Zero (Basic)",
+            "nl": "Zero (Basis)"
+          }
+        },
+        {
+          "id": "zero_smart",
+          "title": {
+            "en": "Zero (Smart)",
+            "nl": "Zero (Slim)"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker"
+    },
+    "predicted_sun_hours": {
+      "type": "number",
+      "title": {
+        "en": "Predicted Sun (4h)",
+        "nl": "Voorspelde Zon (4u)"
+      },
+      "desc": {
+        "en": "Expected sunshine hours in next 4 hours",
+        "nl": "Verwachte zonuren in komende 4 uur"
+      },
+      "units": {
+        "en": "h",
+        "nl": "u"
+      },
+      "min": 0,
+      "max": 4,
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
     "preset": {
       "type": "enum",
       "title": {
@@ -4942,6 +5981,21 @@
         }
       ]
     },
+    "recommended_mode": {
+      "type": "string",
+      "title": {
+        "en": "Recommended Mode",
+        "nl": "Aanbevolen Modus"
+      },
+      "desc": {
+        "en": "Current battery mode recommendation",
+        "nl": "Huidige batterij modus aanbeveling"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
     "rssi": {
       "type": "number",
       "title": {
@@ -4957,6 +6011,28 @@
         "en": "RSSI",
         "nl": "RSSI"
       }
+    },
+    "sun_score": {
+      "type": "number",
+      "title": {
+        "en": "Sunshine Score",
+        "nl": "Zonneschijn Score"
+      },
+      "desc": {
+        "en": "Predicted sunshine availability (0-100%)",
+        "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "tariff": {
       "type": "number",
@@ -5089,6 +6165,51 @@
       "uiComponent": "sensor",
       "insights": false,
       "icon": "assets/shower.svg"
+    },
+    "weather_override": {
+      "id": "weather_override",
+      "type": "enum",
+      "title": {
+        "en": "Weather Override",
+        "nl": "Weer Overschrijven"
+      },
+      "desc": {
+        "en": "Override weather forecast for policy decisions",
+        "nl": "Overschrijf weersverwachting voor beleidsbeslissingen"
+      },
+      "values": [
+        {
+          "id": "auto",
+          "title": {
+            "en": "Auto (use forecast)",
+            "nl": "Auto (gebruik voorspelling)"
+          }
+        },
+        {
+          "id": "sunny",
+          "title": {
+            "en": "Sunny",
+            "nl": "Zonnig"
+          }
+        },
+        {
+          "id": "cloudy",
+          "title": {
+            "en": "Cloudy",
+            "nl": "Bewolkt"
+          }
+        },
+        {
+          "id": "rainy",
+          "title": {
+            "en": "Rainy",
+            "nl": "Regenachtig"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": true,
+      "uiComponent": "picker"
     },
     "wifi_quality": {
       "type": "string",
