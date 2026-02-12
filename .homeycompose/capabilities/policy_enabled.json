@@ -1,0 +1,15 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Policy Enabled",
+    "nl": "Beleid Ingeschakeld"
+  },
+  "desc": {
+    "en": "Enable or disable the battery policy automation",
+    "nl": "Schakel batterijbeleid automatisering in of uit"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "toggle",
+  "icon": "assets/icon.svg"
+}

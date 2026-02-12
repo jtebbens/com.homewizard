@@ -113,6 +113,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   async onInit() {
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
+    this._pollErrorCount = 0;
 
     this.agent = new http.Agent({
       keepAlive: true,
@@ -435,6 +436,15 @@ async onPoll() {
     return;
   }
 
+  //
+  // --- BACKOFF DURING ERRORS ---
+  //
+  if (this._pollErrorCount > 0) {
+    const delayMs = Math.min(60000, this._pollErrorCount * 2000); // max 60s
+    this._debugLog(`Backoff active: waiting ${delayMs}ms due to ${this._pollErrorCount} errors`);
+    await new Promise(r => setTimeout(r, delayMs));
+  }
+
   let data, nowLocal, homeyLang;
 
   //
@@ -445,7 +455,12 @@ async onPoll() {
     nowLocal = t.nowLocal;
     homeyLang = t.homeyLang;
     data = await this._fetchData();
+
+    // Succes → reset error counter
+    this._pollErrorCount = 0;
+
   } catch (err) {
+    this._pollErrorCount++;
     this._handlePollError(err);
     return;
   }
@@ -931,17 +946,26 @@ async onPoll() {
     }
   }
 
-  _handlePollError(err) {
-    
-    updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+_handlePollError(err) {
+  const msg = err.message || 'Polling error';
 
-    //this.setUnavailable(err.message || 'Polling error').catch(this.error);
+  // Capability updates alleen bij de eerste fout of elke 10 fouten
+  if (this._pollErrorCount === 1 || this._pollErrorCount % 10 === 0) {
+    updateCapability(this, 'connection_error', msg).catch(this.error);
     updateCapability(this, 'alarm_connectivity', true).catch(this.error);
-
-    // Debug logging
-    this._debugLog(`Poll failed: ${err.message || err}`);
-    this.log(`Poll failed: ${err.message || err}`);
   }
+
+  // Logging beperken: alleen elke 5 fouten loggen
+  if (this._pollErrorCount % 5 === 1) {
+    this.log(`Poll failed (${this._pollErrorCount}): ${msg}`);
+  }
+
+  // Debug log alleen bij eerste fout
+  if (this._pollErrorCount === 1) {
+    this._debugLog(`Poll failed: ${msg}`);
+  }
+}
+
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
     if (!this._phaseOverloadNotificationsEnabled) return;

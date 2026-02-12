@@ -1,0 +1,12 @@
+{
+  "type": "text",
+  "title": {
+    "en": "Weather location",
+    "nl": "Weer locatie"
+  },
+  "placeholder": "52.02, 5.04 or Utrecht",
+  "desc": {
+    "en": "Enter 'lat,lon' or a city name",
+    "nl": "Voer 'lat,lon' of een plaatsnaam in"
+  }
+}

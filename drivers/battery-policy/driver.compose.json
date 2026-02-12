@@ -1,0 +1,51 @@
+{
+  "id": "battery-policy",
+  "name": {
+    "en": "Battery Policy Manager"
+  },
+  "class": "other",
+  "capabilities": [
+    "policy_enabled",
+    "policy_mode",
+    "auto_apply",
+    "recommended_mode",
+    "sun_score",
+    "predicted_sun_hours",
+    "confidence_score",
+    "explanation_summary",
+    "battery_soc_mirror",
+    "grid_power_mirror",
+    "last_update",
+    "override_until",
+    "weather_override"
+  ],
+  "pair": [
+    {
+      "id": "select_battery",
+      "template": "list_devices",
+      "navigation": {
+        "next": "configure_policy"
+      },
+      "options": {
+        "singular": true,
+        "title": {
+          "en": "Select Battery Device"
+        },
+        "instruction": {
+          "en": "Select the HomeWizard battery device to manage"
+        }
+      }
+    },
+    {
+      "id": "configure_policy",
+      "template": "add_devices",
+      "navigation": {
+        "prev": "select_battery"
+      }
+    }
+  ],
+  "images": {
+    "large": "drivers/battery-policy/assets/images/large.png",
+    "small": "drivers/battery-policy/assets/images/small.png"
+  }
+}

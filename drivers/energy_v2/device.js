@@ -852,6 +852,73 @@ this.homey.flow
     this._cacheDirty = true;
   }
 
+  /**
+ * Public API: Set battery group mode
+ * Can be called from other drivers (e.g. BatteryPolicyDevice)
+ */
+async setBatteryGroupMode(targetMode) {
+  this.log(`🔋 setBatteryGroupMode(${targetMode}) called`);
+
+  try {
+    const { wsManager, url, token } = this;
+
+    // --- Prefer WebSocket ---
+    if (wsManager?.isConnected()) {
+      this.log(`🔌 Setting mode via WebSocket: ${targetMode}`);
+      wsManager.setBatteryMode(targetMode);
+      // Add delay for WebSocket command to be processed
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      // --- HTTP fallback ---
+      this.log(`🌐 Setting mode via HTTP: ${targetMode}`);
+      const response = await api.setMode(url, token, targetMode);
+      if (!response) {
+        this.error('❌ HTTP setMode returned invalid response');
+        return false;
+      }
+    }
+
+    // --- Fetch updated mode from device with retry ---
+    let modeResponse;
+    let retries = 3;
+    while (retries > 0) {
+      try {
+        modeResponse = await api.getMode(url, token);
+        if (modeResponse) break;
+      } catch (err) {
+        this.log(`⚠️ getMode attempt failed (${retries} retries left):`, err.message);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        retries--;
+      }
+    }
+
+    if (!modeResponse) {
+      this.error('❌ Failed to fetch mode after setting');
+      return false;
+    }
+
+    // api.getMode returns a string, so normalize it directly
+    const normalized = modeResponse;
+
+    // --- Update cache ---
+    this._cacheSet('last_battery_mode', normalized);
+
+    // --- Update capability ---
+    await updateCapability(this, 'battery_group_charge_mode', normalized);
+
+    // --- Trigger flow if changed ---
+    this.flowTriggerBatteryMode(this, { mode: normalized });
+
+    this.log(`✅ Battery group mode applied: ${normalized}`);
+    return true;
+
+  } catch (err) {
+    this.error('❌ Failed to set battery group mode:', err);
+    return false;
+  }
+}
+
+
 
 
   flowTriggerBatteryMode(device, tokens) {
@@ -1013,6 +1080,14 @@ async _updateBatteryGroup() {
 
   // --- If we have ANY batteries, continue ---
   if (batteries.length === 0) return;
+
+  // ⭐ Ensure battery_group_charge_mode reflects the last known vendor state
+  const vendorState = this._cacheGet('last_battery_state');
+  if (vendorState && vendorState.mode) {
+    const normalized = normalizeBatteryMode(vendorState);
+    await updateCapability(this, 'battery_group_charge_mode', normalized);
+  }
+
 
   // 5. Weighted SoC calculation
   let totalCapacity = 0;

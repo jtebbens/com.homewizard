@@ -1,0 +1,22 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Confidence",
+    "nl": "Vertrouwen"
+  },
+  "desc": {
+    "en": "Confidence in current recommendation (0-100%)",
+    "nl": "Vertrouwen in huidige aanbeveling (0-100%)"
+  },
+  "units": {
+    "en": "%",
+    "nl": "%"
+  },
+  "min": 0,
+  "max": 100,
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

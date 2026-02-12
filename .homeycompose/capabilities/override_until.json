@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Override Until",
+    "nl": "Overschrijven Tot"
+  },
+  "desc": {
+    "en": "Manual override expiry time",
+    "nl": "Handmatige overschrijving vervaltijd"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

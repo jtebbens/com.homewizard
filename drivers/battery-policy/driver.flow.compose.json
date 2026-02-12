@@ -1,0 +1,217 @@
+{
+  "triggers": [
+    {
+      "id": "policy_recommendation_changed",
+      "title": { "en": "Recommendation changed" },
+      "titleFormatted": { "en": "Recommendation changed" },
+      "hint": { "en": "Triggers when the policy engine changes its recommendation" },
+      "tokens": [
+        {
+          "name": "mode",
+          "type": "string",
+          "title": { "en": "Mode" },
+          "example": { "en": "charge" }
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "title": { "en": "Confidence" },
+          "example": 75
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "title": { "en": "Reason" },
+          "example": { "en": "Strong sunlight expected" }
+        }
+      ]
+    },
+    {
+      "id": "policy_mode_applied",
+      "title": { "en": "Mode applied to battery" },
+      "titleFormatted": { "en": "Mode applied to battery" },
+      "hint": { "en": "Triggers when the policy engine applies a mode to the battery" },
+      "tokens": [
+        {
+          "name": "mode",
+          "type": "string",
+          "title": { "en": "Mode" },
+          "example": { "en": "discharge" }
+        },
+        {
+          "name": "confidence",
+          "type": "number",
+          "title": { "en": "Confidence" },
+          "example": 85
+        }
+      ]
+    },
+    {
+      "id": "policy_override_set",
+      "title": { "en": "Manual override activated" },
+      "titleFormatted": { "en": "Manual override activated" },
+      "hint": { "en": "Triggers when manual override is set" },
+      "tokens": [
+        {
+          "name": "duration",
+          "type": "number",
+          "title": { "en": "Duration" },
+          "example": 60
+        }
+      ]
+    }
+  ],
+
+  "conditions": [
+    {
+      "id": "policy_is_enabled",
+      "title": { "en": "Policy is !{{enabled|disabled}}" },
+      "titleFormatted": { "en": "Policy is !{{enabled|disabled}}" },
+      "hint": { "en": "Check if the policy engine is active" }
+    },
+    {
+      "id": "confidence_above",
+      "title": { "en": "Confidence is above" },
+      "titleFormatted": { "en": "Confidence is above [[threshold]]" },
+      "hint": { "en": "Check if recommendation confidence exceeds threshold" },
+      "args": [
+        {
+          "name": "threshold",
+          "type": "number",
+          "placeholder": { "en": "70" },
+          "min": 0,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "id": "recommended_mode_is",
+      "title": { "en": "Recommended mode is" },
+      "titleFormatted": { "en": "Recommended mode is [[mode]]" },
+      "hint": { "en": "Check if current recommendation matches a specific mode" },
+      "args": [
+        {
+          "name": "mode",
+          "type": "dropdown",
+          "values": [
+            { "id": "charge", "label": { "en": "Charge" } },
+            { "id": "discharge", "label": { "en": "Discharge" } },
+            { "id": "preserve", "label": { "en": "Preserve" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sun_score_above",
+      "title": { "en": "Sun score is above" },
+      "titleFormatted": { "en": "Sun score is above [[threshold]]" },
+      "hint": { "en": "Check if sunshine availability exceeds threshold" },
+      "args": [
+        {
+          "name": "threshold",
+          "type": "number",
+          "placeholder": { "en": "50" },
+          "min": 0,
+          "max": 100
+        }
+      ]
+    }
+  ],
+
+  "actions": [
+    {
+      "id": "enable_policy",
+      "title": { "en": "Enable policy" },
+      "titleFormatted": { "en": "Enable policy" },
+      "hint": { "en": "Enable the battery policy engine" }
+    },
+    {
+      "id": "disable_policy",
+      "title": { "en": "Disable policy" },
+      "titleFormatted": { "en": "Disable policy" },
+      "hint": { "en": "Disable the battery policy engine" }
+    },
+    {
+      "id": "set_policy_mode",
+      "title": { "en": "Set policy mode to" },
+      "titleFormatted": { "en": "Set policy mode to [[mode]]" },
+      "hint": { "en": "Change the policy optimization mode" },
+      "args": [
+        {
+          "name": "mode",
+          "type": "dropdown",
+          "values": [
+            { "id": "eco", "label": { "en": "Eco" } },
+            { "id": "balanced", "label": { "en": "Balanced" } },
+            { "id": "aggressive", "label": { "en": "Aggressive" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enable_auto_apply",
+      "title": { "en": "Enable auto-apply" },
+      "titleFormatted": { "en": "Enable auto-apply" },
+      "hint": { "en": "Automatically apply policy recommendations" }
+    },
+    {
+      "id": "disable_auto_apply",
+      "title": { "en": "Disable auto-apply" },
+      "titleFormatted": { "en": "Disable auto-apply" },
+      "hint": { "en": "Stop automatically applying recommendations" }
+    },
+    {
+      "id": "set_override",
+      "title": { "en": "Set manual override for" },
+      "titleFormatted": { "en": "Set manual override for [[duration]] minutes" },
+      "hint": { "en": "Prevent automatic policy changes for a duration" },
+      "args": [
+        {
+          "name": "duration",
+          "type": "number",
+          "placeholder": { "en": "60" },
+          "min": 15,
+          "max": 1440,
+          "units": { "en": "minutes" }
+        }
+      ]
+    },
+    {
+      "id": "clear_override",
+      "title": { "en": "Clear manual override" },
+      "titleFormatted": { "en": "Clear manual override" },
+      "hint": { "en": "Resume automatic policy management" }
+    },
+    {
+      "id": "force_policy_check",
+      "title": { "en": "Run policy check now" },
+      "titleFormatted": { "en": "Run policy check now" },
+      "hint": { "en": "Force immediate policy recalculation" }
+    },
+    {
+      "id": "refresh_weather",
+      "title": { "en": "Refresh weather forecast" },
+      "titleFormatted": { "en": "Refresh weather forecast" },
+      "hint": { "en": "Fetch latest weather data immediately" }
+    },
+    {
+      "id": "set_weather_override",
+      "title": { "en": "Set weather override" },
+      "titleFormatted": { "en": "Set weather override to [[override]]" },
+      "hint": { "en": "Override the weather forecast for policy decisions" },
+      "args": [
+        {
+          "name": "override",
+          "type": "dropdown",
+          "title": { "en": "Weather condition" },
+          "values": [
+            { "id": "auto", "title": { "en": "Auto (use forecast)" } },
+            { "id": "sunny", "title": { "en": "Sunny" } },
+            { "id": "cloudy", "title": { "en": "Cloudy" } },
+            { "id": "rainy", "title": { "en": "Rainy" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

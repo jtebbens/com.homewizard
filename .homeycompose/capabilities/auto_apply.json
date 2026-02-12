@@ -1,0 +1,15 @@
+{
+  "type": "boolean",
+  "title": {
+    "en": "Auto-Apply",
+    "nl": "Automatisch Toepassen"
+  },
+  "desc": {
+    "en": "Automatically apply policy recommendations to battery",
+    "nl": "Pas beleidsaanbevelingen automatisch toe op batterij"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "toggle",
+  "icon": "assets/icon.svg"
+}

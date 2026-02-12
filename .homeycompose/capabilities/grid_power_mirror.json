@@ -1,0 +1,20 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Grid Power",
+    "nl": "Netvermogen"
+  },
+  "desc": {
+    "en": "Current grid import/export power",
+    "nl": "Huidig net import/export vermogen"
+  },
+  "units": {
+    "en": "W",
+    "nl": "W"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

@@ -65,6 +65,7 @@
   <!-- TAB HEADERS -->
   <div class="tabs">
     <div class="tab active" data-tab="baseload" id="tab-baseload"></div>
+    <div class="tab" data-tab="explain">Battery Policy</div>
     <div class="tab" data-tab="fetch">Device Fetch Debug</div>
     <div class="tab" data-tab="discovery">Discovery Debug</div>
     <div class="tab" data-tab="ws">WebSocket Debug</div>
@@ -128,6 +129,26 @@
     <h2>WebSocket debug</h2>
     <pre id="ws-debug" class="debug-box">Loading…</pre>
   </div>
+
+  <!-- TAB: EXPLAINABILITY -->
+  <div id="explain" class="tab-content">
+    <h2>Battery Policy Explainability</h2>
+
+    <div id="explain-summary" style="margin-bottom: 15px; font-size: 14px;"></div>
+
+    <h3>Redenen</h3>
+    <ul id="explain-reasons" style="padding-left: 20px;"></ul>
+
+    <h3>Waarschuwingen</h3>
+    <ul id="explain-warnings" style="padding-left: 20px;"></ul>
+
+    <h3>Scores</h3>
+    <pre id="explain-scores" class="debug-box"></pre>
+
+    <h3>Tijdstip</h3>
+    <div id="explain-timestamp" style="font-size: 12px; color: #666;"></div>
+  </div>
+
 
   <!-- TAB: LEGACY FETCH -->
   <div id="legacy" class="tab-content">
@@ -260,6 +281,59 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
         /* ---- WEBSOCKET ---- */
         document.getElementById('ws-debug').textContent =
           JSON.stringify(settings['debug_ws']?.slice(-20) || [], null, 2);
+
+          /* ---- EXPLAINABILITY ---- */
+        function renderExplainability(data) {
+          if (!data) {
+            document.getElementById('explain-summary').innerText = 'Nog geen analyse beschikbaar.';
+            return;
+          }
+
+          document.getElementById('explain-summary').innerText = data.summary;
+
+          const reasonsList = document.getElementById('explain-reasons');
+          reasonsList.innerHTML = '';
+          data.reasons.forEach(r => {
+            const li = document.createElement('li');
+            li.textContent = `${r.icon} ${r.text}`;
+            reasonsList.appendChild(li);
+          });
+
+          const warningsList = document.getElementById('explain-warnings');
+          warningsList.innerHTML = '';
+          data.warnings.forEach(w => {
+            const li = document.createElement('li');
+            li.textContent = `⚠️ ${w}`;
+            warningsList.appendChild(li);
+          });
+
+          document.getElementById('explain-scores').textContent =
+            JSON.stringify(data.scores, null, 2);
+
+          document.getElementById('explain-timestamp').innerText =
+            `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
+        }
+
+        /* Load initial explainability */
+        let explainRaw = settings['policy_explainability'];
+        let explainObj = null;
+
+        try {
+          explainObj = typeof explainRaw === 'string'
+            ? JSON.parse(explainRaw)
+            : explainRaw;
+        } catch (e) {
+          console.error('Failed to parse explainability:', e);
+        }
+
+        renderExplainability(explainObj);
+
+
+        /* Live updates */
+        Homey.on('explainability_update', data => {
+          renderExplainability(data);
+        });
+
 
         /* ---- LEGACY FETCH ---- */
         document.getElementById('legacyfetch-debug').textContent =
