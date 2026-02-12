@@ -1,0 +1,17 @@
+{
+  "id": "policy_mode",
+  "type": "enum",
+  "title": {
+    "en": "Policy Mode",
+    "nl": "Beleidsmodus"
+  },
+  "values": [
+    { "id": "off", "title": { "en": "Off", "nl": "Uit" } },
+    { "id": "balanced", "title": { "en": "Balanced", "nl": "Gebalanceerd" } },
+    { "id": "zero_basic", "title": { "en": "Zero (Basic)", "nl": "Zero (Basis)" } },
+    { "id": "zero_smart", "title": { "en": "Zero (Smart)", "nl": "Zero (Slim)" } }
+  ],
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker"
+}

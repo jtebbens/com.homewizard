@@ -36,25 +36,49 @@ function estimateBatteryKWh(loadPct, cycles, inverterEfficiency) {
 // ---------------------------------------------------------
 // checkSoCDrift (unchanged)
 // ---------------------------------------------------------
-function checkSoCDrift({ previousSoC, previousTimestamp, currentSoC, currentPowerW, batteryCapacityWh = 2470, driftMargin = 0.5 }) {
-  if (previousSoC === undefined || previousTimestamp === undefined) return { drift: false };
+function checkSoCDrift({
+  previousSoC,
+  previousTimestamp,
+  currentSoC,
+  currentPowerW,
+  batteryCapacityWh = 2470
+}) {
+  // Geen vorige meting → geen drift
+  if (previousSoC === undefined || previousTimestamp === undefined) {
+    return { drift: false };
+  }
 
   const now = Date.now();
   const deltaTimeMin = (now - previousTimestamp) / 60000;
-  if (deltaTimeMin < 0.2) return { drift: false, timestamp: now };
 
-  const deltaSoC = currentSoC - previousSoC;
-  const rateOfChange = deltaSoC / deltaTimeMin;
-
-  const expectedWhChange = currentPowerW * deltaTimeMin;
-  const expectedSoCChange = (expectedWhChange / batteryCapacityWh) * 100;
-
-  if (Math.abs(rateOfChange - expectedSoCChange) > driftMargin) {
-    return { drift: true, rateOfChange, expectedSoCChange, timestamp: now };
+  // Minder dan 3 minuten ertussen → niet interessant
+  if (deltaTimeMin < 3) {
+    return { drift: false, timestamp: previousTimestamp };
   }
 
-  return { drift: false, timestamp: now };
+  // Te weinig vermogen → geen serieuze verwachting
+  if (Math.abs(currentPowerW) < 300) {
+    return { drift: false, timestamp: previousTimestamp };
+  }
+
+  // Hoeveel % zou je ongeveer moeten zijn gestegen?
+  const energyWh = Math.abs(currentPowerW) * deltaTimeMin;
+  const expectedPct = (energyWh / batteryCapacityWh) * 100;
+
+  // 🔥 Jouw kerncase:
+  // SoC blijft 0%, terwijl je genoeg geladen hebt → DRIFT
+  if (currentSoC === 0 && expectedPct >= 3) {
+    return { drift: true, timestamp: now };
+  }
+
+  // Boven 0% kun je (optioneel) nog extra driftlogica doen,
+  // maar als je dat nu zat bent, gewoon uit laten:
+  return { drift: false, timestamp: previousTimestamp };
 }
+
+
+
+
 
 // ---------------------------------------------------------
 // getWifiQuality (unchanged)
@@ -116,6 +140,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
   async onInit() {
     wsDebug.init(this.homey);
+
+    this._pollErrorCount = 0;
+    this._lastPollAt = 0;
+
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -516,6 +544,16 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // 8. Drift detection (max 1× per 30 sec)
     // ---------------------------------------------------------
     if (!this._driftLastUpdate || now - this._driftLastUpdate > 30000) {
+
+      // 1. Eerste measurement initialiseren
+      if (Math.abs(data.power_w) > 10 && (this.previousSoC === undefined || this.previousTimestamp === undefined)) {
+        this.previousSoC = data.state_of_charge_pct;
+        this.previousTimestamp = now;
+        this._driftLastUpdate = now;
+        return; // drift kan nog niet berekend worden
+      }
+
+      // 2. Nu pas drift berekenen
       const driftResult = checkSoCDrift({
         previousSoC: this.previousSoC,
         previousTimestamp: this.previousTimestamp,
@@ -524,9 +562,13 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         currentTimestamp: now
       });
 
-      this.previousSoC = data.state_of_charge_pct;
-      this.previousTimestamp = driftResult.timestamp;
+      // 3. Update previousSoC/timestamp na drift-check
+      if (Math.abs(data.power_w) > 10) {
+        this.previousSoC = data.state_of_charge_pct;
+        this.previousTimestamp = driftResult.timestamp;
+      }
 
+      // 4. Drift events
       if (driftResult.drift && !this.driftActive) {
         this.driftActive = true;
         this.log(`⚠️ SoC drift detected`);
@@ -682,10 +724,23 @@ async _updateBatteryGroup() {
   const batteryId = this.getData()?.id;
   if (!batteryId) return;
 
-  // 1. Start with WS SoC (can be null)
-  let soc = (typeof this._lastSoC === 'number') ? this._lastSoC : null;
+  // 1. Skip during polling errors (backoff active)
+  if (this._pollErrorCount > 0) {
+    return;
+  }
 
-  // 2. ALWAYS do extra API call
+  // 2. Skip if WS updated SoC recently (< 30s)
+  if (this._lastSoC && Date.now() - this._energyLastUpdate < 30000) {
+    return;
+  }
+
+  // 3. Throttle: only run every 30 seconds
+  if (!this._lastGroupUpdate || Date.now() - this._lastGroupUpdate < 30000) {
+    return;
+  }
+  this._lastGroupUpdate = Date.now();
+
+  // 4. Fetch SoC via API (fallback)
   let apiSoc = null;
   try {
     const res = await fetchWithTimeout(`${this.url}/api/measurement`, {
@@ -698,34 +753,28 @@ async _updateBatteryGroup() {
 
     if (res.ok) {
       const data = await res.json();
-
-      // Only accept API SoC if > 0
-      if (typeof data.state_of_charge_pct === 'number' && data.state_of_charge_pct > 0) {
+      if (typeof data.state_of_charge_pct === 'number') {
         apiSoc = data.state_of_charge_pct;
-        if (debug) this.log(`🔄 Extra API SoC: ${apiSoc}%`);
-      } else {
-        if (debug) this.log(`⚠️ Extra API SoC missing or is 0 — exception`);
       }
-    } else {
-      if (debug) this.log(`⚠️ Extra API SoC fetch failed: ${res.status}`);
     }
   } catch (err) {
-    this.error('Extra API SoC fetch error:', err.message);
+    // Do NOT increment pollErrorCount here
+    // This is a soft fallback, not core polling
+    this.log('Battery group API fetch failed:', err.message);
+    return;
   }
 
-  // 3. API SoC takes precedence (but 0 is invalid)
-  if (typeof apiSoc === 'number' && apiSoc > 0) {
-    soc = apiSoc;
-  }
+  // 5. Determine final SoC
+  let soc = (typeof this._lastSoC === 'number') ? this._lastSoC : null;
+  if (typeof apiSoc === 'number') soc = apiSoc;
+  if (typeof soc !== 'number' || soc < 0 || soc > 100) soc = 0;
 
-  // 4. Last fallback
-  if (typeof soc !== 'number' || soc < 0) soc = 0;
-
+  // 6. Update group
   const info = {
     id: batteryId,
     capacity_kwh: 2.8,
-    cycles: typeof this._lastCycles === 'number' ? this._lastCycles : 0,
-    power_w: typeof this._lastPower === 'number' ? this._lastPower : 0,
+    cycles: this._lastCycles ?? 0,
+    power_w: this._lastPower ?? 0,
     soc_pct: Math.round(soc),
     updated_at: Date.now()
   };
@@ -744,10 +793,12 @@ async _updateBatteryGroup() {
 
 
 
+
   /**
    * Fallback poll (pure fetch)
    */
   async _fallbackPoll() {
+    if (this._pollErrorCount > 0) return; // geen fallback tijdens errors
     try {
       const measurementRes = await fetchWithTimeout(`${this.url}/api/measurement`, {
         headers: {
@@ -786,6 +837,20 @@ async _updateBatteryGroup() {
    * Polling (pure fetch, no timeout wrapper)
    */
   async onPoll() {
+  const now = Date.now();
+
+  // Exponential backoff bij fouten
+  if (this._pollErrorCount > 0) {
+    const delayMs = Math.min(60000, this._pollErrorCount * 2000);
+    const sinceLast = now - this._lastPollAt;
+
+    if (sinceLast < delayMs) {
+      return; // skip poll
+    }
+  }
+
+  this._lastPollAt = now;
+
   try {
     const measurementRes = await fetchWithTimeout(`${this.url}/api/measurement`, {
       headers: {
@@ -797,12 +862,14 @@ async _updateBatteryGroup() {
 
     if (measurementRes.ok) {
       const measurement = await measurementRes.json();
-
-      if (debug) this.log('📡 POLL MEASUREMENT:', measurement);
-
       this._handleMeasurement(measurement);
+      this._pollErrorCount = 0; // reset bij succes
     } else {
-      if (debug) this.log('❌ POLL measurementRes NOT OK:', measurementRes.status);
+      this._pollErrorCount++;
+      if (this._pollErrorCount % 5 === 1) {
+        this.log(`Polling measurement failed (${measurementRes.status})`);
+      }
+      return;
     }
 
     const systemRes = await fetchWithTimeout(`${this.url}/api/system`, {
@@ -815,18 +882,22 @@ async _updateBatteryGroup() {
 
     if (systemRes.ok) {
       const system = await systemRes.json();
-
-      if (debug) this.log('📡 POLL SYSTEM:', system);
-
       this._handleSystem(system);
     } else {
-      if (debug) this.log('❌ POLL systemRes NOT OK:', systemRes.status);
+      this._pollErrorCount++;
+      if (this._pollErrorCount % 5 === 1) {
+        this.log(`Polling system failed (${systemRes.status})`);
+      }
     }
 
   } catch (err) {
-    this.error('Polling error:', err.message);
+    this._pollErrorCount++;
+    if (this._pollErrorCount % 5 === 1) {
+      this.error('Polling error:', err.message);
+    }
   }
 }
+
 
 
 

@@ -1,0 +1,184 @@
+[
+  {
+    "type": "group",
+    "label": { "en": "Battery Device", "nl": "Batterijapparaat" },
+    "children": [
+      {
+        "id": "p1_device_id",
+        "type": "label",
+        "label": { "en": "Linked P1 (Energy v2)", "nl": "Gekoppelde P1 (Energy v2)" },
+        "value": "Not configured",
+        "hint": {
+          "en": "The HomeWizard P1 (energy_v2) device this policy uses for grid & battery group data. Use the repair tool to change.",
+          "nl": "Het HomeWizard P1‑apparaat (energy_v2) dat deze policy gebruikt voor net‑ en batterijgroepgegevens. Gebruik de reparatietool om dit te wijzigen."
+        }
+      }
+    ]
+  },
+
+  {
+    "type": "group",
+    "label": { "en": "Policy Behavior", "nl": "Policy‑gedrag" },
+    "children": [
+      {
+        "id": "policy_interval",
+        "type": "number",
+        "label": { "en": "Policy Check Interval", "nl": "Policy‑controle‑interval" },
+        "units": { "en": "minutes", "nl": "minuten" },
+        "value": 15,
+        "min": 5,
+        "max": 60,
+        "step": 5
+      },
+      {
+        "id": "min_confidence_threshold",
+        "type": "number",
+        "label": { "en": "Minimum Confidence", "nl": "Minimale zekerheid" },
+        "units": { "en": "%", "nl": "%" },
+        "value": 60,
+        "min": 0,
+        "max": 100,
+        "step": 5
+      }
+    ]
+  },
+
+  {
+    "type": "group",
+    "label": { "en": "Tariff Configuration", "nl": "Tariefinstellingen" },
+    "children": [
+      {
+        "id": "tariff_type",
+        "type": "dropdown",
+        "label": { "en": "Tariff Type", "nl": "Type tarief" },
+        "value": "fixed",
+        "values": [
+          { "id": "fixed", "label": { "en": "Fixed Rate (Peak Shaving)", "nl": "Vast tarief (Peak Shaving)" } },
+          { "id": "dynamic", "label": { "en": "Dynamic Pricing", "nl": "Dynamische prijzen" } }
+        ]
+      },
+
+      {
+        "id": "peak_hours",
+        "type": "text",
+        "label": { "en": "Peak Hours", "nl": "Piekuren" },
+        "value": "17:00-21:00",
+        "visible": { "when": "tariff_type", "is": "fixed" }
+      },
+
+      {
+        "id": "enable_dynamic_pricing",
+        "type": "checkbox",
+        "label": { "en": "Enable Dynamic Pricing Provider", "nl": "Dynamische prijsprovider inschakelen" },
+        "value": false,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+
+      {
+        "id": "max_charge_price",
+        "type": "number",
+        "label": { "en": "Max Charge Price (€/kWh)", "nl": "Maximale laadprijs (€/kWh)" },
+        "value": 0.15,
+        "min": 0,
+        "max": 1,
+        "step": 0.01,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+
+      {
+        "id": "min_discharge_price",
+        "type": "number",
+        "label": { "en": "Min Discharge Price (€/kWh)", "nl": "Minimale ontlaadprijs (€/kWh)" },
+        "value": 0.25,
+        "min": 0,
+        "max": 1,
+        "step": 0.01,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      }
+    ]
+  },
+
+  {
+    "type": "group",
+    "label": { "en": "Weather Forecasting", "nl": "Weersvoorspelling" },
+    "visible": { "when": "tariff_type", "is": "dynamic" },
+    "children": [
+      {
+        "id": "weather_location",
+        "type": "text",
+        "label": { "en": "Weather Location", "nl": "Weerlocatie" },
+        "hint": { "en": "City name used for solar forecasting (Open‑Meteo).", "nl": "Plaatsnaam voor zonne‑energievoorspelling (Open‑Meteo)." },
+        "value": ""
+      },
+      {
+        "id": "weather_update_interval",
+        "type": "number",
+        "label": { "en": "Weather Update Interval", "nl": "Update‑interval weersvoorspelling" },
+        "units": { "en": "hours", "nl": "uur" },
+        "value": 3,
+        "min": 1,
+        "max": 24,
+        "step": 1
+      }
+    ]
+  },
+
+  {
+    "type": "group",
+    "label": { "en": "Battery Limits", "nl": "Batterijlimieten" },
+    "children": [
+      {
+        "id": "min_soc",
+        "type": "number",
+        "label": { "en": "Minimum Battery %", "nl": "Minimale batterij‑%" },
+        "hint": {
+          "en": "0% means no minimum — battery is allowed to fully discharge.",
+          "nl": "0% betekent geen minimum — de batterij mag volledig ontladen."
+        },
+        "units": { "en": "%", "nl": "%" },
+        "value": 0,
+        "min": 0,
+        "max": 50,
+        "step": 5,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
+        "id": "max_soc",
+        "type": "number",
+        "label": { "en": "Maximum Battery %", "nl": "Maximale batterij‑%" },
+        "units": { "en": "%", "nl": "%" },
+        "value": 95,
+        "min": 80,
+        "max": 100,
+        "step": 5,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
+        "id": "preserve_cycles",
+        "type": "checkbox",
+        "label": { "en": "Preserve Battery Cycles", "nl": "Batterijcycli sparen" },
+        "value": true,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      }
+    ]
+  },
+
+  {
+    "type": "group",
+    "label": { "en": "Advanced", "nl": "Geavanceerd" },
+    "children": [
+      {
+        "id": "enable_logging",
+        "type": "checkbox",
+        "label": { "en": "Enable Detailed Logging", "nl": "Gedetailleerde logging inschakelen" },
+        "value": false
+      },
+      {
+        "id": "enable_policy_notifications",
+        "type": "checkbox",
+        "label": { "en": "Post policy decisions to timeline", "nl": "Policy‑beslissingen naar tijdlijn sturen" },
+        "value": false
+      }
+    ]
+  }
+]

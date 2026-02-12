@@ -1,0 +1,22 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Predicted Sun (4h)",
+    "nl": "Voorspelde Zon (4u)"
+  },
+  "desc": {
+    "en": "Expected sunshine hours in next 4 hours",
+    "nl": "Verwachte zonuren in komende 4 uur"
+  },
+  "units": {
+    "en": "h",
+    "nl": "u"
+  },
+  "min": 0,
+  "max": 4,
+  "decimals": 1,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

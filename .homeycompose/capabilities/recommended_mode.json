@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Recommended Mode",
+    "nl": "Aanbevolen Modus"
+  },
+  "desc": {
+    "en": "Current battery mode recommendation",
+    "nl": "Huidige batterij modus aanbeveling"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

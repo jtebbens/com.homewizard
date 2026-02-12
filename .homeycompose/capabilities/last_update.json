@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Last Update",
+    "nl": "Laatste Update"
+  },
+  "desc": {
+    "en": "Timestamp of last policy check",
+    "nl": "Tijdstempel van laatste beleidscontrole"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

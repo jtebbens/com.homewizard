@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Decision Reason",
+    "nl": "Beslissingsreden"
+  },
+  "desc": {
+    "en": "Explanation of current policy decision",
+    "nl": "Uitleg van huidige beleidsbeslissing"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

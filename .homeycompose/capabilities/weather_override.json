@@ -1,0 +1,45 @@
+{
+  "id": "weather_override",
+  "type": "enum",
+  "title": {
+    "en": "Weather Override",
+    "nl": "Weer Overschrijven"
+  },
+  "desc": {
+    "en": "Override weather forecast for policy decisions",
+    "nl": "Overschrijf weersverwachting voor beleidsbeslissingen"
+  },
+  "values": [
+    {
+      "id": "auto",
+      "title": {
+        "en": "Auto (use forecast)",
+        "nl": "Auto (gebruik voorspelling)"
+      }
+    },
+    {
+      "id": "sunny",
+      "title": {
+        "en": "Sunny",
+        "nl": "Zonnig"
+      }
+    },
+    {
+      "id": "cloudy",
+      "title": {
+        "en": "Cloudy",
+        "nl": "Bewolkt"
+      }
+    },
+    {
+      "id": "rainy",
+      "title": {
+        "en": "Rainy",
+        "nl": "Regenachtig"
+      }
+    }
+  ],
+  "getable": true,
+  "setable": true,
+  "uiComponent": "picker"
+}

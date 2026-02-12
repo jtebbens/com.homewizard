@@ -1,0 +1,22 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Sunshine Score",
+    "nl": "Zonneschijn Score"
+  },
+  "desc": {
+    "en": "Predicted sunshine availability (0-100%)",
+    "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)"
+  },
+  "units": {
+    "en": "%",
+    "nl": "%"
+  },
+  "min": 0,
+  "max": 100,
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}
