@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.10",
+  "version": "3.13.11",
   "platforms": [
     "local"
   ],
@@ -2791,6 +2791,10 @@
         "predicted_sun_hours",
         "confidence_score",
         "explanation_summary",
+        "policy_debug_price",
+        "policy_debug_top3low",
+        "policy_debug_top3high",
+        "policy_debug_sun",
         "battery_soc_mirror",
         "grid_power_mirror",
         "last_update",
@@ -5863,6 +5867,86 @@
       "uiComponent": "sensor",
       "icon": "assets/icon.svg"
     },
+    "policy_debug": {
+      "id": "policy_debug",
+      "type": "string",
+      "title": {
+        "en": "Policy Debug",
+        "nl": "Policy Debug"
+      },
+      "desc": {
+        "en": "Current tariff and weather inputs used by the policy engine",
+        "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
+    "policy_debug_price": {
+      "id": "policy_debug_price",
+      "type": "string",
+      "title": {
+        "en": "Policy Price",
+        "nl": "Policy Prijs"
+      },
+      "desc": {
+        "en": "Current DAP price and rate bucket",
+        "nl": "Huidige DAP-prijs en tariefcategorie"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
+    "policy_debug_sun": {
+      "id": "policy_debug_sun",
+      "type": "string",
+      "title": {
+        "en": "Policy Sun",
+        "nl": "Policy Zon"
+      },
+      "desc": {
+        "en": "Sunshine forecast inputs used by the policy",
+        "nl": "Zon-voorspelling gebruikt door de policy"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
+    "policy_debug_top3high": {
+      "id": "policy_debug_top3high",
+      "type": "string",
+      "title": {
+        "en": "Policy Top3 High",
+        "nl": "Policy Top3 Hoog"
+      },
+      "desc": {
+        "en": "Top 3 most expensive DAP hours",
+        "nl": "Top 3 duurste DAP-uren"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
+    "policy_debug_top3low": {
+      "id": "policy_debug_top3low",
+      "type": "string",
+      "title": {
+        "en": "Policy Top3 Low",
+        "nl": "Policy Top3 Laag"
+      },
+      "desc": {
+        "en": "Top 3 cheapest DAP hours",
+        "nl": "Top 3 goedkoopste DAP-uren"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
     "policy_enabled": {
       "type": "boolean",
       "title": {
@@ -5901,17 +5985,10 @@
           }
         },
         {
-          "id": "zero_basic",
+          "id": "zero",
           "title": {
-            "en": "Zero (Basic)",
-            "nl": "Zero (Basis)"
-          }
-        },
-        {
-          "id": "zero_smart",
-          "title": {
-            "en": "Zero (Smart)",
-            "nl": "Zero (Slim)"
+            "en": "Zero",
+            "nl": "Zero"
           }
         }
       ],
