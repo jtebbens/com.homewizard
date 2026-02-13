@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.12",
+  "version": "3.13.13",
   "platforms": [
     "local"
   ],
@@ -1651,6 +1651,45 @@
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "update_pv_production",
+        "title": {
+          "en": "Update PV production",
+          "nl": "PV-productie bijwerken"
+        },
+        "titleFormatted": {
+          "en": "Update PV production to [[power]] watts",
+          "nl": "PV-productie bijwerken naar [[power]] watt"
+        },
+        "hint": {
+          "en": "Provide real-time PV production data from your solar system. This overrides the sun-based estimate.",
+          "nl": "Geef realtime PV-productiegegevens van uw zonnesysteem. Dit overschrijft de op zon gebaseerde schatting."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "power",
+            "type": "number",
+            "title": {
+              "en": "PV Power",
+              "nl": "PV-vermogen"
+            },
+            "placeholder": {
+              "en": "1500"
+            },
+            "min": 0,
+            "max": 50000,
+            "units": {
+              "en": "W",
+              "nl": "W"
+            }
           }
         ]
       },
