@@ -23,6 +23,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.p1Device = null;
     this.weatherData = null;
     this.lastRecommendation = null;
+    this._lastPvEstimateW = 0; // For EMA smoothing
 
     await this._initializeCapabilities();
     this._registerCapabilityListeners();
@@ -204,60 +205,59 @@ class BatteryPolicyDevice extends Homey.Device {
    * Listen for capability changes on P1 device and mirror them in real-time
    */
   _setupP1Listeners() {
-  if (!this.p1Device) return;
-
-  if (this._p1PollInterval) {
-    this.homey.clearInterval(this._p1PollInterval);
-  }
-
-  this._p1PollInterval = this.homey.setInterval(async () => {
     if (!this.p1Device) return;
 
-    try {
-      const soc =
-        this.p1Device.getCapabilityValue('battery_group_average_soc') ??
-        50;
-
-      const gridPower =
-        this.p1Device.getCapabilityValue('measure_power') ?? 0;
-
-      const currentSoc = this.getCapabilityValue('battery_soc_mirror');
-      const currentPower = this.getCapabilityValue('grid_power_mirror');
-
-      // Mirror SoC
-      if (currentSoc !== soc) {
-        await this.setCapabilityValue('battery_soc_mirror', soc);
-        this.log(`🔄 SoC updated: ${currentSoc}% → ${soc}%`);
-      }
-
-      // Mirror grid power
-      if (currentPower !== gridPower) {
-        await this.setCapabilityValue('grid_power_mirror', gridPower);
-      }
-
-      // ------------------------------------------------------
-      // ⭐ REALTIME PV STATE CHANGE DETECTIE
-      // ------------------------------------------------------
-      const prevGrid = this._prevGridPower ?? 0;
-
-      const hadPV = prevGrid < -100;   // export → PV overschot
-      const hasPV = gridPower < -100;
-
-      if (hadPV !== hasPV) {
-        this.log(`⚡ PV state changed (${hadPV} → ${hasPV}) → running policy immediately`);
-        this._runPolicyCheck().catch(err => this.error(err));
-      }
-
-      this._prevGridPower = gridPower;
-
-    } catch (err) {
-      this.error('Error polling P1 capabilities:', err);
+    if (this._p1PollInterval) {
+      this.homey.clearInterval(this._p1PollInterval);
     }
-  }, 5000);
 
-  this.log('✅ P1 capability polling started (5s interval)');
-}
+    this._p1PollInterval = this.homey.setInterval(async () => {
+      if (!this.p1Device) return;
 
+      try {
+        const soc =
+          this.p1Device.getCapabilityValue('battery_group_average_soc') ??
+          50;
+
+        const gridPower =
+          this.p1Device.getCapabilityValue('measure_power') ?? 0;
+
+        const currentSoc = this.getCapabilityValue('battery_soc_mirror');
+        const currentPower = this.getCapabilityValue('grid_power_mirror');
+
+        // Mirror SoC
+        if (currentSoc !== soc) {
+          await this.setCapabilityValue('battery_soc_mirror', soc);
+          this.log(`🔄 SoC updated: ${currentSoc}% → ${soc}%`);
+        }
+
+        // Mirror grid power
+        if (currentPower !== gridPower) {
+          await this.setCapabilityValue('grid_power_mirror', gridPower);
+        }
+
+        // ------------------------------------------------------
+        // ⭐ REALTIME PV STATE CHANGE DETECTIE
+        // ------------------------------------------------------
+        const prevGrid = this._prevGridPower ?? 0;
+
+        const hadPV = prevGrid < -100;   // export → PV overschot
+        const hasPV = gridPower < -100;
+
+        if (hadPV !== hasPV) {
+          this.log(`⚡ PV state changed (${hadPV} → ${hasPV}) → running policy immediately`);
+          this._runPolicyCheck().catch(err => this.error(err));
+        }
+
+        this._prevGridPower = gridPower;
+
+      } catch (err) {
+        this.error('Error polling P1 capabilities:', err);
+      }
+    }, 5000);
+
+    this.log('✅ P1 capability polling started (5s interval)');
+  }
 
   _schedulePolicyCheck() {
     const intervalMinutes = this.getSetting('policy_interval') || 15;
@@ -444,6 +444,66 @@ class BatteryPolicyDevice extends Homey.Device {
     }
   }
 
+  /**
+   * Estimate PV production using grid power analysis + sun model
+   * @param {Object} ctx - Context with gridPower, batteryPower, sunScore
+   * @returns {number} Estimated PV production in watts
+   */
+  _estimatePvProduction(ctx) {
+    const settings = this.getSettings();
+    
+    // Feature disabled or no capacity configured
+    if (!settings.pv_estimation_enabled || !settings.pv_capacity_w || settings.pv_capacity_w <= 0) {
+      return 0;
+    }
+
+    const grid = ctx.gridPower ?? 0;           // positive = import, negative = export
+    const batt = ctx.batteryPower ?? 0;        // positive = charging, negative = discharging
+    const sunScore = ctx.sunScore ?? 0;        // 0..100
+    const pvCap = settings.pv_capacity_w;
+    const alpha = 0.4; // EMA smoothing factor
+
+    // Sun-based model: scale capacity by sun intensity
+    const sunFactor = Math.max(0, Math.min(1, sunScore / 100));
+    const pvModel = Math.round(pvCap * sunFactor);
+
+    let pvFromGrid = 0;
+    const exportThreshold = -75; // Grid exporting when below this
+
+    if (grid < exportThreshold) {
+      // Grid is exporting: PV must be producing more than household consumption
+      // Household load = export + any battery discharge
+      const exportPower = Math.abs(grid);
+      const batteryDischarge = batt < 0 ? Math.abs(batt) : 0;
+      pvFromGrid = exportPower + batteryDischarge;
+      
+      // When exporting, PV must also be covering any battery charge
+      const batteryCharge = batt > 0 ? batt : 0;
+      pvFromGrid += batteryCharge;
+    } else if (grid > 0 && batt > 100) {
+      // Grid importing + battery charging: PV might be contributing
+      // This is conservative: only count if battery is actively charging
+      // Real PV = battery charge power (assuming zero-charge-only mode)
+      pvFromGrid = batt;
+    }
+
+    // Use the stronger signal (measured export trumps model)
+    const rawEstimate = Math.max(pvModel, pvFromGrid);
+
+    // EMA smoothing to avoid oscillation from clouds
+    const estimate = this._lastPvEstimateW 
+      ? Math.round((alpha * rawEstimate) + ((1 - alpha) * this._lastPvEstimateW))
+      : rawEstimate;
+
+    this._lastPvEstimateW = estimate;
+
+    if (settings.enable_logging && estimate > 0) {
+      this.log(`PV estimate: ${estimate}W (model: ${pvModel}W, fromGrid: ${pvFromGrid}W, sun: ${sunScore}%)`);
+    }
+
+    return Math.max(0, estimate);
+  }
+
   async _gatherInputs() {
     const settings = this.getSettings();
 
@@ -529,9 +589,18 @@ class BatteryPolicyDevice extends Homey.Device {
     await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
     await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
 
+    // Estimate PV production using grid analysis + sun model
+    const sunScore = sun ? Math.max(sun.gfs ?? 0, sun.harmonie ?? 0) : 0;
+    const pvEstimateW = this._estimatePvProduction({
+      gridPower: batteryState.gridPower,
+      batteryPower: batteryState.groupPower,
+      sunScore
+    });
+
     const p1 = {
       resolved_gridPower: batteryState.gridPower,
-      battery_power: batteryState.groupPower
+      battery_power: batteryState.groupPower,
+      pv_power_estimated: pvEstimateW
     };
 
     return {
@@ -552,18 +621,27 @@ class BatteryPolicyDevice extends Homey.Device {
     switch (override) {
       case 'sunny':
         modified.sunshineNext4Hours = 4;
+        modified.sunshineNext8Hours = 6;
+        modified.sunshineTodayRemaining = 5;
+        modified.sunshineTomorrow = 7;
         modified.cloudCover = 0;
         modified.precipitationProbability = 0;
         break;
 
       case 'cloudy':
         modified.sunshineNext4Hours = 0.5;
+        modified.sunshineNext8Hours = 1;
+        modified.sunshineTodayRemaining = 1;
+        modified.sunshineTomorrow = 2;
         modified.cloudCover = 80;
         modified.precipitationProbability = 20;
         break;
 
       case 'rainy':
         modified.sunshineNext4Hours = 0;
+        modified.sunshineNext8Hours = 0;
+        modified.sunshineTodayRemaining = 0;
+        modified.sunshineTomorrow = 0;
         modified.cloudCover = 100;
         modified.precipitationProbability = 90;
         break;
@@ -582,7 +660,10 @@ class BatteryPolicyDevice extends Homey.Device {
       cycles: 0,
       gridPower: 0,
       mode: 'standby',
-      groupPower: 0
+      groupPower: 0,
+      maxDischargePowerW: 800,
+      maxChargePowerW: 800,
+      battery_group_max_discharge_power_w: 800
     };
 
     if (!this.p1Device) {
@@ -610,6 +691,15 @@ class BatteryPolicyDevice extends Homey.Device {
         this.p1Device.getCapabilityValue('battery_group_total_capacity_kwh') ??
         null;
 
+      // ✅ NEW: Get max production and consumption power
+      const maxProduction =
+        this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ??
+        800;
+
+      const maxConsumption =
+        this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ??
+        800;
+
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
       await this.setCapabilityValue('grid_power_mirror', gridPower).catch(this.error);
 
@@ -620,7 +710,11 @@ class BatteryPolicyDevice extends Homey.Device {
         gridPower,
         mode: groupMode,
         groupPower,
-        totalCapacityKwh: totalCapacity
+        totalCapacityKwh: totalCapacity,
+        // ✅ NEW: Provide max discharge and charge power
+        maxDischargePowerW: maxProduction,
+        maxChargePowerW: maxConsumption,
+        battery_group_max_discharge_power_w: maxProduction
       };
 
     } catch (error) {
@@ -629,68 +723,68 @@ class BatteryPolicyDevice extends Homey.Device {
     }
   }
 
-async _applyRecommendation(mode, confidence) {
-  const minConfidence = this.getSetting('min_confidence_threshold') || 60;
+  async _applyRecommendation(mode, confidence) {
+    const minConfidence = this.getSetting('min_confidence_threshold') || 60;
 
-  if (confidence < minConfidence) {
-    this.log(`Confidence ${confidence}% below threshold ${minConfidence}%, not applying`);
-    return false;
-  }
-
-  if (!this.p1Device) {
-    this.error('No P1 device available to apply mode');
-    return false;
-  }
-
-  try {
-    // ⭐ Alleen echte HomeWizard modes
-    let targetMode = null;
-
-    if (mode === 'zero_charge_only') {
-      targetMode = 'zero_charge_only';
-    } else if (mode === 'zero_discharge_only') {
-      targetMode = 'zero_discharge_only';
-    } else if (mode === 'to_full') {
-      targetMode = 'to_full';
-    } else if (mode === 'standby') {
-      targetMode = 'standby';
-    } else if (mode === 'zero') {
-      targetMode = 'zero';
-    } else {
-      // Fallback: nooit niet‑bestaande modes sturen
-      this.log(`⚠️ Unknown logical mode "${mode}", falling back to standby`);
-      targetMode = 'standby';
-    }
-
-    // ⭐ Lees de ECHTE batterij-mode
-    const actualMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
-
-    this.log(`🔍 Actual HW mode: ${actualMode}, desired: ${targetMode}`);
-
-    // ⭐ Als al correct → niets doen
-    if (actualMode === targetMode) {
-      this.log(`ℹ️ Battery already in correct HW mode (${actualMode}), no change needed`);
-      return true;
-    }
-
-    // ⭐ Mode zetten
-    this.log(`🔄 Changing battery mode: ${actualMode} → ${targetMode} (confidence: ${confidence}%)`);
-    const result = await this.p1Device.setBatteryGroupMode(targetMode);
-
-    if (result) {
-      this.log(`✅ Battery mode successfully changed to: ${targetMode}`);
-      await this._triggerModeApplied(targetMode, confidence);
-      return true;
-    } else {
-      this.log(`❌ setBatteryGroupMode returned false`);
+    if (confidence < minConfidence) {
+      this.log(`Confidence ${confidence}% below threshold ${minConfidence}%, not applying`);
       return false;
     }
 
-  } catch (error) {
-    this.error('❌ Failed to apply recommendation to P1:', error);
-    return false;
+    if (!this.p1Device) {
+      this.error('No P1 device available to apply mode');
+      return false;
+    }
+
+    try {
+      // ⭐ Alleen echte HomeWizard modes
+      let targetMode = null;
+
+      if (mode === 'zero_charge_only') {
+        targetMode = 'zero_charge_only';
+      } else if (mode === 'zero_discharge_only') {
+        targetMode = 'zero_discharge_only';
+      } else if (mode === 'to_full') {
+        targetMode = 'to_full';
+      } else if (mode === 'standby') {
+        targetMode = 'standby';
+      } else if (mode === 'zero') {
+        targetMode = 'zero';
+      } else {
+        // Fallback: nooit niet‑bestaande modes sturen
+        this.log(`⚠️ Unknown logical mode "${mode}", falling back to standby`);
+        targetMode = 'standby';
+      }
+
+      // ⭐ Lees de ECHTE batterij-mode
+      const actualMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+
+      this.log(`🔍 Actual HW mode: ${actualMode}, desired: ${targetMode}`);
+
+      // ⭐ Als al correct → niets doen
+      if (actualMode === targetMode) {
+        this.log(`ℹ️ Battery already in correct HW mode (${actualMode}), no change needed`);
+        return true;
+      }
+
+      // ⭐ Mode zetten
+      this.log(`🔄 Changing battery mode: ${actualMode} → ${targetMode} (confidence: ${confidence}%)`);
+      const result = await this.p1Device.setBatteryGroupMode(targetMode);
+
+      if (result) {
+        this.log(`✅ Battery mode successfully changed to: ${targetMode}`);
+        await this._triggerModeApplied(targetMode, confidence);
+        return true;
+      } else {
+        this.log(`❌ setBatteryGroupMode returned false`);
+        return false;
+      }
+
+    } catch (error) {
+      this.error('❌ Failed to apply recommendation to P1:', error);
+      return false;
+    }
   }
-}
 
   async _triggerRecommendationChanged(result, explanation) {
     const trigger = this.homey.flow.getDeviceTriggerCard('policy_recommendation_changed');
