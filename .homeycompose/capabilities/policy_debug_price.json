@@ -1,0 +1,16 @@
+{
+  "id": "policy_debug_price",
+  "type": "string",
+  "title": {
+    "en": "Policy Price",
+    "nl": "Policy Prijs"
+  },
+  "desc": {
+    "en": "Current DAP price and rate bucket",
+    "nl": "Huidige DAP-prijs en tariefcategorie"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false
+}

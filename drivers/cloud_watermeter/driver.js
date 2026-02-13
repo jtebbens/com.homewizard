@@ -83,12 +83,13 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
   }
 
   /**
-   * Get devices for a specific home using GraphQL
+   * Fetch devices for a specific home using GraphQL (renamed to avoid
+   * overriding Homey.Driver.getDevices()).
    * @param {string} token - Bearer token
    * @param {number} homeId - Home ID
    * @returns {Promise<Object>} GraphQL response with devices
    */
-  async getDevices(token, homeId) {
+  async fetchDevicesForHome(token, homeId) {
     const payload = {
       operationName: 'DeviceList',
       variables: {
@@ -245,7 +246,7 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
 
       for (const location of locations) {
         this.log(`Fetching devices for location: ${location.id} (${location.name || 'unnamed'})`);
-        const devicesData = await this.getDevices(tokenData.access_token, location.id);
+        const devicesData = await this.fetchDevicesForHome(tokenData.access_token, location.id);
         
         if (devicesData?.data?.home?.devices) {
           this.log(`Found ${devicesData.data.home.devices.length} total devices`);

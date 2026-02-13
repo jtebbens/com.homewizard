@@ -1341,7 +1341,14 @@ async _handleMeasurement(m) {
   const now = Date.now();
   const settings = this.getSettings();
   const showGas = settings.show_gas === true;
-  const homeyLang = this.homey.i18n.getLanguage();
+  
+  // Safely get language, default to 'en' if app instance is destroyed
+  let homeyLang = 'en';
+  try {
+    homeyLang = this.homey.i18n.getLanguage();
+  } catch (err) {
+    this.log('⚠️ Could not get language (app destroyed?), defaulting to English');
+  }
 
   this._measurementCache(m, now);
   const tasks = [];
@@ -1366,6 +1373,13 @@ _validateMeasurementContext() {
     this.log('⚠️ Ignoring measurement: device no longer exists');
     return false;
   }
+  
+  // Check if app instance is still valid (not destroyed)
+  if (!this.homey) {
+    this.log('⚠️ Ignoring measurement: app instance has been destroyed');
+    return false;
+  }
+  
   return true;
 }
 

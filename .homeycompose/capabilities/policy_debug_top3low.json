@@ -1,0 +1,16 @@
+{
+  "id": "policy_debug_top3low",
+  "type": "string",
+  "title": {
+    "en": "Policy Top3 Low",
+    "nl": "Policy Top3 Laag"
+  },
+  "desc": {
+    "en": "Top 3 cheapest DAP hours",
+    "nl": "Top 3 goedkoopste DAP-uren"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false
+}

@@ -4,7 +4,7 @@ Upon first deployment you need add the Homewizard unit first, then you can add t
 
 NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
 
-v3.13.8
+v3.13.11
 
 * Homewizard Legacy Device updates (CSS, flow and language) - thanks smarthomesvan
 * Watermeter - battery based (via cloud hwenergy only 4x updates a day)
@@ -12,6 +12,10 @@ v3.13.8
 * P1 (apiv2) - tariff trigger fix
 * Bugfix: capability_already_exists (cloud_p1)
 * Plugin Battery state of charge icon added as tile for dashboard
+
+NEW
+
+* Battery Policy driver to act on dynamic tariffs, or peak shaving
 
 NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
 If Homewizard Energy is down or is under maintenance or change their hwenergy web frontend you get errors or incorrect data.

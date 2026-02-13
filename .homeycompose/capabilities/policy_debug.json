@@ -1,0 +1,16 @@
+{
+  "id": "policy_debug",
+  "type": "string",
+  "title": {
+    "en": "Policy Debug",
+    "nl": "Policy Debug"
+  },
+  "desc": {
+    "en": "Current tariff and weather inputs used by the policy engine",
+    "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false
+}
