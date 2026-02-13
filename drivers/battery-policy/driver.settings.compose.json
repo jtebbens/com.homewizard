@@ -165,6 +165,38 @@
 
   {
     "type": "group",
+    "label": { "en": "PV Estimation", "nl": "PV‑schatting" },
+    "children": [
+      {
+        "id": "pv_estimation_enabled",
+        "type": "checkbox",
+        "label": { "en": "Enable PV Estimation", "nl": "PV‑schatting inschakelen" },
+        "hint": {
+          "en": "Estimate PV production using grid measurements (no privileged access needed).",
+          "nl": "Schat PV‑productie met behulp van netmetingen (geen verhoogde toegang nodig)."
+        },
+        "value": false
+      },
+      {
+        "id": "pv_capacity_w",
+        "type": "number",
+        "label": { "en": "PV Peak Capacity (W)", "nl": "PV‑piekvermogen (W)" },
+        "hint": {
+          "en": "Your solar system's peak power rating in watts (e.g., 3500 for 3.5kWp).",
+          "nl": "Het piekvermogen van uw zonnesysteem in watt (bijv. 3500 voor 3,5kWp)."
+        },
+        "units": { "en": "W", "nl": "W" },
+        "value": 0,
+        "min": 0,
+        "max": 20000,
+        "step": 100,
+        "visible": { "when": "pv_estimation_enabled", "is": true }
+      }
+    ]
+  },
+
+  {
+    "type": "group",
     "label": { "en": "Advanced", "nl": "Geavanceerd" },
     "children": [
       {
