@@ -961,5 +961,8 @@
   },
   "3.13.10": {
     "en": "Battery Policy - dynamic mode fine tuning"
+  },
+  "3.13.11": {
+    "en": "Bug fixes: Battery Policy, energy, energy_v2 and cloud_watermeter"
   }
 }
