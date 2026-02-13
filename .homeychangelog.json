@@ -964,5 +964,8 @@
   },
   "3.13.11": {
     "en": "Bug fixes: Battery Policy, energy, energy_v2 and cloud_watermeter"
+  },
+  "3.13.12": {
+    "en": "Bugfixes and a PV option to estimate what your PV system produce without linking directly"
   }
 }
