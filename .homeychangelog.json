@@ -967,5 +967,8 @@
   },
   "3.13.12": {
     "en": "Bugfixes and a PV option to estimate what your PV system produce without linking directly"
+  },
+  "3.13.13": {
+    "en": "Flowcard added to update any realtime PV production"
   }
 }
