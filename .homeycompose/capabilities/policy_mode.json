@@ -8,8 +8,7 @@
   "values": [
     { "id": "off", "title": { "en": "Off", "nl": "Uit" } },
     { "id": "balanced", "title": { "en": "Balanced", "nl": "Gebalanceerd" } },
-    { "id": "zero_basic", "title": { "en": "Zero (Basic)", "nl": "Zero (Basis)" } },
-    { "id": "zero_smart", "title": { "en": "Zero (Smart)", "nl": "Zero (Slim)" } }
+    { "id": "zero", "title": { "en": "Zero", "nl": "Zero" } }
   ],
   "getable": true,
   "setable": true,

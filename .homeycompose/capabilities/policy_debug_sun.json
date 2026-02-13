@@ -1,0 +1,16 @@
+{
+  "id": "policy_debug_sun",
+  "type": "string",
+  "title": {
+    "en": "Policy Sun",
+    "nl": "Policy Zon"
+  },
+  "desc": {
+    "en": "Sunshine forecast inputs used by the policy",
+    "nl": "Zon-voorspelling gebruikt door de policy"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false
+}

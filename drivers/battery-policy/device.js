@@ -54,6 +54,10 @@ class BatteryPolicyDevice extends Homey.Device {
       predicted_sun_hours: 0,
       confidence_score: 0,
       explanation_summary: 'Initializing policy engine...',
+      policy_debug_price: '-',
+      policy_debug_top3low: '-',
+      policy_debug_top3high: '-',
+      policy_debug_sun: '-',
       battery_soc_mirror: 50,
       grid_power_mirror: 0,
       last_update: new Date().toISOString(),
@@ -63,9 +67,10 @@ class BatteryPolicyDevice extends Homey.Device {
 
     for (const [capability, defaultValue] of Object.entries(defaults)) {
       if (!this.hasCapability(capability)) {
-        await this.addCapability(capability).catch(err =>
-          this.error(`Failed to add capability ${capability}:`, err)
-        );
+        await this.addCapability(capability).catch(err => {
+          if (err && err.code === 409) return;
+          this.error(`Failed to add capability ${capability}:`, err);
+        });
       }
 
       const current = this.getCapabilityValue(capability);
@@ -500,6 +505,29 @@ class BatteryPolicyDevice extends Homey.Device {
 
     const batteryState = await this._getBatteryState();
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
+
+    const debugPrice = tariffInfo?.currentPrice ?? 'n/a';
+    const debugTopLow = Array.isArray(tariffInfo?.top3Lowest)
+      ? tariffInfo.top3Lowest.map(p => Number(p).toFixed(3)).join(',')
+      : 'n/a';
+    const debugTopHigh = Array.isArray(tariffInfo?.top3Highest)
+      ? tariffInfo.top3Highest.map(p => Number(p).toFixed(3)).join(',')
+      : 'n/a';
+    const debugSun4h = Number(weatherData?.sunshineNext4Hours ?? 0).toFixed(1);
+    const debugSun8h = Number(weatherData?.sunshineNext8Hours ?? 0).toFixed(1);
+    const debugSunToday = Number(weatherData?.sunshineTodayRemaining ?? 0).toFixed(1);
+    const debugSunTomorrow = Number(weatherData?.sunshineTomorrow ?? 0).toFixed(1);
+
+    const debugRate = tariffInfo?.currentRate ?? 'n/a';
+    const debugPriceText = `price=${debugPrice} rate=${debugRate}`;
+    const debugTopLowText = `low=[${debugTopLow}]`;
+    const debugTopHighText = `high=[${debugTopHigh}]`;
+    const debugSunText = `4h=${debugSun4h} 8h=${debugSun8h} today=${debugSunToday} tmw=${debugSunTomorrow}`;
+
+    await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
+    await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
+    await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
+    await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
 
     const p1 = {
       resolved_gridPower: batteryState.gridPower,
