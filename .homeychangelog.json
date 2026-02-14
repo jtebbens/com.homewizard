@@ -970,5 +970,8 @@
   },
   "3.13.13": {
     "en": "Flowcard added to update any realtime PV production"
+  },
+  "3.13.14": {
+    "en": "User request, grid outage, sag and swells trigger cards added"
   }
 }
