@@ -6367,7 +6367,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/icon.svg"
     },
     "policy_debug_price": {
       "id": "policy_debug_price",
@@ -6383,7 +6384,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/icon.svg"
     },
     "policy_debug_sun": {
       "id": "policy_debug_sun",
@@ -6399,7 +6401,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/icon.svg"
     },
     "policy_debug_top3high": {
       "id": "policy_debug_top3high",
@@ -6415,7 +6418,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/icon.svg"
     },
     "policy_debug_top3low": {
       "id": "policy_debug_top3low",
@@ -6431,7 +6435,8 @@
       "getable": true,
       "setable": false,
       "uiComponent": "sensor",
-      "insights": false
+      "insights": false,
+      "icon": "assets/icon.svg"
     },
     "policy_enabled": {
       "type": "boolean",
@@ -6480,7 +6485,8 @@
       ],
       "getable": true,
       "setable": true,
-      "uiComponent": "picker"
+      "uiComponent": "picker",
+      "icon": "assets/icon.svg"
     },
     "predicted_sun_hours": {
       "type": "number",
@@ -6772,7 +6778,8 @@
       ],
       "getable": true,
       "setable": true,
-      "uiComponent": "picker"
+      "uiComponent": "picker",
+      "icon": "assets/icon.svg"
     },
     "wifi_quality": {
       "type": "string",
