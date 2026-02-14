@@ -374,5 +374,10 @@
         "prev": "list_devices"
       }
     }
+  ],
+  "repair": [
+    {
+      "id": "manual_ip"
+    }
   ]
 }

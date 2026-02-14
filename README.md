@@ -48,7 +48,33 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.14)
+## 📝 Latest Updates (v3.13.17)
+
+### New Features
+
+* **Manual IP Override** - Repair flow for devices when mDNS discovery fails (VLAN/UniFi/mesh Wi-Fi issues)
+* **Battery-Aware Baseload** - Excludes battery discharge from grid power for accurate standby consumption
+* **Smart Filtering** - Automatically filters EV charging and heat pump cycles from baseload calculation
+* **Dynamic Sunrise/Sunset** - Battery discharge windows adapt to seasonal changes (sunset-based timing)
+* **Weather-Aware Discharge** - Battery policy uses tomorrow's solar forecast for intelligent discharge decisions
+* **Monthly Cost Display** - Settings page shows estimated baseload costs with real-time pricing
+
+### Improvements
+
+* Discovery error messages now guide users with mDNS troubleshooting steps (EN/NL)
+* Baseload monitor uses median of lowest 50% samples for robust calculation
+* Settings page displays visual ML score progress bars
+* Explainability engine shows weather-aware reasoning with dynamic time windows
+
+### Technical
+
+* Manual IP support for both P1 Meter (v1) and P1 Meter (apiv2) drivers
+* Discovery events properly ignored when manual IP is configured
+* Fixed €0.25 estimate for baseload costs to prevent API overload from 15k users
+
+---
+
+## Previous Updates (v3.13.14)
 
 ### New Features
 

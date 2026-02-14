@@ -16,6 +16,7 @@ const https = require('https');
 const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
 const wsDebug = require('../../includes/v2/wsDebug');
+const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 const debug = false;
 
 process.on('uncaughtException', (err) => {
@@ -377,6 +378,43 @@ _hashExternal(external) {
   return hash;
 }
 
+/**
+ * Get effective URL - manual IP overrides discovery
+ * @returns {string} URL to use for API calls
+ */
+_getEffectiveURL() {
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🔧 Using manual IP: ${manualIP}`);
+    return `https://${manualIP}`;
+  }
+  
+  const settings = this.getSettings();
+  if (settings.url) {
+    return settings.url;
+  }
+  
+  return null;
+}
+
+/**
+ * Reconnect with manual IP after repair flow
+ * @param {string} ip - The manual IP address
+ */
+async reconnectWithManualIP(ip) {
+  this.log(`🔧 Reconnecting with manual IP: ${ip}`);
+  
+  this.url = `https://${ip}`;
+  
+  // Restart WebSocket if not polling
+  if (!this.getSettings().use_polling && this.wsManager) {
+    this.log('🔁 Manual IP: restarting WebSocket');
+    this.wsManager.restartWebSocket();
+  } else if (this.getSettings().use_polling) {
+    this.log('🔁 Manual IP: polling mode, will reconnect on next poll');
+  }
+}
+
 
  async onInit() {
     wsDebug.init(this.homey);
@@ -404,6 +442,9 @@ _hashExternal(external) {
       this._cache[key] = await getStoreValueSafe(this, key);
     }
 
+    // Get effective URL (manual IP overrides discovery)
+    this.url = this._getEffectiveURL();
+
 
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
@@ -417,6 +458,13 @@ _hashExternal(external) {
     await this._registerCapabilityListeners();
     await this._ensureBatteryCapabilities();
 
+    // Register with baseload monitor
+    const app = this.homey.app;
+    if (!app.baseloadMonitor) {
+      app.baseloadMonitor = new BaseloadMonitor(this.homey);
+    }
+    app.baseloadMonitor.registerP1Device(this);
+    app.baseloadMonitor.trySetMaster(this);
 
     const settings = this.getSettings();
     this.log('Settings for P1 apiv2: ', settings.polling_interval);
@@ -1463,6 +1511,18 @@ _measurementPower(m, tasks) {
     cap('measure_power.l1', m.power_l1_w);
     cap('measure_power.l2', m.power_l2_w);
     cap('measure_power.l3', m.power_l3_w);
+
+    // Feed baseload monitor with battery-aware power
+    this._onNewPowerValue(m.power_w);
+  }
+}
+
+_onNewPowerValue(gridPower) {
+  const app = this.homey.app;
+  if (app.baseloadMonitor) {
+    // Get battery power if available
+    const batteryPower = this.getCapabilityValue('measure_power.battery_group_power_w');
+    app.baseloadMonitor.updatePowerFromDevice(this, gridPower, batteryPower);
   }
 }
 
@@ -1759,6 +1819,12 @@ async _handleBatteries(data) {
 
 
   onDeleted() {
+    // Unregister from baseload monitor
+    const app = this.homey.app;
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.unregisterP1Device(this);
+    }
+
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -1805,6 +1871,13 @@ async _handleBatteries(data) {
 
 async onDiscoveryAvailable(discoveryResult) {
   const newIP = discoveryResult.address;
+
+  // Check if manual IP is set - if so, ignore discovery
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🌐 Discovery: Manual IP (${manualIP}) is set — ignoring discovery IP ${newIP}`);
+    return;
+  }
 
   // Eerste keer discovery → IP opslaan
   if (!this._lastDiscoveryIP) {
@@ -1864,6 +1937,13 @@ async onDiscoveryAvailable(discoveryResult) {
 
 async onDiscoveryAddressChanged(discoveryResult) {
   const newIP = discoveryResult.address;
+
+  // Check if manual IP is set - if so, ignore discovery
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🌐 AddressChanged: Manual IP (${manualIP}) is set — ignoring discovery IP ${newIP}`);
+    return;
+  }
 
   // Only respond if the IP actually changed
   if (this._lastDiscoveryIP === newIP) {

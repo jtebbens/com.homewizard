@@ -689,10 +689,10 @@ class BatteryPolicyDevice extends Homey.Device {
 
     const debugPrice = tariffInfo?.currentPrice ?? 'n/a';
     const debugTopLow = Array.isArray(tariffInfo?.top3Lowest)
-      ? tariffInfo.top3Lowest.map(p => Number(p).toFixed(3)).join(',')
+      ? tariffInfo.top3Lowest.map(p => `${String(p.hour).padStart(2, '0')}:00€${p.price.toFixed(2)}`).join(', ')
       : 'n/a';
     const debugTopHigh = Array.isArray(tariffInfo?.top3Highest)
-      ? tariffInfo.top3Highest.map(p => Number(p).toFixed(3)).join(',')
+      ? tariffInfo.top3Highest.map(p => `${String(p.hour).padStart(2, '0')}:00€${p.price.toFixed(2)}`).join(', ')
       : 'n/a';
     const debugSun4h = Number(weatherData?.sunshineNext4Hours ?? 0).toFixed(1);
     const debugSun8h = Number(weatherData?.sunshineNext8Hours ?? 0).toFixed(1);

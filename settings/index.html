@@ -75,6 +75,25 @@
   <!-- TAB: BASELOAD -->
   <div id="baseload" class="tab-content active">
     <h2>Sluipverbruik grafiek</h2>
+    
+    <!-- Cost estimate box -->
+    <div id="baseload-cost" style="
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    ">
+      <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Huidig sluipverbruik</div>
+      <div id="baseload-value" style="font-size: 28px; font-weight: bold; color: #212529; margin-bottom: 12px;">
+        Laden...
+      </div>
+      <div id="baseload-cost-details" style="font-size: 13px; color: #6c757d; line-height: 1.6;">
+        Berekening wordt uitgevoerd...
+      </div>
+    </div>
+
     <canvas id="baseloadChart" height="150"></canvas>
 
     <h3>Samples van geselecteerde nacht</h3>
@@ -142,8 +161,12 @@
     <h3>Waarschuwingen</h3>
     <ul id="explain-warnings" style="padding-left: 20px;"></ul>
 
-    <h3>Scores</h3>
-    <pre id="explain-scores" class="debug-box"></pre>
+    <h3>ML Decision Scores</h3>
+    <div id="explain-scores-visual" style="margin-bottom: 20px;"></div>
+    <details style="margin-bottom: 20px;">
+      <summary style="cursor: pointer; color: #666; font-size: 12px;">Toon raw scores (debug)</summary>
+      <pre id="explain-scores" class="debug-box" style="margin-top: 10px;"></pre>
+    </details>
 
     <h3>Tijdstip</h3>
     <div id="explain-timestamp" style="font-size: 12px; color: #666;"></div>
@@ -182,6 +205,28 @@
         /* ---- BASELOAD ---- */
         const state = settings['baseload_state'];
         const history = state?.nightHistory || [];
+        const currentBaseload = state?.currentBaseload;
+
+        // Calculate and display cost estimate
+        if (currentBaseload && typeof currentBaseload === 'number') {
+          // Use fixed €0.25/kWh estimate (prevents 15k users hammering APIs)
+          // Battery policy users will see more accurate pricing via their policy device
+          const avgPrice = 0.25;
+          
+          const monthlyKwh = (currentBaseload / 1000) * 24 * 30;
+          const monthlyCost = monthlyKwh * avgPrice;
+          const yearlyCost = monthlyCost * 12;
+          
+          document.getElementById('baseload-value').innerText = `${Math.round(currentBaseload)}W`;
+          document.getElementById('baseload-cost-details').innerHTML = `
+            <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) = 
+            <strong>~€${monthlyCost.toFixed(2)}/maand</strong> (€${yearlyCost.toFixed(0)}/jaar)<br>
+            <span style="font-size: 12px; color: #999;">Typisch sluipverbruik: 200-300W</span>
+          `;
+        } else {
+          document.getElementById('baseload-value').innerText = 'Geen data';
+          document.getElementById('baseload-cost-details').innerText = 'Sluipverbruik wordt nog berekend. Check morgen terug.';
+        }
 
         const labels = history.map(n => n.date);
         const values = history.map(n => n.avg || null);
@@ -307,6 +352,58 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
             warningsList.appendChild(li);
           });
 
+          // Visual scores with progress bars
+          const scoresVisual = document.getElementById('explain-scores-visual');
+          if (data.scores) {
+            const scores = data.scores;
+            const maxScore = Math.max(scores.charge || 0, scores.discharge || 0, scores.preserve || 0);
+            const winner = maxScore === scores.charge ? 'charge' : 
+                          maxScore === scores.discharge ? 'discharge' : 'preserve';
+            
+            const scoreLabels = {
+              charge: '🔌 Laden',
+              discharge: '⚡ Ontladen', 
+              preserve: '🛡️ Beschermen'
+            };
+            
+            const scoreColors = {
+              charge: '#4CAF50',
+              discharge: '#2196F3',
+              preserve: '#FF9800'
+            };
+            
+            scoresVisual.innerHTML = ['charge', 'discharge', 'preserve'].map(mode => {
+              const score = scores[mode] || 0;
+              const percentage = maxScore > 0 ? (score / maxScore * 100) : 0;
+              const isWinner = mode === winner;
+              
+              return `
+                <div style="margin-bottom: 15px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">
+                      ${scoreLabels[mode]} ${isWinner ? '✓' : ''}
+                    </span>
+                    <span style="font-family: monospace; font-size: 13px; color: #666;">
+                      ${score.toFixed(1)}
+                    </span>
+                  </div>
+                  <div style="background: #e0e0e0; border-radius: 4px; height: 24px; overflow: hidden; position: relative;">
+                    <div style="
+                      background: ${scoreColors[mode]};
+                      width: ${percentage}%;
+                      height: 100%;
+                      transition: width 0.3s ease;
+                      ${isWinner ? 'box-shadow: 0 0 8px rgba(0,0,0,0.3);' : ''}
+                    "></div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            scoresVisual.innerHTML = '<p style="color: #999;">Geen scores beschikbaar</p>';
+          }
+
+          // Raw scores (collapsible)
           document.getElementById('explain-scores').textContent =
             JSON.stringify(data.scores, null, 2);
 
