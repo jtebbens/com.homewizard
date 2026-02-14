@@ -27,6 +27,7 @@
     "tab_baseload": "Sluipverbruik"
   },
   "pair": {
+    "no_devices_found": "Geen apparaten gevonden. Controleer:\n• Lokale API is ingeschakeld in HomeWizard app\n• Apparaat en Homey zijn op hetzelfde netwerk\n• mDNS/Bonjour is ingeschakeld op je router\n• Geen VLAN-isolatie tussen netwerken",
     "authorize_title": "Authorizeren",
     "authorize_instruction": "Druk op de knop van het apparaat om de koppeling te voltooien",
     "button_label_waiting": "Wachten op indrukken knop...",
@@ -39,6 +40,30 @@
     "plugin_battery": {
       "authorize_instruction": "Druk op de knop van de plugin batterij om de koppeling te voltooien"
     }
+  },
+  "repair": {
+    "title": "Handmatig IP-adres instellen",
+    "description": "Gebruik dit als mDNS-discovery niet werkt op je netwerk (bijv. VLAN-isolatie, mesh Wi-Fi problemen).",
+    "warning": "⚠️ Waarschuwing: Handmatig IP wordt niet automatisch bijgewerkt als het apparaat een nieuw IP krijgt via DHCP. Gebruik een statische IP-reservering in je router.",
+    "label_current_mode": "Huidige modus:",
+    "label_discovery_ip": "Discovery IP:",
+    "label_manual_ip": "Handmatig IP-adres:",
+    "mode_manual": "Handmatig IP",
+    "mode_discovery": "mDNS Discovery (automatisch)",
+    "unknown": "Onbekend",
+    "btn_save": "Opslaan & Verbinding testen",
+    "btn_clear": "Terug naar mDNS Discovery",
+    "testing": "Testen...",
+    "invalid_ip": "Ongeldig IP-adres formaat",
+    "connection_failed": "Kan geen verbinding maken met apparaat",
+    "wrong_device": "Verkeerd apparaat - serienummer komt niet overeen",
+    "ip_required": "Voer een IP-adres in",
+    "success": "✓ Handmatig IP succesvol opgeslagen",
+    "cleared": "✓ Teruggekeerd naar mDNS discovery",
+    "save_failed": "Opslaan handmatig IP mislukt",
+    "clear_failed": "Wissen handmatig IP mislukt",
+    "load_failed": "Laden huidige instellingen mislukt",
+    "confirm_clear": "Terugkeren naar automatische mDNS discovery? Je handmatige IP wordt verwijderd."
   },
   "device": {
     "init": "Apparaat initialiseren...",

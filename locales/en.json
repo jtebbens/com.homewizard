@@ -27,6 +27,7 @@
     "tab_baseload": "Baseload"
   },
   "pair": {
+    "no_devices_found": "No devices found. Make sure:\n• Local API is enabled in HomeWizard app\n• Device and Homey are on same network\n• mDNS/Bonjour is enabled on your router\n• No VLAN isolation between networks",
     "authorize_title": "Authorize",
     "authorize_instruction": "Press the button on the device to complete the pairing",
     "button_label_waiting": "Waiting for button press...",
@@ -45,6 +46,30 @@
     "SDM630_v2": {
       "authorize_instruction": "Press the button on the KWH Meter to complete the pairing"
     }        
+  },
+  "repair": {
+    "title": "Manual IP Override",
+    "description": "Use this if mDNS discovery is not working on your network (e.g., VLAN isolation, mesh Wi-Fi issues).",
+    "warning": "⚠️ Warning: Manual IP will not auto-update if the device gets a new IP address via DHCP. Use static IP reservation in your router.",
+    "label_current_mode": "Current mode:",
+    "label_discovery_ip": "Discovery IP:",
+    "label_manual_ip": "Manual IP address:",
+    "mode_manual": "Manual IP",
+    "mode_discovery": "mDNS Discovery (automatic)",
+    "unknown": "Unknown",
+    "btn_save": "Save & Test Connection",
+    "btn_clear": "Return to mDNS Discovery",
+    "testing": "Testing...",
+    "invalid_ip": "Invalid IP address format",
+    "connection_failed": "Cannot connect to device",
+    "wrong_device": "Wrong device - serial number mismatch",
+    "ip_required": "Please enter an IP address",
+    "success": "✓ Manual IP saved successfully",
+    "cleared": "✓ Returned to mDNS discovery",
+    "save_failed": "Failed to save manual IP",
+    "clear_failed": "Failed to clear manual IP",
+    "load_failed": "Failed to load current settings",
+    "confirm_clear": "Return to automatic mDNS discovery? Your manual IP will be removed."
   },
   "device": {
     "init": "Initializing device...",

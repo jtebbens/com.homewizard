@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+    }
+    .info-box {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .info-row {
+      margin: 8px 0;
+    }
+    .label {
+      font-weight: bold;
+      color: #666;
+    }
+    .value {
+      color: #000;
+    }
+    .warning {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .input-group {
+      margin: 20px 0;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .button-group {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #2fc052;
+      color: white;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    .error {
+      color: #dc3545;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .success {
+      color: #28a745;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="title"></h2>
+  <p id="description"></p>
+
+  <div class="info-box">
+    <div class="info-row">
+      <span class="label" id="label-current-mode"></span>
+      <span class="value" id="current-mode"></span>
+    </div>
+    <div class="info-row">
+      <span class="label" id="label-discovery-ip"></span>
+      <span class="value" id="discovery-ip"></span>
+    </div>
+  </div>
+
+  <div class="warning" id="warning"></div>
+
+  <div class="input-group">
+    <label for="manual-ip" id="label-manual-ip"></label>
+    <input type="text" id="manual-ip" placeholder="192.168.1.100" />
+  </div>
+
+  <div id="message"></div>
+
+  <div class="button-group">
+    <button class="btn-secondary" id="btn-clear"></button>
+    <button class="btn-primary" id="btn-save"></button>
+  </div>
+
+  <script>
+    let currentData = {};
+
+    async function loadCurrentIP() {
+      try {
+        currentData = await Homey.emit('get_current_ip');
+        
+        // Update UI with current state
+        document.getElementById('current-mode').textContent = 
+          currentData.using_manual ? Homey.__('repair.mode_manual') : Homey.__('repair.mode_discovery');
+        
+        document.getElementById('discovery-ip').textContent = 
+          currentData.discovery_ip || Homey.__('repair.unknown');
+        
+        if (currentData.manual_ip) {
+          document.getElementById('manual-ip').value = currentData.manual_ip;
+        }
+
+        // Hide clear button if not using manual IP
+        if (!currentData.using_manual) {
+          document.getElementById('btn-clear').style.display = 'none';
+        }
+      } catch (error) {
+        showError(Homey.__('repair.load_failed') + ': ' + error.message);
+      }
+    }
+
+    function showError(message) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    function showSuccess(message) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.innerHTML = `<div class="success">${message}</div>`;
+    }
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const ip = document.getElementById('manual-ip').value.trim();
+      document.getElementById('message').innerHTML = '';
+
+      if (!ip) {
+        showError(Homey.__('repair.ip_required'));
+        return;
+      }
+
+      try {
+        document.getElementById('btn-save').disabled = true;
+        document.getElementById('btn-save').textContent = Homey.__('repair.testing');
+        
+        await Homey.emit('set_manual_ip', { ip, clear: false });
+        
+        showSuccess(Homey.__('repair.success'));
+        setTimeout(() => Homey.done(), 1500);
+        
+      } catch (error) {
+        showError(error.message || Homey.__('repair.save_failed'));
+        document.getElementById('btn-save').disabled = false;
+        document.getElementById('btn-save').textContent = Homey.__('repair.btn_save');
+      }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', async () => {
+      if (!confirm(Homey.__('repair.confirm_clear'))) {
+        return;
+      }
+
+      try {
+        await Homey.emit('set_manual_ip', { clear: true });
+        showSuccess(Homey.__('repair.cleared'));
+        setTimeout(() => Homey.done(), 1500);
+        
+      } catch (error) {
+        showError(error.message || Homey.__('repair.clear_failed'));
+      }
+    });
+
+    // Set translations
+    document.getElementById('title').textContent = Homey.__('repair.title');
+    document.getElementById('description').textContent = Homey.__('repair.description');
+    document.getElementById('warning').textContent = Homey.__('repair.warning');
+    document.getElementById('label-current-mode').textContent = Homey.__('repair.label_current_mode');
+    document.getElementById('label-discovery-ip').textContent = Homey.__('repair.label_discovery_ip');
+    document.getElementById('label-manual-ip').textContent = Homey.__('repair.label_manual_ip');
+    document.getElementById('btn-clear').textContent = Homey.__('repair.btn_clear');
+    document.getElementById('btn-save').textContent = Homey.__('repair.btn_save');
+
+    // Load current IP on page load
+    loadCurrentIP();
+  </script>
+</body>
+</html>

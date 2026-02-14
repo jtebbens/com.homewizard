@@ -128,6 +128,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       keepAliveMsecs: 10000
     });
 
+    // Get effective URL (manual IP overrides discovery)
+    this.url = this._getEffectiveURL();
+
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
 
@@ -318,8 +321,46 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     }
   }
 
+/**
+ * Get effective URL - manual IP overrides discovery
+ * @returns {string} URL to use for API calls
+ */
+_getEffectiveURL() {
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🔧 Using manual IP: ${manualIP}`);
+    // Energy v1 uses http and port 80 with /api path
+    return `http://${manualIP}/api`;
+  }
+  
+  const settings = this.getSettings();
+  if (settings.url) {
+    return settings.url;
+  }
+  
+  return null;
+}
+
+/**
+ * Reconnect with manual IP after repair flow
+ * @param {string} ip - The manual IP address
+ */
+async reconnectWithManualIP(ip) {
+  this.log(`🔧 Reconnecting with manual IP: ${ip}`);
+  this.url = `http://${ip}/api`;
+  // Energy v1 uses polling, will reconnect on next poll automatically
+  this.log('🔁 Manual IP set, will use on next poll cycle');
+}
+
 onDiscoveryAvailable(discoveryResult) {
   if (this._deleted) return;
+
+  // Check if manual IP is set - if so, ignore discovery
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🌐 Discovery: Manual IP (${manualIP}) is set — ignoring discovery`);
+    return;
+  }
 
   if (!discoveryResult?.address || !discoveryResult?.port || !discoveryResult?.txt?.path) {
     this.log('Invalid discovery result');
@@ -340,6 +381,13 @@ onDiscoveryAvailable(discoveryResult) {
 
 onDiscoveryAddressChanged(discoveryResult) {
   if (this._deleted) return;
+
+  // Check if manual IP is set - if so, ignore discovery
+  const manualIP = this.getSetting('manual_ip');
+  if (manualIP) {
+    this.log(`🌐 AddressChanged: Manual IP (${manualIP}) is set — ignoring discovery`);
+    return;
+  }
 
   const newUrl = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
 

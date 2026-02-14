@@ -70,8 +70,8 @@ class BaseloadMonitor {
     if (!this.master) this.master = device;
   }
 
-  updatePowerFromDevice(device, power) {
-    if (device === this.master) this.updatePower(power);
+  updatePowerFromDevice(device, power, batteryPower = null) {
+    if (device === this.master) this.updatePower(power, batteryPower);
   }
 
   start() {
@@ -86,11 +86,20 @@ class BaseloadMonitor {
     this._resetNightState();
   }
 
-  updatePower(power) {
+  updatePower(power, batteryPower = null) {
     if (!this.enabled || typeof power !== 'number') return;
     const now = new Date();
     if (!this._isInNightWindow(now)) return;
-    this._processNightSample(now, power);
+    
+    // Battery-aware: if battery is discharging, subtract it from grid power
+    // to get true household baseload (not including battery contribution)
+    let householdPower = power;
+    if (typeof batteryPower === 'number' && batteryPower < 0) {
+      // Battery discharging (negative value), add to grid power to get household consumption
+      householdPower = power - batteryPower;
+    }
+    
+    this._processNightSample(now, householdPower, power, batteryPower);
   }
 
   _isInNightWindow(d) {
@@ -156,15 +165,15 @@ class BaseloadMonitor {
     };
   }
 
-  _processNightSample(ts, power) {
+  _processNightSample(ts, power, rawGridPower = null, batteryPower = null) {
     // NEW: ignore export for baseload logic
     if (power < 0) {
       // mark as invalid sample but do NOT trigger nightInvalid
-      this.currentNightSamples.push({ ts, power });
+      this.currentNightSamples.push({ ts, power, rawGridPower, batteryPower });
       return;
     }
 
-    this.currentNightSamples.push({ ts, power });
+    this.currentNightSamples.push({ ts, power, rawGridPower, batteryPower });
 
     // Only re-run expensive detections every 30 seconds to avoid CPU overhead
     // Each update would otherwise trigger full array scans
@@ -328,7 +337,7 @@ class BaseloadMonitor {
     this._push(dateKey,avg,false,{fridgeCycles:cycles});
 
     const old = this.currentBaseload;
-    this.currentBaseload = this._compute();
+    this.currentBaseload = this._computeSmartBaseload();
     this._save();
 
     if (old && this.currentBaseload) {
@@ -373,7 +382,87 @@ class BaseloadMonitor {
     return this._avg(sorted);
   }
 
+  /**
+   * Smart baseload calculation that filters out EV charging and heat pump cycles
+   * Strategy: 
+   * 1. Get all valid nights
+   * 2. For each night, filter samples to exclude obvious non-baseload (>1kW)
+   * 3. Take median of lowest 50% of filtered samples per night
+   * 4. Average the 3 lowest night medians
+   * 
+   * This is robust against:
+   * - EV charging (typically 1.4-7kW)
+   * - Heat pump cycles (typically 2-3kW)
+   * - Brief high consumption spikes
+   */
+  _computeSmartBaseload() {
+    const validNights = this.nightHistory.filter(n => !n.invalid && Array.isArray(n.samples) && n.samples.length > 0);
+    
+    if (!validNights.length) {
+      this._notify('baseload_unavailable');
+      return this.currentBaseload || null;
+    }
+
+    const nightMedians = [];
+    
+    for (const night of validNights) {
+      // Filter out obvious non-baseload consumption (EV charging, heat pumps, etc.)
+      // Keep only samples that look like true baseload (<1000W)
+      const baseloadSamples = night.samples
+        .map(s => s.power)
+        .filter(p => typeof p === 'number' && p >= 0 && p < 1000);
+      
+      if (baseloadSamples.length < 10) continue; // Need at least 10 samples for reliable median
+      
+      // Sort to find median of lowest 50%
+      baseloadSamples.sort((a, b) => a - b);
+      const halfPoint = Math.floor(baseloadSamples.length / 2);
+      const lowestHalf = baseloadSamples.slice(0, halfPoint);
+      
+      if (lowestHalf.length > 0) {
+        // Median of lowest half
+        const medianIdx = Math.floor(lowestHalf.length / 2);
+        nightMedians.push(lowestHalf[medianIdx]);
+      }
+    }
+    
+    if (!nightMedians.length) {
+      // Fallback to old method if smart filtering yields nothing
+      return this._compute();
+    }
+    
+    // Take average of 3 lowest night medians
+    nightMedians.sort((a, b) => a - b);
+    const count = Math.min(3, nightMedians.length);
+    const lowest = nightMedians.slice(0, count);
+    
+    return this._avg(lowest);
+  }
+
   _avg(a) {return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;}
+
+  /**
+   * Calculate monthly and yearly cost estimate for current baseload
+   * @param {number} avgPricePerKwh - Average electricity price in €/kWh
+   * @returns {object} { baseloadW, monthlyKwh, monthlyCost, yearlyCost }
+   */
+  getMonthlyEstimate(avgPricePerKwh = 0.25) {
+    if (!this.currentBaseload || typeof avgPricePerKwh !== 'number') {
+      return { baseloadW: null, monthlyKwh: null, monthlyCost: null, yearlyCost: null };
+    }
+    
+    const baseloadW = this.currentBaseload;
+    const monthlyKwh = (baseloadW / 1000) * 24 * 30; // W to kW, 24h/day, 30 days
+    const monthlyCost = monthlyKwh * avgPricePerKwh;
+    const yearlyCost = monthlyCost * 12;
+    
+    return {
+      baseloadW: Math.round(baseloadW),
+      monthlyKwh: Math.round(monthlyKwh * 10) / 10,
+      monthlyCost: Math.round(monthlyCost * 100) / 100,
+      yearlyCost: Math.round(yearlyCost * 100) / 100
+    };
+  }
 
   _durAbove(t) {
     let ms=0;

@@ -91,6 +91,9 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
       if (!discoveryResults || Object.keys(discoveryResults).length === 0) {
         this.logDiscovery('not_found', 'No devices found via mDNS');
+        
+        // Throw helpful error to guide users with mDNS/network issues
+        throw new Error(this.homey.__('pair.no_devices_found'));
       } else {
         this.logDiscovery('ok', `Found ${Object.keys(discoveryResults).length} devices`);
       }
@@ -181,6 +184,72 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
       } catch (error) {
         console.log('Pair Session Timeout error', error);
+      }
+    });
+  }
+
+  async onRepair(session, device) {
+    console.log('[REPAIR] Starting repair session for device:', device.getName());
+
+    // Get current manual IP if set
+    session.setHandler('get_current_ip', async () => {
+      const manualIP = device.getSetting('manual_ip');
+      const discoveryIP = device.getStoreValue('address');
+      return {
+        manual_ip: manualIP || '',
+        discovery_ip: discoveryIP || this.homey.__('repair.unknown'),
+        using_manual: !!manualIP
+      };
+    });
+
+    // Validate and set manual IP
+    session.setHandler('set_manual_ip', async (data) => {
+      const ip = data.ip?.trim();
+      
+      // Clear manual IP if requested
+      if (data.clear) {
+        await device.setSettings({ manual_ip: '' });
+        console.log('[REPAIR] Manual IP cleared, returning to mDNS discovery');
+        return { success: true };
+      }
+
+      // Validate IP format
+      if (!ip || !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+        throw new Error(this.homey.__('repair.invalid_ip'));
+      }
+
+      // Test connection to device
+      try {
+        const response = await fetch(`http://${ip}/api`, {
+          method: 'GET',
+          timeout: 5000
+        });
+
+        if (!response.ok) {
+          throw new Error(this.homey.__('repair.connection_failed'));
+        }
+
+        const data = await response.json();
+        
+        // Verify it's the same device by serial number
+        if (data.serial && data.serial !== device.getData().id) {
+          throw new Error(this.homey.__('repair.wrong_device'));
+        }
+
+        // Save manual IP
+        await device.setSettings({ manual_ip: ip });
+        console.log('[REPAIR] Manual IP set to:', ip);
+
+        // Trigger device reconnection if it has the method
+        if (typeof device.reconnectWithManualIP === 'function') {
+          await device.reconnectWithManualIP(ip);
+        }
+
+        return { success: true };
+
+      } catch (error) {
+        console.error('[REPAIR] Connection test failed:', error.message);
+        throw new Error(this.homey.__('repair.connection_failed') + ': ' + error.message);
       }
     });
   }
