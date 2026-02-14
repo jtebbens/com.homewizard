@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.15",
+  "version": "3.13.17",
   "platforms": [
     "local"
   ],
@@ -4119,6 +4119,11 @@
           "template": "add_devices"
         }
       ],
+      "repair": [
+        {
+          "id": "manual_ip"
+        }
+      ],
       "id": "energy",
       "settings": [
         {
@@ -4738,6 +4743,11 @@
           "navigation": {
             "prev": "list_devices"
           }
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "energy_v2",

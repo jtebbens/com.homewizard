@@ -976,5 +976,8 @@
   },
   "3.13.15": {
     "en": "Added restore triggercards for power outage, sags and swells"
+  },
+  "3.13.17": {
+    "en": "Repair button for P1 dongle, Baseload improvement, dynamic price fallback"
   }
 }
