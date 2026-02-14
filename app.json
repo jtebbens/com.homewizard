@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.14",
+  "version": "3.13.15",
   "platforms": [
     "local"
   ],
@@ -509,6 +509,73 @@
         ]
       },
       {
+        "id": "voltage_restored_v1",
+        "title": {
+          "en": "Voltage restored to normal",
+          "nl": "Spanning hersteld naar normaal"
+        },
+        "hint": {
+          "en": "Triggers when voltage returns to normal range after a sag or swell",
+          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "phase",
+            "type": "string",
+            "title": {
+              "en": "Phase",
+              "nl": "Fase"
+            },
+            "example": "L1"
+          },
+          {
+            "name": "voltage",
+            "type": "number",
+            "title": {
+              "en": "Voltage (V)",
+              "nl": "Spanning (V)"
+            },
+            "example": 230
+          }
+        ]
+      },
+      {
+        "id": "power_restored_v1",
+        "title": {
+          "en": "Power restored",
+          "nl": "Stroom hersteld"
+        },
+        "hint": {
+          "en": "Triggers when power is restored after being offline",
+          "nl": "Triggert wanneer stroom is hersteld na een uitval"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "offline_duration",
+            "type": "number",
+            "title": {
+              "en": "Offline duration (seconds)",
+              "nl": "Offline duur (seconden)"
+            },
+            "example": 120
+          }
+        ]
+      },
+      {
         "id": "battery_mode_changed",
         "title": {
           "en": "Battery mode changed"
@@ -728,6 +795,73 @@
               "nl": "Totaal aantal"
             },
             "example": 1
+          }
+        ]
+      },
+      {
+        "id": "voltage_restored",
+        "title": {
+          "en": "Voltage restored to normal",
+          "nl": "Spanning hersteld naar normaal"
+        },
+        "hint": {
+          "en": "Triggers when voltage returns to normal range after a sag or swell",
+          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "phase",
+            "type": "string",
+            "title": {
+              "en": "Phase",
+              "nl": "Fase"
+            },
+            "example": "L1"
+          },
+          {
+            "name": "voltage",
+            "type": "number",
+            "title": {
+              "en": "Voltage (V)",
+              "nl": "Spanning (V)"
+            },
+            "example": 230
+          }
+        ]
+      },
+      {
+        "id": "power_restored",
+        "title": {
+          "en": "Power restored",
+          "nl": "Stroom hersteld"
+        },
+        "hint": {
+          "en": "Triggers when power is restored after being offline",
+          "nl": "Triggert wanneer stroom is hersteld na een uitval"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "offline_duration",
+            "type": "number",
+            "title": {
+              "en": "Offline duration (seconds)",
+              "nl": "Offline duur (seconden)"
+            },
+            "example": 120
           }
         ]
       },

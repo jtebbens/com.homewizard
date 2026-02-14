@@ -973,5 +973,8 @@
   },
   "3.13.14": {
     "en": "User request, grid outage, sag and swells trigger cards added"
+  },
+  "3.13.15": {
+    "en": "Added restore triggercards for power outage, sags and swells"
   }
 }
