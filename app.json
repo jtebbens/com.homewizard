@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.13",
+  "version": "3.13.14",
   "platforms": [
     "local"
   ],
@@ -386,6 +386,129 @@
         ]
       },
       {
+        "id": "voltage_sag_detected_v1",
+        "title": {
+          "en": "Voltage sag detected",
+          "nl": "Spanningsdip gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggered when a voltage sag is detected on any phase",
+          "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase"
+        },
+        "tokens": [
+          {
+            "name": "phase_l1",
+            "type": "number",
+            "title": {
+              "en": "Phase L1 count",
+              "nl": "Fase L1 aantal"
+            },
+            "example": 5
+          },
+          {
+            "name": "phase_l2",
+            "type": "number",
+            "title": {
+              "en": "Phase L2 count",
+              "nl": "Fase L2 aantal"
+            },
+            "example": 3
+          },
+          {
+            "name": "phase_l3",
+            "type": "number",
+            "title": {
+              "en": "Phase L3 count",
+              "nl": "Fase L3 aantal"
+            },
+            "example": 2
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy"
+          }
+        ]
+      },
+      {
+        "id": "voltage_swell_detected_v1",
+        "title": {
+          "en": "Voltage swell detected",
+          "nl": "Spanningspiek gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggered when a voltage swell is detected on any phase",
+          "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase"
+        },
+        "tokens": [
+          {
+            "name": "phase_l1",
+            "type": "number",
+            "title": {
+              "en": "Phase L1 count",
+              "nl": "Fase L1 aantal"
+            },
+            "example": 2
+          },
+          {
+            "name": "phase_l2",
+            "type": "number",
+            "title": {
+              "en": "Phase L2 count",
+              "nl": "Fase L2 aantal"
+            },
+            "example": 1
+          },
+          {
+            "name": "phase_l3",
+            "type": "number",
+            "title": {
+              "en": "Phase L3 count",
+              "nl": "Fase L3 aantal"
+            },
+            "example": 0
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy"
+          }
+        ]
+      },
+      {
+        "id": "long_power_fail_detected_v1",
+        "title": {
+          "en": "Long power failure detected",
+          "nl": "Lange stroomstoring gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggered when a long power failure is detected",
+          "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd"
+        },
+        "tokens": [
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Failure count",
+              "nl": "Storing aantal"
+            },
+            "example": 1
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy"
+          }
+        ]
+      },
+      {
         "id": "battery_mode_changed",
         "title": {
           "en": "Battery mode changed"
@@ -498,6 +621,111 @@
             "title": {
               "en": "export",
               "nl": "export"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "voltage_sag_detected",
+        "title": {
+          "en": "Voltage sag detected",
+          "nl": "Spanningsdip gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggers when a voltage sag (dip) is detected on any phase",
+          "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "phase",
+            "type": "string",
+            "title": {
+              "en": "Phase",
+              "nl": "Fase"
+            },
+            "example": "L1"
+          },
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Total count",
+              "nl": "Totaal aantal"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "voltage_swell_detected",
+        "title": {
+          "en": "Voltage swell detected",
+          "nl": "Spanningspiek gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggers when a voltage swell (surge) is detected on any phase",
+          "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "phase",
+            "type": "string",
+            "title": {
+              "en": "Phase",
+              "nl": "Fase"
+            },
+            "example": "L1"
+          },
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Total count",
+              "nl": "Totaal aantal"
+            },
+            "example": 1
+          }
+        ]
+      },
+      {
+        "id": "long_power_fail_detected",
+        "title": {
+          "en": "Long power failure detected",
+          "nl": "Lange stroomuitval gedetecteerd"
+        },
+        "hint": {
+          "en": "Triggers when a long power failure is detected (>1 minute)",
+          "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "count",
+            "type": "number",
+            "title": {
+              "en": "Total count",
+              "nl": "Totaal aantal"
             },
             "example": 1
           }
@@ -1694,6 +1922,28 @@
         ]
       },
       {
+        "id": "reset_learning_data",
+        "title": {
+          "en": "Reset learning data",
+          "nl": "Leergegevens resetten"
+        },
+        "titleFormatted": {
+          "en": "Reset all learning data",
+          "nl": "Alle leergegevens resetten"
+        },
+        "hint": {
+          "en": "Clear all learned patterns and start fresh. Use when moving or changing your setup.",
+          "nl": "Wis alle geleerde patronen en begin opnieuw. Gebruik bij verhuizing of wijziging van uw opstelling."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
         "id": "set-battery-to-full-charge-mode",
         "title": {
           "en": "Set battery to Full Charge mode",
@@ -2834,6 +3084,7 @@
         "policy_debug_top3low",
         "policy_debug_top3high",
         "policy_debug_sun",
+        "policy_debug_learning",
         "battery_soc_mirror",
         "grid_power_mirror",
         "last_update",
@@ -5962,6 +6213,22 @@
       "desc": {
         "en": "Current tariff and weather inputs used by the policy engine",
         "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false
+    },
+    "policy_debug_learning": {
+      "id": "policy_debug_learning",
+      "type": "string",
+      "title": {
+        "en": "Policy Learning",
+        "nl": "Policy Leren"
+      },
+      "desc": {
+        "en": "Historical learning statistics and pattern coverage",
+        "nl": "Historische leerstatistieken en patroonbedekking"
       },
       "getable": true,
       "setable": false,
