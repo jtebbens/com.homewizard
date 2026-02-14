@@ -130,6 +130,13 @@ class BatteryPolicyDriver extends Homey.Driver {
         args.device.log(`PV production updated via flow: ${power}W`);
       });
 
+    // Action: Reset learning data
+    this.homey.flow.getActionCard('reset_learning_data')
+      .registerRunListener(async (args) => {
+        await args.device.learningEngine.reset();
+        args.device.log('Learning data reset via flow card');
+      });
+
     this.log('Flow cards registered');
   }
 

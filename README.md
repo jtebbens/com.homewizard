@@ -1,36 +1,91 @@
-# HomeWizard
+# HomeWizard for Homey
 
-Upon first deployment you need add the Homewizard unit first, then you can add the related/connected components from Homewizard to your Homey.
+Control and monitor your HomeWizard Energy devices directly from your Homey smart home hub.
 
-NOTE! - ENABLE "LOCAL API" FOR YOUR DEVICE FIRST IN THE OFFICIAL HOMEWIZARD ENERGY APP BEFORE ADDING DEVICES
+## 🚀 Quick Start
 
-v3.13.11
+1. **Enable Local API** - Open the official HomeWizard Energy app and enable "Local API" for your devices
+2. **Add Homewizard Unit** - First add your main Homewizard unit in Homey
+3. **Add Devices** - Then add related/connected components from Homewizard to your Homey
+
+⚠️ **IMPORTANT**: You must enable "Local API" for your device in the official HomeWizard Energy app before adding devices to Homey.
+
+## ✨ Features
+
+### Smart Energy Management
+
+* **P1 Meter Support** - Monitor energy consumption in real-time (API v1 & v2)
+* **Smart Sockets** - Control and monitor individual devices
+* **Battery Management** - Track and control home battery systems
+* **Solar Integration** - Monitor solar production and consumption
+
+### Advanced Features
+
+* **Battery Policy Driver** - Automated battery management based on dynamic tariffs or peak shaving
+* **Power Quality Monitoring** - Trigger cards for voltage sags, swells, power failures, and restoration events
+* **Baseload Detection** - Identify standby power consumption (sluipverbruik)
+* **Learning Engine** - AI-powered pattern recognition for optimized battery charging
+* **Cloud API Support** - Connect P1 meters and water meters via HomeWizard cloud
+
+### Supported Devices
+
+* P1 Energy Meters (API v1 & v2, including cloud-connected)
+* Energy Sockets
+* Plugin Battery
+* SDM230 & SDM630 kWh Meters (3-phase, industrial grade)
+* Water Meters (local & cloud)
+* Legacy Devices (thermometer, heatlink, rainmeter, windmeter, sensors)
+
+## 📊 Battery Policy Manager
+
+NEW in v3.13.14: Intelligent battery management system that:
+
+* Responds to dynamic electricity tariffs
+* Implements peak shaving strategies
+* Learns consumption patterns over time
+* Adjusts PV production estimates based on historical accuracy
+* Provides confidence scoring for policy decisions
+
+**Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
+
+## 📝 Latest Updates (v3.13.14)
+
+### New Features
+
+* Battery Policy driver with ML-based charging optimization
+* Trigger cards for energy grid errors, voltage swells, voltage sags, and restoration events
+* Learning engine for consumption patterns and PV accuracy tracking
+* Plugin Battery state of charge icon for dashboard
+
+### Improvements
 
 * Homewizard Legacy Device updates (CSS, flow and language) - thanks smarthomesvan
-* Watermeter - battery based (via cloud hwenergy only 4x updates a day)
-* P1 meters can now be connected via HomeWizard cloud API (Based on cloud API research by Sven Serlier)
-* P1 (apiv2) - tariff trigger fix
-* Bugfix: capability_already_exists (cloud_p1)
-* Plugin Battery state of charge icon added as tile for dashboard
+* P1 meters can now connect via HomeWizard cloud API (thanks to Sven Serlier's research)
+* Watermeter cloud support (4x daily updates via hwenergy)
+* P1 (apiv2) tariff trigger improvements
 
-NEW
+### Bug Fixes
 
-* Battery Policy driver to act on dynamic tariffs, or peak shaving
+* Fixed capability_already_exists error (cloud_p1)
 
-NOTE: This is best effort as this is cloud based and depends on your own internet and what Homewizard Energy platform allows.
-If Homewizard Energy is down or is under maintenance or change their hwenergy web frontend you get errors or incorrect data.
+---
 
-v3.12.9
+## 📖 Full Changelog
 
-* Plugin battery charge mode now selectable from UI
-* Energy(apiv2) guard for add / remove "battery_group_charge_mode"
+<details>
+<summary>Click to expand complete version history</summary>
 
-v3.12.7
+### v3.12.9
+
+* Plugin battery charge mode selectable from UI
+* Energy (apiv2) guard for add/remove "battery_group_charge_mode"
+
+### v3.12.7
 
 * P1 tuning TIMEOUT & Unreachable
-* Removed pollingActive, unwanted side effect
+* Removed pollingActive (unwanted side effect)
 
-v3.12.4
+### v3.12.4
 
 * Baseload ignore return power (compensate battery return to grid datapoints)
 * Plugin Battery LED brightness adjustment (user request)
@@ -304,11 +359,36 @@ v3.5.2
 
 * SDM630 clone added to allow P1 like use of kwh meter as a replacement for P1 dongle (users request)
 
-v3.5.1
+### v3.5.1
 
-* Coversion to homey-compose (DCSBL)
-* Socket identification (push button led blink) (DCSBL)
+* Conversion to homey-compose (DCSBL)
+* Socket identification with LED blink (DCSBL)
 
-**You can sponsor my work by donating via paypal.**
+</details>
+
+---
+
+## 💝 Support This Project
+
+If you find this app useful, consider supporting development:
 
 [![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme2/jtebbens)
+
+---
+
+## 📄 License
+
+This app is licensed under the GNU General Public License v3.0
+
+## 👥 Credits
+
+* **Jeroen Tebbens** - Main developer
+* **DCSBL** - Major code contributions (homey-compose, pairing improvements)
+* **Sven Serlier (smarthomesvan)** - Cloud API research, Legacy device improvements
+* **Community contributors** - Bug reports and feature requests
+
+## 🔗 Links
+
+* [GitHub Repository](https://github.com/jtebbens/com.homewizard)
+* [Homey App Store](https://homey.app/a/com.homewizard/)
+* [HomeWizard Official Site](https://www.homewizard.com/)

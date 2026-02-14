@@ -41,9 +41,13 @@
 | `includes/legacy/homewizard.js` | Legacy gateway | Adaptive polling, device management, retry logic |
 | `includes/utils/baseloadMonitor.js` | Baseload (sluipverbruik) tracker | Night analysis, fridge detection, oscillation checks |
 | `includes/utils/fetchQueue.js` | Fetch rate limiter | Prevents CPU spikes from polling |
-| `drivers/energy_v2/device.js` | P1 APIv2 driver | WebSocket + polling hybrid, battery handling |
-| `drivers/energy/device.js` | P1 APIv1 driver | Polling-based, gas/water processing |
+| `drivers/energy_v2/device.js` | P1 APIv2 driver | WebSocket + polling hybrid, battery handling, power quality triggers |
+| `drivers/energy/device.js` | P1 APIv1 driver | Polling-based, gas/water processing, power quality triggers |
 | `drivers/plugin_battery/device.js` | Battery driver | WebSocket real-time, polling fallback |
+| `drivers/battery-policy/device.js` | Battery policy automation | ML-based charging optimization, PV estimation, learning engine |
+| `lib/policy-engine.js` | Battery decision logic | Score-based mode selection, profitability checks |
+| `lib/learning-engine.js` | Historical learning | Consumption patterns, PV accuracy tracking, confidence adjustments |
+| `lib/xadi-provider.js` | Dynamic pricing | Day-ahead pricing via Xadi API, 30-min refresh |
 
 ---
 
@@ -80,6 +84,16 @@
 6. OnDeleted → homewizard.removeDevice() clears all references
 ```
 
+### Power Quality Monitoring (energy, energy_v2)
+```
+1. Counter tracking → voltage_sag_l1/l2/l3_count, voltage_swell_l1/l2/l3_count, long_power_fail_count
+2. Change detection → Compare previous value with current (increment detection)
+3. Trigger → Fire flow card when any counter increases
+4. Token data → Include all phase counts (L1/L2/L3) or failure count
+5. Flow cards → voltage_sag_detected_v1/v2, voltage_swell_detected_v1/v2, long_power_fail_detected_v1/v2
+6. Note → v1 suffix for energy driver, no suffix for energy_v2 (unique IDs across app)
+```
+
 ---
 
 ## Known Issues & Workarounds
@@ -107,6 +121,19 @@
 - **Battery interference:** Negative power (export) completely filtered before analysis
 - **Night data gaps:** Uses fallback calculation if too many invalid nights
 - **Oscillation sensitivity:** 300W threshold for normal grid variations, 400W for battery systems
+
+### Battery Policy Specific
+- **PV estimation:** Dual approach (flow card priority with 5-min expiry, grid export detection fallback)
+- **Hysteresis:** PV state uses 100W dead zone (-125W ON, -25W OFF) to prevent log spam
+- **Profitability check:** 80% round-trip efficiency before forcing grid charging
+- **Learning maturity:** Needs 1-2 weeks for useful patterns, 4-6 weeks for full accuracy
+- **SoC drift detection:** Two-phase BMS calibration (75W @ 45min, 800W @ 15min), 20min sustained charging required
+
+### Power Quality Triggers Specific
+- **Counter persistence:** Voltage sag/swell/fail counters cumulative (never reset by device)
+- **Trigger frequency:** Fires on ANY increase in counter value (not just specific thresholds)
+- **Token format:** energy driver uses phase_l1/l2/l3, energy_v2 uses phase string + count
+- **Flow card IDs:** Must be unique across all drivers (_v1 suffix for energy, no suffix for energy_v2)
 
 ---
 

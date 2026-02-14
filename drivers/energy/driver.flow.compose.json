@@ -56,6 +56,163 @@
           "example": 1
         }
       ]
+    },
+    {
+      "id": "voltage_sag_detected_v1",
+      "title": {
+        "en": "Voltage sag detected",
+        "nl": "Spanningsdip gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggered when a voltage sag is detected on any phase",
+        "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase"
+      },
+      "tokens": [
+        {
+          "name": "phase_l1",
+          "type": "number",
+          "title": {
+            "en": "Phase L1 count",
+            "nl": "Fase L1 aantal"
+          },
+          "example": 5
+        },
+        {
+          "name": "phase_l2",
+          "type": "number",
+          "title": {
+            "en": "Phase L2 count",
+            "nl": "Fase L2 aantal"
+          },
+          "example": 3
+        },
+        {
+          "name": "phase_l3",
+          "type": "number",
+          "title": {
+            "en": "Phase L3 count",
+            "nl": "Fase L3 aantal"
+          },
+          "example": 2
+        }
+      ]
+    },
+    {
+      "id": "voltage_swell_detected_v1",
+      "title": {
+        "en": "Voltage swell detected",
+        "nl": "Spanningspiek gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggered when a voltage swell is detected on any phase",
+        "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase"
+      },
+      "tokens": [
+        {
+          "name": "phase_l1",
+          "type": "number",
+          "title": {
+            "en": "Phase L1 count",
+            "nl": "Fase L1 aantal"
+          },
+          "example": 2
+        },
+        {
+          "name": "phase_l2",
+          "type": "number",
+          "title": {
+            "en": "Phase L2 count",
+            "nl": "Fase L2 aantal"
+          },
+          "example": 1
+        },
+        {
+          "name": "phase_l3",
+          "type": "number",
+          "title": {
+            "en": "Phase L3 count",
+            "nl": "Fase L3 aantal"
+          },
+          "example": 0
+        }
+      ]
+    },
+    {
+      "id": "long_power_fail_detected_v1",
+      "title": {
+        "en": "Long power failure detected",
+        "nl": "Lange stroomstoring gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggered when a long power failure is detected",
+        "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd"
+      },
+      "tokens": [
+        {
+          "name": "count",
+          "type": "number",
+          "title": {
+            "en": "Failure count",
+            "nl": "Storing aantal"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "voltage_restored_v1",
+      "title": {
+        "en": "Voltage restored to normal",
+        "nl": "Spanning hersteld naar normaal"
+      },
+      "hint": {
+        "en": "Triggers when voltage returns to normal range after a sag or swell",
+        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "phase",
+          "type": "string",
+          "title": {
+            "en": "Phase",
+            "nl": "Fase"
+          },
+          "example": "L1"
+        },
+        {
+          "name": "voltage",
+          "type": "number",
+          "title": {
+            "en": "Voltage (V)",
+            "nl": "Spanning (V)"
+          },
+          "example": 230
+        }
+      ]
+    },
+    {
+      "id": "power_restored_v1",
+      "title": {
+        "en": "Power restored",
+        "nl": "Stroom hersteld"
+      },
+      "hint": {
+        "en": "Triggers when power is restored after being offline",
+        "nl": "Triggert wanneer stroom is hersteld na een uitval"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "offline_duration",
+          "type": "number",
+          "title": {
+            "en": "Offline duration (seconds)",
+            "nl": "Offline duur (seconden)"
+          },
+          "example": 120
+        }
+      ]
     }
   ]
 }

@@ -136,6 +136,148 @@
           "example": 1
         }
       ]
+    },
+    {
+      "id": "voltage_sag_detected",
+      "title": {
+        "en": "Voltage sag detected",
+        "nl": "Spanningsdip gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggers when a voltage sag (dip) is detected on any phase",
+        "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "phase",
+          "type": "string",
+          "title": {
+            "en": "Phase",
+            "nl": "Fase"
+          },
+          "example": "L1"
+        },
+        {
+          "name": "count",
+          "type": "number",
+          "title": {
+            "en": "Total count",
+            "nl": "Totaal aantal"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "voltage_swell_detected",
+      "title": {
+        "en": "Voltage swell detected",
+        "nl": "Spanningspiek gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggers when a voltage swell (surge) is detected on any phase",
+        "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "phase",
+          "type": "string",
+          "title": {
+            "en": "Phase",
+            "nl": "Fase"
+          },
+          "example": "L1"
+        },
+        {
+          "name": "count",
+          "type": "number",
+          "title": {
+            "en": "Total count",
+            "nl": "Totaal aantal"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "long_power_fail_detected",
+      "title": {
+        "en": "Long power failure detected",
+        "nl": "Lange stroomuitval gedetecteerd"
+      },
+      "hint": {
+        "en": "Triggers when a long power failure is detected (>1 minute)",
+        "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "count",
+          "type": "number",
+          "title": {
+            "en": "Total count",
+            "nl": "Totaal aantal"
+          },
+          "example": 1
+        }
+      ]
+    },
+    {
+      "id": "voltage_restored",
+      "title": {
+        "en": "Voltage restored to normal",
+        "nl": "Spanning hersteld naar normaal"
+      },
+      "hint": {
+        "en": "Triggers when voltage returns to normal range after a sag or swell",
+        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "phase",
+          "type": "string",
+          "title": {
+            "en": "Phase",
+            "nl": "Fase"
+          },
+          "example": "L1"
+        },
+        {
+          "name": "voltage",
+          "type": "number",
+          "title": {
+            "en": "Voltage (V)",
+            "nl": "Spanning (V)"
+          },
+          "example": 230
+        }
+      ]
+    },
+    {
+      "id": "power_restored",
+      "title": {
+        "en": "Power restored",
+        "nl": "Stroom hersteld"
+      },
+      "hint": {
+        "en": "Triggers when power is restored after being offline",
+        "nl": "Triggert wanneer stroom is hersteld na een uitval"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "offline_duration",
+          "type": "number",
+          "title": {
+            "en": "Offline duration (seconds)",
+            "nl": "Offline duur (seconden)"
+          },
+          "example": 120
+        }
+      ]
     }
   ]
 }

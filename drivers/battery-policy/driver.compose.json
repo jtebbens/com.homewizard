@@ -17,6 +17,7 @@
     "policy_debug_top3low",
     "policy_debug_top3high",
     "policy_debug_sun",
+    "policy_debug_learning",
     "battery_soc_mirror",
     "grid_power_mirror",
     "last_update",
