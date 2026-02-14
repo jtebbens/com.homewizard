@@ -24,6 +24,9 @@ class BatteryPolicyDevice extends Homey.Device {
     this.weatherData = null;
     this.lastRecommendation = null;
     this._lastPvEstimateW = 0; // For EMA smoothing
+    this._pvProductionW = null; // User-provided PV production via flow card
+    this._pvProductionTimestamp = null; // When the PV data was last updated
+    this._pvState = false; // Track PV state with hysteresis
 
     await this._initializeCapabilities();
     this._registerCapabilityListeners();
@@ -41,6 +44,9 @@ class BatteryPolicyDevice extends Homey.Device {
       this._updateWeather().catch(err =>
         this.error('Initial weather fetch failed:', err)
       );
+      
+      // Schedule periodic Xadi price refresh (every 30 minutes)
+      this._scheduleXadiRefresh();
     }
 
     this.log('BatteryPolicyDevice ready');
@@ -237,19 +243,25 @@ class BatteryPolicyDevice extends Homey.Device {
         }
 
         // ------------------------------------------------------
-        // ⭐ REALTIME PV STATE CHANGE DETECTIE
+        // ⭐ REALTIME PV STATE CHANGE DETECTIE (with hysteresis)
         // ------------------------------------------------------
-        const prevGrid = this._prevGridPower ?? 0;
-
-        const hadPV = prevGrid < -100;   // export → PV overschot
-        const hasPV = gridPower < -100;
-
-        if (hadPV !== hasPV) {
-          this.log(`⚡ PV state changed (${hadPV} → ${hasPV}) → running policy immediately`);
+        // Use hysteresis around -75W sweet spot to prevent rapid toggling:
+        // - Turn ON when grid < -125W (clear PV surplus)
+        // - Turn OFF when grid > -25W (surplus gone)
+        const prevPvState = this._pvState;
+        
+        if (!this._pvState && gridPower < -125) {
+          // PV state OFF → ON (export started)
+          this._pvState = true;
+          this.log(`⚡ PV state changed (OFF → ON) → running policy immediately`);
+          this._runPolicyCheck().catch(err => this.error(err));
+        } else if (this._pvState && gridPower > -25) {
+          // PV state ON → OFF (export stopped)
+          this._pvState = false;
+          this.log(`⚡ PV state changed (ON → OFF) → running policy immediately`);
           this._runPolicyCheck().catch(err => this.error(err));
         }
-
-        this._prevGridPower = gridPower;
+        // Otherwise: no state change, no spam
 
       } catch (err) {
         this.error('Error polling P1 capabilities:', err);
@@ -277,6 +289,39 @@ class BatteryPolicyDevice extends Homey.Device {
     );
 
     this.log(`Policy check scheduled every ${intervalMinutes} minutes`);
+  }
+
+  _scheduleXadiRefresh() {
+    const refreshIntervalMs = 30 * 60 * 1000; // 30 minutes
+
+    if (this.xadiRefreshInterval) {
+      this.homey.clearInterval(this.xadiRefreshInterval);
+    }
+
+    this.xadiRefreshInterval = this.homey.setInterval(
+      async () => {
+        const settings = this.getSettings();
+        
+        // Only refresh if dynamic pricing is enabled
+        if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
+          this.log('🔄 Refreshing Xadi prices...');
+          try {
+            await this.tariffManager.dynamicProvider.fetchPrices();
+            this.log('✅ Xadi prices refreshed');
+            
+            // Trigger policy check after successful refresh to update debug capabilities
+            if (this.getCapabilityValue('policy_enabled')) {
+              await this._runPolicyCheck();
+            }
+          } catch (err) {
+            this.error('❌ Xadi price refresh failed:', err);
+          }
+        }
+      },
+      refreshIntervalMs
+    );
+
+    this.log('Xadi price refresh scheduled every 30 minutes');
   }
 
   async _updateWeather() {
@@ -445,6 +490,15 @@ class BatteryPolicyDevice extends Homey.Device {
   }
 
   /**
+   * Update PV production from flow card (user-provided data)
+   * @param {number} powerW - PV production in watts
+   */
+  _updatePvProduction(powerW) {
+    this._pvProductionW = powerW;
+    this._pvProductionTimestamp = Date.now();
+  }
+
+  /**
    * Estimate PV production using grid power analysis + sun model
    * @param {Object} ctx - Context with gridPower, batteryPower, sunScore
    * @returns {number} Estimated PV production in watts
@@ -452,6 +506,24 @@ class BatteryPolicyDevice extends Homey.Device {
   _estimatePvProduction(ctx) {
     const settings = this.getSettings();
     
+    // Priority 1: User-provided data via flow card (most accurate)
+    if (this._pvProductionW !== null && this._pvProductionTimestamp) {
+      const age = Date.now() - this._pvProductionTimestamp;
+      const maxAge = 5 * 60 * 1000; // 5 minutes
+      
+      if (age < maxAge) {
+        if (settings.enable_logging) {
+          this.log(`PV from flow card: ${this._pvProductionW}W (age: ${Math.round(age/1000)}s)`);
+        }
+        return this._pvProductionW;
+      } else {
+        // Data too old, clear it
+        this._pvProductionW = null;
+        this._pvProductionTimestamp = null;
+      }
+    }
+    
+    // Priority 2: Estimation (fallback when no flow data)
     // Feature disabled or no capacity configured
     if (!settings.pv_estimation_enabled || !settings.pv_capacity_w || settings.pv_capacity_w <= 0) {
       return 0;
@@ -579,10 +651,11 @@ class BatteryPolicyDevice extends Homey.Device {
     const debugSunTomorrow = Number(weatherData?.sunshineTomorrow ?? 0).toFixed(1);
 
     const debugRate = tariffInfo?.currentRate ?? 'n/a';
-    const debugPriceText = `price=${debugPrice} rate=${debugRate}`;
-    const debugTopLowText = `low=[${debugTopLow}]`;
-    const debugTopHighText = `high=[${debugTopHigh}]`;
-    const debugSunText = `4h=${debugSun4h} 8h=${debugSun8h} today=${debugSunToday} tmw=${debugSunTomorrow}`;
+    const now = new Date().toISOString().slice(11, 16); // HH:MM format
+    const debugPriceText = `price=${debugPrice} rate=${debugRate} @${now}`;
+    const debugTopLowText = `low=[${debugTopLow}] @${now}`;
+    const debugTopHighText = `high=[${debugTopHigh}] @${now}`;
+    const debugSunText = `4h=${debugSun4h} 8h=${debugSun8h} today=${debugSunToday} tmw=${debugSunTomorrow} @${now}`;
 
     await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
@@ -835,10 +908,23 @@ class BatteryPolicyDevice extends Homey.Device {
       await this._connectP1Device();
     }
 
+    // Restart Xadi refresh if dynamic pricing or tariff type changed
+    if (changedKeys.includes('enable_dynamic_pricing') || changedKeys.includes('tariff_type')) {
+      if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
+        this._scheduleXadiRefresh();
+      } else if (this.xadiRefreshInterval) {
+        this.homey.clearInterval(this.xadiRefreshInterval);
+        this.xadiRefreshInterval = null;
+        this.log('Xadi refresh stopped (dynamic pricing disabled)');
+      }
+    }
+
     if (
       changedKeys.includes('policy_interval') ||
       changedKeys.includes('weather_location') ||
-      changedKeys.includes('p1_device_id')
+      changedKeys.includes('p1_device_id') ||
+      changedKeys.includes('enable_dynamic_pricing') ||
+      changedKeys.includes('tariff_type')
     ) {
       await this._runPolicyCheck();
     }
@@ -849,6 +935,10 @@ class BatteryPolicyDevice extends Homey.Device {
 
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
+    }
+
+    if (this.xadiRefreshInterval) {
+      this.homey.clearInterval(this.xadiRefreshInterval);
     }
 
     if (this._p1PollInterval) {

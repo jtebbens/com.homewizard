@@ -51,29 +51,35 @@ function checkSoCDrift({
   const now = Date.now();
   const deltaTimeMin = (now - previousTimestamp) / 60000;
 
-  // Minder dan 3 minuten ertussen → niet interessant
-  if (deltaTimeMin < 3) {
-    return { drift: false, timestamp: previousTimestamp };
+  // Moet lang genoeg duren om cloudy PV noise te filteren
+  // BMS calibratie: 45min @ 75W + 15min @ 800W = sustained pattern
+  if (deltaTimeMin < 20) {
+    return { drift: false };
   }
 
-  // Te weinig vermogen → geen serieuze verwachting
-  if (Math.abs(currentPowerW) < 300) {
-    return { drift: false, timestamp: previousTimestamp };
+  // SoC moet stuck zijn op 0% (zowel vorige als huidige meting)
+  if (previousSoC !== 0 || currentSoC !== 0) {
+    return { drift: false };
   }
 
-  // Hoeveel % zou je ongeveer moeten zijn gestegen?
-  const energyWh = Math.abs(currentPowerW) * deltaTimeMin;
-  const expectedPct = (energyWh / batteryCapacityWh) * 100;
-
-  // 🔥 Jouw kerncase:
-  // SoC blijft 0%, terwijl je genoeg geladen hebt → DRIFT
-  if (currentSoC === 0 && expectedPct >= 3) {
-    return { drift: true, timestamp: now };
+  // Must be actively charging (not idle or discharging)
+  if (currentPowerW < 50) {
+    return { drift: false };
   }
 
-  // Boven 0% kun je (optioneel) nog extra driftlogica doen,
-  // maar als je dat nu zat bent, gewoon uit laten:
-  return { drift: false, timestamp: previousTimestamp };
+  // BMS calibration signatures:
+  // Phase 1: ~75W for 45min+ (50-150W range to catch variations)
+  // Phase 2: ~800W for 15min+ (700-900W range for full power phase)
+  const isLowPowerCalibration = currentPowerW >= 50 && currentPowerW <= 150 && deltaTimeMin >= 20;
+  const isHighPowerCalibration = currentPowerW >= 700 && currentPowerW <= 900 && deltaTimeMin >= 20;
+
+  // 20+ minuten laden terwijl SoC stuck op 0% → zeer waarschijnlijk BMS drift
+  // (cloudy PV zou niet zo consistent zijn over 20min+)
+  if (isLowPowerCalibration || isHighPowerCalibration) {
+    return { drift: true };
+  }
+
+  return { drift: false };
 }
 
 
@@ -559,13 +565,14 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         previousTimestamp: this.previousTimestamp,
         currentSoC: data.state_of_charge_pct,
         currentPowerW: data.power_w,
-        currentTimestamp: now
+        currentTimestamp: now,
+        batteryCapacityWh: this.getSetting('battery_capacity_wh') || 2470
       });
 
       // 3. Update previousSoC/timestamp na drift-check
       if (Math.abs(data.power_w) > 10) {
         this.previousSoC = data.state_of_charge_pct;
-        this.previousTimestamp = driftResult.timestamp;
+        this.previousTimestamp = now; // Always use current timestamp when updating
       }
 
       // 4. Drift events
