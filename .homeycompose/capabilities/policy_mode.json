@@ -12,5 +12,6 @@
   ],
   "getable": true,
   "setable": true,
-  "uiComponent": "picker"
+  "uiComponent": "picker",
+  "icon": "assets/icon.svg"
 }
