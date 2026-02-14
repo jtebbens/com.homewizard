@@ -6,6 +6,7 @@ const PolicyEngine = require('../../lib/policy-engine');
 const TariffManager = require('../../lib/tariff-manager');
 const ExplainabilityEngine = require('../../lib/explainability-engine');
 const SunMultiSource = require('../../lib/sun-multisource');
+const LearningEngine = require('../../lib/learning-engine');
 
 class BatteryPolicyDevice extends Homey.Device {
 
@@ -18,6 +19,10 @@ class BatteryPolicyDevice extends Homey.Device {
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = new ExplainabilityEngine(this.homey);
     this.sunMulti = new SunMultiSource(this.homey);
+    this.learningEngine = new LearningEngine(this.homey, this);
+    
+    // Initialize learning engine
+    await this.learningEngine.initialize();
 
     // State
     this.p1Device = null;
@@ -65,6 +70,7 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_debug_top3low: '-',
       policy_debug_top3high: '-',
       policy_debug_sun: '-',
+      policy_debug_learning: '-',
       battery_soc_mirror: 50,
       grid_power_mirror: 0,
       last_update: new Date().toISOString(),
@@ -240,6 +246,16 @@ class BatteryPolicyDevice extends Homey.Device {
         // Mirror grid power
         if (currentPower !== gridPower) {
           await this.setCapabilityValue('grid_power_mirror', gridPower);
+        }
+
+        // ------------------------------------------------------
+        // 📊 LEARNING: Record consumption patterns
+        // ------------------------------------------------------
+        if (gridPower > 0) {
+          // Only record import (consumption), not export
+          await this.learningEngine.recordConsumption(gridPower).catch(err => 
+            this.error('Learning consumption recording failed:', err)
+          );
         }
 
         // ------------------------------------------------------
@@ -419,6 +435,23 @@ class BatteryPolicyDevice extends Homey.Device {
 
       const result = this.policyEngine.calculatePolicy(inputs);
 
+      // ------------------------------------------------------
+      // 📊 LEARNING: Apply confidence adjustment based on history
+      // ------------------------------------------------------
+      const confidenceAdjustment = this.learningEngine.getConfidenceAdjustment(
+        result.hwMode || result.policyMode,
+        {
+          soc: inputs.battery?.stateOfCharge ?? 0,
+          sun4h: inputs.weather?.sun4h ?? 0
+        }
+      );
+      
+      if (confidenceAdjustment !== 0) {
+        const originalConfidence = result.confidence;
+        result.confidence = Math.max(0, Math.min(100, result.confidence + confidenceAdjustment));
+        this.log(`📊 Learning adjusted confidence: ${originalConfidence} → ${result.confidence} (${confidenceAdjustment > 0 ? '+' : ''}${confidenceAdjustment})`);
+      }
+
       const explanation = this.explainabilityEngine.generateExplanation(
         result,
         inputs,
@@ -461,6 +494,16 @@ class BatteryPolicyDevice extends Homey.Device {
         confidence: result.confidence,
         summary: explanation.summary
       });
+
+      // ------------------------------------------------------
+      // 📊 LEARNING: Record policy decision
+      // ------------------------------------------------------
+      await this.learningEngine.recordPolicyDecision(currentMode, {
+        soc: inputs.battery?.stateOfCharge ?? 0,
+        price: inputs.tariff?.currentPrice ?? 0,
+        sun4h: inputs.weather?.sun4h ?? 0,
+        confidence: result.confidence
+      }).catch(err => this.error('Learning policy recording failed:', err));
 
       await this._triggerRecommendationChanged(result, explanation);
 
@@ -569,11 +612,17 @@ class BatteryPolicyDevice extends Homey.Device {
 
     this._lastPvEstimateW = estimate;
 
-    if (settings.enable_logging && estimate > 0) {
-      this.log(`PV estimate: ${estimate}W (model: ${pvModel}W, fromGrid: ${pvFromGrid}W, sun: ${sunScore}%)`);
+    // ------------------------------------------------------
+    // 📊 LEARNING: Apply learned PV accuracy adjustment
+    // ------------------------------------------------------
+    const learningMultiplier = this.learningEngine.getPvAdjustmentMultiplier();
+    const adjustedEstimate = Math.round(estimate * learningMultiplier);
+    
+    if (settings.enable_logging && adjustedEstimate > 0) {
+      this.log(`PV estimate: ${adjustedEstimate}W (raw: ${estimate}W, model: ${pvModel}W, fromGrid: ${pvFromGrid}W, sun: ${sunScore}%, learning: ${learningMultiplier.toFixed(2)}x)`);
     }
 
-    return Math.max(0, estimate);
+    return Math.max(0, adjustedEstimate);
   }
 
   async _gatherInputs() {
@@ -657,10 +706,15 @@ class BatteryPolicyDevice extends Homey.Device {
     const debugTopHighText = `high=[${debugTopHigh}] @${now}`;
     const debugSunText = `4h=${debugSun4h} 8h=${debugSun8h} today=${debugSunToday} tmw=${debugSunTomorrow} @${now}`;
 
+    // Learning statistics
+    const learningStats = this.learningEngine.getStatistics();
+    const debugLearningText = `days=${learningStats.days_tracking} samples=${learningStats.total_samples} coverage=${learningStats.pattern_coverage}% pv_acc=${learningStats.pv_accuracy}% @${now}`;
+
     await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
     await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
+    await this.setCapabilityValue('policy_debug_learning', debugLearningText).catch(this.error);
 
     // Estimate PV production using grid analysis + sun model
     const sunScore = sun ? Math.max(sun.gfs ?? 0, sun.harmonie ?? 0) : 0;

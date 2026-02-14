@@ -232,6 +232,15 @@
           "units": { "en": "W", "nl": "W" }
         }
       ]
+    },
+    {
+      "id": "reset_learning_data",
+      "title": { "en": "Reset learning data", "nl": "Leergegevens resetten" },
+      "titleFormatted": { "en": "Reset all learning data", "nl": "Alle leergegevens resetten" },
+      "hint": { 
+        "en": "Clear all learned patterns and start fresh. Use when moving or changing your setup.",
+        "nl": "Wis alle geleerde patronen en begin opnieuw. Gebruik bij verhuizing of wijziging van uw opstelling."
+      }
     }
   ]
 }

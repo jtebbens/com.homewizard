@@ -1,0 +1,16 @@
+{
+  "id": "policy_debug_learning",
+  "type": "string",
+  "title": {
+    "en": "Policy Learning",
+    "nl": "Policy Leren"
+  },
+  "desc": {
+    "en": "Historical learning statistics and pattern coverage",
+    "nl": "Historische leerstatistieken en patroonbedekking"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false
+}

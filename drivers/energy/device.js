@@ -215,6 +215,21 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this._flowTriggerTariff = this.homey.flow.getDeviceTriggerCard('tariff_changed');
     this._flowTriggerImport = this.homey.flow.getDeviceTriggerCard('import_changed');
     this._flowTriggerExport = this.homey.flow.getDeviceTriggerCard('export_changed');
+    this._flowTriggerVoltageRestored = this.homey.flow.getDeviceTriggerCard('voltage_restored_v1');
+    this._flowTriggerPowerRestored = this.homey.flow.getDeviceTriggerCard('power_restored_v1');
+
+    // Track voltage state for restoration detection
+    this._voltageState = {
+      l1: { abnormal: false, lastAbnormalTime: null },
+      l2: { abnormal: false, lastAbnormalTime: null },
+      l3: { abnormal: false, lastAbnormalTime: null }
+    };
+    
+    // Track power state for restoration detection
+    this._powerState = {
+      offline: false,
+      offlineStartTime: null
+    };
 
     this.registerCapabilityListener('identify', async () => {
       await this.onIdentify();
@@ -490,6 +505,10 @@ async onPoll() {
     this._processUrlSync(tasks, settings);
 
     await Promise.allSettled(tasks);
+
+    // Check for voltage and power restoration
+    this._checkVoltageRestoration(data);
+    this._checkPowerRestoration(data);
 
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
@@ -836,16 +855,39 @@ async onPoll() {
     if (data.long_power_fail_count !== undefined &&
         this._hasChanged('long_power_fail_count', data.long_power_fail_count)) {
       tasks.push(updateCapability(this, 'long_power_fail_count', data.long_power_fail_count));
+      
+      // Trigger flow card for long power failure
+      this.homey.flow.getDeviceTriggerCard('long_power_fail_detected_v1')
+        .trigger(this, { count: data.long_power_fail_count })
+        .catch(this.error);
     }
 
     if (data.voltage_sag_l1_count !== undefined &&
         this._hasChanged('voltage_sag_l1', data.voltage_sag_l1_count)) {
       tasks.push(updateCapability(this, 'voltage_sag_l1', data.voltage_sag_l1_count));
+      
+      // Trigger flow card for voltage sag
+      this.homey.flow.getDeviceTriggerCard('voltage_sag_detected_v1')
+        .trigger(this, {
+          phase_l1: data.voltage_sag_l1_count || 0,
+          phase_l2: this.getCapabilityValue('voltage_sag_l2') || 0,
+          phase_l3: this.getCapabilityValue('voltage_sag_l3') || 0
+        })
+        .catch(this.error);
     }
 
     if (data.voltage_swell_l1_count !== undefined &&
         this._hasChanged('voltage_swell_l1', data.voltage_swell_l1_count)) {
       tasks.push(updateCapability(this, 'voltage_swell_l1', data.voltage_swell_l1_count));
+      
+      // Trigger flow card for voltage swell
+      this.homey.flow.getDeviceTriggerCard('voltage_swell_detected_v1')
+        .trigger(this, {
+          phase_l1: data.voltage_swell_l1_count || 0,
+          phase_l2: this.getCapabilityValue('voltage_swell_l2') || 0,
+          phase_l3: this.getCapabilityValue('voltage_swell_l3') || 0
+        })
+        .catch(this.error);
     }
 
     if (data.active_current_l1_a !== undefined) {
@@ -863,18 +905,54 @@ async onPoll() {
       if (data.voltage_sag_l2_count !== undefined &&
           this._hasChanged('voltage_sag_l2', data.voltage_sag_l2_count)) {
         tasks.push(updateCapability(this, 'voltage_sag_l2', data.voltage_sag_l2_count));
+        
+        // Trigger flow card for voltage sag
+        this.homey.flow.getDeviceTriggerCard('voltage_sag_detected_v1')
+          .trigger(this, {
+            phase_l1: this.getCapabilityValue('voltage_sag_l1') || 0,
+            phase_l2: data.voltage_sag_l2_count || 0,
+            phase_l3: this.getCapabilityValue('voltage_sag_l3') || 0
+          })
+          .catch(this.error);
       }
       if (data.voltage_sag_l3_count !== undefined &&
           this._hasChanged('voltage_sag_l3', data.voltage_sag_l3_count)) {
         tasks.push(updateCapability(this, 'voltage_sag_l3', data.voltage_sag_l3_count));
+        
+        // Trigger flow card for voltage sag
+        this.homey.flow.getDeviceTriggerCard('voltage_sag_detected_v1')
+          .trigger(this, {
+            phase_l1: this.getCapabilityValue('voltage_sag_l1') || 0,
+            phase_l2: this.getCapabilityValue('voltage_sag_l2') || 0,
+            phase_l3: data.voltage_sag_l3_count || 0
+          })
+          .catch(this.error);
       }
       if (data.voltage_swell_l2_count !== undefined &&
           this._hasChanged('voltage_swell_l2', data.voltage_swell_l2_count)) {
         tasks.push(updateCapability(this, 'voltage_swell_l2', data.voltage_swell_l2_count));
+        
+        // Trigger flow card for voltage swell
+        this.homey.flow.getDeviceTriggerCard('voltage_swell_detected_v1')
+          .trigger(this, {
+            phase_l1: this.getCapabilityValue('voltage_swell_l1') || 0,
+            phase_l2: data.voltage_swell_l2_count || 0,
+            phase_l3: this.getCapabilityValue('voltage_swell_l3') || 0
+          })
+          .catch(this.error);
       }
       if (data.voltage_swell_l3_count !== undefined &&
           this._hasChanged('voltage_swell_l3', data.voltage_swell_l3_count)) {
         tasks.push(updateCapability(this, 'voltage_swell_l3', data.voltage_swell_l3_count));
+        
+        // Trigger flow card for voltage swell
+        this.homey.flow.getDeviceTriggerCard('voltage_swell_detected_v1')
+          .trigger(this, {
+            phase_l1: this.getCapabilityValue('voltage_swell_l1') || 0,
+            phase_l2: this.getCapabilityValue('voltage_swell_l2') || 0,
+            phase_l3: data.voltage_swell_l3_count || 0
+          })
+          .catch(this.error);
       }
 
       if (data.active_power_l2_w !== undefined &&
@@ -1084,6 +1162,84 @@ _handlePollError(err) {
         }
       }
 
+    }
+  }
+
+  /**
+   * Check if voltage has been restored to normal range after sag/swell
+   * @param {Object} data - measurement data
+   */
+  _checkVoltageRestoration(data) {
+    if (!this._voltageState || !this._flowTriggerVoltageRestored) return;
+    
+    // Voltage normal range (230V ±10% = 207-253V)
+    const VOLTAGE_MIN = 207;
+    const VOLTAGE_MAX = 253;
+    
+    const phases = [
+      { name: 'l1', voltage: data.active_voltage_l1_v },
+      { name: 'l2', voltage: data.active_voltage_l2_v },
+      { name: 'l3', voltage: data.active_voltage_l3_v }
+    ];
+    
+    phases.forEach(({ name, voltage }) => {
+      if (voltage == null) return;
+      
+      const state = this._voltageState[name];
+      const isNormal = voltage >= VOLTAGE_MIN && voltage <= VOLTAGE_MAX;
+      
+      // Detect restoration: was abnormal, now normal
+      if (state.abnormal && isNormal) {
+        const phaseName = name.toUpperCase();
+        this.log(`Voltage restored on ${phaseName}: ${voltage}V`);
+        
+        this._flowTriggerVoltageRestored.trigger(this, {
+          phase: phaseName,
+          voltage: Math.round(voltage)
+        }).catch(this.error);
+        
+        state.abnormal = false;
+        state.lastAbnormalTime = null;
+      }
+      // Track abnormal state
+      else if (!state.abnormal && !isNormal) {
+        state.abnormal = true;
+        state.lastAbnormalTime = Date.now();
+      }
+    });
+  }
+
+  /**
+   * Check if power has been restored after being offline
+   * @param {Object} data - measurement data
+   */
+  _checkPowerRestoration(data) {
+    if (!this._powerState || !this._flowTriggerPowerRestored) return;
+    
+    // Consider online if we have active power reading or any voltage
+    const hasActivePower = data.active_power_w != null && data.active_power_w !== 0;
+    const hasVoltage = data.active_voltage_l1_v != null || data.active_voltage_l2_v != null || data.active_voltage_l3_v != null;
+    const isOnline = hasActivePower || hasVoltage;
+    
+    // Detect restoration: was offline, now online
+    if (this._powerState.offline && isOnline) {
+      const offlineDuration = this._powerState.offlineStartTime 
+        ? Math.round((Date.now() - this._powerState.offlineStartTime) / 1000)
+        : 0;
+      
+      this.log(`Power restored after ${offlineDuration} seconds offline`);
+      
+      this._flowTriggerPowerRestored.trigger(this, {
+        offline_duration: offlineDuration
+      }).catch(this.error);
+      
+      this._powerState.offline = false;
+      this._powerState.offlineStartTime = null;
+    }
+    // Track offline state
+    else if (!this._powerState.offline && !isOnline) {
+      this._powerState.offline = true;
+      this._powerState.offlineStartTime = Date.now();
     }
   }
 
