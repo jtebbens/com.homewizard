@@ -122,6 +122,14 @@ class BatteryPolicyDriver extends Homey.Driver {
         await args.device.setCapabilityValue('weather_override', args.override);
       });
 
+    // Action: Update PV production
+    this.homey.flow.getActionCard('update_pv_production')
+      .registerRunListener(async (args) => {
+        const power = Math.max(0, Math.round(args.power || 0));
+        args.device._updatePvProduction(power);
+        args.device.log(`PV production updated via flow: ${power}W`);
+      });
+
     this.log('Flow cards registered');
   }
 
