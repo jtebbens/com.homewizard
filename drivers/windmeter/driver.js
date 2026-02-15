@@ -11,53 +11,54 @@ class HomeWizardWindmeter extends Homey.Driver {
     // Driver initialized
   }
 
-  onPair(socket) {
+  async onPair(socket) {
 
-    // Show initial view
-    socket.showView('start');
+    await socket.showView('start');
 
-    // View change logging
     socket.setHandler('showView', (viewId) => {
       this.log(`View: ${viewId}`);
     });
 
-    // Request list of HomeWizard controllers
-    socket.setHandler('get_homewizards', () => {
-
+    socket.setHandler('get_homewizards', async () => {
       this.homey.drivers.getDriver('homewizard').getDevices();
 
-      homewizard.getDevices((hwDevices) => {
-        const result = {};
+      return new Promise((resolve) => {
+        homewizard.getDevices((hwDevices) => {
+          const result = {};
 
-        Object.keys(hwDevices).forEach((key) => {
-          result[key] = hwDevices[key];
+          Object.keys(hwDevices).forEach((key) => {
+            result[key] = {
+              id: key,
+              name: hwDevices[key].name,
+              settings: hwDevices[key].settings
+            };
+          });
+
+          this.log('HomeWizard devices found:', Object.keys(result).length);
+          socket.emit('hw_devices', result);
+          resolve(result);
         });
-
-        this.log(result);
-        socket.emit('hw_devices', result);
       });
     });
 
-    // Add device manually
-    socket.setHandler('manual_add', (device) => {
+    socket.setHandler('manual_add', async (device) => {
+      const hwId = device.settings.homewizard_id;
 
-      const id = device.settings.homewizard_id;
-
-      if (id.indexOf('HW_') === -1 && id.indexOf('HW') === 0) {
-
-        this.log(`Windmeter added ${device.data.id}`);
-
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-        };
-
-        socket.emit('success', device);
-        return devices;
+      if (!hwId || hwId === '') {
+        socket.emit('error', 'No HomeWizard selected');
+        return;
       }
 
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
+      this.log(`Windmeter added ${device.data.id} on HomeWizard ${hwId}`);
+
+      devices[device.data.id] = {
+        id: device.data.id,
+        name: device.name,
+        settings: device.settings,
+      };
+
+      socket.emit('success', device);
+      return devices;
     });
 
     socket.setHandler('disconnect', () => {

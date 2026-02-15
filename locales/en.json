@@ -24,7 +24,10 @@
     },
     "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
     "support_label": "🛠️ Support Page",
-    "tab_baseload": "Baseload"
+    "tab_baseload": "Baseload",
+    "tab_planning": "Battery Planning",
+    "planning_title": "Battery Planning - 48 Hours",
+    "planning_subtitle": "Expected prices, battery modes and SoC projection for today and tomorrow"
   },
   "pair": {
     "no_devices_found": "No devices found. Make sure:\n• Local API is enabled in HomeWizard app\n• Device and Homey are on same network\n• mDNS/Bonjour is enabled on your router\n• No VLAN isolation between networks",
@@ -70,6 +73,9 @@
     "clear_failed": "Failed to clear manual IP",
     "load_failed": "Failed to load current settings",
     "confirm_clear": "Return to automatic mDNS discovery? Your manual IP will be removed."
+  },
+  "camera": {
+    "planning_title": "Battery Planning"
   },
   "device": {
     "init": "Initializing device...",

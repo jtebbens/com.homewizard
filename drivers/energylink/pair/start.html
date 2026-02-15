@@ -1,75 +1,104 @@
 <script>
-$( document ).ready(function() {
-	Homey.emit('get_homewizards');
+$(document).ready(function() {
+  console.log('[ENERGYLINK PAIR] Document ready, emitting get_energylinks');
+  Homey.emit('get_energylinks');
 
-	Homey.on('hw_devices', function(hw_devices){
-		$.each(hw_devices, function( index, value ) {
-			$('#homewizard_select').append($("<option>").attr('value',value.id).text(value.settings.homewizard_ip));
-		});
+  Homey.on('energylink_list', function(energyLinkList) {
+    console.log('[ENERGYLINK PAIR] Received energylink_list:', energyLinkList);
+    
+    $('#energylink_select').empty().append('<option>' + Homey.__("settings.select") + '</option>');
+    
+    if (!energyLinkList || energyLinkList.length === 0) {
+      $('#error').html(Homey.__("settings.no_energylink_found") || "No EnergyLinks found. Make sure your HomeWizard is polling data.");
+      return;
+    }
+    
+    energyLinkList.forEach(function(item) {
+      $('#energylink_select').append(
+        $('<option>')
+          .val(item.homewizard_id)
+          .text(item.name + ' (' + (item.hw_ip || item.hw_name) + ')')
+          .data('energylink_id', item.energylink_id)
+      );
     });
+  });
 });
 
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-	console.log('MA');
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW_EL'+Math.floor(Date.now() / 1000)
-	    },
-		settings: {
-		    'homewizard_id': $('#homewizard_select').val(),
-	    },
-	    name: 'Energylink',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
-    
-    Homey.on('success', function(device){
-		$('#error').html('Saving...');
-        $('#save').prop('disabled', true);
-        Homey.addDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: device.data.id
-            },
-			settings: {
-                'homewizard_id': device.settings.homewizard_id,
-            },
-            name: "EnergyLink"
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
-        });
+function saveSettings() {
+  $('#error').html('');
+  $('#save').prop('disabled', true);
+  
+  const select = $('#energylink_select');
+  const selectedOption = select.find('option:selected');
+  
+  if (select.prop('selectedIndex') === 0) {
+    $('#error').html(Homey.__("settings.select_energylink") || "Please select an EnergyLink");
+    $('#save').prop('disabled', false);
+    return;
+  }
+  
+  Homey.emit('manual_add', {
+    data: {
+      id: 'HW_EL' + Math.floor(Date.now() / 1000)
+    },
+    settings: {
+      'homewizard_id': selectedOption.val(),
+      'energylink_id': selectedOption.data('energylink_id')
+    },
+    name: 'EnergyLink'
+  }, function(err, result) {
+    if (err) return console.error(err);
+  });
+  
+  Homey.on('success', function(device) {
+    $('#error').html('Saving...');
+    $('#save').prop('disabled', true);
+    Homey.addDevice({
+      data: {
+        id: device.data.id
+      },
+      settings: device.settings,
+      name: device.name
+    }, function(err) {
+      if (err) return console.error(err);
+      Homey.done();
     });
-    
-    Homey.on('error', function(message){
-        $('#error').html(Homey.__("settings.error")+message);
-        $('#save').prop('disabled', false);
-    });
+  });
+  
+  Homey.on('error', function(message) {
+    $('#error').html(Homey.__("settings.error") + message);
+    $('#save').prop('disabled', false);
+  });
 }
+</script>
 </script>
 <!doctype html>
 <html>
     <head>
         <style>
             label {
-                width: 150px;
-                display:inline-block !important;   
+                font-size: 16px;
+                margin-bottom: 5px;
+                display: block;
+            }
+            .field.row {
+                margin-bottom: 20px;
             }
             #error {
                 color: red;
+                font-size: 16px;
             }
         </style>
     </head>
     <body>
         <p data-i18n="settings.energylink_intro"></p>
-            <div class="field row">
-				<select class="homey-form-select" id="homewizard_select">
-					<option data-i18n="settings.select"></option>
-				</select>
-            </div>
-            <br>
-            <p id="error"></p>
+        <div class="field row">
+            <select class="homey-form-select" id="energylink_select">
+                <option data-i18n="settings.select"></option>
+            </select>
+        </div>
+        <br>
+        <p id="error"></p>
         <button class="homey-button-primary-full" onclick="saveSettings()" id="save" data-i18n="settings.save"></button>
     </body>
 </html>

@@ -80,48 +80,48 @@ class HomeWizardHeatlink extends Homey.Driver {
   }
 
   async onPair(socket) {
-    // socket.on('get_homewizards', function () {
-    await socket.setHandler('get_homewizards', () => {
+    socket.setHandler('get_heatlinks', async () => {
+      const fetchedDevices = homewizard.self.devices || {};
+      const heatLinkList = [];
 
-      // homewizard_devices = driver.getDevices();
-      homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
-
-      homewizard.getDevices((homewizard_devices) => {
-        const hw_devices = {};
-
-        Object.keys(homewizard_devices).forEach((key) => {
-          hw_devices[key] = homewizard_devices[key];
-        });
-
-        this.log(hw_devices);
-        socket.emit('hw_devices', hw_devices);
-
+      Object.keys(fetchedDevices).forEach(hwId => {
+        const device = fetchedDevices[hwId];
+        const heatlinks = device.polldata?.heatlinks || [];
+        
+        if (Array.isArray(heatlinks) && heatlinks.length > 0) {
+          heatLinkList.push({
+            homewizard_id: hwId,
+            name: device.name || device.settings?.homewizard_ip || hwId,
+            ip: device.settings?.homewizard_ip,
+            heatlink_name: heatlinks[0].name || 'HeatLink'
+          });
+        }
       });
+      
+      this.log('HomeWizard devices with HeatLinks:', heatLinkList.length);
+      socket.emit('heatlink_list', heatLinkList);
     });
 
-    await socket.setHandler('manual_add', (device) => {
-
-      if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-        // true
-        this.log(`HeatLink added ${device.data.id}`);
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-        };
-        // callback( null, devices );
-        socket.emit('success', device);
-        return devices;
-
+    socket.setHandler('manual_add', async (device) => {
+      const hwId = device.settings.homewizard_id;
+      
+      if (!hwId || hwId === '') {
+        socket.emit('error', 'No HomeWizard selected');
+        return;
       }
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
-
+      
+      this.log(`HeatLink added ${device.data.id} on HomeWizard ${hwId}`);
+      devices[device.data.id] = {
+        id: device.data.id,
+        name: device.name,
+        settings: device.settings,
+      };
+      socket.emit('success', device);
     });
 
     socket.setHandler('disconnect', () => {
       this.log('User aborted pairing, or pairing is finished');
     });
-
   }
 
 }

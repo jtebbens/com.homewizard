@@ -21,50 +21,56 @@ class HomeWizardEnergyLink extends Homey.Driver {
       this.log(`View: ${viewId}`);
     });
 
-    // Request list of HomeWizard controllers
-    socket.setHandler('get_homewizards', () => {
+    // Request list of EnergyLinks from all HomeWizard controllers
+    socket.setHandler('get_energylinks', async () => {
+      const fetchedDevices = homewizard.self.devices || {};
+      const energyLinkList = [];
 
-      const hwControllers = this.homey.drivers.getDriver('homewizard').getDevices();
+      this.log('[PAIRING] Fetched devices:', Object.keys(fetchedDevices));
 
-      homewizard.getDevices((hwDevices) => {
-        const result = {};
-
-        Object.keys(hwDevices).forEach((key) => {
-
-          const energylinks = hwDevices[key].polldata?.energylinks || {};
-
-          result[key] = {
-            id: key,
-            name: hwDevices[key].name,
-            settings: hwDevices[key].settings,
-            energylinks: energylinks
-          };
-        });
-
-        socket.emit('hw_devices', result);
+      Object.keys(fetchedDevices).forEach(hwId => {
+        const device = fetchedDevices[hwId];
+        this.log(`[PAIRING] Device ${hwId} polldata:`, device.polldata ? 'exists' : 'missing');
+        
+        const energylinks = device.polldata?.energylinks || [];
+        this.log(`[PAIRING] Device ${hwId} energylinks:`, energylinks);
+        
+        // Energylinks is een array
+        if (Array.isArray(energylinks) && energylinks.length > 0) {
+          energylinks.forEach(el => {
+            energyLinkList.push({
+              homewizard_id: hwId,
+              energylink_id: el.id,
+              name: el.name || 'EnergyLink',
+              hw_name: device.name || device.settings?.homewizard_ip || hwId,
+              hw_ip: device.settings?.homewizard_ip
+            });
+          });
+        }
       });
+
+      this.log('[PAIRING] EnergyLinks found:', energyLinkList.length, energyLinkList);
+      socket.emit('energylink_list', energyLinkList);
     });
 
     // Manual add
-    socket.setHandler('manual_add', (device) => {
+    socket.setHandler('manual_add', async (device) => {
+      const hwId = device.settings.homewizard_id;
 
-      const id = device.settings.homewizard_id;
-
-      if (id.indexOf('HW_') === -1 && id.indexOf('HW') === 0) {
-
-        this.log(`EnergyLink added ${device.data.id}`);
-
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: 'EnergyLink',
-          settings: device.settings,
-        };
-
-        socket.emit('success', device);
-        return devices;
+      if (!hwId || hwId === '') {
+        socket.emit('error', 'No HomeWizard selected');
+        return;
       }
 
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
+      this.log(`EnergyLink added ${device.data.id} on HomeWizard ${hwId}`);
+
+      devices[device.data.id] = {
+        id: device.data.id,
+        name: device.name,
+        settings: device.settings,
+      };
+
+      socket.emit('success', device);
     });
 
     socket.setHandler('disconnect', () => {

@@ -13,23 +13,26 @@ class HomeWizardKakusensors extends Homey.Driver {
 
     await socket.showView('start');
 
-    socket.setHandler('get_homewizards', async () => {
-      const hwDevices = this.homey.drivers.getDriver('homewizard').getDevices();
-      const result = {};
+    socket.setHandler('get_kakusensors', async () => {
+      const fetchedDevices = homewizard.self.devices || {};
+      const sensorList = [];
+      const hwIds = Object.keys(fetchedDevices);
 
       await Promise.all(
-        Object.keys(hwDevices).map(hwId => {
+        hwIds.map(hwId => {
           return new Promise(resolve => {
             homewizard.callnew(hwId, '/get-sensors', (err, response) => {
-              if (err || !response) {
-                result[hwId] = { id: hwId, kakusensors: [] };
-                return resolve();
-              }
+              if (err || !response) return resolve();
 
-              result[hwId] = {
-                id: hwId,
-                kakusensors: response.kakusensors || []
-              };
+              const kakusensors = response.kakusensors || [];
+              kakusensors.forEach(sensor => {
+                sensorList.push({
+                  id: sensor.id,
+                  name: sensor.name,
+                  type: sensor.type,
+                  homewizard_id: hwId
+                });
+              });
 
               resolve();
             });
@@ -37,31 +40,20 @@ class HomeWizardKakusensors extends Homey.Driver {
         })
       );
 
-      socket.emit('hw_devices', result);
+      this.log('[PAIRING] Kakusensor list:', sensorList);
+      socket.emit('kakusensor_list', sensorList);
     });
 
     socket.setHandler('manual_add', async (device) => {
       const hwId = device.settings.homewizard_id;
       const sensorId = device.settings.kakusensors_id;
 
-      if (!hwId || !sensorId) {
+      if (!hwId || sensorId === undefined) {
         socket.emit('error', this.homey.__("settings.selection_error"));
         return;
       }
 
-      // Sensor type opslaan
-      const sensors = device.kakusensors;
-      const selected = sensors[sensorId];
-
-      if (!selected) {
-        socket.emit('error', this.homey.__("settings.notfound_error"));
-        return;
-      }
-
-      device.settings.kakusensor_type = selected.type;
-
       socket.emit('success', device);
-      return device;
     });
 
     socket.setHandler('disconnect', () => {});

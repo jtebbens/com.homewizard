@@ -18,41 +18,44 @@ class HomeWizardWattcher extends Homey.Driver {
   }
 
   async onPair(socket) {
-    socket.setHandler('get_homewizards', () => {
+    socket.setHandler('get_homewizards', async () => {
       homewizard_devices = this.homey.drivers.getDriver('homewizard').getDevices();
-      // socket.on('get_homewizards', function () {
 
-      // homewizard_devices = driver.getDevices();
+      return new Promise((resolve) => {
+        homewizard.getDevices((homewizard_devices) => {
+          const hw_devices = {};
 
-      homewizard.getDevices((homewizard_devices) => {
-        const hw_devices = {};
+          Object.keys(homewizard_devices).forEach((key) => {
+            hw_devices[key] = {
+              id: key,
+              name: homewizard_devices[key].name,
+              settings: homewizard_devices[key].settings
+            };
+          });
 
-        Object.keys(homewizard_devices).forEach((key) => {
-          hw_devices[key] = homewizard_devices[key];
+          this.log('HomeWizard devices found:', Object.keys(hw_devices).length);
+          socket.emit('hw_devices', hw_devices);
+          resolve(hw_devices);
         });
-
-        this.log(hw_devices);
-        socket.emit('hw_devices', hw_devices);
-
       });
     });
 
-    socket.setHandler('manual_add', (device) => {
-
-      if (device.settings.homewizard_id.indexOf('HW_') === -1 && device.settings.homewizard_id.indexOf('HW') === 0) {
-        // true
-        this.log(`Wattcher added ${device.data.id}`);
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-        };
-        socket.emit('success', device);
-        return devices;
-
+    socket.setHandler('manual_add', async (device) => {
+      const hwId = device.settings.homewizard_id;
+      
+      if (!hwId || hwId === '') {
+        socket.emit('error', 'No HomeWizard selected');
+        return;
       }
-      socket.emit('error', 'No valid HomeWizard found, re-pair if problem persists');
-
+      
+      this.log(`Wattcher added ${device.data.id} on HomeWizard ${hwId}`);
+      devices[device.data.id] = {
+        id: device.data.id,
+        name: device.name,
+        settings: device.settings,
+      };
+      socket.emit('success', device);
+      return devices;
     });
 
     socket.setHandler('disconnect', () => {

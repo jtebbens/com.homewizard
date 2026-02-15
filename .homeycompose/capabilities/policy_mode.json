@@ -7,8 +7,8 @@
   },
   "values": [
     { "id": "off", "title": { "en": "Off", "nl": "Uit" } },
-    { "id": "balanced", "title": { "en": "Balanced", "nl": "Gebalanceerd" } },
-    { "id": "zero", "title": { "en": "Zero", "nl": "Zero" } }
+    { "id": "balanced", "title": { "en": "Dynamic Pricing", "nl": "Dynamisch Tarief" } },
+    { "id": "zero", "title": { "en": "Peak Shaving", "nl": "Peak Shaving" } }
   ],
   "getable": true,
   "setable": true,

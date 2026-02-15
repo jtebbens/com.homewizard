@@ -50,9 +50,95 @@
       font-size: 13px;
     }
     th { background: #f0f0f0; }
+    
+    /* Battery Planning Styles */
+    .planning-hour-card {
+      background: #fafafa;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .planning-hour-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .planning-hour-card.current {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+    }
+    .planning-hour-card.cheap {
+      background: linear-gradient(135deg, #c8e6c9 0%, #fafafa 100%);
+    }
+    .planning-hour-card.expensive {
+      background: linear-gradient(135deg, #ffcdd2 0%, #fafafa 100%);
+    }
+    .planning-hour-time {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .planning-hour-price {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #666;
+      font-weight: 600;
+    }
+    .planning-hour-mode {
+      font-size: 36px;
+      margin: 10px 0;
+    }
+    .planning-hour-mode-text {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .planning-hour-details {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+    }
+    .planning-status-item {
+      text-align: center;
+    }
+    .planning-status-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .planning-status-value {
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .planning-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: white;
+      border-radius: 6px;
+    }
+    .planning-legend-icon {
+      font-size: 24px;
+      min-width: 32px;
+      text-align: center;
+    }
+    .planning-day-marker {
+      grid-column: 1 / -1;
+      padding: 12px 16px;
+      background: linear-gradient(90deg, #2196F3, #1976D2);
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      border-radius: 8px;
+      margin: 8px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
   </style>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
@@ -65,6 +151,7 @@
   <!-- TAB HEADERS -->
   <div class="tabs">
     <div class="tab active" data-tab="baseload" id="tab-baseload"></div>
+    <div class="tab" data-tab="planning" id="tab-planning"></div>
     <div class="tab" data-tab="explain">Battery Policy</div>
     <div class="tab" data-tab="fetch">Device Fetch Debug</div>
     <div class="tab" data-tab="discovery">Discovery Debug</div>
@@ -149,6 +236,38 @@
     <pre id="ws-debug" class="debug-box">Loading…</pre>
   </div>
 
+  <!-- TAB: BATTERY PLANNING -->
+  <div id="planning" class="tab-content">
+    <h2 id="planning-title"></h2>
+    <p id="planning-subtitle" style="color: #666; margin-bottom: 20px;"></p>
+    
+    <div id="planning-status" style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #f8f8f8;
+      border-radius: 8px;
+    "></div>
+    
+    <div style="
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #f8f8f8;
+      border-radius: 8px;
+    " id="planning-legend"></div>
+    
+    <div id="planning-grid" style="
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    "></div>
+  </div>
+
   <!-- TAB: EXPLAINABILITY -->
   <div id="explain" class="tab-content">
     <h2>Battery Policy Explainability</h2>
@@ -198,6 +317,9 @@
       document.getElementById('support').innerText = Homey.__('settings.support_label'); 
       document.getElementById('support').href = Homey.__('settings.support_link');
       document.getElementById('tab-baseload').innerText = Homey.__('settings.tab_baseload');
+      document.getElementById('tab-planning').innerText = Homey.__('settings.tab_planning');
+      document.getElementById('planning-title').innerText = Homey.__('settings.planning_title');
+      document.getElementById('planning-subtitle').innerText = Homey.__('settings.planning_subtitle');
 
       Homey.get(async (err, settings) => {
         if (err) return;
@@ -436,8 +558,366 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
         document.getElementById('legacyfetch-debug').textContent =
           JSON.stringify(settings['debug_legacy_fetch']?.slice(-50) || [], null, 2);
 
+        /* ---- BATTERY PLANNING ---- */
+        await renderBatteryPlanning(settings, Homey);
+        
+        // Auto-refresh planning every 5 minutes
+        setInterval(async () => {
+          Homey.get((err, newSettings) => {
+            if (!err) {
+              renderBatteryPlanning(newSettings, Homey);
+            }
+          });
+        }, 5 * 60 * 1000); // 5 minutes
+
         Homey.ready();
       });
+    }
+    
+    /* BATTERY PLANNING RENDERER */
+    async function renderBatteryPlanning(settings, Homey) {
+      const currentHour = new Date().getHours();
+      const lang = await Homey.getLanguage();
+      console.log('🌍 Detected language:', lang); // Debug log
+      
+      // Get policy data from battery policy device
+      const policyState = settings['battery_policy_state'];
+      const currentSOC = policyState?.batterySOC || 50;
+      
+      // Try to get policy mode from multiple sources
+      let policyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
+      // Normalize mode values
+      if (policyMode === 'balanced' || policyMode === 'balanced-fixed' || policyMode === 'balanced-dynamic') {
+        policyMode = 'balanced'; // Dynamic pricing
+      } else if (policyMode === 'zero' || policyMode === 'off') {
+        // Keep as is
+      }
+      
+      const basePrice = 0.25; // Fallback price
+      
+      // Get all hourly prices from battery policy device
+      const allPrices = settings['policy_all_prices'] || [];
+      const priceMap = {};
+      allPrices.forEach(p => {
+        if (p && typeof p.hour === 'number' && typeof p.price === 'number') {
+          priceMap[p.hour] = p.price;
+        }
+      });
+      
+      // Get capabilities from battery policy device if available
+      const policyDebugTop3High = settings['policy_debug_top3high'] || '';
+      const policyDebugTop3Low = settings['policy_debug_top3low'] || '';
+      
+      // Parse peak hours (format: "high=[18:00€0.35, 19:00€0.38, 20:00€0.36] @12:34")
+      const peakHours = new Set();
+      if (policyDebugTop3High) {
+        const match = policyDebugTop3High.match(/\[(.*?)\]/);
+        if (match) {
+          match[1].split(',').forEach(entry => {
+            const hourMatch = entry.trim().match(/(\d+):00/);
+            if (hourMatch) {
+              peakHours.add(parseInt(hourMatch[1]));
+            }
+          });
+        }
+      }
+      
+      // Parse cheap hours (format: "low=[02:00€0.15, 03:00€0.16, 04:00€0.17] @12:34")
+      const cheapHoursSet = new Set();
+      if (policyDebugTop3Low) {
+        const match = policyDebugTop3Low.match(/\[(.*?)\]/);
+        if (match) {
+          match[1].split(',').forEach(entry => {
+            const hourMatch = entry.trim().match(/(\d+):00/);
+            if (hourMatch) {
+              cheapHoursSet.add(parseInt(hourMatch[1]));
+            }
+          });
+        }
+      }
+      
+      // Get hourly weather forecast for sunshine prediction
+      const weatherHourly = settings['policy_weather_hourly'] || [];
+      const sunshineMap = {};
+      weatherHourly.forEach(w => {
+        if (w && typeof w.hour === 'number' && typeof w.sunshine === 'number') {
+          sunshineMap[w.hour] = w.sunshine;
+        }
+      });
+      
+      // Generate 48h planning data based on policy mode (today + tomorrow)
+      const hours = [];
+      for (let h = 0; h < 48; h++) {
+        const actualHour = (currentHour + h) % 24;
+        const dayOffset = Math.floor((currentHour + h) / 24);
+        
+        // Use real prices from all prices map if available, otherwise use base price
+        const price = priceMap[currentHour + h] || basePrice;
+        
+        // Check if sunshine is expected (>0.3h means decent sun)
+        const hasSunshine = sunshineMap[actualHour] > 0.3;
+        
+        let mode = 'standby';
+        
+        if (policyMode === 'zero') {
+          // PEAK SHAVING MODE: focus on avoiding peak hours
+          if (peakHours.has(currentHour + h)) {
+            mode = 'discharge'; // Discharge during peaks
+          } else if (cheapHoursSet.has(currentHour + h)) {
+            mode = 'charge'; // Charge during cheap hours
+          } else if (hasSunshine && actualHour >= 8 && actualHour <= 17) {
+            mode = 'pv_only'; // PV when sun is expected
+          } else {
+            mode = 'standby';
+          }
+        } else {
+          // DYNAMIC PRICING MODE: follow price optimization
+          if (cheapHoursSet.has(currentHour + h)) {
+            mode = 'charge'; // Charge during cheap hours
+          } else if (peakHours.has(currentHour + h)) {
+            mode = 'discharge'; // Discharge during expensive hours
+          } else if (hasSunshine && actualHour >= 8 && actualHour <= 17) {
+            mode = 'pv_only'; // PV when sun is expected
+          } else if (actualHour >= 2 && actualHour <= 5) {
+            mode = 'standby'; // Night standby
+          } else {
+            mode = 'standby';
+          }
+        }
+        
+        hours.push({ 
+          hour: actualHour, 
+          displayIndex: h,
+          dayOffset,
+          price, 
+          mode, 
+          soc: 0, 
+          pv: 0, 
+          isCurrent: h === 0, 
+          isPeak: peakHours.has(currentHour + h), 
+          isCheap: cheapHoursSet.has(currentHour + h) 
+        });
+      }
+      
+      // Calculate realistic SoC projection based on battery specs
+      const maxDischargePowerW = policyState?.maxDischargePowerW || 800;
+      const maxChargePowerW = policyState?.maxChargePowerW || 800;
+      const totalCapacityKwh = policyState?.totalCapacityKwh || null;
+      
+      // Project SoC forward from current hour
+      for (let i = 0; i < hours.length; i++) {
+        const hour = hours[i];
+        const prevHour = i > 0 ? hours[i - 1] : null;
+        
+        if (!prevHour) {
+          hour.soc = currentSOC;
+        } else {
+          let socChange = 0;
+          
+          if (totalCapacityKwh && totalCapacityKwh > 0) {
+            // Use real battery capacity for accurate projection
+            if (prevHour.mode === 'discharge') {
+              // Discharge: -maxDischargePowerW for 1 hour
+              socChange = -(maxDischargePowerW / 1000 / totalCapacityKwh) * 100;
+            } else if (prevHour.mode === 'charge') {
+              // Charge: +maxChargePowerW for 1 hour
+              socChange = (maxChargePowerW / 1000 / totalCapacityKwh) * 100;
+            } else if (prevHour.mode === 'pv_only') {
+              // PV charging: assume 50% of max charge power (conservative)
+              socChange = (maxChargePowerW * 0.5 / 1000 / totalCapacityKwh) * 100;
+            } else {
+              // Standby: no change (battery idle)
+              socChange = 0;
+            }
+          } else {
+            // Fallback to percentage-based estimation
+            if (prevHour.mode === 'discharge') socChange = -2.5;
+            else if (prevHour.mode === 'charge') socChange = 3;
+            else if (prevHour.mode === 'pv_only') socChange = 2;
+            else socChange = 0; // Standby: no change
+          }
+          
+          hour.soc = Math.max(20, Math.min(100, prevHour.soc + socChange));
+        }
+        
+        // PV forecast (simple bell curve)
+        hour.pv = (hour.hour >= 8 && hour.hour <= 17) 
+          ? Math.max(0, 3.5 * (1 - Math.abs(hour.hour - 12.5) / 5)) 
+          : 0;
+      }
+      
+      // Render status bar - only calculate average from known prices
+      const hoursWithKnownPrices = hours.filter(h => priceMap[currentHour + h.displayIndex] !== undefined);
+      const avgPrice = hoursWithKnownPrices.length > 0 
+        ? (hoursWithKnownPrices.reduce((sum, h) => sum + h.price, 0) / hoursWithKnownPrices.length).toFixed(3)
+        : '?';
+      const cheapHoursCount = hours.filter(h => h.isCheap).length;
+      const peakHoursCount = hours.filter(h => h.isPeak).length;
+      
+      const policyModeLabel = policyMode === 'zero' 
+        ? (lang === 'nl' ? 'Peak Shaving' : 'Peak Shaving')
+        : (lang === 'nl' ? 'Dynamisch Tarief' : 'Dynamic Pricing');
+      
+      document.getElementById('planning-status').innerHTML = `
+        <div class="planning-status-item">
+          <div class="planning-status-label">${lang === 'nl' ? 'Policy Modus' : 'Policy Mode'}</div>
+          <div class="planning-status-value" style="font-size: 16px;">${policyModeLabel}</div>
+        </div>
+        <div class="planning-status-item">
+          <div class="planning-status-label">${lang === 'nl' ? 'Huidige SoC' : 'Current SoC'}</div>
+          <div class="planning-status-value">${currentSOC}%</div>
+        </div>
+        <div class="planning-status-item">
+          <div class="planning-status-label">${lang === 'nl' ? 'Gem. Prijs' : 'Avg. Price'}</div>
+          <div class="planning-status-value">€${avgPrice}</div>
+        </div>
+        <div class="planning-status-item">
+          <div class="planning-status-label">${policyMode === 'zero' ? (lang === 'nl' ? 'Piek Uren' : 'Peak Hours') : (lang === 'nl' ? 'Goedkope Uren' : 'Cheap Hours')}</div>
+          <div class="planning-status-value">${policyMode === 'zero' ? peakHoursCount : cheapHoursCount} ${lang === 'nl' ? 'uur' : 'hrs'}</div>
+        </div>
+      `;
+      
+      // Render legend
+      const legends = lang === 'nl' ? {
+        charge: 'Laden',
+        to_full: 'Vol laden (max vermogen)',
+        pv: 'Alleen PV laden',
+        discharge: 'Ontladen',
+        standby: 'Standby',
+        zero: 'Nul op de meter',
+        cheap: 'Lage prijs',
+        expensive: 'Hoge prijs',
+        current: 'Huidig uur'
+      } : {
+        charge: 'Charge',
+        to_full: 'To full (max power)',
+        pv: 'PV only',
+        discharge: 'Discharge',
+        standby: 'Standby',
+        zero: 'Zero export',
+        cheap: 'Low price',
+        expensive: 'High price',
+        current: 'Current hour'
+      };
+      
+      document.getElementById('planning-legend').innerHTML = `
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon">⚡</div>
+          <div>${legends.charge}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon">☀️</div>
+          <div>${legends.pv}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon">🔋</div>
+          <div>${legends.discharge}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon">⏸️</div>
+          <div>${legends.standby}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon">⏹️</div>
+          <div>${legends.zero}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon" style="background: linear-gradient(90deg, #c8e6c9, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div>${legends.cheap}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon" style="background: linear-gradient(90deg, #ffcdd2, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div>${legends.expensive}</div>
+        </div>
+        <div class="planning-legend-item">
+          <div class="planning-legend-icon" style="border: 2px solid #4CAF50; width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div>${legends.current}</div>
+        </div>
+      `;
+      
+      // Render hour cards - only calculate min/max from known prices
+      const knownPrices = hours.filter(h => priceMap[currentHour + h.displayIndex] !== undefined).map(h => h.price);
+      const minPrice = knownPrices.length > 0 ? Math.min(...knownPrices) : 0;
+      const maxPrice = knownPrices.length > 0 ? Math.max(...knownPrices) : 1;
+      const priceRange = maxPrice - minPrice;
+      
+      const modeIcons = {
+        charge: '⚡',
+        to_full: '⚡',
+        pv_only: '☀️',
+        zero_charge_only: '☀️',
+        discharge: '🔋',
+        zero_discharge_only: '🔋',
+        standby: '⏸️',
+        zero: '⏹️'
+      };
+      
+      const modeTexts = lang === 'nl' ? {
+        charge: 'Laden',
+        to_full: 'Vol Laden',
+        zero_charge_only: 'Alleen PV',
+        discharge: 'Ontladen',
+        zero_discharge_only: 'Ontladen',
+        pv_only: 'PV',
+        standby: 'Standby',
+        zero: 'Nul op Meter'
+      } : {
+        charge: 'Charge',
+        to_full: 'To Full',
+        zero_charge_only: 'PV Only',
+        discharge: 'Discharge',
+        zero_discharge_only: 'Discharge Only',
+        pv_only: 'PV',
+        standby: 'Standby',
+        zero: 'Zero Export'
+      };
+      
+      document.getElementById('planning-grid').innerHTML = hours.map((hour, index) => {
+        const priceNorm = priceRange > 0 ? (hour.price - minPrice) / priceRange : 0.5;
+        const priceClass = priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '';
+        const modeIcon = modeIcons[hour.mode] || '⏸️';
+        const modeText = modeTexts[hour.mode] || hour.mode;
+        
+        // Add day marker when we cross midnight (hour becomes 0 and it's not the first item)
+        let dayMarker = '';
+        if (hour.hour === 0 && index > 0 && hour.dayOffset > 0) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + hour.dayOffset);
+          const dayName = lang === 'nl' 
+            ? ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'][tomorrow.getDay()]
+            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][tomorrow.getDay()];
+          const dateStr = tomorrow.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
+          dayMarker = `<div class="planning-day-marker">📅 ${dayName}, ${dateStr}</div>`;
+        }
+        
+        // Add badge for peak/cheap hours
+        let badge = '';
+        if (hour.isPeak) {
+          badge = `<span style="position: absolute; top: 2px; right: 2px; background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${lang === 'nl' ? 'PIEK' : 'PEAK'}</span>`;
+        } else if (hour.isCheap) {
+          badge = `<span style="position: absolute; top: 2px; right: 2px; background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${lang === 'nl' ? 'GOEDKOOP' : 'CHEAP'}</span>`;
+        }
+        
+        // Check if price is known
+        const priceKnown = priceMap[currentHour + hour.displayIndex] !== undefined;
+        const priceDisplay = priceKnown ? `€${hour.price.toFixed(3)}` : (lang === 'nl' ? '?' : '?');
+        const priceClass2 = priceKnown ? priceClass : 'unknown';
+        
+        return `
+          ${dayMarker}
+          <div class="planning-hour-card ${priceClass2} ${hour.isCurrent ? 'current' : ''}" style="position: relative; ${!priceKnown ? 'opacity: 0.6;' : ''}">
+            ${badge}
+            <div class="planning-hour-time">${hour.hour.toString().padStart(2, '0')}:00</div>
+            <div class="planning-hour-price">${priceDisplay}</div>
+            <div class="planning-hour-mode">${modeIcon}</div>
+            <div class="planning-hour-mode-text">${modeText}</div>
+            <div class="planning-hour-details">
+              SoC: ${hour.soc.toFixed(0)}%<br>
+              ${hour.pv > 0.5 ? `PV: ${hour.pv.toFixed(1)} kW` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
     }
   </script>
 

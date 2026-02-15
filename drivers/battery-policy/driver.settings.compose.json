@@ -35,7 +35,7 @@
         "type": "number",
         "label": { "en": "Minimum Confidence", "nl": "Minimale zekerheid" },
         "units": { "en": "%", "nl": "%" },
-        "value": 60,
+        "value": 55,
         "min": 0,
         "max": 100,
         "step": 5

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Battery Planning</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #1a1a1a;
+      color: #ffffff;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .planning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+    
+    .hour-card {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .hour-card.current {
+      border-color: #4CAF50;
+      box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+    
+    .hour-card.cheap {
+      background: linear-gradient(135deg, #1b5e20 0%, #2a2a2a 100%);
+    }
+    
+    .hour-card.expensive {
+      background: linear-gradient(135deg, #b71c1c 0%, #2a2a2a 100%);
+    }
+    
+    .hour-time {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .hour-price {
+      font-size: 14px;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+    
+    .hour-mode {
+      font-size: 32px;
+      margin: 8px 0;
+    }
+    
+    .hour-details {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 8px;
+    }
+    
+    .legend {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .legend h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .legend-icon {
+      font-size: 24px;
+      min-width: 32px;
+      text-align: center;
+    }
+    
+    .legend-text {
+      font-size: 14px;
+    }
+    
+    .status-bar {
+      background: #2a2a2a;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    
+    .status-item {
+      text-align: center;
+    }
+    
+    .status-label {
+      font-size: 12px;
+      opacity: 0.7;
+      margin-bottom: 5px;
+    }
+    
+    .status-value {
+      font-size: 20px;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 600px) {
+      .planning-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      }
+      
+      .hour-card {
+        padding: 8px;
+      }
+      
+      .hour-mode {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">Batterij Planning - 24 Uur</h1>
+    
+    <div class="status-bar" id="statusBar">
+      <!-- Will be filled by JavaScript -->
+    </div>
+    
+    <div class="legend">
+      <h2 id="legendTitle">Legenda</h2>
+      <div class="legend-grid">
+        <div class="legend-item">
+          <div class="legend-icon">⚡</div>
+          <div class="legend-text" id="legend-charge">Volledig laden</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">☀️</div>
+          <div class="legend-text" id="legend-pv">Alleen PV laden</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">🔋</div>
+          <div class="legend-text" id="legend-discharge">Ontladen</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">⏸️</div>
+          <div class="legend-text" id="legend-standby">Standby</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">⏹️</div>
+          <div class="legend-text" id="legend-zero">Zero/Passthrough</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: linear-gradient(90deg, #1b5e20, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text" id="legend-cheap">Lage prijs</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: linear-gradient(90deg, #b71c1c, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text" id="legend-expensive">Hoge prijs</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="border: 2px solid #4CAF50; width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text" id="legend-current">Huidig uur</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="planning-grid" id="planningGrid">
+      <!-- Will be filled by JavaScript -->
+    </div>
+  </div>
+  
+  <script>
+    // Get device data from Homey
+    async function loadPlanning() {
+      try {
+        // This would be populated by Homey's device API
+        // For now, show placeholder
+        const mockData = generateMockData();
+        renderPlanning(mockData);
+      } catch (err) {
+        console.error('Failed to load planning:', err);
+      }
+    }
+    
+    function generateMockData() {
+      const currentHour = new Date().getHours();
+      const hours = [];
+      
+      for (let h = 0; h < 24; h++) {
+        const price = 0.15 + Math.random() * 0.20; // €0.15-0.35
+        const soc = 50 + (h - 12) * 2; // Simple projection
+        
+        let mode = 'standby';
+        if (price < 0.20) mode = 'charge';
+        else if (price > 0.30) mode = 'discharge';
+        else if (h >= 10 && h <= 15) mode = 'pv_only';
+        
+        hours.push({
+          hour: h,
+          price: price,
+          mode: mode,
+          soc: Math.max(20, Math.min(100, soc)),
+          pv: h >= 8 && h <= 17 ? Math.max(0, 3 * (1 - Math.abs(h - 12.5) / 5)) : 0,
+          isCurrent: h === currentHour
+        });
+      }
+      
+      return { hours, currentSoC: 65, avgPrice: 0.25 };
+    }
+    
+    function getModeIcon(mode) {
+      const icons = {
+        'charge': '⚡',
+        'full_charge': '⚡',
+        'pv_only': '☀️',
+        'zero_charge_only': '☀️',
+        'discharge': '🔋',
+        'zero_discharge_only': '🔋',
+        'standby': '⏸️',
+        'zero': '⏹️'
+      };
+      return icons[mode] || '⏸️';
+    }
+    
+    function getModeName(mode, lang) {
+      const names = {
+        'en': {
+          'charge': 'Charge',
+          'full_charge': 'Full Charge',
+          'pv_only': 'PV Only',
+          'zero_charge_only': 'PV Only',
+          'discharge': 'Discharge',
+          'zero_discharge_only': 'Discharge',
+          'standby': 'Standby',
+          'zero': 'Zero'
+        },
+        'nl': {
+          'charge': 'Laden',
+          'full_charge': 'Volledig laden',
+          'pv_only': 'Alleen PV',
+          'zero_charge_only': 'Alleen PV',
+          'discharge': 'Ontladen',
+          'zero_discharge_only': 'Ontladen',
+          'standby': 'Standby',
+          'zero': 'Zero'
+        }
+      };
+      return names[lang]?.[mode] || mode;
+    }
+    
+    function renderPlanning(data) {
+      const grid = document.getElementById('planningGrid');
+      const statusBar = document.getElementById('statusBar');
+      
+      // Render status
+      const avgPrice = (data.hours.reduce((sum, h) => sum + h.price, 0) / 24).toFixed(3);
+      const cheapHours = data.hours.filter(h => h.price < parseFloat(avgPrice)).length;
+      
+      statusBar.innerHTML = `
+        <div class="status-item">
+          <div class="status-label">Huidige SoC</div>
+          <div class="status-value">${data.currentSoC}%</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Gemiddelde Prijs</div>
+          <div class="status-value">€${avgPrice}</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">Goedkope Uren</div>
+          <div class="status-value">${cheapHours} uur</div>
+        </div>
+      `;
+      
+      // Render hours
+      const minPrice = Math.min(...data.hours.map(h => h.price));
+      const maxPrice = Math.max(...data.hours.map(h => h.price));
+      const priceRange = maxPrice - minPrice;
+      
+      grid.innerHTML = data.hours.map(hour => {
+        const priceNorm = (hour.price - minPrice) / priceRange;
+        const priceClass = priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '';
+        
+        return `
+          <div class="hour-card ${priceClass} ${hour.isCurrent ? 'current' : ''}">
+            <div class="hour-time">${hour.hour.toString().padStart(2, '0')}:00</div>
+            <div class="hour-price">€${hour.price.toFixed(3)}</div>
+            <div class="hour-mode">${getModeIcon(hour.mode)}</div>
+            <div class="hour-details">
+              SoC: ${hour.soc.toFixed(0)}%<br>
+              ${hour.pv > 0 ? `PV: ${hour.pv.toFixed(1)} kW` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Load on page load
+    loadPlanning();
+    
+    // Refresh every 5 minutes
+    setInterval(loadPlanning, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

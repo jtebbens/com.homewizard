@@ -7,6 +7,7 @@ const TariffManager = require('../../lib/tariff-manager');
 const ExplainabilityEngine = require('../../lib/explainability-engine');
 const SunMultiSource = require('../../lib/sun-multisource');
 const LearningEngine = require('../../lib/learning-engine');
+const BatteryChartGenerator = require('../../lib/battery-chart-generator');
 
 class BatteryPolicyDevice extends Homey.Device {
 
@@ -20,6 +21,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.explainabilityEngine = new ExplainabilityEngine(this.homey);
     this.sunMulti = new SunMultiSource(this.homey);
     this.learningEngine = new LearningEngine(this.homey, this);
+    this.chartGenerator = new BatteryChartGenerator(this.homey);
     
     // Initialize learning engine
     await this.learningEngine.initialize();
@@ -58,8 +60,10 @@ class BatteryPolicyDevice extends Homey.Device {
   }
 
   async _initializeCapabilities() {
+    const tariffType = this.getSettings().tariff_type || 'dynamic';
+    
     const defaults = {
-      policy_mode: 'balanced',
+      policy_mode: tariffType === 'dynamic' ? 'balanced' : 'balanced-fixed',
       auto_apply: true,
       recommended_mode: 'preserve',
       sun_score: 0,
@@ -92,6 +96,13 @@ class BatteryPolicyDevice extends Homey.Device {
         this.log('ℹ️ Forcing auto_apply to true (was false)');
         await this.setCapabilityValue(capability, true).catch(err =>
           this.error(`Failed to set ${capability}:`, err)
+        );
+      } else if (capability === 'policy_mode' && current === 'balanced') {
+        // Migrate old 'balanced' to type-specific mode
+        const newMode = tariffType === 'dynamic' ? 'balanced' : 'balanced-fixed';
+        this.log(`ℹ️ Migrating policy_mode 'balanced' to '${newMode}' based on tariff type`);
+        await this.setCapabilityValue(capability, newMode).catch(err =>
+          this.error(`Failed to migrate ${capability}:`, err)
         );
       } else if (current === null || current === undefined) {
         await this.setCapabilityValue(capability, defaultValue).catch(err =>
@@ -308,36 +319,82 @@ class BatteryPolicyDevice extends Homey.Device {
   }
 
   _scheduleXadiRefresh() {
-    const refreshIntervalMs = 30 * 60 * 1000; // 30 minutes
+    // Use adaptive interval: 15min during price release window (15:00-16:00), 30min otherwise
+    const getRefreshInterval = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      // More frequent checks around 15:00 when tomorrow's prices become available
+      return (hour >= 14 && hour <= 16) ? 15 * 60 * 1000 : 30 * 60 * 1000;
+    };
 
-    if (this.xadiRefreshInterval) {
-      this.homey.clearInterval(this.xadiRefreshInterval);
-    }
+    const scheduleNext = () => {
+      if (this.xadiRefreshInterval) {
+        this.homey.clearTimeout(this.xadiRefreshInterval);
+      }
 
-    this.xadiRefreshInterval = this.homey.setInterval(
-      async () => {
-        const settings = this.getSettings();
-        
-        // Only refresh if dynamic pricing is enabled
-        if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
-          this.log('🔄 Refreshing Xadi prices...');
-          try {
-            await this.tariffManager.dynamicProvider.fetchPrices();
-            this.log('✅ Xadi prices refreshed');
+      this.xadiRefreshInterval = this.homey.setTimeout(
+        async () => {
+          const settings = this.getSettings();
+          
+          // Only refresh if dynamic pricing is enabled
+          if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
+            const now = new Date();
+            const hour = now.getHours();
             
-            // Trigger policy check after successful refresh to update debug capabilities
-            if (this.getCapabilityValue('policy_enabled')) {
-              await this._runPolicyCheck();
+            this.log(`🔄 Refreshing Xadi prices... (hour: ${hour}:${now.getMinutes().toString().padStart(2, '0')})`);
+            try {
+              // Try fetching from both providers and select best
+              let success = false;
+              
+              // Try Xadi first
+              try {
+                await this.tariffManager.xadiProvider.fetchPrices(true);
+                if (this.tariffManager.xadiProvider.hasPrices()) {
+                  this.tariffManager.dynamicProvider = this.tariffManager.xadiProvider;
+                  this.tariffManager.activeProvider = 'xadi';
+                  this.log('✅ Xadi prices refreshed and active');
+                  success = true;
+                }
+              } catch (xadiErr) {
+                this.log('⚠️ Xadi fetch failed, trying EnergyZero fallback:', xadiErr.message);
+              }
+              
+              // Fallback to EnergyZero if Xadi failed
+              if (!success) {
+                try {
+                  await this.tariffManager.energyzeroProvider.fetchPrices();
+                  if (this.tariffManager.energyzeroProvider.hasPrices()) {
+                    this.tariffManager.dynamicProvider = this.tariffManager.energyzeroProvider;
+                    this.tariffManager.activeProvider = 'energyzero';
+                    this.log('✅ EnergyZero prices refreshed (fallback active)');
+                    success = true;
+                  }
+                } catch (ezErr) {
+                  this.error('❌ Both Xadi and EnergyZero failed:', ezErr.message);
+                }
+              }
+              
+              if (success) {
+                // Trigger policy check after successful refresh
+                if (this.getCapabilityValue('policy_enabled')) {
+                  await this._runPolicyCheck();
+                }
+              }
+            } catch (err) {
+              this.error('❌ Price refresh failed:', err);
             }
-          } catch (err) {
-            this.error('❌ Xadi price refresh failed:', err);
           }
-        }
-      },
-      refreshIntervalMs
-    );
+          
+          // Schedule next refresh with adaptive interval
+          scheduleNext();
+        },
+        getRefreshInterval()
+      );
+    };
 
-    this.log('Xadi price refresh scheduled every 30 minutes');
+    scheduleNext();
+    const initialInterval = getRefreshInterval();
+    this.log(`Xadi price refresh scheduled (adaptive: ${initialInterval / 60000}min, frequent 15:00-16:00)`);
   }
 
   async _updateWeather() {
@@ -463,8 +520,29 @@ class BatteryPolicyDevice extends Homey.Device {
       this.homey.settings.set('policy_explainability', explanation);
 
       this.log('Saving explainability length:', JSON.stringify(explanation).length);
-
+      
       const recommended = result.hwMode || result.policyMode || 'standby';
+      
+      // Push planning data to app settings for the settings page
+      const batterySOC = inputs.battery?.stateOfCharge ?? 50;
+      const policyMode = this.getCapabilityValue('policy_mode') || 'balanced';
+      const planningData = {
+        batterySOC,
+        policyMode,
+        currentMode: recommended,
+        maxDischargePowerW: inputs.battery?.maxDischargePowerW || 800,
+        maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
+        totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
+        lastUpdate: new Date().toISOString()
+      };
+      this.homey.settings.set('battery_policy_state', planningData);
+      
+      // Also push the debug capabilities
+      const debugTop3Low = this.getCapabilityValue('policy_debug_top3low');
+      const debugTop3High = this.getCapabilityValue('policy_debug_top3high');
+      if (debugTop3Low) this.homey.settings.set('policy_debug_top3low', debugTop3Low);
+      if (debugTop3High) this.homey.settings.set('policy_debug_top3high', debugTop3High);
+
       await this.setCapabilityValue('recommended_mode', recommended);
 
       await this.setCapabilityValue('confidence_score', result.confidence);
@@ -505,6 +583,13 @@ class BatteryPolicyDevice extends Homey.Device {
         confidence: result.confidence
       }).catch(err => this.error('Learning policy recording failed:', err));
 
+      // ------------------------------------------------------
+      // 📊 CHART: Update visual planning image
+      // ------------------------------------------------------
+      this._updatePlanningChart(inputs, result).catch(err => 
+        this.error('Chart update failed:', err)
+      );
+
       await this._triggerRecommendationChanged(result, explanation);
 
       const autoApplyEnabled = this.getCapabilityValue('auto_apply');
@@ -512,13 +597,16 @@ class BatteryPolicyDevice extends Homey.Device {
 
       if (autoApplyEnabled) {
         const applyMode = result.hwMode || result.policyMode;
-        this.log(`Attempting to apply recommendation: ${applyMode} (confidence: ${result.confidence}%)`);
+        this.log(`📋 Policy recommendation: ${result.policyMode} → HW mode: ${applyMode}`);
+        this.log(`📊 Scores: charge=${result.scores?.charge}, discharge=${result.scores?.discharge}, preserve=${result.scores?.preserve}`);
+        this.log(`🎯 Attempting to apply: ${applyMode} (confidence: ${result.confidence}%)`);
+        
         const applied = await this._applyRecommendation(applyMode, result.confidence);
 
         if (applied) {
           this.log(`✅ Successfully applied: ${applyMode}`);
         } else {
-          this.log(`⚠️ Failed to apply recommendation`);
+          this.log(`⚠️ Failed to apply recommendation - check confidence threshold or P1 connection`);
         }
       } else {
         this.log('Auto-apply disabled — recommendation not applied');
@@ -715,6 +803,25 @@ class BatteryPolicyDevice extends Homey.Device {
     await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
     await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
     await this.setCapabilityValue('policy_debug_learning', debugLearningText).catch(this.error);
+    
+    // Push debug data to app settings for planning view
+    this.homey.settings.set('policy_debug_top3low', debugTopLowText);
+    this.homey.settings.set('policy_debug_top3high', debugTopHighText);
+    
+    // Push all hourly prices for complete 24h planning visualization
+    if (tariffInfo?.allPrices && Array.isArray(tariffInfo.allPrices)) {
+      this.homey.settings.set('policy_all_prices', tariffInfo.allPrices);
+    }
+    
+    // Push weather forecast with hourly sunshine data for PV prediction
+    if (weatherData?.hourlyForecast && Array.isArray(weatherData.hourlyForecast)) {
+      const hourlyWeather = weatherData.hourlyForecast.map(h => ({
+        hour: new Date(h.time).getHours(),
+        sunshine: h.sunshine,
+        cloudCover: h.cloudCover
+      }));
+      this.homey.settings.set('policy_weather_hourly', hourlyWeather);
+    }
 
     // Estimate PV production using grid analysis + sun model
     const sunScore = sun ? Math.max(sun.gfs ?? 0, sun.harmonie ?? 0) : 0;
@@ -851,7 +958,7 @@ class BatteryPolicyDevice extends Homey.Device {
   }
 
   async _applyRecommendation(mode, confidence) {
-    const minConfidence = this.getSetting('min_confidence_threshold') || 60;
+    const minConfidence = this.getSetting('min_confidence_threshold') || 55;
 
     if (confidence < minConfidence) {
       this.log(`Confidence ${confidence}% below threshold ${minConfidence}%, not applying`);
@@ -998,6 +1105,100 @@ class BatteryPolicyDevice extends Homey.Device {
     if (this._p1PollInterval) {
       this.homey.clearInterval(this._p1PollInterval);
       this.log('P1 capability polling stopped');
+    }
+  }
+
+  /**
+   * Update planning chart camera image
+   * @param {Object} inputs - Policy inputs (battery, tariff, weather)
+   * @param {Object} result - Policy result with recommendation
+   */
+  async _updatePlanningChart(inputs, result) {
+    try {
+      const currentHour = new Date().getHours();
+      const language = this.homey.i18n.getLanguage();
+
+      // Get hourly prices for next 24 hours
+      const prices = [];
+      if (inputs.tariff?.top3Low && inputs.tariff?.top3High) {
+        // Generate price array from available data
+        const allPrices = this.tariffManager.dynamicProvider?.cache || [];
+        for (let h = 0; h < 24; h++) {
+          const priceData = allPrices.find(p => new Date(p.time).getHours() === h);
+          prices.push({
+            hour: h,
+            price: priceData?.price || inputs.tariff.currentPrice || 0.25
+          });
+        }
+      } else {
+        // Fallback: flat rate
+        for (let h = 0; h < 24; h++) {
+          prices.push({ hour: h, price: 0.25 });
+        }
+      }
+
+      // Generate mode forecast for next 24 hours
+      // Simplified: current mode for all hours (can be enhanced with actual planning)
+      const modes = [];
+      const currentMode = result.hwMode || result.policyMode || 'standby';
+      for (let h = 0; h < 24; h++) {
+        modes.push({ hour: h, mode: currentMode });
+      }
+
+      // PV forecast (simplified, could use weather hourly data)
+      const pvForecast = [];
+      const sun4h = inputs.weather?.sun4h || 0;
+      // Simple bell curve for daylight hours
+      for (let h = 0; h < 24; h++) {
+        let kw = 0;
+        if (h >= 8 && h <= 17 && sun4h > 0) {
+          // Peak at noon
+          const distance = Math.abs(h - 12.5);
+          kw = Math.max(0, sun4h * (1 - distance / 5));
+        }
+        pvForecast.push({ hour: h, kw });
+      }
+
+      // SoC projection (simple linear discharge/charge based on current mode)
+      const socProjection = [];
+      let projectedSoC = inputs.battery?.stateOfCharge || 50;
+      for (let h = 0; h < 24; h++) {
+        socProjection.push({ hour: h, soc: Math.max(20, Math.min(100, projectedSoC)) });
+        
+        // Simple projection: discharge 2%/h at night, charge 5%/h during PV
+        if (h >= 18 || h <= 6) {
+          projectedSoC -= 2; // Discharge
+        } else if (pvForecast[h].kw > 1) {
+          projectedSoC += 5; // Charge from PV
+        }
+      }
+
+      // Generate chart
+      const chartData = {
+        prices,
+        modes,
+        pvForecast,
+        socProjection,
+        currentHour,
+        language
+      };
+
+      const imageBuffer = this.chartGenerator.generateChart(chartData);
+      
+      if (!imageBuffer) {
+        // Chart generation disabled (canvas not installed)
+        return;
+      }
+
+      // Update camera image
+      const image = await this.homey.images.createImage();
+      await image.setBuffer(imageBuffer);
+      await this.setCameraImage('planning', this.homey.__('camera.planning_title'), image);
+
+      this.log('📊 Planning chart updated successfully');
+
+    } catch (err) {
+      this.error('Failed to update planning chart:', err);
     }
   }
 }
