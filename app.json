@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.17",
+  "version": "3.13.18",
   "platforms": [
     "local"
   ],
@@ -3250,10 +3250,6 @@
           }
         }
       ],
-      "images": {
-        "large": "drivers/battery-policy/assets/images/large.png",
-        "small": "drivers/battery-policy/assets/images/small.png"
-      },
       "settings": [
         {
           "type": "group",
@@ -3311,7 +3307,7 @@
                 "en": "%",
                 "nl": "%"
               },
-              "value": 60,
+              "value": 55,
               "min": 0,
               "max": 100,
               "step": 5
@@ -3591,7 +3587,11 @@
             }
           ]
         }
-      ]
+      ],
+      "images": {
+        "large": "drivers/battery-policy/assets/images/large.png",
+        "small": "drivers/battery-policy/assets/images/small.png"
+      }
     },
     {
       "name": {
@@ -6481,15 +6481,15 @@
         {
           "id": "balanced",
           "title": {
-            "en": "Balanced",
-            "nl": "Gebalanceerd"
+            "en": "Dynamic Pricing",
+            "nl": "Dynamisch Tarief"
           }
         },
         {
           "id": "zero",
           "title": {
-            "en": "Zero",
-            "nl": "Zero"
+            "en": "Peak Shaving",
+            "nl": "Peak Shaving"
           }
         }
       ],

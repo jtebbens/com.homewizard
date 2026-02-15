@@ -979,5 +979,8 @@
   },
   "3.13.17": {
     "en": "Repair button for P1 dongle, Baseload improvement, dynamic price fallback"
+  },
+  "3.13.18": {
+    "en": "Homewizard Legacy pairing problem (user report)"
   }
 }
