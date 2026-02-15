@@ -24,7 +24,10 @@
     },
     "support_label": "🛠️ Support pagina", 
     "support_link": "https://community.homey.app/t/app-pro-nl-homewizard/71211",
-    "tab_baseload": "Sluipverbruik"
+    "tab_baseload": "Sluipverbruik",
+    "tab_planning": "Batterij Planning",
+    "planning_title": "Batterij Planning - 48 Uur",
+    "planning_subtitle": "Verwachte prijzen, batterij modi en SoC projectie voor vandaag en morgen"
   },
   "pair": {
     "no_devices_found": "Geen apparaten gevonden. Controleer:\n• Lokale API is ingeschakeld in HomeWizard app\n• Apparaat en Homey zijn op hetzelfde netwerk\n• mDNS/Bonjour is ingeschakeld op je router\n• Geen VLAN-isolatie tussen netwerken",
@@ -64,6 +67,9 @@
     "clear_failed": "Wissen handmatig IP mislukt",
     "load_failed": "Laden huidige instellingen mislukt",
     "confirm_clear": "Terugkeren naar automatische mDNS discovery? Je handmatige IP wordt verwijderd."
+  },
+  "camera": {
+    "planning_title": "Batterij Planning"
   },
   "device": {
     "init": "Apparaat initialiseren...",

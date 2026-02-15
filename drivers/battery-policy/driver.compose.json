@@ -49,6 +49,30 @@
       }
     }
   ],
+  "settings": [
+    {
+      "type": "group",
+      "label": {
+        "en": "24-Hour Planning",
+        "nl": "24-Uurs Planning"
+      },
+      "children": [
+        {
+          "id": "view_planning",
+          "type": "label",
+          "label": {
+            "en": "View Planning",
+            "nl": "Planning Bekijken"
+          },
+          "hint": {
+            "en": "Open the 24-hour battery planning view to see hourly prices, modes, and projections",
+            "nl": "Open de 24-uurs batterij planning om prijzen, modi en projecties per uur te zien"
+          },
+          "value": "📊"
+        }
+      ]
+    }
+  ],
   "images": {
     "large": "drivers/battery-policy/assets/images/large.png",
     "small": "drivers/battery-policy/assets/images/small.png"

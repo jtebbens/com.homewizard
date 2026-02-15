@@ -1,59 +1,70 @@
 <script>
-$( document ).ready(function() {
-	Homey.emit('get_homewizards');
-
-	Homey.on('hw_devices', function(hw_devices){
-		// $.each(hw_devices, function( index, value ) {
-		// 	$('#homewizard_select').append($("<option>").attr('value',value.id).text(value.settings.homewizard_ip));
-		// });
-
-        hw_device_list = hw_devices;
-        $('#homewizard_select').find('option').remove();
-        $('#homewizard_select').append('<option>' + Homey.__("settings.select") + '</option>');
-        $.each(hw_devices, function( index, value ) {
-            $('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
-        });
-        // $('#homewizard_select').trigger('change');
+$(document).ready(function() {
+  Homey.emit('get_heatlinks');
+  
+  Homey.on('heatlink_list', function(heatLinkList) {
+    $('#homewizard_select').html('');
+    
+    var defaultOption = $('<option></option>')
+      .text(Homey.__("settings.select"));
+    $('#homewizard_select').append(defaultOption);
+    
+    if (!heatLinkList || heatLinkList.length === 0) {
+      $('#error').text(Homey.__("settings.no_heatlink_found") || "No HomeWizard units with HeatLink found. Make sure your HomeWizard is polling data.");
+      console.log('No HeatLinks found in polldata');
+      return;
+    }
+    
+    $.each(heatLinkList, function(i, item) {
+      var option = $('<option></option>')
+        .attr('value', item.homewizard_id)
+        .text((item.ip || item.name) + ' - ' + item.heatlink_name);
+      $('#homewizard_select').append(option);
     });
+  });
 });
 
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-	console.log('MA');
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW_HL'+Math.floor(Date.now() / 1000)
-	    },
-		settings: {
-		    'homewizard_id': $('#homewizard_select').val(),
-	    },
-	    name: 'Heatlink',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
-    
-    Homey.on('success', function(device){
-		$('#error').html('Saving...');
-        $('#save').prop('disabled', true);
-        Homey.addDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: device.data.id
-            },
-			settings: {
-                'homewizard_id': device.settings.homewizard_id,
-            },
-            name: device.name
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
-        });
+function saveSettings() {
+  var homewizardId = $('#homewizard_select').val();
+  
+  $('#error').text('');
+  $('#save').attr('disabled', true);
+  
+  if (!homewizardId || homewizardId === '' || $('#homewizard_select').prop('selectedIndex') === 0) {
+    $('#error').text(Homey.__("settings.select_homewizard") || "Please select a HomeWizard");
+    $('#save').attr('disabled', false);
+    return;
+  }
+  
+  var device = {
+    data: {
+      id: 'HW_HL' + Math.floor(Date.now() / 1000)
+    },
+    settings: {
+      'homewizard_id': homewizardId
+    },
+    name: 'Heatlink'
+  };
+  
+  Homey.emit('manual_add', device, function(err) {
+    if (err) {
+      $('#error').text((Homey.__("settings.error") || "Error: ") + err);
+      $('#save').attr('disabled', false);
+      return;
+    }
+  });
+  
+  Homey.on('success', function(device) {
+    Homey.addDevice(device, function(err, result) {
+      if (err) return Homey.alert(err);
+      Homey.done();
     });
-    
-    Homey.on('error', function(message){
-        $('#error').html(Homey.__("settings.error")+message);
-        $('#save').prop('disabled', false);
-    });
+  });
+  
+  Homey.on('error', function(err) {
+    $('#error').text((Homey.__("settings.error") || "Error: ") + err);
+    $('#save').attr('disabled', false);
+  });
 }
 </script>
 <!doctype html>

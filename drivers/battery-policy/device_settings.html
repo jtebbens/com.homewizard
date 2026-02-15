@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .planning-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .status-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #f8f8f8;
+      border-radius: 8px;
+    }
+    
+    .status-item {
+      text-align: center;
+    }
+    
+    .status-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .status-value {
+      font-size: 22px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .planning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    
+    .hour-card {
+      background: #fafafa;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 12px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .hour-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .hour-card.current {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+    }
+    
+    .hour-card.cheap {
+      background: linear-gradient(135deg, #c8e6c9 0%, #fafafa 100%);
+    }
+    
+    .hour-card.expensive {
+      background: linear-gradient(135deg, #ffcdd2 0%, #fafafa 100%);
+    }
+    
+    .hour-time {
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .hour-price {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #666;
+      font-weight: 600;
+    }
+    
+    .hour-mode {
+      font-size: 36px;
+      margin: 10px 0;
+    }
+    
+    .hour-mode-text {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .hour-details {
+      font-size: 11px;
+      color: #999;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    
+    .legend {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .legend h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #333;
+    }
+    
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      background: #f8f8f8;
+      border-radius: 6px;
+    }
+    
+    .legend-icon {
+      font-size: 24px;
+      min-width: 32px;
+      text-align: center;
+    }
+    
+    .legend-text {
+      font-size: 13px;
+      color: #333;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    @media (max-width: 600px) {
+      .planning-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 8px;
+      }
+      
+      .hour-card {
+        padding: 8px;
+      }
+      
+      .hour-mode {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="title"></h1>
+    <div class="subtitle" id="subtitle"></div>
+  </div>
+  
+  <div class="planning-container">
+    <div class="status-bar" id="statusBar">
+      <div class="loading">⏳ Planning laden...</div>
+    </div>
+    
+    <div class="legend">
+      <h2 id="legendTitle"></h2>
+      <div class="legend-grid" id="legendGrid"></div>
+    </div>
+    
+    <div class="planning-grid" id="planningGrid">
+      <div class="loading">⏳ Uren laden...</div>
+    </div>
+  </div>
+  
+  <script>
+    let device;
+    let language = 'nl';
+    
+    const translations = {
+      nl: {
+        title: 'Batterij Planning - 24 Uur',
+        subtitle: 'Verwachte prijzen, modi en SoC projectie',
+        legendTitle: 'Legenda',
+        currentSoC: 'Huidige SoC',
+        avgPrice: 'Gem. Prijs',
+        cheapHours: 'Goedkope Uren',
+        legends: {
+          charge: 'Volledig laden',
+          pv: 'Alleen PV laden',
+          discharge: 'Ontladen',
+          standby: 'Standby',
+          zero: 'Zero/Passthrough',
+          cheap: 'Lage prijs',
+          expensive: 'Hoge prijs',
+          current: 'Huidig uur'
+        },
+        modes: {
+          charge: 'Laden',
+          full_charge: 'Vol laden',
+          pv_only: 'Alleen PV',
+          zero_charge_only: 'Alleen PV',
+          discharge: 'Ontladen',
+          zero_discharge_only: 'Ontladen',
+          standby: 'Standby',
+          zero: 'Zero'
+        }
+      },
+      en: {
+        title: 'Battery Planning - 24 Hours',
+        subtitle: 'Expected prices, modes and SoC projection',
+        legendTitle: 'Legend',
+        currentSoC: 'Current SoC',
+        avgPrice: 'Avg. Price',
+        cheapHours: 'Cheap Hours',
+        legends: {
+          charge: 'Full charge',
+          pv: 'PV only',
+          discharge: 'Discharge',
+          standby: 'Standby',
+          zero: 'Zero/Passthrough',
+          cheap: 'Low price',
+          expensive: 'High price',
+          current: 'Current hour'
+        },
+        modes: {
+          charge: 'Charge',
+          full_charge: 'Full charge',
+          pv_only: 'PV only',
+          zero_charge_only: 'PV only',
+          discharge: 'Discharge',
+          zero_discharge_only: 'Discharge',
+          standby: 'Standby',
+          zero: 'Zero'
+        }
+      }
+    };
+    
+    function t(key) {
+      const keys = key.split('.');
+      let value = translations[language];
+      for (const k of keys) {
+        value = value?.[k];
+      }
+      return value || key;
+    }
+    
+    function getModeIcon(mode) {
+      const icons = {
+        'charge': '⚡',
+        'charge_from_grid': '⚡',
+        'full_charge': '⚡',
+        'pv_only': '☀️',
+        'zero_charge_only': '☀️',
+        'discharge': '🔋',
+        'zero_discharge': '🔋',
+        'zero_discharge_only': '🔋',
+        'standby': '⏸️',
+        'zero': '⏹️'
+      };
+      return icons[mode] || '⏸️';
+    }
+    
+    function initTranslations() {
+      document.getElementById('title').textContent = t('title');
+      document.getElementById('subtitle').textContent = t('subtitle');
+      document.getElementById('legendTitle').textContent = t('legendTitle');
+      
+      const legendGrid = document.getElementById('legendGrid');
+      legendGrid.innerHTML = `
+        <div class="legend-item">
+          <div class="legend-icon">⚡</div>
+          <div class="legend-text">${t('legends.charge')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">☀️</div>
+          <div class="legend-text">${t('legends.pv')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">🔋</div>
+          <div class="legend-text">${t('legends.discharge')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">⏸️</div>
+          <div class="legend-text">${t('legends.standby')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon">⏹️</div>
+          <div class="legend-text">${t('legends.zero')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: linear-gradient(90deg, #c8e6c9, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text">${t('legends.cheap')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="background: linear-gradient(90deg, #ffcdd2, transparent); width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text">${t('legends.expensive')}</div>
+        </div>
+        <div class="legend-item">
+          <div class="legend-icon" style="border: 2px solid #4CAF50; width: 32px; height: 20px; border-radius: 4px;"></div>
+          <div class="legend-text">${t('legends.current')}</div>
+        </div>
+      `;
+    }
+    
+    async function loadPlanning() {
+      if (!device) return;
+      
+      try {
+        // Get capabilities
+        const batterySOC = await device.capabilitiesObj.battery_soc_mirror?.value || 50;
+        const currentMode = await device.capabilitiesObj.policy_mode?.value || 'standby';
+        const priceDebug = await device.capabilitiesObj.policy_debug_price?.value || '';
+        
+        // Parse price data if available (format: "Current: €0.207")
+        let currentPrice = 0.25;
+        const priceMatch = priceDebug.match(/€([\d.]+)/);
+        if (priceMatch) {
+          currentPrice = parseFloat(priceMatch[1]);
+        }
+        
+        // Generate mock 24h data (in real implementation, get from device)
+        const data = generatePlanningData(batterySOC, currentMode, currentPrice);
+        renderPlanning(data);
+        
+      } catch (err) {
+        console.error('Failed to load planning:', err);
+        document.getElementById('statusBar').innerHTML = '<div class="loading">❌ Fout bij laden</div>';
+      }
+    }
+    
+    function generatePlanningData(currentSOC, currentMode, basePrice) {
+      const currentHour = new Date().getHours();
+      const hours = [];
+      
+      for (let h = 0; h < 24; h++) {
+        // Simple price variation (real version would get from tariff manager)
+        const hourOffset = (h - currentHour + 24) % 24;
+        let price = basePrice;
+        
+        // Peak hours: 18:00-20:00
+        if (h >= 18 && h <= 20) price = basePrice * 1.3;
+        // Cheap hours: 12:00-15:00
+        else if (h >= 12 && h <= 15) price = basePrice * 0.8;
+        // Night hours: 02:00-05:00
+        else if (h >= 2 && h <= 5) price = basePrice * 0.85;
+        
+        // Simple SoC projection
+        let soc = currentSOC;
+        if (hourOffset > 0) {
+          if (h >= 18 || h <= 6) soc -= hourOffset * 2; // Discharge
+          else if (h >= 10 && h <= 15) soc += hourOffset * 3; // PV charge
+        }
+        soc = Math.max(20, Math.min(100, soc));
+        
+        // Simple mode logic
+        let mode = currentMode;
+        if (price < basePrice * 0.9) mode = 'charge';
+        else if (price > basePrice * 1.2) mode = 'discharge';
+        else if (h >= 10 && h <= 15) mode = 'pv_only';
+        
+        // PV forecast
+        const pv = (h >= 8 && h <= 17) ? Math.max(0, 3 * (1 - Math.abs(h - 12.5) / 5)) : 0;
+        
+        hours.push({
+          hour: h,
+          price: price,
+          mode: mode,
+          soc: soc,
+          pv: pv,
+          isCurrent: h === currentHour
+        });
+      }
+      
+      return { hours, currentSOC, basePrice };
+    }
+    
+    function renderPlanning(data) {
+      const statusBar = document.getElementById('statusBar');
+      const grid = document.getElementById('planningGrid');
+      
+      // Calculate stats
+      const avgPrice = (data.hours.reduce((sum, h) => sum + h.price, 0) / 24).toFixed(3);
+      const cheapHours = data.hours.filter(h => h.price < parseFloat(avgPrice)).length;
+      
+      // Render status
+      statusBar.innerHTML = `
+        <div class="status-item">
+          <div class="status-label">${t('currentSoC')}</div>
+          <div class="status-value">${data.currentSOC}%</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">${t('avgPrice')}</div>
+          <div class="status-value">€${avgPrice}</div>
+        </div>
+        <div class="status-item">
+          <div class="status-label">${t('cheapHours')}</div>
+          <div class="status-value">${cheapHours} ${language === 'nl' ? 'uur' : 'hrs'}</div>
+        </div>
+      `;
+      
+      // Calculate price range for coloring
+      const minPrice = Math.min(...data.hours.map(h => h.price));
+      const maxPrice = Math.max(...data.hours.map(h => h.price));
+      const priceRange = maxPrice - minPrice;
+      
+      // Render hours
+      grid.innerHTML = data.hours.map(hour => {
+        const priceNorm = priceRange > 0 ? (hour.price - minPrice) / priceRange : 0.5;
+        const priceClass = priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '';
+        const modeText = t(`modes.${hour.mode}`);
+        
+        return `
+          <div class="hour-card ${priceClass} ${hour.isCurrent ? 'current' : ''}">
+            <div class="hour-time">${hour.hour.toString().padStart(2, '0')}:00</div>
+            <div class="hour-price">€${hour.price.toFixed(3)}</div>
+            <div class="hour-mode">${getModeIcon(hour.mode)}</div>
+            <div class="hour-mode-text">${modeText}</div>
+            <div class="hour-details">
+              SoC: ${hour.soc.toFixed(0)}%<br>
+              ${hour.pv > 0.5 ? `PV: ${hour.pv.toFixed(1)} kW` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Initialize when Homey is ready
+    function onHomeyReady(homey) {
+      Homey = homey;
+      language = Homey.getLanguage();
+      
+      Homey.ready();
+      
+      initTranslations();
+      
+      Homey.getDevice((err, result) => {
+        if (err) return console.error(err);
+        device = result;
+        loadPlanning();
+        
+        // Refresh every 5 minutes
+        setInterval(loadPlanning, 5 * 60 * 1000);
+      });
+    }
+  </script>
+</body>
+</html>

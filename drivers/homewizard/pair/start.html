@@ -1,62 +1,52 @@
 <script>
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-    if ($('#homewizard_ledring').is(":checked")) {
-        var homewizard_ledring = true;   
-    } else {
-        var homewizard_ledring = false;   
-    }
-    if (!$('#homewizard_ip').val()) {
-        $('#error').html(Homey.__("settings.no_ip"));
-        $('#save').prop('disabled', false);
-        return;
-    }
-    Homey.emit('manual_add', {
-    data: { id: 'HW'+Math.floor(Date.now() / 1000) },
-    settings: {
-        'homewizard_ip': $('#homewizard_ip').val(),
-        'homewizard_pass': $('#homewizard_pass').val(),
-        'homewizard_ledring': homewizard_ledring
-    },
-    name: 'HomeWizard',
-    }, function(err, result) {
-    if (err) {
-        console.error('[PAIRING VIEW] manual_add error:', err);
-        $('#error').html('Error: ' + err);
-        $('#save').prop('disabled', false);
-        return;
-    }
-
-    console.log('[PAIRING VIEW] manual_add result:', result);
-    });
-
-    
-    Homey.on('success', function(device){
-		$('#error').html('Connected, saving...');
-        $('#save').prop('disabled', true);
-        Homey.createDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: 'HW'+Math.floor(Date.now() / 1000)
-            },
-            settings: {
-                'homewizard_ip': device.settings.homewizard_ip,
-                'homewizard_pass': device.settings.homewizard_pass,
-                'homewizard_ledring': device.settings.homewizard_ledring,
-            },
-            name: device.name,
-            capabilities: []
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
-        });
+async function saveSettings() {
+  const errorEl = document.getElementById('error');
+  const saveBtn = document.getElementById('save');
+  
+  errorEl.textContent = '';
+  saveBtn.disabled = true;
+  
+  const ipInput = document.getElementById('homewizard_ip');
+  const passInput = document.getElementById('homewizard_pass');
+  const ledringCheckbox = document.getElementById('homewizard_ledring');
+  
+  if (!ipInput.value) {
+    errorEl.textContent = Homey.__("settings.no_ip");
+    saveBtn.disabled = false;
+    return;
+  }
+  
+  try {
+    const device = await Homey.emit('manual_add', {
+      data: { id: 'HW' + Math.floor(Date.now() / 1000) },
+      settings: {
+        'homewizard_ip': ipInput.value,
+        'homewizard_pass': passInput.value,
+        'homewizard_ledring': ledringCheckbox.checked
+      },
+      name: 'HomeWizard'
     });
     
-    Homey.on('error', function(message){
-        $('#error').html('Error: '+message);
-        $('#save').prop('disabled', false);
+    errorEl.textContent = 'Connected, saving...';
+    
+    await Homey.createDevice({
+      data: {
+        id: device.data.id
+      },
+      settings: device.settings,
+      name: device.name,
+      capabilities: []
     });
+    
+    await Homey.done();
+  } catch (err) {
+    console.error('[PAIRING] Error:', err);
+    errorEl.textContent = 'Error: ' + (err.message || err);
+    saveBtn.disabled = false;
+  }
 }
+
+Homey.ready();
 </script>
 <!doctype html>
 <html>

@@ -1,53 +1,64 @@
 <script>
-    $( document ).ready(function() {
-        Homey.emit('get_homewizards');
-
-        Homey.on('hw_devices', function(hw_devices){
-            hw_device_list = hw_devices;
-            $('#homewizard_select').find('option').remove();
-            $('#homewizard_select').append('<option>' + Homey.__("settings.select") + '</option>');
-            $.each(hw_devices, function( index, value ) {
-                $('#homewizard_select').append($("<option>").attr('value',index).text(value.settings.homewizard_ip));
-            });
-        });
-    });
-
-function saveSettings () {
-    $('#error').html('');
-	$('#save').prop('disabled', true);
-	console.log('MA');
-	Homey.emit('manual_add', {
-	    data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-	        id: 'HW_WA'+Math.floor(Date.now() / 1000)
-	    },
-		settings: {
-		    'homewizard_id': $('#homewizard_select').val(),
-	    },
-	    name: 'Windmeter',
-	}, function( err, result ){
-	    if( err ) return console.error(err);
-	});
+$(document).ready(function() {
+  Homey.emit('get_homewizards');
+  
+  Homey.on('hw_devices', function(hw_devices) {
+    $('#homewizard_select').html('');
     
-    Homey.on('success', function(device){
-		$('#error').html('Saving...');
-        $('#save').prop('disabled', true);
-        Homey.addDevice({
-            data: { // this data object is saved to- and unique for the device. It is passed on the get and set functions as 1st argument
-                id: device.data.id
-            },
-			settings: {
-                'homewizard_id': device.settings.homewizard_id,
-            },
-            name: device.name
-        }, function( err, result ){
-            if( err ) return console.error(err);
-            Homey.done();
-        });
-    });
+    var defaultOption = $('<option></option>')
+      .text(Homey.__("settings.select"));
+    $('#homewizard_select').append(defaultOption);
     
-    Homey.on('error', function(message){
-        $('#error').html(Homey.__("settings.error")+message);
-        $('#save').prop('disabled', false);
+    $.each(hw_devices, function(index, device) {
+      var option = $('<option></option>')
+        .attr('value', index)
+        .text(device.settings?.homewizard_ip || device.name);
+      $('#homewizard_select').append(option);
+    });
+  });
+});
+
+function saveSettings() {
+  $('#error').text('');
+  $('#save').attr('disabled', true);
+  
+  if (!$('#homewizard_select').val() || $('#homewizard_select').val() === '' || $('#homewizard_select').prop('selectedIndex') === 0) {
+    $('#error').text(Homey.__("settings.select_homewizard") || "Please select a HomeWizard");
+    $('#save').attr('disabled', false);
+    return;
+  }
+  
+  var device = {
+    data: {
+      id: 'HW_WM' + Math.floor(Date.now() / 1000)
+    },
+    settings: {
+      'homewizard_id': $('#homewizard_select').val()
+    },
+    name: 'Windmeter'
+  };
+  
+  Homey.emit('manual_add', device, function(err) {
+    if (err) {
+      $('#error').text(Homey.__("settings.error") + (err.message || err));
+      $('#save').attr('disabled', false);
+      return;
+    }
+  });
+  
+  Homey.on('success', function(device) {
+    Homey.addDevice(device, function(err, result) {
+      if (err) return Homey.alert(err);
+      Homey.done();
+    });
+  });
+  
+  Homey.on('error', function(err) {
+    $('#error').text(Homey.__("settings.error") + (err.message || err));
+    $('#save').attr('disabled', false);
+  });
+}
+</script>
     });
 }
 </script>

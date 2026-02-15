@@ -214,80 +214,49 @@ class HomeWizardDriver extends Homey.Driver {
     });
   }
 
-  onPair(socket) {
+  async onPair(session) {
     // Show a specific view by ID
-    socket.showView('start');
-
-    // Show the next view
-    socket.nextView();
-
-    // Show the previous view
-    socket.prevView();
-
-    // Close the pair session
-    socket.done();
+    await session.showView('start');
 
     // Received when a view has changed
-    socket.setHandler('showView', async (viewId) => {
+    session.setHandler('showView', async (viewId) => {
       if (errorMsg) {
         this.log('[Driver] - Show errorMsg:', errorMsg);
-        socket.emit('error_msg', errorMsg);
+        session.emit('error_msg', errorMsg);
         errorMsg = false;
       }
     });
 
-    socket.setHandler('manual_add', async (device) => {
-
+    session.setHandler('manual_add', async (device) => {
       const url = `http://${device.settings.homewizard_ip}/${device.settings.homewizard_pass}/get-status/`;
 
-      const json = await fetch(url).then((res) => res.json());
+      try {
+        const json = await fetch(url).then((res) => res.json());
 
-      this.log(`Calling ${url}`);
+        this.log(`Calling ${url}`);
 
-      if (json.status == 'ok') {
-        this.log('Call OK');
+        if (json.status == 'ok') {
+          this.log('Call OK');
 
-        devices[device.data.id] = {
-          id: device.data.id,
-          name: device.name,
-          settings: device.settings,
-          capabilities: device.capabilities,
-        };
-        homewizard.setDevices(devices);
+          devices[device.data.id] = {
+            id: device.data.id,
+            name: device.name,
+            settings: device.settings,
+            capabilities: device.capabilities,
+          };
+          homewizard.setDevices(devices);
 
-        socket.emit('success', device);
-        return devices;
-
+          return device;
+        }
+        
+        throw new Error('HomeWizard returned invalid status');
+      } catch (err) {
+        this.error('Failed to connect to HomeWizard:', err);
+        throw new Error('Could not connect to HomeWizard at ' + device.settings.homewizard_ip);
       }
-      /*
-            request(url, function (error, response, body) {
-                if (response === null || response === undefined) {
-                            socket.emit("error", "http error");
-                            return;
-                }
-                if (!error && response.statusCode == 200) {
-                    var jsonObject = JSON.parse(body);
-
-                    if (jsonObject.status == 'ok') {
-                        this.log('Call OK');
-
-                        devices[device.data.id] = {
-                            id: device.data.id,
-                            name: device.name,
-                            settings: device.settings,
-                            capabilities: device.capabilities
-                        };
-                        homewizard.setDevices(devices);
-
-                        callback( null, devices );
-                        socket.emit("success", device);
-                    }
-                }
-            });
-  */
     });
 
-    socket.setHandler('disconnect', async () => {
+    session.setHandler('disconnect', async () => {
       this.log('User aborted pairing, or pairing is finished');
     });
   }
