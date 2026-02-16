@@ -374,8 +374,17 @@ class BatteryPolicyDevice extends Homey.Device {
                 }
               }
               
-              if (success) {
-                // Trigger policy check after successful refresh
+              // Check if we have good coverage (at least 40 hours)
+              const priceCount = this.tariffManager.dynamicProvider?.cache?.length || 0;
+              if (success && priceCount >= 40) {
+                // Good coverage, trigger policy check
+                if (this.getCapabilityValue('policy_enabled')) {
+                  await this._runPolicyCheck();
+                }
+              } else if (success && priceCount < 40) {
+                // Limited coverage, try fallback
+                this.log(`⚠️ Only ${priceCount} prices available, attempting provider switch...`);
+                await this.tariffManager._selectBestProvider();
                 if (this.getCapabilityValue('policy_enabled')) {
                   await this._runPolicyCheck();
                 }
