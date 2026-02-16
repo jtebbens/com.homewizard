@@ -433,6 +433,16 @@ Homey.on('settings.set', changedKey => {
       if (!err) renderFetchDebug(newSettings);
     });
   }
+  
+  // 🔋 Live update battery planning when state changes
+  if (changedKey === 'battery_policy_state') {
+    Homey.get((err, newSettings) => {
+      if (!err && document.getElementById('planning').classList.contains('active')) {
+        console.log('🔄 Battery state updated, refreshing planning...');
+        renderBatteryPlanning(newSettings, Homey);
+      }
+    });
+  }
 });
 
 /* Clear button */
@@ -587,8 +597,11 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       // Get policy data from battery policy device
       const policyState = settings['battery_policy_state'];
-      const currentSOC = policyState?.batterySOC || 50;
-      
+      const currentSOC = policyState?.batterySOC ?? 50;
+
+      console.log('🔋 Battery policy state:', policyState);
+      console.log('🔋 Current SoC:', currentSOC, '(fallback used:', !policyState?.batterySOC, ')');
+            
       // Try to get policy mode from multiple sources
       let policyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
       // Normalize mode values
@@ -616,13 +629,26 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       console.log('💰 Price map keys:', Object.keys(priceMap).sort((a,b) => a-b)); // Debug
       
-      // Get capabilities from battery policy device if available
-      const policyDebugTop3High = settings['policy_debug_top3high'] || '';
-      const policyDebugTop3Low = settings['policy_debug_top3low'] || '';
+      // Calculate price statistics for relative price comparisons
+      let priceValues = Object.values(priceMap).filter(p => typeof p === 'number' && p > 0);
+      let avgPrice = priceValues.length > 0 ? priceValues.reduce((a, b) => a + b) / priceValues.length : 0.25;
+      let minPrice = priceValues.length > 0 ? Math.min(...priceValues) : 0.15;
+      let maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : 0.35;
+      let priceRange = maxPrice - minPrice || 0.01;
+      
+      console.log(`📊 Price stats: min=${minPrice.toFixed(3)}, avg=${avgPrice.toFixed(3)}, max=${maxPrice.toFixed(3)}`);
+      
+      // Define price thresholds relative to average for recommendations
+      let chargeThreshold = avgPrice - (priceRange * 0.2); // Bottom 20% of price range
+      let dischargeThreshold = avgPrice + (priceRange * 0.2); // Top 20% of price range
+      
+      // Get capabilities from battery policy device if available (for top-3 badges)
+      let policyDebugTop3High = settings['policy_debug_top3high'] || '';
+      let policyDebugTop3Low = settings['policy_debug_top3low'] || '';
       
       // Parse peak hours (format: "high=[18:00€0.35, 19:00€0.38, 20:00€0.36] @12:34")
       // Store as hour-of-day (0-23) since these are day-level rankings
-      const peakHours = new Set();
+      let peakHours = new Set();
       if (policyDebugTop3High) {
         const match = policyDebugTop3High.match(/\[(.*?)\]/);
         if (match) {
@@ -637,7 +663,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       // Parse cheap hours (format: "low=[02:00€0.15, 03:00€0.16, 04:00€0.17] @12:34")
       // Store as hour-of-day (0-23) since these are day-level rankings
-      const cheapHoursSet = new Set();
+      let cheapHoursSet = new Set();
       if (policyDebugTop3Low) {
         const match = policyDebugTop3Low.match(/\[(.*?)\]/);
         if (match) {
@@ -651,8 +677,8 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       }
       
       // Get hourly weather forecast for sunshine prediction
-      const weatherHourly = settings['policy_weather_hourly'] || [];
-      const sunshineMap = {};
+      let weatherHourly = settings['policy_weather_hourly'] || [];
+      let sunshineMap = {};
       weatherHourly.forEach(w => {
         if (w && typeof w.hour === 'number' && typeof w.sunshine === 'number') {
           sunshineMap[w.hour] = w.sunshine;
@@ -660,7 +686,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       });
       
       // Generate full day view (00:00-23:00 for today and tomorrow)
-      const hours = [];
+      let hours = [];
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       
@@ -689,6 +715,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
           
           let mode = 'standby';
           
+          // Determine mode based on price + top-3 badges + weather
           if (policyMode === 'zero') {
             // PEAK SHAVING MODE: focus on avoiding peak hours
             // Check by hour-of-day since top-3 is based on day prices
@@ -703,15 +730,23 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
             }
           } else {
             // DYNAMIC PRICING MODE: follow price optimization
-            // Check by hour-of-day since top-3 is based on day prices
-            if (cheapHoursSet.has(h)) {
-              mode = 'charge'; // Charge during cheap hours
-            } else if (peakHours.has(h)) {
-              mode = 'discharge'; // Discharge during expensive hours
+            // Priority: top-3 badges > price thresholds > weather > default
+            
+            if (peakHours.has(h)) {
+              // Top-3 expensive hour
+              mode = 'discharge'; 
+            } else if (cheapHoursSet.has(h)) {
+              // Top-3 cheap hour
+              mode = 'charge'; 
+            } else if (priceKnown && price <= chargeThreshold) {
+              // Below-average price (good for charging)
+              mode = 'charge';
+            } else if (priceKnown && price >= dischargeThreshold) {
+              // Above-average price (good for discharging)
+              mode = 'discharge';
             } else if (hasSunshine && h >= 8 && h <= 17) {
-              mode = 'pv_only'; // PV when sun is expected
-            } else if (h >= 2 && h <= 5) {
-              mode = 'standby'; // Night standby
+              // Good sun expected, not a price extreme
+              mode = 'pv_only';
             } else {
               mode = 'standby';
             }
@@ -740,42 +775,76 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       const totalCapacityKwh = policyState?.totalCapacityKwh || null;
       
       // Project SoC forward from current hour
-      for (let i = 0; i < hours.length; i++) {
-        const hour = hours[i];
-        const prevHour = i > 0 ? hours[i - 1] : null;
-        
-        if (!prevHour) {
-          hour.soc = currentSOC;
-        } else {
+      // Anchor the projection at the actual current hour (isCurrent === true) so
+      // the displayed current SoC matches the device state.
+      const currentIndex = hours.findIndex(h => h.isCurrent);
+      if (currentIndex >= 0) {
+        // Set current hour SoC from device and project forward
+        hours[currentIndex].soc = currentSOC;
+        for (let i = currentIndex + 1; i < hours.length; i++) {
+          const hour = hours[i];
+          const prevHour = hours[i - 1];
           let socChange = 0;
-          
+
           if (totalCapacityKwh && totalCapacityKwh > 0) {
-            // Use real battery capacity for accurate projection
             if (prevHour.mode === 'discharge') {
-              // Discharge: -maxDischargePowerW for 1 hour
               socChange = -(maxDischargePowerW / 1000 / totalCapacityKwh) * 100;
             } else if (prevHour.mode === 'charge') {
-              // Charge: +maxChargePowerW for 1 hour
               socChange = (maxChargePowerW / 1000 / totalCapacityKwh) * 100;
             } else if (prevHour.mode === 'pv_only') {
-              // PV charging: assume 50% of max charge power (conservative)
               socChange = (maxChargePowerW * 0.5 / 1000 / totalCapacityKwh) * 100;
             } else {
-              // Standby: no change (battery idle)
               socChange = 0;
             }
           } else {
-            // Fallback to percentage-based estimation
             if (prevHour.mode === 'discharge') socChange = -2.5;
             else if (prevHour.mode === 'charge') socChange = 3;
             else if (prevHour.mode === 'pv_only') socChange = 2;
-            else socChange = 0; // Standby: no change
+            else socChange = 0;
           }
-          
+
           hour.soc = Math.max(20, Math.min(100, prevHour.soc + socChange));
         }
-        
-        // PV forecast (simple bell curve)
+
+        // For past hours (before current), set to currentSOC to avoid misleading historical projection
+        for (let i = 0; i < currentIndex; i++) {
+          hours[i].soc = currentSOC;
+        }
+      } else {
+        // Fallback: no current hour found (shouldn't happen) — fall back to previous behavior
+        for (let i = 0; i < hours.length; i++) {
+          const hour = hours[i];
+          const prevHour = i > 0 ? hours[i - 1] : null;
+
+          if (!prevHour) {
+            hour.soc = currentSOC;
+          } else {
+            let socChange = 0;
+            if (totalCapacityKwh && totalCapacityKwh > 0) {
+              if (prevHour.mode === 'discharge') {
+                socChange = -(maxDischargePowerW / 1000 / totalCapacityKwh) * 100;
+              } else if (prevHour.mode === 'charge') {
+                socChange = (maxChargePowerW / 1000 / totalCapacityKwh) * 100;
+              } else if (prevHour.mode === 'pv_only') {
+                socChange = (maxChargePowerW * 0.5 / 1000 / totalCapacityKwh) * 100;
+              } else {
+                socChange = 0;
+              }
+            } else {
+              if (prevHour.mode === 'discharge') socChange = -2.5;
+              else if (prevHour.mode === 'charge') socChange = 3;
+              else if (prevHour.mode === 'pv_only') socChange = 2;
+              else socChange = 0;
+            }
+
+            hour.soc = Math.max(20, Math.min(100, prevHour.soc + socChange));
+          }
+        }
+      }
+
+      // PV forecast (simple bell curve)
+      for (let i = 0; i < hours.length; i++) {
+        const hour = hours[i];
         hour.pv = (hour.hour >= 8 && hour.hour <= 17) 
           ? Math.max(0, 3.5 * (1 - Math.abs(hour.hour - 12.5) / 5)) 
           : 0;
@@ -783,7 +852,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       // Render status bar - only calculate average from known prices
       const hoursWithKnownPrices = hours.filter(h => h.priceKnown);
-      const avgPrice = hoursWithKnownPrices.length > 0 
+      let avgKnownPrice = hoursWithKnownPrices.length > 0 
         ? (hoursWithKnownPrices.reduce((sum, h) => sum + h.price, 0) / hoursWithKnownPrices.length).toFixed(3)
         : '?';
       const cheapHoursCount = hours.filter(h => h.isCheap).length;
@@ -804,7 +873,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Gem. Prijs' : 'Avg. Price'}</div>
-          <div class="planning-status-value">€${avgPrice}</div>
+          <div class="planning-status-value">€${avgKnownPrice}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${policyMode === 'zero' ? (lang === 'nl' ? 'Piek Uren' : 'Peak Hours') : (lang === 'nl' ? 'Goedkope Uren' : 'Cheap Hours')}</div>
@@ -872,9 +941,9 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       // Render hour cards - only calculate min/max from known prices
       const knownPrices = hours.filter(h => h.priceKnown).map(h => h.price);
-      const minPrice = knownPrices.length > 0 ? Math.min(...knownPrices) : 0;
-      const maxPrice = knownPrices.length > 0 ? Math.max(...knownPrices) : 1;
-      const priceRange = maxPrice - minPrice;
+      let minKnownPrice = knownPrices.length > 0 ? Math.min(...knownPrices) : 0;
+      let maxKnownPrice = knownPrices.length > 0 ? Math.max(...knownPrices) : 1;
+      let priceRangeKnown = maxKnownPrice - minKnownPrice;
       
       const modeIcons = {
         charge: '⚡',
@@ -908,7 +977,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       };
       
       document.getElementById('planning-grid').innerHTML = hours.map((hour, index) => {
-        const priceNorm = priceRange > 0 ? (hour.price - minPrice) / priceRange : 0.5;
+        const priceNorm = priceRangeKnown > 0 ? (hour.price - minKnownPrice) / priceRangeKnown : 0.5;
         const priceClass = priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '';
         const modeIcon = modeIcons[hour.mode] || '⏸️';
         const modeText = modeTexts[hour.mode] || hour.mode;
