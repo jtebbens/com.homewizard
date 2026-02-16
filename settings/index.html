@@ -75,6 +75,10 @@
     .planning-hour-card.expensive {
       background: linear-gradient(135deg, #ffcdd2 0%, #fafafa 100%);
     }
+    .planning-hour-card.unknown {
+      opacity: 0.6;
+      background: #f5f5f5;
+    }
     .planning-hour-time {
       font-size: 16px;
       font-weight: bold;
@@ -578,7 +582,8 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
     async function renderBatteryPlanning(settings, Homey) {
       const currentHour = new Date().getHours();
       const lang = await Homey.getLanguage();
-      console.log('🌍 Detected language:', lang); // Debug log
+      console.log('🌍 Detected language:', lang);
+      console.log('📊 Planning data:', settings['policy_all_prices']?.length || 0, 'prices available');
       
       // Get policy data from battery policy device
       const policyState = settings['battery_policy_state'];
@@ -597,18 +602,26 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       
       // Get all hourly prices from battery policy device
       const allPrices = settings['policy_all_prices'] || [];
+      console.log('🔍 All prices structure:', allPrices.slice(0, 3)); // Debug first 3 items
+      
       const priceMap = {};
       allPrices.forEach(p => {
-        if (p && typeof p.hour === 'number' && typeof p.price === 'number') {
-          priceMap[p.hour] = p.price;
+        if (p && typeof p.price === 'number') {
+          // Use index field (hours from now) if available, otherwise fallback to hour
+          const key = typeof p.index === 'number' ? p.index : p.hour;
+          priceMap[key] = p.price;
+          console.log(`  Price map: index=${key} → €${p.price.toFixed(3)}`); // Debug
         }
       });
+      
+      console.log('💰 Price map keys:', Object.keys(priceMap).sort((a,b) => a-b)); // Debug
       
       // Get capabilities from battery policy device if available
       const policyDebugTop3High = settings['policy_debug_top3high'] || '';
       const policyDebugTop3Low = settings['policy_debug_top3low'] || '';
       
       // Parse peak hours (format: "high=[18:00€0.35, 19:00€0.38, 20:00€0.36] @12:34")
+      // Store as hour-of-day (0-23) since these are day-level rankings
       const peakHours = new Set();
       if (policyDebugTop3High) {
         const match = policyDebugTop3High.match(/\[(.*?)\]/);
@@ -623,6 +636,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       }
       
       // Parse cheap hours (format: "low=[02:00€0.15, 03:00€0.16, 04:00€0.17] @12:34")
+      // Store as hour-of-day (0-23) since these are day-level rankings
       const cheapHoursSet = new Set();
       if (policyDebugTop3Low) {
         const match = policyDebugTop3Low.match(/\[(.*?)\]/);
@@ -645,58 +659,79 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
         }
       });
       
-      // Generate 48h planning data based on policy mode (today + tomorrow)
+      // Generate full day view (00:00-23:00 for today and tomorrow)
       const hours = [];
-      for (let h = 0; h < 48; h++) {
-        const actualHour = (currentHour + h) % 24;
-        const dayOffset = Math.floor((currentHour + h) / 24);
-        
-        // Use real prices from all prices map if available, otherwise use base price
-        const price = priceMap[currentHour + h] || basePrice;
-        
-        // Check if sunshine is expected (>0.3h means decent sun)
-        const hasSunshine = sunshineMap[actualHour] > 0.3;
-        
-        let mode = 'standby';
-        
-        if (policyMode === 'zero') {
-          // PEAK SHAVING MODE: focus on avoiding peak hours
-          if (peakHours.has(currentHour + h)) {
-            mode = 'discharge'; // Discharge during peaks
-          } else if (cheapHoursSet.has(currentHour + h)) {
-            mode = 'charge'; // Charge during cheap hours
-          } else if (hasSunshine && actualHour >= 8 && actualHour <= 17) {
-            mode = 'pv_only'; // PV when sun is expected
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      
+      for (let day = 0; day < 2; day++) {
+        for (let h = 0; h < 24; h++) {
+          const hourDate = new Date(todayStart);
+          hourDate.setDate(todayStart.getDate() + day);
+          hourDate.setHours(h);
+          
+          // Calculate hours from now for price lookup
+          const hoursFromNow = Math.floor((hourDate - now) / (1000 * 60 * 60));
+          
+          // 🔧 FIX: Look up price using hoursFromNow
+          const price = priceMap[hoursFromNow] !== undefined ? priceMap[hoursFromNow] : basePrice;
+          const priceKnown = priceMap[hoursFromNow] !== undefined;
+          
+          console.log(`Hour ${h}:00 (day ${day}, hoursFromNow=${hoursFromNow}): price=${price.toFixed(3)}, known=${priceKnown}`);
+          
+          // Check if sunshine is expected (>0.3h means decent sun)
+          const hasSunshine = sunshineMap[h] > 0.3;
+          
+          // Check if this hour is in the past (compare end of hour, not start)
+          const hourEndDate = new Date(hourDate.getTime() + 3600 * 1000); // End of this hour
+          const isPast = hourEndDate <= now;
+          const isCurrent = !isPast && hourDate <= now && hourEndDate > now;
+          
+          let mode = 'standby';
+          
+          if (policyMode === 'zero') {
+            // PEAK SHAVING MODE: focus on avoiding peak hours
+            // Check by hour-of-day since top-3 is based on day prices
+            if (peakHours.has(h)) {
+              mode = 'discharge'; // Discharge during peaks
+            } else if (cheapHoursSet.has(h)) {
+              mode = 'charge'; // Charge during cheap hours
+            } else if (hasSunshine && h >= 8 && h <= 17) {
+              mode = 'pv_only'; // PV when sun is expected
+            } else {
+              mode = 'standby';
+            }
           } else {
-            mode = 'standby';
+            // DYNAMIC PRICING MODE: follow price optimization
+            // Check by hour-of-day since top-3 is based on day prices
+            if (cheapHoursSet.has(h)) {
+              mode = 'charge'; // Charge during cheap hours
+            } else if (peakHours.has(h)) {
+              mode = 'discharge'; // Discharge during expensive hours
+            } else if (hasSunshine && h >= 8 && h <= 17) {
+              mode = 'pv_only'; // PV when sun is expected
+            } else if (h >= 2 && h <= 5) {
+              mode = 'standby'; // Night standby
+            } else {
+              mode = 'standby';
+            }
           }
-        } else {
-          // DYNAMIC PRICING MODE: follow price optimization
-          if (cheapHoursSet.has(currentHour + h)) {
-            mode = 'charge'; // Charge during cheap hours
-          } else if (peakHours.has(currentHour + h)) {
-            mode = 'discharge'; // Discharge during expensive hours
-          } else if (hasSunshine && actualHour >= 8 && actualHour <= 17) {
-            mode = 'pv_only'; // PV when sun is expected
-          } else if (actualHour >= 2 && actualHour <= 5) {
-            mode = 'standby'; // Night standby
-          } else {
-            mode = 'standby';
-          }
+          
+          hours.push({ 
+            hour: h,
+            dayOffset: day,
+            hoursFromNow,
+            price, 
+            priceKnown, // 🔧 FIX: Now correctly set!
+            mode, 
+            soc: 0, 
+            pv: 0, 
+            isCurrent,
+            isPast,
+            isPeak: peakHours.has(h),  // Check by hour-of-day
+            isCheap: cheapHoursSet.has(h)  // Check by hour-of-day
+          });
         }
-        
-        hours.push({ 
-          hour: actualHour, 
-          displayIndex: h,
-          dayOffset,
-          price, 
-          mode, 
-          soc: 0, 
-          pv: 0, 
-          isCurrent: h === 0, 
-          isPeak: peakHours.has(currentHour + h), 
-          isCheap: cheapHoursSet.has(currentHour + h) 
-        });
       }
       
       // Calculate realistic SoC projection based on battery specs
@@ -747,7 +782,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       }
       
       // Render status bar - only calculate average from known prices
-      const hoursWithKnownPrices = hours.filter(h => priceMap[currentHour + h.displayIndex] !== undefined);
+      const hoursWithKnownPrices = hours.filter(h => h.priceKnown);
       const avgPrice = hoursWithKnownPrices.length > 0 
         ? (hoursWithKnownPrices.reduce((sum, h) => sum + h.price, 0) / hoursWithKnownPrices.length).toFixed(3)
         : '?';
@@ -836,7 +871,7 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
       `;
       
       // Render hour cards - only calculate min/max from known prices
-      const knownPrices = hours.filter(h => priceMap[currentHour + h.displayIndex] !== undefined).map(h => h.price);
+      const knownPrices = hours.filter(h => h.priceKnown).map(h => h.price);
       const minPrice = knownPrices.length > 0 ? Math.min(...knownPrices) : 0;
       const maxPrice = knownPrices.length > 0 ? Math.max(...knownPrices) : 1;
       const priceRange = maxPrice - minPrice;
@@ -878,16 +913,19 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
         const modeIcon = modeIcons[hour.mode] || '⏸️';
         const modeText = modeTexts[hour.mode] || hour.mode;
         
-        // Add day marker when we cross midnight (hour becomes 0 and it's not the first item)
+        // Add day marker at start of day 0 and day 1
         let dayMarker = '';
-        if (hour.hour === 0 && index > 0 && hour.dayOffset > 0) {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + hour.dayOffset);
+        if (hour.hour === 0) {
+          const dayDate = new Date();
+          dayDate.setDate(dayDate.getDate() + hour.dayOffset);
           const dayName = lang === 'nl' 
-            ? ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'][tomorrow.getDay()]
-            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][tomorrow.getDay()];
-          const dateStr = tomorrow.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
-          dayMarker = `<div class="planning-day-marker">📅 ${dayName}, ${dateStr}</div>`;
+            ? ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'][dayDate.getDay()]
+            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayDate.getDay()];
+          const dateStr = dayDate.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
+          const label = hour.dayOffset === 0 
+            ? (lang === 'nl' ? 'Vandaag' : 'Today')
+            : (lang === 'nl' ? 'Morgen' : 'Tomorrow');
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}</div>`;
         }
         
         // Add badge for peak/cheap hours
@@ -898,14 +936,16 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
           badge = `<span style="position: absolute; top: 2px; right: 2px; background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${lang === 'nl' ? 'GOEDKOOP' : 'CHEAP'}</span>`;
         }
         
-        // Check if price is known
-        const priceKnown = priceMap[currentHour + hour.displayIndex] !== undefined;
-        const priceDisplay = priceKnown ? `€${hour.price.toFixed(3)}` : (lang === 'nl' ? '?' : '?');
-        const priceClass2 = priceKnown ? priceClass : 'unknown';
+        // 🔧 FIX: Use hour.priceKnown instead of checking priceMap
+        const priceDisplay = hour.priceKnown ? `€${hour.price.toFixed(3)}` : (lang === 'nl' ? '?' : '?');
+        const priceClass2 = hour.priceKnown ? priceClass : 'unknown';
+        
+        // Dim past hours
+        const pastStyle = hour.isPast ? 'opacity: 0.4; filter: grayscale(60%);' : '';
         
         return `
           ${dayMarker}
-          <div class="planning-hour-card ${priceClass2} ${hour.isCurrent ? 'current' : ''}" style="position: relative; ${!priceKnown ? 'opacity: 0.6;' : ''}">
+          <div class="planning-hour-card ${priceClass2} ${hour.isCurrent ? 'current' : ''}" style="position: relative; ${pastStyle}">
             ${badge}
             <div class="planning-hour-time">${hour.hour.toString().padStart(2, '0')}:00</div>
             <div class="planning-hour-price">${priceDisplay}</div>
@@ -918,6 +958,8 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
           </div>
         `;
       }).join('');
+      
+      console.log('✅ Planning rendered:', hours.length, 'hours');
     }
   </script>
 
