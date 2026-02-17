@@ -94,6 +94,21 @@
         "max": 1,
         "step": 0.01,
         "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+
+      {
+        "id": "min_profit_margin",
+        "type": "number",
+        "label": { "en": "Min Arbitrage Profit (€/kWh)", "nl": "Minimale arbitragewinst (€/kWh)" },
+        "hint": {
+          "en": "Minimum profit per kWh (after 25% battery loss) before grid charging is attempted. Higher = fewer but more profitable cycles. 0.00 = always charge at cheap hours.",
+          "nl": "Minimale winst per kWh (na 25% batterijverlies) voordat laden uit het net wordt geprobeerd. Hoger = minder maar winstgevendere cycli. 0,00 = altijd laden bij goedkope uren."
+        },
+        "value": 0.02,
+        "min": 0,
+        "max": 0.15,
+        "step": 0.01,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
       }
     ]
   },
