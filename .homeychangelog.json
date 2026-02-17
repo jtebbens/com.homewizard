@@ -982,5 +982,8 @@
   },
   "3.13.18": {
     "en": "Homewizard Legacy pairing problem (user report)"
+  },
+  "3.13.19": {
+    "en": "Tariff adjustments and RTE battery forced in calculations"
   }
 }
