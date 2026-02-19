@@ -985,5 +985,8 @@
   },
   "3.13.19": {
     "en": "Tariff adjustments and RTE battery forced in calculations"
+  },
+  "3.13.20": {
+    "en": "Remapping states and icons on planning page"
   }
 }
