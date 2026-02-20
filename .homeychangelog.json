@@ -991,5 +991,8 @@
   },
   "3.13.21": {
     "en": "RTE efficiency added to improve cheap and expensive profit gain calculations"
+  },
+  "3.13.22": {
+    "en": "Improved dynamic price margins"
   }
 }
