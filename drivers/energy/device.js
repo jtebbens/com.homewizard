@@ -746,25 +746,47 @@ async onPoll() {
 }
 
 
-  async _processGasDelta(data, tasks, settings, nowLocal) {
-    if (settings.show_gas && (nowLocal.getMinutes() % 5 === 0)) {
-      const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
+async _processGasDelta(data, tasks, settings, nowLocal) {
+  if (!settings.show_gas || (nowLocal.getMinutes() % 5 !== 0)) return;
 
-      if (prevTs == null) {
-        tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
-      } else if (data._gasValue != null && prevTs !== data._gasTimestamp) {
-        const prevReading = await this.getStoreValue('gasmeter_previous_reading');
-        if (prevReading != null) {
-          const gasDelta = data._gasValue - prevReading;
-          if (gasDelta >= 0 && this._hasChanged('measure_gas_delta', gasDelta)) {
-            tasks.push(updateCapability(this, 'measure_gas', gasDelta));
-          }
-        }
-        tasks.push(this.setStoreValue('gasmeter_previous_reading', data._gasValue));
-        tasks.push(this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp));
-      }
+  try {
+    const prevTs = await this.getStoreValue('gasmeter_previous_reading_timestamp');
+
+    if (prevTs == null) {
+      tasks.push(
+        this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp)
+          .catch(err => this.error('Store error (ts init):', err.message))
+      );
+      return;
     }
+
+    if (data._gasValue != null && prevTs !== data._gasTimestamp) {
+      const prevReading = await this.getStoreValue('gasmeter_previous_reading');
+
+      if (prevReading != null) {
+        const gasDelta = data._gasValue - prevReading;
+
+        // Minimum delta of 0.01 to avoid noise, and only update if changed since last time
+        if (gasDelta >= 0.01 && this._hasChanged('measure_gas_delta', gasDelta)) {
+          tasks.push(updateCapability(this, 'measure_gas', gasDelta));
+        }
+      }
+
+      tasks.push(
+        this.setStoreValue('gasmeter_previous_reading', data._gasValue)
+          .catch(err => this.error('Store error (reading):', err.message))
+      );
+
+      tasks.push(
+        this.setStoreValue('gasmeter_previous_reading_timestamp', data._gasTimestamp)
+          .catch(err => this.error('Store error (ts update):', err.message))
+      );
+    }
+  } catch (err) {
+    this.error('Unhandled gas delta error:', err.message);
   }
+}
+
 
   async _processDailyTotals(data, tasks, settings) {
     const meterStart = await this.getStoreValue('meter_start_day');

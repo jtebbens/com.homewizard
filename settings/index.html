@@ -5,108 +5,51 @@
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
 
   <script>
-    // Runtime error catcher: display uncaught errors and unhandled rejections
     window.addEventListener('error', function (ev) {
       try {
         const box = document.getElementById('fetch-debug');
         const msg = `Uncaught Error: ${ev.message} at ${ev.filename}:${ev.lineno}:${ev.colno}`;
         if (box) box.textContent = msg + (ev.error && ev.error.stack ? '\n' + ev.error.stack : '');
         console.error('Settings page error:', ev.error || ev.message, ev);
-      } catch (e) {
-        console.error('Error while reporting error', e);
-      }
+      } catch (e) { console.error('Error while reporting error', e); }
     });
 
     window.addEventListener('unhandledrejection', function (ev) {
       try {
         const box = document.getElementById('fetch-debug');
         const reason = ev.reason && ev.reason.message ? ev.reason.message : JSON.stringify(ev.reason);
-        const msg = `Unhandled Rejection: ${reason}`;
-        if (box) box.textContent = msg;
-        console.error('Unhandled promise rejection in settings page:', ev.reason);
-      } catch (e) {
-        console.error('Error while reporting rejection', e);
-      }
+        if (box) box.textContent = `Unhandled Rejection: ${reason}`;
+        console.error('Unhandled promise rejection:', ev.reason);
+      } catch (e) { console.error('Error while reporting rejection', e); }
     });
-  </script>
-
-  <script>
-    // Inline PlannerEngine fallback: define minimal PlannerEngine if not already provided
-    (function(window){
-      if (window.PlannerEngine) return;
-      function PlannerEngine(settings){
-        this.settings = Object.assign({
-          battery_efficiency: 0.75,
-          min_profit_margin: 0.02,
-          max_charge_price: 0.15,
-          min_discharge_price: 0.30,
-          min_soc: 10,
-          max_soc: 95,
-          tariff_type: 'dynamic'
-        }, settings || {});
-      }
-      PlannerEngine.prototype.getRecommendationForHour = function(ctx, allPrices){
-        if (ctx.price === null || typeof ctx.price !== 'number') return ctx.hasSun ? 'pv_only' : 'standby';
-        if (ctx.isPeak) return 'discharge';
-        if (ctx.isCheap) return 'charge';
-        const s = this.settings;
-        if (ctx.price >= s.min_discharge_price) return 'discharge';
-        if (ctx.price <= s.max_charge_price) return 'charge';
-        if (ctx.hasSun) return 'pv_only';
-        return 'standby';
-      };
-      window.PlannerEngine = PlannerEngine;
-    })(window);
   </script>
 
   <style>
     body { font-family: sans-serif; padding: 20px; }
 
-    /* Tabs */
     .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
     .tab {
-      padding: 10px 16px;
-      cursor: pointer;
-      user-select: none;
-      border-radius: 6px 6px 0 0;
-      margin-right: 4px;
-      background: #eee;
+      padding: 10px 16px; cursor: pointer; user-select: none;
+      border-radius: 6px 6px 0 0; margin-right: 4px; background: #eee;
     }
     .tab.active {
-      background: white;
-      border: 1px solid #ccc;
-      border-bottom: none;
-      font-weight: bold;
+      background: white; border: 1px solid #ccc;
+      border-bottom: none; font-weight: bold;
     }
-
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
     .debug-box {
-      background: #f3f3f3;
-      padding: 15px;
-      border-radius: 6px;
-      font-family: monospace;
-      font-size: 12px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 400px;
-      overflow: auto;
+      background: #f3f3f3; padding: 15px; border-radius: 6px;
+      font-family: monospace; font-size: 12px; white-space: pre-wrap;
+      word-break: break-word; max-height: 400px; overflow: auto;
     }
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 16px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 6px 8px;
-      font-size: 13px;
-    }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
     th { background: #f0f0f0; }
-    
-    /* Battery Planning Styles */
+
+    /* ── Planning Cards ── */
     .planning-hour-card {
       background: #fafafa;
       border: 2px solid #e0e0e0;
@@ -114,87 +57,68 @@
       padding: 12px;
       text-align: center;
       transition: all 0.2s;
+      position: relative;
     }
     .planning-hour-card:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .planning-hour-card.current {
-      border-color: #4CAF50;
+      border-color: #4CAF50 !important;
       background: #e8f5e9;
-      box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+      box-shadow: 0 0 15px rgba(76,175,80,0.3);
     }
-    .planning-hour-card.cheap {
-      background: linear-gradient(135deg, #c8e6c9 0%, #fafafa 100%);
-    }
-    .planning-hour-card.expensive {
-      background: linear-gradient(135deg, #ffcdd2 0%, #fafafa 100%);
-    }
-    .planning-hour-card.unknown {
-      opacity: 0.6;
-      background: #f5f5f5;
-    }
-    .planning-hour-time {
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-    .planning-hour-price {
-      font-size: 14px;
-      margin-bottom: 8px;
-      color: #666;
-      font-weight: 600;
-    }
-    .planning-hour-mode {
-      font-size: 36px;
-      margin: 10px 0;
-    }
-    .planning-hour-mode-text {
-      font-size: 11px;
-      color: #666;
-      margin-bottom: 8px;
-    }
-    .planning-hour-details {
-      font-size: 11px;
-      color: #999;
-      margin-top: 8px;
-    }
-    .planning-status-item {
-      text-align: center;
-    }
-    .planning-status-label {
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-    }
-    .planning-status-value {
-      font-size: 22px;
-      font-weight: bold;
-    }
+    .planning-hour-card.cheap   { background: linear-gradient(135deg,#c8e6c9 0%,#fafafa 100%); }
+    .planning-hour-card.expensive { background: linear-gradient(135deg,#ffcdd2 0%,#fafafa 100%); }
+    .planning-hour-card.unknown { opacity:.6; background:#f5f5f5; }
+
+    /* hwMode colour accents on card border */
+    .planning-hour-card.hw-to_full          { border-color: #1565C0; }
+    .planning-hour-card.hw-zero_charge_only  { border-color: #F9A825; }
+    .planning-hour-card.hw-zero_discharge_only{ border-color: #6A1B9A; }
+    .planning-hour-card.hw-zero             { border-color: #00838F; }
+    .planning-hour-card.hw-standby          { border-color: #e0e0e0; }
+
+    .planning-hour-time  { font-size:16px; font-weight:bold; margin-bottom:8px; }
+    .planning-hour-price { font-size:14px; margin-bottom:8px; color:#666; font-weight:600; }
+    .planning-hour-mode  { font-size:36px; margin:10px 0; }
+    .planning-hour-mode-text { font-size:11px; color:#666; margin-bottom:8px; }
+    .planning-hour-details   { font-size:11px; color:#999; margin-top:8px; }
+
+    .planning-status-item  { text-align:center; }
+    .planning-status-label { font-size:12px; color:#666; margin-bottom:5px; }
+    .planning-status-value { font-size:22px; font-weight:bold; }
+
     .planning-legend-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px;
-      background: white;
-      border-radius: 6px;
+      display:flex; align-items:center; gap:10px;
+      padding:8px; background:white; border-radius:6px;
     }
-    .planning-legend-icon {
-      font-size: 24px;
-      min-width: 32px;
-      text-align: center;
-    }
+    .planning-legend-icon { font-size:24px; min-width:32px; text-align:center; }
+
     .planning-day-marker {
       grid-column: 1 / -1;
       padding: 12px 16px;
-      background: linear-gradient(90deg, #2196F3, #1976D2);
-      color: white;
-      font-weight: bold;
-      font-size: 16px;
-      border-radius: 8px;
-      margin: 8px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: linear-gradient(90deg,#2196F3,#1976D2);
+      color: white; font-weight:bold; font-size:16px;
+      border-radius:8px; margin:8px 0;
+      box-shadow:0 2px 4px rgba(0,0,0,.1);
     }
+
+    /* hwMode badge pill inside card */
+    .hw-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 20px;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+    .hw-badge-to_full           { background:#1565C0; color:#fff; }
+    .hw-badge-zero_charge_only  { background:#F9A825; color:#333; }
+    .hw-badge-zero_discharge_only { background:#6A1B9A; color:#fff; }
+    .hw-badge-zero              { background:#00838F; color:#fff; }
+    .hw-badge-standby           { background:#e0e0e0; color:#555; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -208,81 +132,42 @@
   <a id="support" data-i18n="settings.support.label" target="_blank"></a>
   <br><br>
 
-  <!-- TAB HEADERS -->
   <div class="tabs">
-    <div class="tab active" data-tab="baseload" id="tab-baseload"></div>
-    <div class="tab" data-tab="planning" id="tab-planning"></div>
-    <div class="tab" data-tab="explain">Battery Policy</div>
-    <div class="tab" data-tab="fetch">Device Fetch Debug</div>
-    <div class="tab" data-tab="discovery">Discovery Debug</div>
-    <div class="tab" data-tab="ws">WebSocket Debug</div>
-    <div class="tab" data-tab="legacy">Legacy Fetch</div>
+    <div class="tab active" data-tab="baseload"  id="tab-baseload"></div>
+    <div class="tab"        data-tab="planning"  id="tab-planning"></div>
+    <div class="tab"        data-tab="explain">Battery Policy</div>
+    <div class="tab"        data-tab="fetch">Device Fetch Debug</div>
+    <div class="tab"        data-tab="discovery">Discovery Debug</div>
+    <div class="tab"        data-tab="ws">WebSocket Debug</div>
+    <div class="tab"        data-tab="legacy">Legacy Fetch</div>
   </div>
 
   <!-- TAB: BASELOAD -->
   <div id="baseload" class="tab-content active">
     <h2>Sluipverbruik grafiek</h2>
-    
-    <!-- Cost estimate box -->
-    <div id="baseload-cost" style="
-      background: #f8f9fa;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 20px;
-      font-family: system-ui, -apple-system, sans-serif;
-    ">
-      <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Huidig sluipverbruik</div>
-      <div id="baseload-value" style="font-size: 28px; font-weight: bold; color: #212529; margin-bottom: 12px;">
-        Laden...
-      </div>
-      <div id="baseload-cost-details" style="font-size: 13px; color: #6c757d; line-height: 1.6;">
-        Berekening wordt uitgevoerd...
-      </div>
+    <div id="baseload-cost" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:15px;margin-bottom:20px;">
+      <div style="font-size:14px;color:#666;margin-bottom:8px;">Huidig sluipverbruik</div>
+      <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#212529;margin-bottom:12px;">Laden...</div>
+      <div id="baseload-cost-details" style="font-size:13px;color:#6c757d;line-height:1.6;">Berekening wordt uitgevoerd...</div>
     </div>
-
     <canvas id="baseloadChart" height="150"></canvas>
-
     <h3>Samples van geselecteerde nacht</h3>
     <select id="nightSelector"></select>
-
-    <button id="toggleSamplesBtn" style="
-      margin-top: 10px;
-      padding: 8px 14px;
-      font-size: 13px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      cursor: pointer;
-    ">
-      Toon samples
-    </button>
-
-    <div id="sampleContainer" style="display:none; margin-top:15px;">
+    <button id="toggleSamplesBtn" style="margin-top:10px;padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Toon samples</button>
+    <div id="sampleContainer" style="display:none;margin-top:15px;">
       <table id="sampleTable">
         <thead><tr><th>Tijd</th><th>Vermogen (W)</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
-
   </div>
 
-<!-- TAB: FETCH -->
-<div id="fetch" class="tab-content">
-  <h2>Device Fetch Debug</h2>
-
-  <pre id="fetch-debug" class="debug-box">Loading…</pre>
-
-  <button id="clear-fetch-btn" style="
-    margin-top: 10px;
-    padding: 8px 14px;
-    font-size: 13px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    cursor: pointer;
-  ">
-    Wis fetch-logs
-  </button>
-</div>
+  <!-- TAB: FETCH -->
+  <div id="fetch" class="tab-content">
+    <h2>Device Fetch Debug</h2>
+    <pre id="fetch-debug" class="debug-box">Loading…</pre>
+    <button id="clear-fetch-btn" style="margin-top:10px;padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Wis fetch-logs</button>
+  </div>
 
   <!-- TAB: DISCOVERY -->
   <div id="discovery" class="tab-content">
@@ -299,58 +184,47 @@
   <!-- TAB: BATTERY PLANNING -->
   <div id="planning" class="tab-content">
     <h2 id="planning-title"></h2>
-    <p id="planning-subtitle" style="color: #666; margin-bottom: 20px;"></p>
-    
-    <div id="planning-status" style="
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-bottom: 30px;
-      padding: 15px;
-      background: #f8f8f8;
-      border-radius: 8px;
-    "></div>
-    
-    <div style="
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      margin-bottom: 30px;
-      padding: 15px;
-      background: #f8f8f8;
-      border-radius: 8px;
-    " id="planning-legend"></div>
-    
-    <div id="planning-grid" style="
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 12px;
-    "></div>
+    <p id="planning-subtitle" style="color:#666;margin-bottom:20px;"></p>
+    <div id="planning-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;padding:15px;background:#f8f8f8;border-radius:8px;"></div>
+    <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#f8f8f8;border-radius:8px;"></div>
+    <div id="planning-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;"></div>
   </div>
 
   <!-- TAB: EXPLAINABILITY -->
   <div id="explain" class="tab-content">
     <h2>Battery Policy Explainability</h2>
-
-    <div id="explain-summary" style="margin-bottom: 15px; font-size: 14px;"></div>
+    <div id="explain-summary" style="margin-bottom:15px;font-size:14px;"></div>
+    <!-- ⭐ ARBITRAGE PANEL -->
+    <div id="arbitrage-panel" style="
+      margin: 15px 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #f7f7f7;
+      border: 1px solid #ddd;
+      font-size: 13px;
+      line-height: 1.4;
+    ">
+      <h3 style="margin-top:0;">⚡ Batterij Economie</h3>
+      <div>Gemiddelde kostprijs: <strong id="arb-avg">–</strong></div>
+      <div>Break-even prijs: <strong id="arb-be">–</strong></div>
+      <div>Huidige prijs: <strong id="arb-price">–</strong></div>
+      <div>Arbitrage: <strong id="arb-signal">–</strong></div>
+      <div>RTE: <strong id="arb-rte">–</strong></div>
+    </div>
 
     <h3>Redenen</h3>
-    <ul id="explain-reasons" style="padding-left: 20px;"></ul>
-
+    <ul id="explain-reasons" style="padding-left:20px;"></ul>
     <h3>Waarschuwingen</h3>
-    <ul id="explain-warnings" style="padding-left: 20px;"></ul>
-
+    <ul id="explain-warnings" style="padding-left:20px;"></ul>
     <h3>ML Decision Scores</h3>
-    <div id="explain-scores-visual" style="margin-bottom: 20px;"></div>
-    <details style="margin-bottom: 20px;">
-      <summary style="cursor: pointer; color: #666; font-size: 12px;">Toon raw scores (debug)</summary>
-      <pre id="explain-scores" class="debug-box" style="margin-top: 10px;"></pre>
+    <div id="explain-scores-visual" style="margin-bottom:20px;"></div>
+    <details style="margin-bottom:20px;">
+      <summary style="cursor:pointer;color:#666;font-size:12px;">Toon raw scores (debug)</summary>
+      <pre id="explain-scores" class="debug-box" style="margin-top:10px;"></pre>
     </details>
-
     <h3>Tijdstip</h3>
-    <div id="explain-timestamp" style="font-size: 12px; color: #666;"></div>
+    <div id="explain-timestamp" style="font-size:12px;color:#666;"></div>
   </div>
-
 
   <!-- TAB: LEGACY FETCH -->
   <div id="legacy" class="tab-content">
@@ -359,79 +233,267 @@
   </div>
 
   <script>
-    /* TAB SWITCHING */
+    /* ── TAB SWITCHING ── */
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab).classList.add('active');
       });
     });
 
-    /* HOMEY READY */
+    /* ══════════════════════════════════════════════════════════
+       hwMode DEFINITIONS
+       Maps every HomeWizard battery mode to icon + label + colour
+    ══════════════════════════════════════════════════════════ */
+    const HW_MODES = {
+      to_full: {
+        icon: '🔌',
+        nl: 'Laden (net)',
+        en: 'Charge (grid)',
+        cls: 'hw-to_full',
+        badge: 'hw-badge-to_full'
+      },
+      zero_charge_only: {
+        icon: '☀️',
+        nl: 'Laden (PV)',
+        en: 'Charge (PV)',
+        cls: 'hw-zero_charge_only',
+        badge: 'hw-badge-zero_charge_only'
+      },
+      zero_discharge_only: {
+        icon: '🔋',
+        nl: 'Ontladen',
+        en: 'Discharge',
+        cls: 'hw-zero_discharge_only',
+        badge: 'hw-badge-zero_discharge_only'
+      },
+      zero: {
+        icon: '🛡️',
+        nl: 'Peak Shaving',
+        en: 'Peak Shaving',
+        cls: 'hw-zero',
+        badge: 'hw-badge-zero'
+      },
+      standby: {
+        icon: '⏸️',
+        nl: 'Standby',
+        en: 'Standby',
+        cls: 'hw-standby',
+        badge: 'hw-badge-standby'
+      }
+    };
+
+    /* ══════════════════════════════════════════════════════════
+       LIGHTWEIGHT hwMode MAPPER
+       Mirrors PolicyEngine._mapPolicyToHwMode() logic so the
+       planning grid shows the ACTUAL mode the engine would pick,
+       not a simplified 3-state model.
+
+       policyMode : 'charge' | 'discharge' | 'preserve'
+       ctx        : { price, soc, minSoc, maxSoc, hasPV,
+                      tariffType, policyMode (user setting),
+                      maxChargePrice, minDischargePrice,
+                      batteryEfficiency, minProfitMargin,
+                      futureExpensiveAvgPrice }
+    ══════════════════════════════════════════════════════════ */
+    function mapToHwMode(policyMode, ctx) {
+      const {
+        price, soc, minSoc, maxSoc, hasPV,
+        tariffType, userPolicyMode,
+        maxChargePrice, minDischargePrice,
+        batteryEfficiency, minProfitMargin,
+        futureExpensiveAvgPrice
+      } = ctx;
+
+      const BREAKEVEN = 1 / batteryEfficiency;
+
+      const spreadProfitable = futureExpensiveAvgPrice !== null &&
+        (futureExpensiveAvgPrice * batteryEfficiency) - price > minProfitMargin;
+
+      const profitableToCharge = price !== null && (
+        // Below configured threshold with enough spread
+        (price <= maxChargePrice && spreadProfitable) ||
+        // Top-3 cheapest hour with profitable spread (catches night cheap hours)
+        (ctx.isCheap && spreadProfitable)
+      );
+
+      const profitableToDischarge = price !== null &&
+        price >= minDischargePrice &&
+        price >= (price * BREAKEVEN);   // always true when >= minDischarge
+
+      // ── ZERO / PEAK-SHAVING mode ──
+      if (userPolicyMode === 'zero') {
+        if (soc <= minSoc) return 'to_full';
+        if (soc >= maxSoc) return 'zero_discharge_only';
+        return 'zero';
+      }
+
+      // hasPV is only meaningful if price is actually cheap (≤ maxChargePrice)
+      // Otherwise daytime ≠ free PV surplus — it just means sun is up
+      const pvChargingWorthwhile = hasPV && (price === null || price <= maxChargePrice);
+
+      // ── DYNAMIC TARIFF ──
+      if (userPolicyMode === 'balanced' && tariffType === 'dynamic') {
+        if (policyMode === 'discharge') {
+          return profitableToDischarge ? 'zero_discharge_only' : 'standby';
+        }
+        if (policyMode === 'charge') {
+          if (profitableToCharge) return 'to_full';
+          if (pvChargingWorthwhile) return 'zero_charge_only';
+          return 'standby';
+        }
+        // preserve
+        if (futureExpensiveAvgPrice !== null) {
+          const profit = (futureExpensiveAvgPrice * batteryEfficiency) - price;
+          if (profit > minProfitMargin && soc < maxSoc - 10) return 'to_full';
+        }
+        if (pvChargingWorthwhile) return 'zero_charge_only';
+        return 'standby';
+      }
+
+      // ── FIXED TARIFF ──
+      if (tariffType === 'fixed') {
+        if (policyMode === 'discharge') return 'zero_discharge_only';
+        if (policyMode === 'charge') return pvChargingWorthwhile ? 'zero_charge_only' : 'to_full';
+        return pvChargingWorthwhile ? 'zero_charge_only' : 'standby';
+      }
+
+      // ── FALLBACK ──
+      return pvChargingWorthwhile ? 'zero_charge_only' : 'standby';
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       SIMPLE SCORE ENGINE
+       Replaces the old PlannerEngine with score-based logic that
+       mirrors PolicyEngine.calculatePolicy() at a high level.
+       Returns policyMode: 'charge' | 'discharge' | 'preserve'
+    ══════════════════════════════════════════════════════════ */
+    function scorePolicyMode(ctx) {
+      const {
+        price, isPeak, isCheap, hasSun, soc,
+        maxChargePrice, minDischargePrice,
+        batteryEfficiency, minProfitMargin,
+        futureExpensiveAvgPrice, maxSoc, minSoc
+      } = ctx;
+
+      const scores = { charge: 0, discharge: 0, preserve: 10 };
+      const BREAKEVEN = 1 / batteryEfficiency;
+
+      // SoC guards
+      if (soc >= maxSoc) { scores.discharge += 40; scores.charge = 0; }
+      if (soc <= minSoc)  { scores.charge += 100; scores.discharge = 0; }
+
+      if (price === null) {
+        // No price data
+        if (hasSun) scores.charge += 30;
+        else scores.preserve += 20;
+      } else {
+        // Ultra cheap / expensive overrides
+        if (price <= 0.05) { scores.charge += 50; scores.preserve -= 10; }
+        if (price >= 0.40) { scores.discharge += 50; scores.preserve -= 10; }
+
+        // Peak hours
+        if (isPeak) { scores.discharge += 300; scores.charge = 0; }
+
+        // Cheap hours — but prefer PV over net charging when sun available
+        if (isCheap) {
+          if (hasSun) {
+            scores.charge += 20;   // PV is free, net charge less urgent
+            scores.preserve += 30;
+          } else {
+            // Check if arbitrage is profitable
+            const profitPerKwh = futureExpensiveAvgPrice !== null
+              ? (futureExpensiveAvgPrice * batteryEfficiency) - price
+              : -1;
+            if (profitPerKwh > minProfitMargin) scores.charge += 100;
+            else if (profitPerKwh > 0)          scores.charge += 50;
+            else                                scores.preserve += 30;
+          }
+        }
+
+        // Threshold-based scoring
+        if (price <= maxChargePrice && !isCheap) {
+          const minProfitable = price * BREAKEVEN;
+          if (minDischargePrice >= minProfitable) {
+            scores.charge += hasSun ? 15 : 35;
+          } else {
+            scores.preserve += 20;
+          }
+        }
+
+        if (price >= minDischargePrice && price > maxChargePrice && !isPeak) {
+          scores.discharge += 30;
+        }
+
+        // PV: always prefer PV charging over grid standby during sun hours
+        if (hasSun && !isPeak) {
+          scores.charge += 40;   // will become zero_charge_only via hwMode mapper
+          scores.preserve -= 5;
+        }
+      }
+
+      // Select winner
+      let winner = 'preserve';
+      if (scores.charge > scores.preserve && scores.charge > scores.discharge) winner = 'charge';
+      if (scores.discharge > scores.preserve && scores.discharge > scores.charge)  winner = 'discharge';
+      return winner;
+    }
+
+    /* ── HOMEY READY ── */
     function onHomeyReady(Homey) {
-      document.getElementById('title').innerText = Homey.__('settings.title');
-      document.getElementById('changelog').innerText = Homey.__('settings.changelog.label');
-      document.getElementById('support').innerText = Homey.__('settings.support_label'); 
-      document.getElementById('support').href = Homey.__('settings.support_link');
-      document.getElementById('tab-baseload').innerText = Homey.__('settings.tab_baseload');
-      document.getElementById('tab-planning').innerText = Homey.__('settings.tab_planning');
-      document.getElementById('planning-title').innerText = Homey.__('settings.planning_title');
-      document.getElementById('planning-subtitle').innerText = Homey.__('settings.planning_subtitle');
+      document.getElementById('title').innerText            = Homey.__('settings.title');
+      document.getElementById('changelog').innerText        = Homey.__('settings.changelog.label');
+      document.getElementById('support').innerText          = Homey.__('settings.support_label');
+      document.getElementById('support').href               = Homey.__('settings.support_link');
+      document.getElementById('tab-baseload').innerText     = Homey.__('settings.tab_baseload');
+      document.getElementById('tab-planning').innerText     = Homey.__('settings.tab_planning');
+      document.getElementById('planning-title').innerText   = Homey.__('settings.planning_title');
+      document.getElementById('planning-subtitle').innerText= Homey.__('settings.planning_subtitle');
 
       Homey.get(async (err, settings) => {
         if (err) return;
 
-        /* ---- BASELOAD ---- */
+        /* ── BASELOAD ── */
         const state = settings['baseload_state'];
         const history = state?.nightHistory || [];
         const currentBaseload = state?.currentBaseload;
 
-        // Calculate and display cost estimate
         if (currentBaseload && typeof currentBaseload === 'number') {
-          // Use fixed €0.25/kWh estimate (prevents 15k users hammering APIs)
-          // Battery policy users will see more accurate pricing via their policy device
-          const avgPrice = 0.25;
-          
+          const avgPrice   = 0.25;
           const monthlyKwh = (currentBaseload / 1000) * 24 * 30;
-          const monthlyCost = monthlyKwh * avgPrice;
+          const monthlyCost= monthlyKwh * avgPrice;
           const yearlyCost = monthlyCost * 12;
-          
           document.getElementById('baseload-value').innerText = `${Math.round(currentBaseload)}W`;
           document.getElementById('baseload-cost-details').innerHTML = `
-            <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) = 
+            <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) =
             <strong>~€${monthlyCost.toFixed(2)}/maand</strong> (€${yearlyCost.toFixed(0)}/jaar)<br>
-            <span style="font-size: 12px; color: #999;">Typisch sluipverbruik: 200-300W</span>
+            <span style="font-size:12px;color:#999;">Typisch sluipverbruik: 200-300W</span>
           `;
         } else {
-          document.getElementById('baseload-value').innerText = 'Geen data';
+          document.getElementById('baseload-value').innerText      = 'Geen data';
           document.getElementById('baseload-cost-details').innerText = 'Sluipverbruik wordt nog berekend. Check morgen terug.';
         }
 
-        const labels = history.map(n => n.date);
-        const values = history.map(n => n.avg || null);
+        const labels  = history.map(n => n.date);
+        const values  = history.map(n => n.avg || null);
         const invalid = history.map(n => n.invalid);
-
-        const ctx = document.getElementById('baseloadChart').getContext('2d');
-        new Chart(ctx, {
+        const ctx2 = document.getElementById('baseloadChart').getContext('2d');
+        new Chart(ctx2, {
           type: 'line',
           data: {
             labels,
             datasets: [{
-              label: 'Watt',
-              data: values,
-              borderColor: 'rgba(0, 150, 255, 1)',
-              backgroundColor: 'rgba(0, 150, 255, 0.2)',
+              label: 'Watt', data: values,
+              borderColor: 'rgba(0,150,255,1)', backgroundColor: 'rgba(0,150,255,0.2)',
               spanGaps: true,
               pointBackgroundColor: invalid.map(v => v ? 'red' : 'green'),
-              pointRadius: 5,
+              pointRadius: 5
             }]
           }
         });
 
-        /* NIGHT SELECTOR */
         const selector = document.getElementById('nightSelector');
         history.forEach((n, i) => {
           const opt = document.createElement('option');
@@ -439,11 +501,7 @@
           opt.textContent = `${n.date} ${n.invalid ? '(ongeldig)' : ''}`;
           selector.appendChild(opt);
         });
-
-        selector.addEventListener('change', () => {
-          renderSamples(history[selector.value]);
-          // samples blijven verborgen tot gebruiker op knop klikt
-        });
+        selector.addEventListener('change', () => renderSamples(history[selector.value]));
 
         function renderSamples(night) {
           const tbody = document.querySelector('#sampleTable tbody');
@@ -455,78 +513,73 @@
           });
         }
 
-        const toggleBtn = document.getElementById('toggleSamplesBtn');
+        const toggleBtn       = document.getElementById('toggleSamplesBtn');
         const sampleContainer = document.getElementById('sampleContainer');
-
         toggleBtn.addEventListener('click', () => {
           const visible = sampleContainer.style.display === 'block';
-          sampleContainer.style.display = visible ? 'none' : 'block';
-          toggleBtn.textContent = visible ? 'Toon samples' : 'Verberg samples';
+          sampleContainer.style.display  = visible ? 'none' : 'block';
+          toggleBtn.textContent           = visible ? 'Toon samples' : 'Verberg samples';
         });
 
+        /* ── FETCH DEBUG ── */
+        const fetchBox = document.getElementById('fetch-debug');
+        function renderFetchDebug(s) {
+          const logs = s.debug_logs || [];
+          fetchBox.textContent = (!Array.isArray(logs) || logs.length === 0)
+            ? 'Geen fetch-logs beschikbaar.'
+            : logs.join('\n');
+          fetchBox.scrollTop = fetchBox.scrollHeight;
+        }
+        renderFetchDebug(settings);
 
-        /* ---- FETCH DEBUG (universeel) ---- */
-const fetchBox = document.getElementById('fetch-debug');
+        Homey.on('settings.set', changedKey => {
+          if (changedKey === 'debug_logs') {
+            Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
+          }
+          if (changedKey === 'battery_policy_state') {
+            Homey.get((e, s) => {
+              if (!e && document.getElementById('planning').classList.contains('active')) {
+                renderBatteryPlanning(s, Homey);
+              }
+            });
+          }
+        });
 
-function renderFetchDebug(settings) {
-  const logs = settings.debug_logs || [];
+        document.getElementById('clear-fetch-btn').addEventListener('click', () => {
+          Homey.set('debug_logs', []);
+        });
 
-  if (!Array.isArray(logs) || logs.length === 0) {
-    fetchBox.textContent = 'Geen fetch-logs beschikbaar.';
-    return;
-  }
-
-  fetchBox.textContent = logs.join('\n');
-  fetchBox.scrollTop = fetchBox.scrollHeight;
-}
-
-renderFetchDebug(settings);
-
-/* Live updates */
-Homey.on('settings.set', changedKey => {
-  if (changedKey === 'debug_logs') {
-    Homey.get((err, newSettings) => {
-      if (!err) renderFetchDebug(newSettings);
-    });
-  }
-  
-  // 🔋 Live update battery planning when state changes
-  if (changedKey === 'battery_policy_state') {
-    Homey.get((err, newSettings) => {
-      if (!err && document.getElementById('planning').classList.contains('active')) {
-        console.log('🔄 Battery state updated, refreshing planning...');
-        renderBatteryPlanning(newSettings, Homey);
-      }
-    });
-  }
-});
-
-/* Clear button */
-document.getElementById('clear-fetch-btn').addEventListener('click', () => {
-  Homey.set('debug_logs', []);
-});
-
-
-
-
-
-
-        /* ---- DISCOVERY ---- */
+        /* ── DISCOVERY ── */
         document.getElementById('discovery-debug').textContent =
           JSON.stringify(settings['debug_discovery'] || {}, null, 2);
 
-        /* ---- WEBSOCKET ---- */
+        /* ── WEBSOCKET ── */
         document.getElementById('ws-debug').textContent =
           JSON.stringify(settings['debug_ws']?.slice(-20) || [], null, 2);
 
-          /* ---- EXPLAINABILITY ---- */
+        /* ── EXPLAINABILITY ── */
         function renderExplainability(data) {
-          if (!data) {
-            document.getElementById('explain-summary').innerText = 'Nog geen analyse beschikbaar.';
-            return;
+          if (!data) { document.getElementById('explain-summary').innerText = 'Nog geen analyse beschikbaar.'; return; }
+          document.getElementById('explain-summary').innerText = data.summary;
+          /* ⭐ ARBITRAGE PANEL UPDATE ⭐ */
+          const avg = data?.batteryCost?.avgCost ?? null;
+          const be  = data?.batteryCost?.breakEven ?? null;
+          const price = data?.effectivePrice ?? null;
+          const rte = data?.batteryEfficiency ?? null;
+
+          if (avg !== null) document.getElementById('arb-avg').innerText = `€${avg.toFixed(3)}`;
+          if (be !== null)  document.getElementById('arb-be').innerText  = `€${be.toFixed(3)}`;
+          if (price !== null) document.getElementById('arb-price').innerText = `€${price.toFixed(3)}`;
+          if (rte !== null) document.getElementById('arb-rte').innerText = `${(rte*100).toFixed(0)}%`;
+
+          if (price !== null && be !== null) {
+            const diff = price - be;
+            document.getElementById('arb-signal').innerText =
+              diff > 0.01 ? `Ontladen (+€${diff.toFixed(3)}/kWh)` :
+              diff < -0.01 ? `Laden (–€${Math.abs(diff).toFixed(3)}/kWh)` :
+                            'Rond break-even';
           }
 
-          document.getElementById('explain-summary').innerText = data.summary;
 
           const reasonsList = document.getElementById('explain-reasons');
           reasonsList.innerHTML = '';
@@ -544,302 +597,242 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
             warningsList.appendChild(li);
           });
 
-          // Visual scores with progress bars
           const scoresVisual = document.getElementById('explain-scores-visual');
           if (data.scores) {
-            const scores = data.scores;
-            const maxScore = Math.max(scores.charge || 0, scores.discharge || 0, scores.preserve || 0);
-            const winner = maxScore === scores.charge ? 'charge' : 
-                          maxScore === scores.discharge ? 'discharge' : 'preserve';
-            
-            const scoreLabels = {
-              charge: '🔌 Laden',
-              discharge: '⚡ Ontladen', 
-              preserve: '🛡️ Beschermen'
-            };
-            
-            const scoreColors = {
-              charge: '#4CAF50',
-              discharge: '#2196F3',
-              preserve: '#FF9800'
-            };
-            
-            scoresVisual.innerHTML = ['charge', 'discharge', 'preserve'].map(mode => {
-              const score = scores[mode] || 0;
-              const percentage = maxScore > 0 ? (score / maxScore * 100) : 0;
-              const isWinner = mode === winner;
-              
+            const s = data.scores;
+            const maxScore = Math.max(s.charge||0, s.discharge||0, s.preserve||0);
+            const winner   = maxScore === s.charge ? 'charge' : maxScore === s.discharge ? 'discharge' : 'preserve';
+            const labels   = { charge:'🔌 Laden', discharge:'⚡ Ontladen', preserve:'🛡️ Beschermen' };
+            const colors   = { charge:'#4CAF50', discharge:'#2196F3', preserve:'#FF9800' };
+            scoresVisual.innerHTML = ['charge','discharge','preserve'].map(mode => {
+              const score = s[mode] || 0;
+              const pct   = maxScore > 0 ? (score / maxScore * 100) : 0;
+              const isW   = mode === winner;
               return `
-                <div style="margin-bottom: 15px;">
-                  <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="font-weight: ${isWinner ? 'bold' : 'normal'}; font-size: 14px;">
-                      ${scoreLabels[mode]} ${isWinner ? '✓' : ''}
-                    </span>
-                    <span style="font-family: monospace; font-size: 13px; color: #666;">
-                      ${score.toFixed(1)}
-                    </span>
+                <div style="margin-bottom:15px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                    <span style="font-weight:${isW?'bold':'normal'};font-size:14px;">${labels[mode]}${isW?' ✓':''}</span>
+                    <span style="font-family:monospace;font-size:13px;color:#666;">${score.toFixed(1)}</span>
                   </div>
-                  <div style="background: #e0e0e0; border-radius: 4px; height: 24px; overflow: hidden; position: relative;">
-                    <div style="
-                      background: ${scoreColors[mode]};
-                      width: ${percentage}%;
-                      height: 100%;
-                      transition: width 0.3s ease;
-                      ${isWinner ? 'box-shadow: 0 0 8px rgba(0,0,0,0.3);' : ''}
-                    "></div>
+                  <div style="background:#e0e0e0;border-radius:4px;height:24px;overflow:hidden;">
+                    <div style="background:${colors[mode]};width:${pct}%;height:100%;transition:width .3s ease;${isW?'box-shadow:0 0 8px rgba(0,0,0,.3);':''}"></div>
                   </div>
-                </div>
-              `;
+                </div>`;
             }).join('');
           } else {
-            scoresVisual.innerHTML = '<p style="color: #999;">Geen scores beschikbaar</p>';
+            scoresVisual.innerHTML = '<p style="color:#999;">Geen scores beschikbaar</p>';
           }
 
-          // Raw scores (collapsible)
-          document.getElementById('explain-scores').textContent =
-            JSON.stringify(data.scores, null, 2);
-
-          document.getElementById('explain-timestamp').innerText =
-            `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
+          document.getElementById('explain-scores').textContent     = JSON.stringify(data.scores, null, 2);
+          document.getElementById('explain-timestamp').innerText    = `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
         }
 
-        /* Load initial explainability */
         let explainRaw = settings['policy_explainability'];
-        let explainObj = null;
+        try { renderExplainability(typeof explainRaw === 'string' ? JSON.parse(explainRaw) : explainRaw); }
+        catch (e) { console.error('Failed to parse explainability:', e); }
 
-        try {
-          explainObj = typeof explainRaw === 'string'
-            ? JSON.parse(explainRaw)
-            : explainRaw;
-        } catch (e) {
-          console.error('Failed to parse explainability:', e);
-        }
+        Homey.on('explainability_update', data => renderExplainability(data));
 
-        renderExplainability(explainObj);
-
-
-        /* Live updates */
-        Homey.on('explainability_update', data => {
-          renderExplainability(data);
-        });
-
-
-        /* ---- LEGACY FETCH ---- */
+        /* ── LEGACY FETCH ── */
         document.getElementById('legacyfetch-debug').textContent =
           JSON.stringify(settings['debug_legacy_fetch']?.slice(-50) || [], null, 2);
 
-        /* ---- BATTERY PLANNING ---- */
+        /* ── BATTERY PLANNING ── */
         await renderBatteryPlanning(settings, Homey);
-        
-        // Auto-refresh planning every 5 minutes
-        setInterval(async () => {
-          Homey.get((err, newSettings) => {
-            if (!err) {
-              renderBatteryPlanning(newSettings, Homey);
-            }
-          });
-        }, 5 * 60 * 1000); // 5 minutes
+
+        setInterval(() => {
+          Homey.get((e, s) => { if (!e) renderBatteryPlanning(s, Homey); });
+        }, 5 * 60 * 1000);
 
         Homey.ready();
       });
     }
-    
-    /* BATTERY PLANNING RENDERER (UPDATED: PlannerEngine-aware) */
+
+    /* ══════════════════════════════════════════════════════════
+       BATTERY PLANNING RENDERER
+       Uses hwMode-aware mapper instead of old PlannerEngine
+    ══════════════════════════════════════════════════════════ */
     async function renderBatteryPlanning(settings, Homey) {
-      const currentHour = new Date().getHours();
-      const lang = await Homey.getLanguage();
-      
-      // Get policy data
+      const now         = new Date();
+      const lang        = await Homey.getLanguage();
       const policyState = settings['battery_policy_state'];
-      const currentSOC = policyState?.batterySOC ?? 50;
-      
-      // Get settings for PlannerEngine
-      const policySettings = {
-        battery_efficiency: settings['battery_efficiency'] || 0.75,
-        min_profit_margin: settings['min_profit_margin'] ?? 0.02,
-        max_charge_price: settings['max_charge_price'] || 0.15,
-        min_discharge_price: settings['min_discharge_price'] || 0.30,
-        min_soc: settings['min_soc'] || 10,
-        max_soc: settings['max_soc'] || 95,
-        tariff_type: settings['tariff_type'] || 'dynamic'
-      };
-      
-      // Initialize PlannerEngine
-      const planner = new PlannerEngine(policySettings);
-      
-      let policyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
-      if (policyMode === 'balanced' || policyMode === 'balanced-fixed' || policyMode === 'balanced-dynamic') {
-        policyMode = 'balanced';
+      const currentSOC  = policyState?.batterySOC ?? 50;
+
+      /* ── Engine settings ── */
+      const battEff      = settings['battery_efficiency']    || 0.75;
+      const minProfit    = settings['min_profit_margin']     ?? 0.02;
+      const maxChgPrice  = settings['max_charge_price']      || 0.15;
+      const minDchPrice  = settings['min_discharge_price']   || 0.30;
+      const minSoc       = settings['min_soc']               || 10;
+      const maxSoc       = settings['max_soc']               || 95;
+      const tariffType   = settings['tariff_type']           || 'dynamic';
+
+      let userPolicyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
+      if (['balanced','balanced-fixed','balanced-dynamic'].includes(userPolicyMode)) {
+        userPolicyMode = 'balanced';
       }
-      
-      // Get all hourly prices
+
+      /* ── Prices ── */
       const allPrices = settings['policy_all_prices'] || [];
-      console.log('🔍 All prices:', allPrices.length, 'entries');
-      
-      const priceMap = {};
+      const priceMap  = {};
       allPrices.forEach(p => {
         if (p && typeof p.price === 'number') {
           const key = typeof p.index === 'number' ? p.index : p.hour;
           priceMap[key] = p.price;
         }
       });
-      
-      // Calculate price statistics
-      let priceValues = Object.values(priceMap).filter(p => typeof p === 'number' && p > 0);
-      let avgPrice = priceValues.length > 0 ? priceValues.reduce((a, b) => a + b) / priceValues.length : 0.25;
-      let minPrice = priceValues.length > 0 ? Math.min(...priceValues) : 0.15;
-      let maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : 0.35;
-      
-      // Get top-3 badges
-      let policyDebugTop3High = settings['policy_debug_top3high'] || '';
-      let policyDebugTop3Low = settings['policy_debug_top3low'] || '';
-      
-      let peakHours = new Set();
-      if (policyDebugTop3High) {
-        const match = policyDebugTop3High.match(/\[(.*?)\]/);
-        if (match) {
-          match[1].split(',').forEach(entry => {
-            const hourMatch = entry.trim().match(/(\d+):00/);
-            if (hourMatch) peakHours.add(parseInt(hourMatch[1]));
-          });
-        }
-      }
-      
-      let cheapHoursSet = new Set();
-      if (policyDebugTop3Low) {
-        const match = policyDebugTop3Low.match(/\[(.*?)\]/);
-        if (match) {
-          match[1].split(',').forEach(entry => {
-            const hourMatch = entry.trim().match(/(\d+):00/);
-            if (hourMatch) cheapHoursSet.add(parseInt(hourMatch[1]));
-          });
-        }
-      }
-      
-      // Get sunshine forecast
-      let weatherHourly = settings['policy_weather_hourly'] || [];
-      let sunshineMap = {};
-      weatherHourly.forEach(w => {
+
+      /* ── Peak / cheap hour sets ── */
+      const peakHours     = new Set();
+      const cheapHoursSet = new Set();
+      const parseTop3 = (str, target) => {
+        if (!str) return;
+        const m = str.match(/\[(.*?)\]/);
+        if (m) m[1].split(',').forEach(e => {
+          const hm = e.trim().match(/(\d+):00/);
+          if (hm) target.add(parseInt(hm[1]));
+        });
+      };
+      parseTop3(settings['policy_debug_top3high'], peakHours);
+      parseTop3(settings['policy_debug_top3low'],  cheapHoursSet);
+
+      /* ── Sunshine forecast ── */
+      const sunshineMap = {};
+      (settings['policy_weather_hourly'] || []).forEach(w => {
         if (w && typeof w.hour === 'number' && typeof w.sunshine === 'number') {
           sunshineMap[w.hour] = w.sunshine;
         }
       });
-      
-      // Generate 48-hour view
-      let hours = [];
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-      
+
+      /* ── Future expensive average (for preserve→charge decisions) ── */
+      const priceValues = Object.values(priceMap).filter(p => typeof p === 'number' && p > 0);
+      const avgAllPrices = priceValues.length
+        ? priceValues.reduce((a, b) => a + b, 0) / priceValues.length : 0.25;
+
+      const futureExpensiveHours = allPrices.filter(p =>
+        p && typeof p.price === 'number' && p.price >= minDchPrice
+      );
+      const futureExpensiveAvgPrice = futureExpensiveHours.length
+        ? futureExpensiveHours.reduce((s, h) => s + h.price, 0) / futureExpensiveHours.length
+        : null;
+
+      /* ── Battery power limits ── */
+      const maxDischW  = policyState?.maxDischargePowerW || 800;
+      const maxChgW    = policyState?.maxChargePowerW    || 800;
+      const capKwh     = policyState?.totalCapacityKwh   || 2.8;
+
+      /* ── Build 48-hour array ── */
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const hours      = [];
+
       for (let day = 0; day < 2; day++) {
         for (let h = 0; h < 24; h++) {
-          const hourDate = new Date(todayStart);
+          const hourDate    = new Date(todayStart);
           hourDate.setDate(todayStart.getDate() + day);
           hourDate.setHours(h);
-          
-          const hoursFromNow = Math.floor((hourDate - now) / (1000 * 60 * 60));
-          const price = priceMap[hoursFromNow] !== undefined ? priceMap[hoursFromNow] : null;
-          const priceKnown = priceMap[hoursFromNow] !== undefined;
-          
-          const hasSunshine = sunshineMap[h] > 0.3;
-          
-          const hourEndDate = new Date(hourDate.getTime() + 3600 * 1000);
-          const isPast = hourEndDate <= now;
-          const isCurrent = !isPast && hourDate <= now && hourEndDate > now;
-          
-          hours.push({ 
-            hour: h,
-            dayOffset: day,
-            hoursFromNow,
-            price, 
-            priceKnown,
-            mode: 'standby', // Will be set by PlannerEngine
-            soc: 0, 
-            pv: 0, 
-            isCurrent,
-            isPast,
+          const hourEnd     = new Date(hourDate.getTime() + 3600_000);
+          const hoursFromNow= Math.floor((hourDate - now) / 3_600_000);
+          const price       = priceMap[hoursFromNow] !== undefined ? priceMap[hoursFromNow] : null;
+          const priceKnown  = priceMap[hoursFromNow] !== undefined;
+
+          // Sun: weather data OR daylight fallback (07:00–19:00)
+          const hasSun = (sunshineMap[h] > 0.3) ||
+                         (!Object.keys(sunshineMap).length && h >= 7 && h < 19);
+
+          const isPast    = hourEnd <= now;
+          const isCurrent = !isPast && hourDate <= now && hourEnd > now;
+
+          hours.push({
+            hour: h, dayOffset: day, hoursFromNow,
+            price, priceKnown, hasSun,
+            isCurrent, isPast,
             isPeak: peakHours.has(h),
             isCheap: cheapHoursSet.has(h),
-            hasSun: hasSunshine
+            soc: 0, hwMode: 'standby', policyMode: 'preserve'
           });
         }
       }
-      
-      // Project SoC forward
-      const maxDischargePowerW = policyState?.maxDischargePowerW || 800;
-      const maxChargePowerW = policyState?.maxChargePowerW || 800;
-      const totalCapacityKwh = policyState?.totalCapacityKwh || 2.8;
-      
-      const currentIndex = hours.findIndex(h => h.isCurrent);
-      if (currentIndex >= 0) {
-        hours[currentIndex].soc = currentSOC;
-        
-        // Use PlannerEngine to determine mode for each hour and project SoC
-        for (let i = currentIndex; i < hours.length; i++) {
+
+      /* ── Project SoC forward & derive hwMode ── */
+      const curIdx = hours.findIndex(h => h.isCurrent);
+      if (curIdx >= 0) {
+        hours[curIdx].soc = currentSOC;
+
+        for (let i = curIdx; i < hours.length; i++) {
           const hour = hours[i];
-          
-          if (i > currentIndex) {
-            const prevHour = hours[i - 1];
-            let socChange = 0;
-            
-            if (prevHour.mode === 'discharge') {
-              socChange = -(maxDischargePowerW / 1000 / totalCapacityKwh) * 100;
-            } else if (prevHour.mode === 'charge') {
-              socChange = (maxChargePowerW / 1000 / totalCapacityKwh) * 100;
-            } else if (prevHour.mode === 'pv_only') {
-              socChange = (maxChargePowerW * 0.5 / 1000 / totalCapacityKwh) * 100;
-            }
-            
-            hour.soc = Math.max(10, Math.min(100, prevHour.soc + socChange));
+
+          // Update SoC from previous hour's mode
+          if (i > curIdx) {
+            const prev = hours[i - 1];
+            let delta  = 0;
+            if (prev.hwMode === 'to_full')               delta = +(maxChgW  / 1000 / capKwh) * 100;
+            else if (prev.hwMode === 'zero_charge_only') delta = +(maxChgW * 0.5 / 1000 / capKwh) * 100;
+            else if (prev.hwMode === 'zero_discharge_only') delta = -(maxDischW / 1000 / capKwh) * 100;
+            else if (prev.hwMode === 'zero')             delta = -(maxDischW * 0.5 / 1000 / capKwh) * 100;
+            hour.soc = Math.max(minSoc, Math.min(100, prev.soc + delta));
           }
-          
-          // Get recommendation from PlannerEngine
-          if (hour.priceKnown) {
-            hour.mode = planner.getRecommendationForHour({
-              hour: hour.hour,
-              price: hour.price,
-              isPeak: hour.isPeak,
-              isCheap: hour.isCheap,
-              hasSun: hour.hasSun,
-              projectedSOC: hour.soc,
-              hoursFromNow: hour.hoursFromNow
-            }, allPrices);
-          } else {
-            // No price data → fallback
-            hour.mode = hour.hasSun ? 'pv_only' : 'standby';
+
+          // Current hour: use ACTUAL hwMode from policyState (ground truth)
+          if (hour.isCurrent && policyState?.currentMode) {
+            hour.hwMode     = policyState.currentMode;
+            hour.policyMode = policyState.policyMode || 'preserve';
+            continue;
           }
+
+          /* Score → policyMode */
+          const scoreCtx = {
+            price: hour.price, isPeak: hour.isPeak, isCheap: hour.isCheap,
+            hasSun: hour.hasSun, soc: hour.soc,
+            maxChargePrice: maxChgPrice, minDischargePrice: minDchPrice,
+            batteryEfficiency: battEff, minProfitMargin: minProfit,
+            futureExpensiveAvgPrice,
+            maxSoc, minSoc
+          };
+          hour.policyMode = scorePolicyMode(scoreCtx);
+
+          /* policyMode + context → hwMode */
+          const mapCtx = {
+            price: hour.price, soc: hour.soc, minSoc, maxSoc,
+            hasPV: hour.hasSun,
+            tariffType, userPolicyMode,
+            maxChargePrice: maxChgPrice, minDischargePrice: minDchPrice,
+            batteryEfficiency: battEff, minProfitMargin: minProfit,
+            futureExpensiveAvgPrice,
+            isCheap: hour.isCheap
+          };
+          hour.hwMode = hour.priceKnown || hour.hasSun
+            ? mapToHwMode(hour.policyMode, mapCtx)
+            : (hour.hasSun ? 'zero_charge_only' : 'standby');
         }
-        
-        // For past hours, use currentSOC
-        for (let i = 0; i < currentIndex; i++) {
-          hours[i].soc = currentSOC;
-          hours[i].mode = 'standby'; // Past hours are immaterial
+
+        // Past hours: greyed out, no mode decision needed
+        for (let i = 0; i < curIdx; i++) {
+          hours[i].soc    = currentSOC;
+          hours[i].hwMode = 'standby';
         }
       }
-      
-      // PV forecast
-      for (let i = 0; i < hours.length; i++) {
-        const hour = hours[i];
-        hour.pv = (hour.hour >= 8 && hour.hour <= 17) 
-          ? Math.max(0, 3.5 * (1 - Math.abs(hour.hour - 12.5) / 5)) 
+
+      /* ── PV estimate (cosmetic, shown in card details) ── */
+      hours.forEach(h => {
+        h.pv = (h.hour >= 8 && h.hour <= 17)
+          ? Math.max(0, 3.5 * (1 - Math.abs(h.hour - 12.5) / 5))
           : 0;
-      }
-      
-      // Render status bar
-      const hoursWithKnownPrices = hours.filter(h => h.priceKnown);
-      let avgKnownPrice = hoursWithKnownPrices.length > 0 
-        ? (hoursWithKnownPrices.reduce((sum, h) => sum + h.price, 0) / hoursWithKnownPrices.length).toFixed(3)
+      });
+
+      /* ── Status bar ── */
+      const knownPriceHours = hours.filter(h => h.priceKnown);
+      const avgKnownPrice   = knownPriceHours.length
+        ? (knownPriceHours.reduce((s, h) => s + h.price, 0) / knownPriceHours.length).toFixed(3)
         : '?';
-      const cheapHoursCount = hours.filter(h => h.isCheap).length;
-      const peakHoursCount = hours.filter(h => h.isPeak).length;
-      
-      const policyModeLabel = policyMode === 'zero' 
-        ? (lang === 'nl' ? 'Peak Shaving' : 'Peak Shaving')
+
+      const policyModeLabel = userPolicyMode === 'zero'
+        ? 'Peak Shaving'
         : (lang === 'nl' ? 'Dynamisch Tarief' : 'Dynamic Pricing');
-      
+
       document.getElementById('planning-status').innerHTML = `
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Policy Modus' : 'Policy Mode'}</div>
-          <div class="planning-status-value" style="font-size: 16px;">${policyModeLabel}</div>
+          <div class="planning-status-value" style="font-size:16px;">${policyModeLabel}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Huidige SoC' : 'Current SoC'}</div>
@@ -850,92 +843,94 @@ document.getElementById('clear-fetch-btn').addEventListener('click', () => {
           <div class="planning-status-value">€${avgKnownPrice}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${policyMode === 'zero' ? (lang === 'nl' ? 'Piek Uren' : 'Peak Hours') : (lang === 'nl' ? 'Goedkope Uren' : 'Cheap Hours')}</div>
-          <div class="planning-status-value">${policyMode === 'zero' ? peakHoursCount : cheapHoursCount} ${lang === 'nl' ? 'uur' : 'hrs'}</div>
+          <div class="planning-status-label">${lang === 'nl' ? 'Goedkope uren' : 'Cheap hours'}</div>
+          <div class="planning-status-value">${cheapHoursSet.size} ${lang === 'nl' ? 'uur' : 'hrs'}</div>
         </div>
       `;
-      
-      // Render legend (same as before)
-      const legends = lang === 'nl' ? {
-        charge: 'Laden', discharge: 'Ontladen', pv: 'Alleen PV', 
-        standby: 'Standby', cheap: 'Lage prijs', expensive: 'Hoge prijs', current: 'Huidig uur'
-      } : {
-        charge: 'Charge', discharge: 'Discharge', pv: 'PV only',
-        standby: 'Standby', cheap: 'Low price', expensive: 'High price', current: 'Current hour'
-      };
-      
-      document.getElementById('planning-legend').innerHTML = `
-        <div class="planning-legend-item"><div class="planning-legend-icon">⚡</div><div>${legends.charge}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon">☀️</div><div>${legends.pv}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon">🔋</div><div>${legends.discharge}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon">⏸️</div><div>${legends.standby}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon" style="background: linear-gradient(90deg, #c8e6c9, transparent); width: 32px; height: 20px; border-radius: 4px;"></div><div>${legends.cheap}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon" style="background: linear-gradient(90deg, #ffcdd2, transparent); width: 32px; height: 20px; border-radius: 4px;"></div><div>${legends.expensive}</div></div>
-        <div class="planning-legend-item"><div class="planning-legend-icon" style="border: 2px solid #4CAF50; width: 32px; height: 20px; border-radius: 4px;"></div><div>${legends.current}</div></div>
-      `;
-      
-      // Render hour cards
-      const knownPrices = hours.filter(h => h.priceKnown).map(h => h.price);
-      let minKnownPrice = knownPrices.length > 0 ? Math.min(...knownPrices) : 0;
-      let maxKnownPrice = knownPrices.length > 0 ? Math.max(...knownPrices) : 1;
-      let priceRangeKnown = maxKnownPrice - minKnownPrice;
-      
-      const modeIcons = {
-        charge: '⚡', discharge: '🔋', pv_only: '☀️', standby: '⏸️'
-      };
-      
-      const modeTexts = lang === 'nl' ? {
-        charge: 'Laden', discharge: 'Ontladen', pv_only: 'PV', standby: 'Standby'
-      } : {
-        charge: 'Charge', discharge: 'Discharge', pv_only: 'PV', standby: 'Standby'
-      };
-      
-      document.getElementById('planning-grid').innerHTML = hours.map((hour, index) => {
-        const priceNorm = priceRangeKnown > 0 ? (hour.price - minKnownPrice) / priceRangeKnown : 0.5;
-        const priceClass = priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '';
-        const modeIcon = modeIcons[hour.mode] || '⏸️';
-        const modeText = modeTexts[hour.mode] || hour.mode;
-        
+
+      /* ── Legend (hwMode-based) ── */
+      const legendItems = [
+        'to_full', 'zero_charge_only', 'zero_discharge_only', 'zero', 'standby'
+      ];
+      document.getElementById('planning-legend').innerHTML = legendItems.map(mode => {
+        const m = HW_MODES[mode];
+        return `
+          <div class="planning-legend-item">
+            <div class="planning-legend-icon">${m.icon}</div>
+            <div>
+              <strong>${lang === 'nl' ? m.nl : m.en}</strong>
+              <div style="font-size:11px;color:#999;font-family:monospace;">${mode}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      /* ── Hour cards ── */
+      const knownPrices    = hours.filter(h => h.priceKnown).map(h => h.price);
+      const minKnownPrice  = knownPrices.length ? Math.min(...knownPrices) : 0;
+      const maxKnownPrice  = knownPrices.length ? Math.max(...knownPrices) : 1;
+      const priceRange     = maxKnownPrice - minKnownPrice || 1;
+
+      document.getElementById('planning-grid').innerHTML = hours.map(hour => {
+        const priceNorm  = hour.priceKnown ? (hour.price - minKnownPrice) / priceRange : 0.5;
+        const priceClass = hour.priceKnown
+          ? (priceNorm < 0.33 ? 'cheap' : priceNorm > 0.66 ? 'expensive' : '')
+          : 'unknown';
+
+        const hwDef      = HW_MODES[hour.hwMode] || HW_MODES.standby;
+        const modeLabel  = lang === 'nl' ? hwDef.nl : hwDef.en;
+
+        /* Day marker */
         let dayMarker = '';
         if (hour.hour === 0) {
-          const dayDate = new Date();
-          dayDate.setDate(dayDate.getDate() + hour.dayOffset);
-          const dayName = lang === 'nl' 
-            ? ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'][dayDate.getDay()]
-            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayDate.getDay()];
-          const dateStr = dayDate.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
-          const label = hour.dayOffset === 0 ? (lang === 'nl' ? 'Vandaag' : 'Today') : (lang === 'nl' ? 'Morgen' : 'Tomorrow');
+          const d       = new Date();
+          d.setDate(d.getDate() + hour.dayOffset);
+          const dayName = (lang === 'nl'
+            ? ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag']
+            : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+          )[d.getDay()];
+          const dateStr = d.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month:'long', day:'numeric' });
+          const label   = hour.dayOffset === 0
+            ? (lang === 'nl' ? 'Vandaag' : 'Today')
+            : (lang === 'nl' ? 'Morgen'  : 'Tomorrow');
           dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}</div>`;
         }
-        
+
+        /* Peak / cheap badge — only show when action actually triggers */
+        const badgeSpread = futureExpensiveAvgPrice !== null && hour.price !== null
+          ? (futureExpensiveAvgPrice * battEff) - hour.price
+          : -1;
+        const badgeProfitableToCharge = hour.isCheap && badgeSpread > minProfit;
+        const badgeProfitableToDischarge = hour.isPeak && hour.price !== null && hour.price >= minDchPrice;
+
         let badge = '';
-        if (hour.isPeak) {
-          badge = `<span style="position: absolute; top: 2px; right: 2px; background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${lang === 'nl' ? 'PIEK' : 'PEAK'}</span>`;
-        } else if (hour.isCheap) {
-          badge = `<span style="position: absolute; top: 2px; right: 2px; background: #4CAF50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">${lang === 'nl' ? 'GOEDKOOP' : 'CHEAP'}</span>`;
+        if (badgeProfitableToDischarge) {
+          badge = `<span style="position:absolute;top:2px;right:2px;background:#f44336;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">${lang==='nl'?'PIEK':'PEAK'}</span>`;
+        } else if (badgeProfitableToCharge) {
+          badge = `<span style="position:absolute;top:2px;right:2px;background:#4CAF50;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">${lang==='nl'?'LADEN':'CHARGE'}</span>`;
         }
-        
+
         const priceDisplay = hour.priceKnown ? `€${hour.price.toFixed(3)}` : '?';
-        const priceClass2 = hour.priceKnown ? priceClass : 'unknown';
-        const pastStyle = hour.isPast ? 'opacity: 0.4; filter: grayscale(60%);' : '';
-        
+        const pastStyle    = hour.isPast ? 'opacity:0.4;filter:grayscale(60%);' : '';
+
         return `
           ${dayMarker}
-          <div class="planning-hour-card ${priceClass2} ${hour.isCurrent ? 'current' : ''}" style="position: relative; ${pastStyle}">
+          <div class="planning-hour-card ${priceClass} ${hour.isCurrent ? 'current' : ''} hw-${hour.hwMode}"
+               style="${pastStyle}">
             ${badge}
-            <div class="planning-hour-time">${hour.hour.toString().padStart(2, '0')}:00</div>
+            <div class="planning-hour-time">${hour.hour.toString().padStart(2,'0')}:00</div>
             <div class="planning-hour-price">${priceDisplay}</div>
-            <div class="planning-hour-mode">${modeIcon}</div>
-            <div class="planning-hour-mode-text">${modeText}</div>
+            <div class="planning-hour-mode">${hwDef.icon}</div>
+            <div class="planning-hour-mode-text">${modeLabel}</div>
+            <span class="hw-badge ${hwDef.badge}">${hour.hwMode}</span>
             <div class="planning-hour-details">
               SoC: ${hour.soc.toFixed(0)}%<br>
-              ${hour.pv > 0.5 ? `PV: ${hour.pv.toFixed(1)} kW` : ''}
+              ${hour.pv > 0.5 ? `PV: ~${hour.pv.toFixed(1)} kW<br>` : ''}
+              ${hour.priceKnown ? `<span style="color:${hour.price !== null && futureExpensiveAvgPrice !== null && (futureExpensiveAvgPrice * battEff) - hour.price > minProfit ? '#4CAF50' : '#bbb'};">be: €${(hour.price / battEff).toFixed(3)}</span>` : ''}
             </div>
-          </div>
-        `;
+          </div>`;
       }).join('');
-      
-      console.log('✅ Planning rendered with PlannerEngine:', hours.length, 'hours');
+
+      console.log('✅ Planning rendered (hwMode-aware):', hours.length, 'hours');
     }
   </script>
 

@@ -8,6 +8,8 @@ const ExplainabilityEngine = require('../../lib/explainability-engine');
 const SunMultiSource = require('../../lib/sun-multisource');
 const LearningEngine = require('../../lib/learning-engine');
 const BatteryChartGenerator = require('../../lib/battery-chart-generator');
+const EfficiencyEstimator = require('../../lib/efficiency-estimator');
+
 
 class BatteryPolicyDevice extends Homey.Device {
 
@@ -25,6 +27,8 @@ class BatteryPolicyDevice extends Homey.Device {
     
     // Initialize learning engine
     await this.learningEngine.initialize();
+    this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
+
 
     // State
     this.p1Device = null;
@@ -244,6 +248,23 @@ class BatteryPolicyDevice extends Homey.Device {
 
         const gridPower =
           this.p1Device.getCapabilityValue('measure_power') ?? 0;
+
+        const batteryPower =
+          this.p1Device.getCapabilityValue('battery_power') ?? 0;
+
+        await this._updateBatteryCostModel({
+          batteryPower,
+          gridPower,
+          pvState: this._pvState
+        });
+
+
+        // Efficiency learning
+        this.efficiencyEstimator.update(
+          { gridPower, batteryPower },
+          { battery_power: batteryPower }
+        );
+
 
         const currentSoc = this.getCapabilityValue('battery_soc_mirror');
         const currentPower = this.getCapabilityValue('grid_power_mirror');
@@ -846,6 +867,20 @@ class BatteryPolicyDevice extends Homey.Device {
       pv_power_estimated: pvEstimateW
     };
 
+    // ------------------------------------------------------
+    // ⭐ BATTERY COST MODEL INPUTS
+    // ------------------------------------------------------
+    const batteryAvgCost = await this.getStoreValue('battery_avg_cost') || 0;
+    const batteryEnergyKwh = await this.getStoreValue('battery_energy_kwh') || 0;
+
+    const batteryEfficiency = this.efficiencyEstimator.getEfficiency() || 0.80;
+
+    // Break-even prijs (€/kWh)
+    const breakEven = batteryAvgCost > 0
+      ? batteryAvgCost / batteryEfficiency
+      : 0;
+
+
     return {
       weather: (settings.tariff_type === 'dynamic') ? weatherData : null,
       battery: batteryState,
@@ -854,8 +889,17 @@ class BatteryPolicyDevice extends Homey.Device {
       policyMode: this.getCapabilityValue('policy_mode'),
       settings,
       p1,
-      sun
+      sun,
+      batteryEfficiency: this.efficiencyEstimator.getEfficiency(),
+
+      // ⭐ NEW: Battery cost model
+      batteryCost: {
+        avgCost: batteryAvgCost,
+        energyKwh: batteryEnergyKwh,
+        breakEven
+      }
     };
+
   }
 
   _applyWeatherOverride(weatherData, override) {
@@ -1210,6 +1254,49 @@ class BatteryPolicyDevice extends Homey.Device {
       this.error('Failed to update planning chart:', err);
     }
   }
+
+
+  async _updateBatteryCostModel({ batteryPower, gridPower, pvState }) {
+  const intervalSeconds = 5;
+  const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
+
+  if (deltaKwh === 0) return;
+
+  let costNew;
+
+  if (batteryPower > 0) {
+    // Laden
+    if (pvState) {
+      const pvMode = await this.getStoreValue('pv_cost_mode') || 'hybrid';
+      const feedIn = await this.getStoreValue('feed_in_tariff') || 0.10;
+
+      if (pvMode === 'free') costNew = 0;
+      else if (pvMode === 'feedin') costNew = feedIn;
+      else costNew = feedIn < 0.08 ? 0 : feedIn;
+    } else {
+      // Grid laden
+      const tariff = this.tariffManager.getCurrentTariff(gridPower);
+      costNew = tariff.currentPrice;
+    }
+
+    const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
+    const avgOld = await this.getStoreValue('battery_avg_cost') || 0;
+
+    const Enew = Eold + deltaKwh;
+    const avgNew = ((avgOld * Eold) + (costNew * deltaKwh)) / Enew;
+
+    await this.setStoreValue('battery_energy_kwh', Enew);
+    await this.setStoreValue('battery_avg_cost', avgNew);
+  } else {
+    // Ontladen
+    const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
+    const Enew = Math.max(0, Eold + deltaKwh);
+
+    await this.setStoreValue('battery_energy_kwh', Enew);
+  }
+}
+
+
 }
 
 module.exports = BatteryPolicyDevice;
