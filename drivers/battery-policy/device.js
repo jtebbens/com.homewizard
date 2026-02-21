@@ -56,8 +56,8 @@ class BatteryPolicyDevice extends Homey.Device {
         this.error('Initial weather fetch failed:', err)
       );
       
-      // Schedule periodic Xadi price refresh (every 30 minutes)
-      this._scheduleXadiRefresh();
+      // Schedule periodic price refresh (every 30 minutes)
+      this._schedulePriceRefresh();
     }
 
     this.log('BatteryPolicyDevice ready');
@@ -339,83 +339,43 @@ class BatteryPolicyDevice extends Homey.Device {
     this.log(`Policy check scheduled every ${intervalMinutes} minutes`);
   }
 
-  _scheduleXadiRefresh() {
-    // Use adaptive interval: 15min during price release window (15:00-16:00), 30min otherwise
+  _schedulePriceRefresh() {
+    // Adaptive interval: 15 min during price-release window (14:00–16:00 CET),
+    // 30 min otherwise. kwhprice.eu publishes tomorrow's prices at ~13:15 CET.
     const getRefreshInterval = () => {
-      const now = new Date();
-      const hour = now.getHours();
-      // More frequent checks around 15:00 when tomorrow's prices become available
+      const hour = new Date().getHours();
       return (hour >= 14 && hour <= 16) ? 15 * 60 * 1000 : 30 * 60 * 1000;
     };
 
     const scheduleNext = () => {
-      if (this.xadiRefreshInterval) {
-        this.homey.clearTimeout(this.xadiRefreshInterval);
+      if (this.priceRefreshTimeout) {
+        this.homey.clearTimeout(this.priceRefreshTimeout);
       }
 
-      this.xadiRefreshInterval = this.homey.setTimeout(
+      this.priceRefreshTimeout = this.homey.setTimeout(
         async () => {
           const settings = this.getSettings();
-          
-          // Only refresh if dynamic pricing is enabled
+
           if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
             const now = new Date();
-            const hour = now.getHours();
-            
-            this.log(`🔄 Refreshing Xadi prices... (hour: ${hour}:${now.getMinutes().toString().padStart(2, '0')})`);
+            this.log(`🔄 Refreshing prices... (${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')})`);
+
             try {
-              // Try fetching from both providers and select best
-              let success = false;
-              
-              // Try Xadi first
-              try {
-                await this.tariffManager.xadiProvider.fetchPrices(true);
-                if (this.tariffManager.xadiProvider.hasPrices()) {
-                  this.tariffManager.dynamicProvider = this.tariffManager.xadiProvider;
-                  this.tariffManager.activeProvider = 'xadi';
-                  this.log('✅ Xadi prices refreshed and active');
-                  success = true;
-                }
-              } catch (xadiErr) {
-                this.log('⚠️ Xadi fetch failed, trying EnergyZero fallback:', xadiErr.message);
-              }
-              
-              // Fallback to EnergyZero if Xadi failed
-              if (!success) {
-                try {
-                  await this.tariffManager.energyzeroProvider.fetchPrices();
-                  if (this.tariffManager.energyzeroProvider.hasPrices()) {
-                    this.tariffManager.dynamicProvider = this.tariffManager.energyzeroProvider;
-                    this.tariffManager.activeProvider = 'energyzero';
-                    this.log('✅ EnergyZero prices refreshed (fallback active)');
-                    success = true;
-                  }
-                } catch (ezErr) {
-                  this.error('❌ Both Xadi and EnergyZero failed:', ezErr.message);
-                }
-              }
-              
-              // Check if we have good coverage (at least 40 hours)
-              const priceCount = this.tariffManager.dynamicProvider?.cache?.length || 0;
-              if (success && priceCount >= 40) {
-                // Good coverage, trigger policy check
-                if (this.getCapabilityValue('policy_enabled')) {
-                  await this._runPolicyCheck();
-                }
-              } else if (success && priceCount < 40) {
-                // Limited coverage, try fallback
-                this.log(`⚠️ Only ${priceCount} prices available, attempting provider switch...`);
-                await this.tariffManager._selectBestProvider();
-                if (this.getCapabilityValue('policy_enabled')) {
-                  await this._runPolicyCheck();
-                }
+              // Force-refresh the merged provider (fetches Xadi + KwhPrice concurrently)
+              await this.tariffManager.mergedProvider.fetchPrices(true);
+              const priceCount = this.tariffManager.mergedProvider.cache?.length || 0;
+              const sources    = this.tariffManager.mergedProvider.lastFetchSources.join('+');
+              const days       = priceCount > 24 ? 'today + tomorrow' : 'today only';
+              this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources})`);
+
+              if (priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
+                await this._runPolicyCheck();
               }
             } catch (err) {
               this.error('❌ Price refresh failed:', err);
             }
           }
-          
-          // Schedule next refresh with adaptive interval
+
           scheduleNext();
         },
         getRefreshInterval()
@@ -423,8 +383,7 @@ class BatteryPolicyDevice extends Homey.Device {
     };
 
     scheduleNext();
-    const initialInterval = getRefreshInterval();
-    this.log(`Xadi price refresh scheduled (adaptive: ${initialInterval / 60000}min, frequent 15:00-16:00)`);
+    this.log(`Price refresh scheduled (adaptive: ${getRefreshInterval() / 60000}min, frequent 14:00–16:00)`);
   }
 
   async _updateWeather() {
@@ -548,6 +507,7 @@ class BatteryPolicyDevice extends Homey.Device {
       this.homey.api.realtime('explainability_update', explanation);
 
       this.homey.settings.set('policy_explainability', explanation);
+      this.setSettings({ policy_explainability: explanation });
 
       this.log('Saving explainability length:', JSON.stringify(explanation).length);
       
@@ -846,7 +806,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // Push weather forecast with hourly sunshine data for PV prediction
     if (weatherData?.hourlyForecast && Array.isArray(weatherData.hourlyForecast)) {
       const hourlyWeather = weatherData.hourlyForecast.map(h => ({
-        hour: new Date(h.time).getHours(),
+        hour: parseInt(new Date(h.time).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
         sunshine: h.sunshine,
         cloudCover: h.cloudCover
       }));
@@ -1122,14 +1082,14 @@ class BatteryPolicyDevice extends Homey.Device {
       await this._connectP1Device();
     }
 
-    // Restart Xadi refresh if dynamic pricing or tariff type changed
+    // Restart price refresh if dynamic pricing or tariff type changed
     if (changedKeys.includes('enable_dynamic_pricing') || changedKeys.includes('tariff_type')) {
       if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
-        this._scheduleXadiRefresh();
-      } else if (this.xadiRefreshInterval) {
-        this.homey.clearInterval(this.xadiRefreshInterval);
-        this.xadiRefreshInterval = null;
-        this.log('Xadi refresh stopped (dynamic pricing disabled)');
+        this._schedulePriceRefresh();
+      } else if (this.priceRefreshTimeout) {
+        this.homey.clearTimeout(this.priceRefreshTimeout);
+        this.priceRefreshTimeout = null;
+        this.log('Price refresh stopped (dynamic pricing disabled)');
       }
     }
 
@@ -1151,8 +1111,8 @@ class BatteryPolicyDevice extends Homey.Device {
       this.homey.clearInterval(this.policyCheckInterval);
     }
 
-    if (this.xadiRefreshInterval) {
-      this.homey.clearInterval(this.xadiRefreshInterval);
+    if (this.priceRefreshTimeout) {
+      this.homey.clearTimeout(this.priceRefreshTimeout);
     }
 
     if (this._p1PollInterval) {
