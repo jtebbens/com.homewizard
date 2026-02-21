@@ -38,6 +38,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._pvProductionW = null; // User-provided PV production via flow card
     this._pvProductionTimestamp = null; // When the PV data was last updated
     this._pvState = false; // Track PV state with hysteresis
+    this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
 
     await this._initializeCapabilities();
     this._registerCapabilityListeners();
@@ -296,18 +297,30 @@ class BatteryPolicyDevice extends Homey.Device {
         // Use hysteresis around -75W sweet spot to prevent rapid toggling:
         // - Turn ON when grid < -125W (clear PV surplus)
         // - Turn OFF when grid > -25W (surplus gone)
-        const prevPvState = this._pvState;
-        
+        const PV_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes between PV-triggered runs
+
         if (!this._pvState && gridPower < -125) {
           // PV state OFF → ON (export started)
           this._pvState = true;
-          this.log(`⚡ PV state changed (OFF → ON) → running policy immediately`);
-          this._runPolicyCheck().catch(err => this.error(err));
+          const now = Date.now();
+          if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
+            this._lastPvPolicyRun = now;
+            this.log(`⚡ PV state changed (OFF → ON) → running policy`);
+            this._runPolicyCheck().catch(err => this.error(err));
+          } else {
+            this.log(`⚡ PV state changed (OFF → ON) → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+          }
         } else if (this._pvState && gridPower > -25) {
           // PV state ON → OFF (export stopped)
           this._pvState = false;
-          this.log(`⚡ PV state changed (ON → OFF) → running policy immediately`);
-          this._runPolicyCheck().catch(err => this.error(err));
+          const now = Date.now();
+          if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
+            this._lastPvPolicyRun = now;
+            this.log(`⚡ PV state changed (ON → OFF) → running policy`);
+            this._runPolicyCheck().catch(err => this.error(err));
+          } else {
+            this.log(`⚡ PV state changed (ON → OFF) → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+          }
         }
         // Otherwise: no state change, no spam
 
@@ -845,7 +858,7 @@ class BatteryPolicyDevice extends Homey.Device {
       weather: (settings.tariff_type === 'dynamic') ? weatherData : null,
       battery: batteryState,
       tariff: tariffInfo,
-      time: new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' })),
+      time: new Date(),
       policyMode: this.getCapabilityValue('policy_mode'),
       settings,
       p1,
@@ -1128,7 +1141,9 @@ class BatteryPolicyDevice extends Homey.Device {
    */
   async _updatePlanningChart(inputs, result) {
     try {
-      const currentHour = new Date().getHours();
+      const currentHour = parseInt(
+        new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' })
+      , 10);
       const language = this.homey.i18n.getLanguage();
 
       // Get hourly prices for next 24 hours
