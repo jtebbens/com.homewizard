@@ -994,5 +994,8 @@
   },
   "3.13.22": {
     "en": "Improved dynamic price margins"
+  },
+  "3.13.23": {
+    "en": "Tuning precharge before peak time only when it is profitable"
   }
 }
