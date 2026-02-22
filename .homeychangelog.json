@@ -997,5 +997,8 @@
   },
   "3.13.23": {
     "en": "Tuning precharge before peak time only when it is profitable"
+  },
+  "3.13.24": {
+    "en": "Planning fixes on icons and actions"
   }
 }
