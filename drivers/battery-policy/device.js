@@ -10,6 +10,8 @@ const LearningEngine = require('../../lib/learning-engine');
 const BatteryChartGenerator = require('../../lib/battery-chart-generator');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
 
+const debug = false;
+
 
 class BatteryPolicyDevice extends Homey.Device {
 
@@ -220,6 +222,29 @@ class BatteryPolicyDevice extends Homey.Device {
 
       this.log(`Connected to P1 device: ${this.p1Device.getName()}`);
 
+      this.p1Device.on('battery_event', (payload) => {
+        this._lastBatteryTargetW = payload.target_power_w ?? 0;
+        this._lastBatteryEventTs = Date.now();
+
+        this.log(`🔌 Battery target event → target=${this._lastBatteryTargetW}W`);
+      });
+
+      // DEBUG: Log all events coming from the P1 device
+      this.p1Device.on('*', (event, data) => {
+        this.log(`🐛 [DEBUG] P1 EVENT → ${event}:`, data);
+      });
+
+      // DEBUG: Log battery_event specifically
+      this.p1Device.on('battery_event', (payload) => {
+        this.log('🐛 [DEBUG] battery_event received:', payload);
+
+      this._lastBatteryTargetW = payload.target_power_w ?? 0;
+      this._lastBatteryEventTs = Date.now();
+
+      this.log(`🔋 Battery target event → target=${this._lastBatteryTargetW}W`);
+});
+
+
       this._setupP1Listeners();
 
       await this._runPolicyCheck();
@@ -243,6 +268,17 @@ class BatteryPolicyDevice extends Homey.Device {
       if (!this.p1Device) return;
 
       try {
+
+        // DEBUG: Log raw capability values from P1
+const rawSoc = this.p1Device.getCapabilityValue('battery_group_average_soc');
+const rawGrid = this.p1Device.getCapabilityValue('measure_power');
+const rawBattCap = this.p1Device.getCapabilityValue('measure_power.battery_group_power_w');
+
+if (debug) this.log(
+  `🐛 [DEBUG/setup] Raw P1 caps → soc=${rawSoc}, grid=${rawGrid}, battCap=${rawBattCap}`
+);
+
+
         const soc =
           this.p1Device.getCapabilityValue('battery_group_average_soc') ??
           50;
@@ -250,8 +286,22 @@ class BatteryPolicyDevice extends Homey.Device {
         const gridPower =
           this.p1Device.getCapabilityValue('measure_power') ?? 0;
 
-        const batteryPower =
-          this.p1Device.getCapabilityValue('battery_power') ?? 0;
+        let batteryPower =
+          this.p1Device.getCapabilityValue('measure_power.battery_group_power_w');
+
+        if (batteryPower === null || batteryPower === undefined) {
+          // fallback op target_power_w (als je die ooit krijgt)
+          if (Date.now() - (this._lastBatteryEventTs ?? 0) < 10000) {
+            batteryPower = this._lastBatteryTargetW;
+          } else {
+            batteryPower = 0;
+          }
+        }
+
+        if (debug) this.log(`🐛 batteryPower resolved → ${batteryPower}W`);
+
+
+
 
         await this._updateBatteryCostModel({
           batteryPower,
@@ -539,6 +589,19 @@ class BatteryPolicyDevice extends Homey.Device {
         lastUpdate: new Date().toISOString()
       };
       this.homey.settings.set('battery_policy_state', planningData);
+
+      // Push device settings to app settings so planning page can read them
+      // (device settings are not accessible via Homey.get() in the settings page)
+      this.homey.settings.set('device_settings', {
+        max_charge_price:    this.getSetting('max_charge_price')    || 0.19,
+        min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
+        min_soc:             this.getSetting('min_soc')             || 10,
+        max_soc:             this.getSetting('max_soc')             || 95,
+        battery_efficiency:  this.getSetting('battery_efficiency')  || 0.75,
+        min_profit_margin:   this.getSetting('min_profit_margin')   || 0.01,
+        tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
+        policy_interval:     this.getSetting('policy_interval')     || 15,
+      });
       
       // Also push the debug capabilities
       const debugTop3Low = this.getCapabilityValue('policy_debug_top3low');
@@ -1232,44 +1295,59 @@ class BatteryPolicyDevice extends Homey.Device {
 
 
   async _updateBatteryCostModel({ batteryPower, gridPower, pvState }) {
-  const intervalSeconds = 5;
-  const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
+    const intervalSeconds = 5;
+    const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
 
-  if (deltaKwh === 0) return;
-
-  let costNew;
-
-  if (batteryPower > 0) {
-    // Laden
-    if (pvState) {
-      const pvMode = await this.getStoreValue('pv_cost_mode') || 'hybrid';
-      const feedIn = await this.getStoreValue('feed_in_tariff') || 0.10;
-
-      if (pvMode === 'free') costNew = 0;
-      else if (pvMode === 'feedin') costNew = feedIn;
-      else costNew = feedIn < 0.08 ? 0 : feedIn;
-    } else {
-      // Grid laden
-      const tariff = this.tariffManager.getCurrentTariff(gridPower);
-      costNew = tariff.currentPrice;
+    // Log every 60s (every 12th call) to avoid spam but confirm it's running
+    this._costModelCallCount = (this._costModelCallCount || 0) + 1;
+    if (this._costModelCallCount % 12 === 0) {
+      const Ecur = await this.getStoreValue('battery_energy_kwh') || 0;
+      const Acur = await this.getStoreValue('battery_avg_cost') || 0;
+      this.log(`💰 CostModel: batteryPower=${batteryPower}W, deltaKwh=${deltaKwh.toFixed(6)}, energy=${Ecur.toFixed(3)}kWh, avgCost=€${Acur.toFixed(4)}, pvState=${pvState}`);
     }
 
-    const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
-    const avgOld = await this.getStoreValue('battery_avg_cost') || 0;
+    if (Math.abs(deltaKwh) < 0.000001) return; // effectively zero
 
-    const Enew = Eold + deltaKwh;
-    const avgNew = ((avgOld * Eold) + (costNew * deltaKwh)) / Enew;
+    let costNew;
 
-    await this.setStoreValue('battery_energy_kwh', Enew);
-    await this.setStoreValue('battery_avg_cost', avgNew);
-  } else {
-    // Ontladen
-    const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
-    const Enew = Math.max(0, Eold + deltaKwh);
+    if (batteryPower > 10) {
+      // Charging
+      if (pvState) {
+        const pvMode = await this.getStoreValue('pv_cost_mode') || 'hybrid';
+        const feedIn = await this.getStoreValue('feed_in_tariff') || 0.10;
 
-    await this.setStoreValue('battery_energy_kwh', Enew);
+        if (pvMode === 'free') costNew = 0;
+        else if (pvMode === 'feedin') costNew = feedIn;
+        else costNew = feedIn < 0.08 ? 0 : feedIn;
+      } else {
+        // Grid charging
+        const tariff = this.tariffManager.getCurrentTariff(gridPower);
+        costNew = tariff.currentPrice;
+      }
+
+      const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
+      const avgOld = await this.getStoreValue('battery_avg_cost') || 0;
+
+      const Enew = Eold + deltaKwh;
+      const avgNew = ((avgOld * Eold) + (costNew * deltaKwh)) / Enew;
+
+      await this.setStoreValue('battery_energy_kwh', Enew);
+      await this.setStoreValue('battery_avg_cost', avgNew);
+
+      if (debug) this.log(`💰 CostModel charge: +${deltaKwh.toFixed(5)}kWh @ €${costNew?.toFixed(4)}, avgCost now €${avgNew.toFixed(4)}, total ${Enew.toFixed(3)}kWh`);
+
+    } else if (batteryPower < -10) {
+      // Discharging
+      const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
+      const Enew = Math.max(0, Eold + deltaKwh); // deltaKwh is negative
+
+      await this.setStoreValue('battery_energy_kwh', Enew);
+
+      if (this._costModelCallCount % 12 === 0) {
+        if (debug) this.log(`💰 CostModel discharge: ${deltaKwh.toFixed(5)}kWh, total ${Enew.toFixed(3)}kWh`);
+      }
+    }
   }
-}
 
 
 }

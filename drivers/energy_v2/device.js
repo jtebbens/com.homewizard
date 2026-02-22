@@ -914,11 +914,21 @@ this.homey.flow
 
     // 🕒 Driver-side watchdog
     this._wsWatchdog = setInterval(() => {
-      const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
-      if (!this.getSettings().use_polling && staleMs > 190000) { // just over 3min
-        this.log(`🕒 P1 watchdog: stale >3min (${staleMs}ms), restarting WS`);
-        this.wsManager?.restartWebSocket();
+      const staleMeasurement = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
+      const staleBattery = Date.now() - (this.wsManager?.lastBatteryAt || 0);
+
+      if (!this.getSettings().use_polling) {
+        if (staleMeasurement > 190000) {
+          this.log(`🕒 P1 watchdog: measurement stale >3min (${staleMeasurement}ms), restarting WS`);
+          this.wsManager?.restartWebSocket();
+        }
+
+        if (staleBattery > 190000) {
+          this.log(`🕒 P1 watchdog: battery stale >3min (${staleBattery}ms), restarting WS`);
+          this.wsManager?.restartWebSocket();
+        }
       }
+
     }, 60000); // check every minute
     
     // Overload notification true/false
@@ -1687,6 +1697,9 @@ async _handleBatteries(data) {
   try {
     if (debug) this.log('⚡ Battery event data:', data);
 
+    // Mark battery WS as alive
+    this.wsManager.lastBatteryAt = Date.now();
+
     // --- Device existence guards ---
     const dataObj = this.getData();
     if (!dataObj?.id) return;
@@ -1707,17 +1720,33 @@ async _handleBatteries(data) {
       ? { ...data, mode: battery, permissions: [] }
       : battery;
 
-    if (debug) this.log('⚡ Battery event payload:', payload);
+    if (debug && payload.battery_count != 0) {
+      this.log('⚡ Battery event payload:', payload);
+    }
 
-    // --- IMPORTANT ---
-    // NEVER remove capabilities here.
-    // vendorCount is handled in _updateBatteryGroup().
-    // WS payloads are unreliable (missing fields, mode-only, reconnects, etc.)
-
-    
     // --- Normalize mode ---
     const normalizedMode = normalizeBatteryMode(payload);
     const lastBatteryMode = this._cacheGet('last_battery_mode');
+
+    // --- Firmware fallback: to_full but power_w = 0 ---
+    if (normalizedMode === 'to_full' && (payload.power_w == null || payload.power_w === 0)) {
+      const prev = this._cacheGet('last_battery_state') || {};
+
+      const batteryCount =
+        (typeof payload.battery_count === 'number' && payload.battery_count > 0)
+          ? payload.battery_count
+          : (typeof prev.battery_count === 'number' && prev.battery_count > 0)
+            ? prev.battery_count
+            : 1;
+
+      const fallbackPower = batteryCount * 800;
+
+      this.log(
+        `⚠️ Firmware bug detected: power_w=0 in to_full. Applying fallback ${fallbackPower}W (battery_count=${batteryCount})`
+      );
+
+      payload.power_w = fallbackPower;
+    }
 
     // --- Update capability battery_group_charge_mode ---
     try {
@@ -1747,8 +1776,6 @@ async _handleBatteries(data) {
     // --- Store raw WS battery state for condition cards ---
     const prev = this._cacheGet('last_battery_state') || {};
 
-    // Only update fields that exist in the payload.
-    // Never overwrite vendorCount with undefined or incomplete WS frames.
     this._cacheSet('last_battery_state', {
       mode: payload.mode ?? prev.mode,
       permissions: Array.isArray(payload.permissions)
