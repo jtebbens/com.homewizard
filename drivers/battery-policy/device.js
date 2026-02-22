@@ -909,7 +909,7 @@ if (debug) this.log(
     const batteryAvgCost = await this.getStoreValue('battery_avg_cost') || 0;
     const batteryEnergyKwh = await this.getStoreValue('battery_energy_kwh') || 0;
 
-    const batteryEfficiency = this.efficiencyEstimator.getEfficiency() || 0.80;
+    const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.75, 0.5), 1.0);
 
     // Break-even prijs (€/kWh)
     const breakEven = batteryAvgCost > 0

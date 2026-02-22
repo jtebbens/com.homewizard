@@ -913,23 +913,19 @@ this.homey.flow
 
 
     // 🕒 Driver-side watchdog
+    // 🕒 Driver-side watchdog (ORIGINEEL)
     this._wsWatchdog = setInterval(() => {
       const staleMeasurement = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
-      const staleBattery = Date.now() - (this.wsManager?.lastBatteryAt || 0);
 
       if (!this.getSettings().use_polling) {
         if (staleMeasurement > 190000) {
           this.log(`🕒 P1 watchdog: measurement stale >3min (${staleMeasurement}ms), restarting WS`);
           this.wsManager?.restartWebSocket();
         }
-
-        if (staleBattery > 190000) {
-          this.log(`🕒 P1 watchdog: battery stale >3min (${staleBattery}ms), restarting WS`);
-          this.wsManager?.restartWebSocket();
-        }
       }
 
     }, 60000); // check every minute
+
     
     // Overload notification true/false
     this._phaseOverloadNotificationsEnabled = this.getSetting('phase_overload_notifications') ?? true;
