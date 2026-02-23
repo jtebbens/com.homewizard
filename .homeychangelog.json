@@ -1003,5 +1003,8 @@
   },
   "3.13.25": {
     "en": "Planning history will not change back to standby, improved cheaphours and calculation with solar adjustments"
+  },
+  "3.13.26": {
+    "en": "New tuning after very cloudy day with odd planning outcome"
   }
 }
