@@ -1000,5 +1000,8 @@
   },
   "3.13.24": {
     "en": "Planning fixes on icons and actions"
+  },
+  "3.13.25": {
+    "en": "Planning history will not change back to standby, improved cheaphours and calculation with solar adjustments"
   }
 }
