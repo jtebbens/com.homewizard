@@ -1009,5 +1009,8 @@
   },
   "3.13.27": {
     "en": "Bugfix onSettings Battery Policy and some cleanup policy mappings"
+  },
+  "3.13.28": {
+    "en": "Planning update when user changes settings for min and max price thresholds"
   }
 }
