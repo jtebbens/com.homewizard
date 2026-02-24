@@ -1172,6 +1172,13 @@ if (debug) this.log(
       }
     }
 
+    // Update timeline user notification if thresholds changed
+    if (changedKeys.includes('max_charge_price') || changedKeys.includes('min_discharge_price')) {
+      await this.homey.notifications.createNotification({
+        excerpt: `Battery thresholds updated: charge ≤€${newSettings.max_charge_price}, discharge ≥€${newSettings.min_discharge_price}`
+      });
+    }
+
     // Update internal modules
     this.policyEngine.updateSettings(newSettings);
     this.tariffManager.updateSettings(newSettings);
