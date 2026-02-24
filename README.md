@@ -69,6 +69,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 * Settings page displays visual ML score progress bars
 * Explainability engine shows weather-aware reasoning with dynamic time windows
 * General UI and logging refinements for clarity and consistency.
+* Pre charge only when it’s profitable
 * Planning update when min max prices are changed by user affecting decisions
 
 ### Technical
