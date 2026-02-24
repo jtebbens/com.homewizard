@@ -51,7 +51,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.27)
+## 📝 Latest Updates (v3.13.28)
 
 ### New Features
 
@@ -69,6 +69,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 * Settings page displays visual ML score progress bars
 * Explainability engine shows weather-aware reasoning with dynamic time windows
 * General UI and logging refinements for clarity and consistency.
+* Planning update when min max prices are changed by user affecting decisions
 
 ### Technical
 
