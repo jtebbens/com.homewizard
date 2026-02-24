@@ -3,3 +3,12 @@
 
 # Added by Homey CLI
 /.homeybuild/
+
+# AI instruction files (keep private)
+CLAUDE.md
+CONTEXT.md
+DEVELOPMENT.md
+
+# Optional: any other internal prompt files
+*.prompt.md
+*.ai.md
