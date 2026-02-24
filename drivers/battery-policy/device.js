@@ -681,7 +681,9 @@ if (debug) this.log(
               ts:     new Date().toISOString(),
               hwMode: applyMode,
               price:  currentPrice,
-              soc:    currentSoc
+              soc:    currentSoc,
+              maxChargePrice: this.getSetting('max_charge_price'),      
+              minDischargePrice: this.getSetting('min_discharge_price') 
             });
             // Keep last 96 entries (24h at 15min intervals)
             if (modeHistory.length > 96) modeHistory.splice(0, modeHistory.length - 96);
@@ -1158,60 +1160,89 @@ if (debug) this.log(
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-  this.log('Settings changed:', changedKeys);
+    this.log('Settings changed:', changedKeys);
 
-  // Update internal modules
-  this.policyEngine.updateSettings(newSettings);
-  this.tariffManager.updateSettings(newSettings);
-
-  // Handle interval change
-  if (changedKeys.includes('policy_interval')) {
-    this._schedulePolicyCheck();
-  }
-
-  // Weather update
-  if (changedKeys.includes('weather_location')) {
-    this.weatherForecaster.invalidateCache();
-    this.homey.setTimeout(() => {
-      this._updateWeather().catch(err => this.error(err));
-    }, 10);
-  }
-
-  // P1 reconnect
-  if (changedKeys.includes('p1_device_id')) {
-    this.homey.setTimeout(() => {
-      this._connectP1Device().catch(err => this.error(err));
-    }, 10);
-  }
-
-  // Dynamic pricing refresh
-  if (
-    changedKeys.includes('enable_dynamic_pricing') ||
-    changedKeys.includes('tariff_type')
-  ) {
-    if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
-      this._schedulePriceRefresh();
-    } else if (this.priceRefreshTimeout) {
-      this.homey.clearTimeout(this.priceRefreshTimeout);
-      this.priceRefreshTimeout = null;
-      this.log('Price refresh stopped (dynamic pricing disabled)');
+    // Validate
+    if (changedKeys.includes('max_charge_price')) {
+      const maxCharge = newSettings.max_charge_price;
+      const minDischarge = newSettings.min_discharge_price || oldSettings.min_discharge_price;
+      
+      if (maxCharge >= minDischarge) {
+        throw new Error(`max_charge_price (€${maxCharge}) must be less than min_discharge_price (€${minDischarge})`);
+      }
     }
-  }
 
-  // Policy-run
-  const requiresPolicyRun =
-    changedKeys.includes('policy_interval') ||
-    changedKeys.includes('weather_location') ||
-    changedKeys.includes('p1_device_id') ||
-    changedKeys.includes('enable_dynamic_pricing') ||
-    changedKeys.includes('tariff_type');
+    // Update internal modules
+    this.policyEngine.updateSettings(newSettings);
+    this.tariffManager.updateSettings(newSettings);
 
-  if (requiresPolicyRun) {
-    // Policy-run 
-    this.homey.setTimeout(() => {
-      this._runPolicyCheck().catch(err => this.error(err));
-    }, 500);
-  }
+    // Handle interval change
+    if (changedKeys.includes('policy_interval')) {
+      this._schedulePolicyCheck();
+    }
+
+    // Weather update
+    if (changedKeys.includes('weather_location')) {
+      this.weatherForecaster.invalidateCache();
+      this.homey.setTimeout(() => {
+        this._updateWeather().catch(err => this.error(err));
+      }, 10);
+    }
+
+    // P1 reconnect
+    if (changedKeys.includes('p1_device_id')) {
+      this.homey.setTimeout(() => {
+        this._connectP1Device().catch(err => this.error(err));
+      }, 10);
+    }
+
+    // Dynamic pricing refresh
+    if (
+      changedKeys.includes('enable_dynamic_pricing') ||
+      changedKeys.includes('tariff_type')
+    ) {
+      if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
+        this._schedulePriceRefresh();
+      } else if (this.priceRefreshTimeout) {
+        this.homey.clearTimeout(this.priceRefreshTimeout);
+        this.priceRefreshTimeout = null;
+        this.log('Price refresh stopped (dynamic pricing disabled)');
+      }
+    }
+
+    // ✅ FIX: Add threshold settings to policy run triggers
+    const requiresPolicyRun =
+      changedKeys.includes('policy_interval') ||
+      changedKeys.includes('weather_location') ||
+      changedKeys.includes('p1_device_id') ||
+      changedKeys.includes('enable_dynamic_pricing') ||
+      changedKeys.includes('tariff_type') ||
+      changedKeys.includes('max_charge_price') ||      // ← ADD THIS
+      changedKeys.includes('min_discharge_price') ||   // ← ADD THIS
+      changedKeys.includes('min_soc') ||               // ← ADD THIS (affects planning)
+      changedKeys.includes('max_soc') ||               // ← ADD THIS (affects planning)
+      changedKeys.includes('battery_efficiency') ||    // ← ADD THIS (affects break-even)
+      changedKeys.includes('min_profit_margin');       // ← ADD THIS (affects spread calc)
+
+    if (requiresPolicyRun) {
+      // Push device_settings to app settings IMMEDIATELY (before policy run)
+      // This ensures settings.html sees the new values when it refreshes
+      this.homey.settings.set('device_settings', {
+        max_charge_price:    newSettings.max_charge_price    || 0.19,
+        min_discharge_price: newSettings.min_discharge_price || 0.22,
+        min_soc:             newSettings.min_soc             || 10,
+        max_soc:             newSettings.max_soc             || 95,
+        battery_efficiency:  newSettings.battery_efficiency  || 0.75,
+        min_profit_margin:   newSettings.min_profit_margin   || 0.01,
+        tariff_type:         newSettings.tariff_type         || 'dynamic',
+        policy_interval:     newSettings.policy_interval     || 15,
+      });
+      
+      // Then run policy with new settings
+      this.homey.setTimeout(() => {
+        this._runPolicyCheck().catch(err => this.error(err));
+      }, 500);
+    }
 }
 
 

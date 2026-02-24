@@ -234,12 +234,20 @@
 
   <script>
     /* ── TAB SWITCHING ── */
+    let homeyInstance = null;
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab).classList.add('active');
+        
+        // Refresh planning when switching to planning tab
+        if (tab.dataset.tab === 'planning' && homeyInstance) {
+          homeyInstance.get((e, s) => {
+            if (!e) renderBatteryPlanning(s, homeyInstance);
+          });
+        }
       });
     });
 
@@ -298,70 +306,72 @@
                       batteryEfficiency, minProfitMargin,
                       futureExpensiveAvgPrice }
     ══════════════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════════
+       mapToHwMode - EXACT MIRROR OF PolicyEngine._mapPolicyToHwMode()
+       This must match the engine exactly (lines 678-764 in PolicyEngine)
+    ══════════════════════════════════════════════════════════ */
     function mapToHwMode(policyMode, ctx) {
       const {
         price, soc, minSoc, maxSoc, hasPV,
         tariffType, userPolicyMode,
         maxChargePrice, minDischargePrice,
-        batteryEfficiency, minProfitMargin,
-        futureExpensiveAvgPrice, maxFuturePrice
+        batteryEfficiency
       } = ctx;
 
-      const BREAKEVEN = 1 / batteryEfficiency;
+      // HARD SAFETY — Never discharge below min_soc
+      if (soc < minSoc) {
+        return 'standby';
+      }
 
-      // Use maxFuturePrice if available, fall back to futureExpensiveAvgPrice
-      const referencePrice = maxFuturePrice ?? futureExpensiveAvgPrice;
+      // PV detection (matches PolicyEngine lines 697-701)
+      const actualPvNow = hasPV;
 
-      const spreadProfitable = referencePrice !== null &&
-        (referencePrice * batteryEfficiency) - price > minProfitMargin * 0.5;
+      // Profitable to discharge check
+      const profitableToDischarge = price !== null && price >= minDischargePrice;
 
-      const profitableToCharge = price !== null && (
-        (price <= maxChargePrice && spreadProfitable) ||
-        (ctx.isCheap && spreadProfitable)
-      );
-
-      const profitableToDischarge = price !== null &&
-        price >= minDischargePrice;  // simple threshold, matches policy engine fix
-
-      // ── ZERO / PEAK-SHAVING mode ──
+      // ── ZERO MODE ──
       if (userPolicyMode === 'zero') {
         if (soc <= minSoc) return 'to_full';
         if (soc >= maxSoc) return 'zero_discharge_only';
         return 'zero';
       }
 
-      // hasPV is only meaningful if price is actually cheap (≤ maxChargePrice)
-      // Otherwise daytime ≠ free PV surplus — it just means sun is up
-      const pvChargingWorthwhile = hasPV && (price === null || price <= maxChargePrice);
-
-      // ── DYNAMIC TARIFF ──
+      // ── DYNAMIC TARIFF (BALANCED) ──
       if (userPolicyMode === 'balanced' && tariffType === 'dynamic') {
+        
+        // DISCHARGE
         if (policyMode === 'discharge') {
           return profitableToDischarge ? 'zero_discharge_only' : 'standby';
         }
+
+        // CHARGE — CRITICAL: only when price <= max_charge_price (lines 728-739)
         if (policyMode === 'charge') {
-          if (profitableToCharge) return 'to_full';
-          if (pvChargingWorthwhile) return 'zero_charge_only';
+          if (actualPvNow) {
+            return 'zero_charge_only';
+          }
+          if (price !== null && price <= maxChargePrice) {
+            return 'to_full';
+          }
+          // Price > maxChargePrice = STANDBY (this is the fix!)
           return 'standby';
         }
-        // preserve
-        if (futureExpensiveAvgPrice !== null) {
-          const profit = (futureExpensiveAvgPrice * batteryEfficiency) - price;
-          if (profit > minProfitMargin && soc < maxSoc - 10) return 'to_full';
+
+        // PRESERVE
+        if (policyMode === 'preserve') {
+          if (actualPvNow) return 'zero_charge_only';
+          return 'standby';
         }
-        if (pvChargingWorthwhile) return 'zero_charge_only';
-        return 'standby';
       }
 
       // ── FIXED TARIFF ──
       if (tariffType === 'fixed') {
         if (policyMode === 'discharge') return 'zero_discharge_only';
-        if (policyMode === 'charge') return pvChargingWorthwhile ? 'zero_charge_only' : 'to_full';
-        return pvChargingWorthwhile ? 'zero_charge_only' : 'standby';
+        if (policyMode === 'charge')    return actualPvNow ? 'zero_charge_only' : 'to_full';
+        return actualPvNow ? 'zero_charge_only' : 'standby';
       }
 
       // ── FALLBACK ──
-      return pvChargingWorthwhile ? 'zero_charge_only' : 'standby';
+      return actualPvNow ? 'zero_charge_only' : 'standby';
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -369,6 +379,10 @@
        Replaces the old PlannerEngine with score-based logic that
        mirrors PolicyEngine.calculatePolicy() at a high level.
        Returns policyMode: 'charge' | 'discharge' | 'preserve'
+    ══════════════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════════════
+       scorePolicyMode - Simplified scoring that mirrors PolicyEngine
+       Main logic from _applyTariffScore (lines 196-261)
     ══════════════════════════════════════════════════════════ */
     function scorePolicyMode(ctx) {
       const {
@@ -380,59 +394,70 @@
       } = ctx;
 
       const scores = { charge: 0, discharge: 0, preserve: 10 };
-      const BREAKEVEN = 1 / batteryEfficiency;
 
-      // SoC guards
-      if (soc >= maxSoc) { scores.discharge += 40; scores.charge = 0; }
-      if (soc <= minSoc)  { scores.charge += 100; scores.discharge = 0; }
+      // SoC guards (matches _applyBatteryScore)
+      if (soc >= maxSoc) { 
+        scores.discharge += 40; 
+        scores.charge = 0;
+        scores.preserve += 10;
+        return 'discharge';
+      }
+      if (soc <= minSoc) { 
+        scores.charge += 100; 
+        scores.discharge = 0;
+        return 'charge';
+      }
 
+      // No price data
       if (price === null) {
-        // No price data
         if (hasSun) scores.charge += 30;
         else scores.preserve += 20;
       } else {
-        // Ultra cheap / expensive overrides
-        if (price <= 0.05) { scores.charge += 50; scores.preserve -= 10; }
-        if (price >= 0.40) { scores.discharge += 50; scores.preserve -= 10; }
-
-        // Peak hours
-        if (isPeak) { scores.discharge += 300; scores.charge = 0; }
-
-        // Cheap hours — but prefer PV over net charging when sun available
-        if (isCheap) {
-          if (hasSun) {
-            scores.charge += 20;
-            scores.preserve += 30;
-          } else {
-            // Use max future price for spread calculation (matches policy engine fix 5)
-            const referencePrice = maxFuturePrice ?? futureExpensiveAvgPrice;
-            const profitPerKwh = referencePrice !== null
-              ? (referencePrice * batteryEfficiency) - price
-              : -1;
-            // Use half of minProfitMargin as threshold (matches policy engine fix 3)
-            if (profitPerKwh > minProfitMargin * 0.5) scores.charge += 100;
-            else if (profitPerKwh > 0)               scores.charge += 50;
-            else                                     scores.preserve += 30;
-          }
+        // Ultra cheap/expensive overrides (matches lines 250-259)
+        if (price <= 0.05) { 
+          scores.charge += 50; 
+          scores.preserve -= 10; 
+        }
+        if (price >= 0.40) { 
+          scores.discharge += 50; 
+          scores.preserve -= 10; 
         }
 
-        // Threshold-based scoring
-        if (price <= maxChargePrice && !isCheap) {
-          const minProfitable = price * BREAKEVEN;
-          if (minDischargePrice >= minProfitable) {
-            scores.charge += hasSun ? 15 : 35;
+        // Calculate spread profitability
+        const maxFuture = maxFuturePrice ?? futureExpensiveAvgPrice;
+        const spreadProfit = maxFuture !== null
+          ? (maxFuture * batteryEfficiency) - price
+          : -1;
+
+        // DISCHARGE logic (matches lines 221-227)
+        if (price >= minDischargePrice && minDischargePrice > 0) {
+          const baseScore = 100;
+          scores.discharge += baseScore;
+          scores.preserve = 0;
+        }
+        // CHARGE logic (matches lines 230-248)
+        else if (price <= maxChargePrice && maxChargePrice > 0) {
+          if (spreadProfit > minProfitMargin) {
+            if (hasSun) {
+              scores.charge += 500;  // Actual PV
+              scores.preserve = 0;
+            } else {
+              const boost = spreadProfit >= 0.10 ? 100 : 60;
+              scores.charge += boost;
+              scores.preserve = 0;
+            }
           } else {
             scores.preserve += 20;
           }
         }
-
-        if (price >= minDischargePrice && price > maxChargePrice && !isPeak) {
-          scores.discharge += 30;
+        // NORMAL price (between thresholds)
+        else {
+          scores.preserve += 5;
         }
 
-        // PV: always prefer PV charging over grid standby during sun hours
-        if (hasSun && !isPeak) {
-          scores.charge += 40;   // will become zero_charge_only via hwMode mapper
+        // PV bonus during sun hours (not peak)
+        if (hasSun && !isPeak && price <= maxChargePrice) {
+          scores.charge += 40;
           scores.preserve -= 5;
         }
       }
@@ -440,12 +465,14 @@
       // Select winner
       let winner = 'preserve';
       if (scores.charge > scores.preserve && scores.charge > scores.discharge) winner = 'charge';
-      if (scores.discharge > scores.preserve && scores.discharge > scores.charge)  winner = 'discharge';
+      if (scores.discharge > scores.preserve && scores.discharge > scores.charge) winner = 'discharge';
+      
       return winner;
     }
 
     /* ── HOMEY READY ── */
     function onHomeyReady(Homey) {
+      homeyInstance = Homey; // Store globally for tab switching
       document.getElementById('title').innerText            = Homey.__('settings.title');
       document.getElementById('changelog').innerText        = Homey.__('settings.changelog.label');
       document.getElementById('support').innerText          = Homey.__('settings.support_label');
@@ -539,7 +566,7 @@
           if (changedKey === 'debug_logs') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
-          if (changedKey === 'battery_policy_state') {
+          if (changedKey === 'battery_policy_state' || changedKey === 'device_settings') {
             Homey.get((e, s) => {
               if (!e && document.getElementById('planning').classList.contains('active')) {
                 renderBatteryPlanning(s, Homey);
@@ -665,10 +692,10 @@
       const deviceSettings = settings['device_settings'] || {};
       const battEff      = deviceSettings['battery_efficiency']  || 0.75;
       const minProfit    = deviceSettings['min_profit_margin']   || 0.01;
-      const maxChgPrice  = deviceSettings['max_charge_price']    || 0.19;
-      const minDchPrice  = deviceSettings['min_discharge_price'] || 0.22;
-      const minSoc       = deviceSettings['min_soc']             || 10;
-      const maxSoc       = deviceSettings['max_soc']             || 95;
+      const maxChgPrice  = deviceSettings['max_charge_price']    || 0.15;
+      const minDchPrice  = deviceSettings['min_discharge_price'] || 0.30;
+      const minSoc       = deviceSettings['min_soc']             || 0;
+      const maxSoc       = deviceSettings['max_soc']             || 100;
       const tariffType   = deviceSettings['tariff_type']         || 'dynamic';
 
       let userPolicyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
@@ -802,7 +829,6 @@
             futureExpensiveAvgPrice, maxFuturePrice,
             maxSoc, minSoc
           };
-          hour.policyMode = scorePolicyMode(scoreCtx);
 
           /* policyMode + context → hwMode */
           const mapCtx = {
@@ -815,9 +841,13 @@
             isCheap: hour.isCheap
           };
 
-          hour.hwMode = hour.priceKnown || hour.hasSun
-            ? mapToHwMode(hour.policyMode, mapCtx)
-            : (hour.hasSun ? 'zero_charge_only' : 'standby');
+          /* ────────────────────────────────────────────────
+            POLICY-BASED MODE CALCULATION
+            Uses the same scoring + mapping logic as the engine
+            ──────────────────────────────────────────────── */
+          const policyMode = scorePolicyMode(scoreCtx);
+          hour.policyMode = policyMode;
+          hour.hwMode = mapToHwMode(policyMode, mapCtx);
         }
 
         // Past hours: show actual mode from history
@@ -867,6 +897,14 @@
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Gem. Prijs' : 'Avg. Price'}</div>
           <div class="planning-status-value">€${avgKnownPrice}</div>
+        </div>
+        <div class="planning-status-item">
+          <div class="planning-status-label">${lang === 'nl' ? 'Max Laadprijs' : 'Max Charge Price'}</div>
+          <div class="planning-status-value" style="font-size:18px;color:#4CAF50;">€${maxChgPrice.toFixed(3)}</div>
+        </div>
+        <div class="planning-status-item">
+          <div class="planning-status-label">${lang === 'nl' ? 'Min Ontlaadprijs' : 'Min Discharge Price'}</div>
+          <div class="planning-status-value" style="font-size:18px;color:#2196F3;">€${minDchPrice.toFixed(3)}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Goedkope uren' : 'Cheap hours'}</div>
