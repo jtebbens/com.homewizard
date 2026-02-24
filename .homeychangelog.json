@@ -1006,5 +1006,8 @@
   },
   "3.13.26": {
     "en": "New tuning after very cloudy day with odd planning outcome"
+  },
+  "3.13.27": {
+    "en": "Bugfix onSettings Battery Policy and some cleanup policy mappings"
   }
 }
