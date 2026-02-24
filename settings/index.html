@@ -820,10 +820,21 @@
             : (hour.hasSun ? 'zero_charge_only' : 'standby');
         }
 
-        // Past hours: greyed out, no mode decision needed
+        // Past hours: show actual mode from history
+        const modeHistory = settings['policy_mode_history'] || [];
         for (let i = 0; i < curIdx; i++) {
-          hours[i].soc    = currentSOC;
-          hours[i].hwMode = 'standby';
+          const h = hours[i];
+          const hStart = new Date(todayStart.getTime());
+          hStart.setDate(todayStart.getDate() + h.dayOffset);
+          hStart.setHours(h.hour);
+          const hEnd = new Date(hStart.getTime() + 3600000);
+          const match = modeHistory.find(m => {
+            const mts = new Date(m.ts);
+            return mts >= hStart && mts < hEnd;
+          });
+          h.soc    = match?.soc    ?? currentSOC;
+          h.hwMode = match?.hwMode ?? 'standby';
+          if (match?.price != null) h.price = match.price;
         }
       }
 

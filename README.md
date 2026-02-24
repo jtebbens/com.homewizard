@@ -4,9 +4,12 @@ Control and monitor your HomeWizard Energy devices directly from your Homey smar
 
 ## 🚀 Quick Start
 
-1. **Enable Local API** - Open the official HomeWizard Energy app and enable "Local API" for your devices
-2. **Add Homewizard Unit** - First add your main Homewizard unit in Homey
-3. **Add Devices** - Then add related/connected components from Homewizard to your Homey
+1. **Enable Local API** - Open the official HomeWizard Energy app and enable "Local API" for your devices you like to add
+
+## 🚀 Quick Start LEGACY (OLD MODEL)
+
+1. **Add Homewizard Unit** - First add your main Homewizard unit in Homey
+2. **Add Devices** - Then add related/connected components from Homewizard to your Homey (Heatlink, Energylink, Thermometers etc)
 
 ⚠️ **IMPORTANT**: You must enable "Local API" for your device in the official HomeWizard Energy app before adding devices to Homey.
 
@@ -48,7 +51,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.24)
+## 📝 Latest Updates (v3.13.27)
 
 ### New Features
 

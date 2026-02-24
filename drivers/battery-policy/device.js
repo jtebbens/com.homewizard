@@ -671,6 +671,24 @@ if (debug) this.log(
 
         if (applied) {
           this.log(`✅ Successfully applied: ${applyMode}`);
+
+          // Append to mode history for planning UI
+          try {
+            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+            const currentPrice = result.tariff?.currentPrice ?? null;
+            const currentSoc   = this.getCapabilityValue('measure_battery') ?? null;
+            modeHistory.push({
+              ts:     new Date().toISOString(),
+              hwMode: applyMode,
+              price:  currentPrice,
+              soc:    currentSoc
+            });
+            // Keep last 96 entries (24h at 15min intervals)
+            if (modeHistory.length > 96) modeHistory.splice(0, modeHistory.length - 96);
+            this.homey.settings.set('policy_mode_history', modeHistory);
+          } catch (e) {
+            this.error('Failed to save mode history:', e);
+          }
         } else {
           this.log(`⚠️ Failed to apply recommendation - check confidence threshold or P1 connection`);
         }
@@ -1140,45 +1158,62 @@ if (debug) this.log(
   }
 
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('Settings changed:', changedKeys);
+  this.log('Settings changed:', changedKeys);
 
-    this.policyEngine.updateSettings(newSettings);
-    this.tariffManager.updateSettings(newSettings);
+  // Update internal modules
+  this.policyEngine.updateSettings(newSettings);
+  this.tariffManager.updateSettings(newSettings);
 
-    if (changedKeys.includes('policy_interval')) {
-      this._schedulePolicyCheck();
-    }
+  // Handle interval change
+  if (changedKeys.includes('policy_interval')) {
+    this._schedulePolicyCheck();
+  }
 
-    if (changedKeys.includes('weather_location')) {
-      this.weatherForecaster.invalidateCache();
-      await this._updateWeather();
-    }
+  // Weather update
+  if (changedKeys.includes('weather_location')) {
+    this.weatherForecaster.invalidateCache();
+    this.homey.setTimeout(() => {
+      this._updateWeather().catch(err => this.error(err));
+    }, 10);
+  }
 
-    if (changedKeys.includes('p1_device_id')) {
-      await this._connectP1Device();
-    }
+  // P1 reconnect
+  if (changedKeys.includes('p1_device_id')) {
+    this.homey.setTimeout(() => {
+      this._connectP1Device().catch(err => this.error(err));
+    }, 10);
+  }
 
-    // Restart price refresh if dynamic pricing or tariff type changed
-    if (changedKeys.includes('enable_dynamic_pricing') || changedKeys.includes('tariff_type')) {
-      if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
-        this._schedulePriceRefresh();
-      } else if (this.priceRefreshTimeout) {
-        this.homey.clearTimeout(this.priceRefreshTimeout);
-        this.priceRefreshTimeout = null;
-        this.log('Price refresh stopped (dynamic pricing disabled)');
-      }
-    }
-
-    if (
-      changedKeys.includes('policy_interval') ||
-      changedKeys.includes('weather_location') ||
-      changedKeys.includes('p1_device_id') ||
-      changedKeys.includes('enable_dynamic_pricing') ||
-      changedKeys.includes('tariff_type')
-    ) {
-      await this._runPolicyCheck();
+  // Dynamic pricing refresh
+  if (
+    changedKeys.includes('enable_dynamic_pricing') ||
+    changedKeys.includes('tariff_type')
+  ) {
+    if (newSettings.tariff_type === 'dynamic' && newSettings.enable_dynamic_pricing) {
+      this._schedulePriceRefresh();
+    } else if (this.priceRefreshTimeout) {
+      this.homey.clearTimeout(this.priceRefreshTimeout);
+      this.priceRefreshTimeout = null;
+      this.log('Price refresh stopped (dynamic pricing disabled)');
     }
   }
+
+  // Policy-run
+  const requiresPolicyRun =
+    changedKeys.includes('policy_interval') ||
+    changedKeys.includes('weather_location') ||
+    changedKeys.includes('p1_device_id') ||
+    changedKeys.includes('enable_dynamic_pricing') ||
+    changedKeys.includes('tariff_type');
+
+  if (requiresPolicyRun) {
+    // Policy-run 
+    this.homey.setTimeout(() => {
+      this._runPolicyCheck().catch(err => this.error(err));
+    }, 500);
+  }
+}
+
 
   async onDeleted() {
     this.log('BatteryPolicyDevice deleted');
