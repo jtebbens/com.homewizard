@@ -547,10 +547,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
 
     // ---------------------------------------------------------
-    // 8. Drift detection (max 1× per 30 sec)
+    // 8. Drift detection (1× per 5 min)
     // ---------------------------------------------------------
-    if (!this._driftLastUpdate || now - this._driftLastUpdate > 30000) {
-
+    if (!this._driftLastUpdate || now - this._driftLastUpdate > 300000) // 5 min
+    {
       // 1. Eerste measurement initialiseren
       if (Math.abs(data.power_w) > 10 && (this.previousSoC === undefined || this.previousTimestamp === undefined)) {
         this.previousSoC = data.state_of_charge_pct;
@@ -570,10 +570,9 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       });
 
       // 3. Update previousSoC/timestamp na drift-check
-      if (Math.abs(data.power_w) > 10) {
-        this.previousSoC = data.state_of_charge_pct;
-        this.previousTimestamp = now; // Always use current timestamp when updating
-      }
+      this.previousSoC = data.state_of_charge_pct;
+      this.previousTimestamp = now;
+
 
       // 4. Drift events
       if (driftResult.drift && !this.driftActive) {
