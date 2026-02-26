@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.28",
+  "version": "3.13.29",
   "platforms": [
     "local"
   ],
@@ -3367,6 +3367,23 @@
                 "nl": "Dynamische prijsprovider inschakelen"
               },
               "value": false,
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "respect_minmax",
+              "type": "checkbox",
+              "label": {
+                "en": "Strictly respect min/max prices",
+                "nl": "Min/max prijzen strikt respecteren"
+              },
+              "hint": {
+                "en": "If disabled, the policy may override min/max when profitable (break-even, spread, future prices).",
+                "nl": "Indien uitgeschakeld mag de policy min/max negeren wanneer dit winstgevend is (break-even, spread, toekomstige prijzen)."
+              },
+              "value": true,
               "visible": {
                 "when": "tariff_type",
                 "is": "dynamic"
