@@ -1012,5 +1012,8 @@
   },
   "3.13.28": {
     "en": "Planning update when user changes settings for min and max price thresholds"
+  },
+  "3.13.29": {
+    "en": "15min planning and custom setting to respect min max prices or allow a little deviation"
   }
 }
