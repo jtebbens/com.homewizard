@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.30",
+  "version": "3.13.32",
   "platforms": [
     "local"
   ],
@@ -5410,6 +5410,7 @@
         "meter_power.export",
         "measure_battery",
         "battery_charging_state",
+        "battery_soc",
         "measure_power",
         "measure_current",
         "measure_voltage",
@@ -5476,6 +5477,28 @@
             "en": "Battery State",
             "nl": "Batterij status"
           }
+        },
+        "battery_soc": {
+          "type": "number",
+          "title": {
+            "en": "Battery Level",
+            "nl": "Batterijniveau"
+          },
+          "desc": {
+            "en": "Current battery state of charge",
+            "nl": "Huidige batterij laadstatus"
+          },
+          "units": {
+            "en": "%",
+            "nl": "%"
+          },
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "getable": true,
+          "setable": false,
+          "uiComponent": "sensor",
+          "icon": "assets/icon.svg"
         },
         "rssi": {
           "type": "number",
@@ -6088,6 +6111,28 @@
       "insights": false,
       "icon": "assets/battery.svg",
       "uiComponent": "sensor"
+    },
+    "battery_soc": {
+      "type": "number",
+      "title": {
+        "en": "Battery Level",
+        "nl": "Batterijniveau"
+      },
+      "desc": {
+        "en": "Current battery state of charge",
+        "nl": "Huidige batterij laadstatus"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "battery_soc_mirror": {
       "type": "number",
