@@ -1018,5 +1018,8 @@
   },
   "3.13.30": {
     "en": "Extra settings for dynamic mode for future 2027 energy contracts"
+  },
+  "3.13.32": {
+    "en": "Remove lastBatteryAt in energy_v2"
   }
 }
