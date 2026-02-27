@@ -803,6 +803,7 @@
       const minSoc = deviceSettings['min_soc'] || 0;
       const maxSoc = deviceSettings['max_soc'] || 100;
       const tariffType = deviceSettings['tariff_type'] || 'dynamic';
+      const respectMinMax = deviceSettings['respect_minmax'] !== false; // ✅ NEW: Default true = strict mode
 
       let userPolicyMode = policyState?.policyMode || settings['policy_mode'] || 'balanced';
       if (['balanced', 'balanced-fixed', 'balanced-dynamic'].includes(userPolicyMode)) {
@@ -915,6 +916,30 @@
       if (curIdx >= 0) {
         intervals[curIdx].soc = currentSOC;
 
+        // ✅ NEW: Fill in PAST intervals with historical data
+        const modeHistory = settings['policy_mode_history'] || [];
+        for (let i = 0; i < curIdx; i++) {
+          const interval = intervals[i];
+          const intervalStart = interval.timestamp;
+          const intervalEnd = new Date(intervalStart.getTime() + 15 * 60 * 1000);
+
+          // Find matching history entry for this 15-min interval
+          const match = modeHistory.find(m => {
+            const mts = new Date(m.ts);
+            return mts >= intervalStart && mts < intervalEnd;
+          });
+
+          if (match) {
+            interval.soc = match.soc ?? currentSOC;
+            interval.hwMode = match.hwMode ?? 'standby';
+            if (match.price != null) interval.price = match.price;
+          } else {
+            // No history: use current SoC as fallback
+            interval.soc = currentSOC;
+          }
+        }
+
+        // ✅ Project FUTURE intervals forward from current
         for (let i = curIdx; i < intervals.length; i++) {
           const interval = intervals[i];
 
@@ -1034,11 +1059,30 @@
         const isPast = hourGroup.intervals.every(i => i.isPast);
         const pastStyle = isPast ? 'opacity:0.4;filter:grayscale(60%);' : '';
 
+        // ✅ NEW: Check if this is an opportunistic override
+        let opportunisticBadge = '';
+        if (!respectMinMax && avgPrice !== null) {
+          // Check if any interval in this hour is charging above threshold or discharging below threshold
+          const hasOpportunisticCharge = hourGroup.intervals.some(i => 
+            i.policyMode === 'charge' && i.price > maxChgPrice
+          );
+          const hasOpportunisticDischarge = hourGroup.intervals.some(i => 
+            i.policyMode === 'discharge' && i.price < minDchPrice && i.price > 0.20
+          );
+
+          if (hasOpportunisticCharge) {
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#FF9800;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+          } else if (hasOpportunisticDischarge) {
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#9C27B0;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+          }
+        }
+
         return `
           ${dayMarker}
           <div class="planning-hour-card ${isCurrent ? 'current' : ''} hw-${dominantMode}" 
                style="${pastStyle}" 
                onclick="showHourDetail(${idx})">
+            ${opportunisticBadge}
             <div class="planning-hour-time">${String(hour).padStart(2, '0')}:00</div>
             <div class="planning-hour-price">${priceDisplay}</div>
             ${hasVariation ? `<div class="price-variation">⚠️ ±€${priceVariation.toFixed(3)}</div>` : ''}
@@ -1046,7 +1090,8 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%
+              SoC: ${avgSoc.toFixed(0)}%<br>
+              ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#4CAF50' : avgPrice >= minDchPrice ? '#2196F3' : '#bbb'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
             </div>
             <div class="expand-indicator">+</div>
           </div>`;
