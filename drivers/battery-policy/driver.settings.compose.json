@@ -75,6 +75,78 @@
       },
 
       {
+        "id": "respect_minmax",
+        "type": "checkbox",
+        "label": { 
+          "en": "Strictly respect min/max prices", 
+          "nl": "Min/max prijzen strikt respecteren" 
+        },
+        "hint": {
+          "en": "When enabled (default), battery only charges/discharges within configured price limits. When disabled, the system can make opportunistic decisions outside these limits when profitable (e.g., charging at €0.17 when future price is €0.30). Recommended: ENABLED for 2026 (with net metering), DISABLED for 2027+ (without net metering).",
+          "nl": "Indien ingeschakeld (standaard) laadt/ontlaadt de batterij alleen binnen geconfigureerde prijslimieten. Indien uitgeschakeld kan het systeem opportunistische beslissingen nemen buiten deze limieten wanneer winstgevend (bijv. laden op €0,17 wanneer toekomstige prijs €0,30 is). Aanbevolen: INGESCHAKELD voor 2026 (met salderen), UITGESCHAKELD voor 2027+ (zonder salderen)."
+        },
+        "value": true,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+
+      {
+        "id": "opportunistic_charge_multiplier",
+        "type": "number",
+        "label": {
+          "en": "Opportunistic charge spread multiplier",
+          "nl": "Opportunistisch laden spread vermenigvuldiger"
+        },
+        "hint": {
+          "en": "Multiplier for min_profit_margin to trigger opportunistic charging above max_charge_price. Formula: spread > (min_profit_margin × multiplier). Higher values = more conservative. Examples: 1.5 (aggressive, €0.015 spread), 2.0 (balanced, €0.02 spread), 3.0 (conservative, €0.03 spread). Only active when 'Strictly respect min/max prices' is DISABLED.",
+          "nl": "Vermenigvuldiger voor min_profit_margin om opportunistisch laden boven max_charge_price te activeren. Formule: spread > (min_profit_margin × vermenigvuldiger). Hogere waarden = conservatiever. Voorbeelden: 1,5 (agressief, €0,015 spread), 2,0 (gebalanceerd, €0,02 spread), 3,0 (conservatief, €0,03 spread). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
+        },
+        "value": 2.0,
+        "min": 1.0,
+        "max": 5.0,
+        "step": 0.5,
+        "units": "×",
+        "visible": { "when": "respect_minmax", "is": false }
+      },
+
+      {
+        "id": "opportunistic_discharge_floor",
+        "type": "number",
+        "label": {
+          "en": "Opportunistic discharge price floor",
+          "nl": "Opportunistisch ontladen prijsbodem"
+        },
+        "hint": {
+          "en": "Minimum price required for opportunistic discharge when current price is below min_discharge_price. Lower values = discharge at lower prices (more aggressive). Examples: €0.10 (very aggressive), €0.20 (balanced), €0.30 (conservative). Only active when 'Strictly respect min/max prices' is DISABLED.",
+          "nl": "Minimale prijs vereist voor opportunistisch ontladen wanneer huidige prijs onder min_discharge_price ligt. Lagere waarden = ontladen bij lagere prijzen (agressiever). Voorbeelden: €0,10 (zeer agressief), €0,20 (gebalanceerd), €0,30 (conservatief). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
+        },
+        "value": 0.20,
+        "min": 0.10,
+        "max": 0.35,
+        "step": 0.01,
+        "units": "€/kWh",
+        "visible": { "when": "respect_minmax", "is": false }
+      },
+
+      {
+        "id": "opportunistic_discharge_spread_threshold",
+        "type": "number",
+        "label": {
+          "en": "Opportunistic discharge spread threshold",
+          "nl": "Opportunistisch ontladen spread drempel"
+        },
+        "hint": {
+          "en": "Maximum negative spread to allow opportunistic discharge (when no better future price expected). More negative = stricter (less willing to discharge early). Formula: (future_max_price × efficiency) - current_price < threshold. Examples: -€0.10 (very strict), -€0.05 (balanced), -€0.01 (aggressive). Only active when 'Strictly respect min/max prices' is DISABLED.",
+          "nl": "Maximale negatieve spread om opportunistisch ontladen toe te staan (wanneer geen betere toekomstige prijs verwacht). Negatiever = strenger (minder bereid vroeg te ontladen). Formule: (toekomstige_max_prijs × efficiëntie) - huidige_prijs < drempel. Voorbeelden: -€0,10 (zeer streng), -€0,05 (gebalanceerd), -€0,01 (agressief). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
+        },
+        "value": -0.05,
+        "min": -0.10,
+        "max": -0.01,
+        "step": 0.01,
+        "units": "€/kWh",
+        "visible": { "when": "respect_minmax", "is": false }
+      },
+
+      {
         "id": "max_charge_price",
         "type": "number",
         "label": { "en": "Max Charge Price (€/kWh)", "nl": "Maximale laadprijs (€/kWh)" },
@@ -101,13 +173,29 @@
         "type": "number",
         "label": { "en": "Min Arbitrage Profit (€/kWh)", "nl": "Minimale arbitragewinst (€/kWh)" },
         "hint": {
-          "en": "Minimum profit per kWh (after 25% battery loss) before grid charging is attempted. Higher = fewer but more profitable cycles. 0.00 = always charge at cheap hours.",
-          "nl": "Minimale winst per kWh (na 25% batterijverlies) voordat laden uit het net wordt geprobeerd. Hoger = minder maar winstgevendere cycli. 0,00 = altijd laden bij goedkope uren."
+          "en": "Minimum profit per kWh (after battery losses) before grid charging is attempted. Higher = fewer but more profitable cycles. 0.00 = always charge at cheap hours.",
+          "nl": "Minimale winst per kWh (na batterijverlies) voordat laden uit het net wordt geprobeerd. Hoger = minder maar winstgevendere cycli. 0,00 = altijd laden bij goedkope uren."
         },
-        "value": 0.02,
+        "value": 0.01,
         "min": 0,
         "max": 0.15,
+        "step": 0.005,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+
+      {
+        "id": "battery_efficiency",
+        "type": "number",
+        "label": { "en": "Battery Efficiency (RTE)", "nl": "Batterij efficiëntie (RTE)" },
+        "hint": {
+          "en": "Round-trip efficiency: the percentage of energy you get back from what you put in. Typical values: 0.70-0.85 (70-85%). This is used for break-even calculations and profit margins. The system will also learn actual efficiency from real charge/discharge cycles.",
+          "nl": "Round-trip efficiëntie: het percentage energie dat je terugkrijgt van wat je erin stopt. Typische waarden: 0,70-0,85 (70-85%). Dit wordt gebruikt voor break-even berekeningen en winstmarges. Het systeem leert ook de werkelijke efficiëntie van echte laad/ontlaad cycli."
+        },
+        "value": 0.75,
+        "min": 0.50,
+        "max": 0.95,
         "step": 0.01,
+        "units": "RTE",
         "visible": { "when": "tariff_type", "is": "dynamic" }
       }
     ]
@@ -147,8 +235,8 @@
         "type": "number",
         "label": { "en": "Minimum Battery %", "nl": "Minimale batterij‑%" },
         "hint": {
-          "en": "0% means no minimum — battery is allowed to fully discharge.",
-          "nl": "0% betekent geen minimum — de batterij mag volledig ontladen."
+          "en": "0% means no minimum — battery is allowed to fully discharge. HomeWizard firmware protects the battery hardware at 0-100%.",
+          "nl": "0% betekent geen minimum — de batterij mag volledig ontladen. HomeWizard firmware beschermt de batterij hardware bij 0-100%."
         },
         "units": { "en": "%", "nl": "%" },
         "value": 0,

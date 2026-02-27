@@ -316,6 +316,12 @@ if (debug) this.log(
           { battery_power: batteryPower }
         );
 
+        // Add this logging every 5 minutes:
+        if (this.efficiencyEstimator.state) {
+          const s = this.efficiencyEstimator.state;
+          if (debug) this.log(`[Efficiency] Progress: charged=${s.totalChargeKwh.toFixed(2)} kWh, discharged=${s.totalDischargeKwh.toFixed(2)} kWh, current=${(s.efficiency * 100).toFixed(1)}%`);
+        }
+
 
         const currentSoc = this.getCapabilityValue('battery_soc_mirror');
         const currentPower = this.getCapabilityValue('grid_power_mirror');
