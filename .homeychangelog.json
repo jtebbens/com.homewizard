@@ -1021,5 +1021,8 @@
   },
   "3.13.32": {
     "en": "Remove lastBatteryAt in energy_v2"
+  },
+  "3.13.33": {
+    "en": "Websocket rewrite with TLS"
   }
 }
