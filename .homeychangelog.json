@@ -1027,5 +1027,8 @@
   },
   "3.13.34": {
     "en": "Websocket adjusments, circuitbreaker, backoff on failure attempts, TLS IP fix, Connection throttle, hard timeouts"
+  },
+  "3.13.35": {
+    "en": "Bugfix energy driver connection_error must be a string"
   }
 }
