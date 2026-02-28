@@ -239,7 +239,7 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
       const locations = await this.getLocations(tokenData.access_token);
       
       if (!locations || locations.length === 0) {
-        throw new Error(this.homey.__('errors.no_locations'));
+        return [];
       }
 
       const devices = [];
@@ -277,7 +277,7 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
       }
 
       if (devices.length === 0) {
-        throw new Error(this.homey.__('errors.no_watermeters'));
+        return [];
       }
 
       this.log(`Returning ${devices.length} watermeter(s) for pairing`);
