@@ -1024,5 +1024,8 @@
   },
   "3.13.33": {
     "en": "Websocket rewrite with TLS"
+  },
+  "3.13.34": {
+    "en": "Websocket adjusments, circuitbreaker, backoff on failure attempts, TLS IP fix, Connection throttle, hard timeouts"
   }
 }
