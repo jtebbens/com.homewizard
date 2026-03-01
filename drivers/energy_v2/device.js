@@ -1693,9 +1693,6 @@ async _handleBatteries(data) {
   try {
     if (debug) this.log('⚡ Battery event data:', data);
 
-    // Mark battery WS as alive
-    this.wsManager.lastBatteryAt = Date.now();
-
     // --- Device existence guards ---
     const dataObj = this.getData();
     if (!dataObj?.id) return;
@@ -2360,7 +2357,8 @@ async _setCapabilityValue(capability, value) {
           });
         }
 
-        this.wsManager.start();
+        //this.wsManager.start();
+        this.wsManager.resume();
       }
 
     }

@@ -20,6 +20,7 @@
     "policy_debug_learning",
     "battery_soc_mirror",
     "grid_power_mirror",
+    "battery_rte",
     "last_update",
     "override_until",
     "weather_override"

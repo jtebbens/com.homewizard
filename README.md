@@ -51,7 +51,23 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.28)
+## 📝 Latest Updates (v3.13.37)
+
+### Bug Fixes
+
+* **Battery Policy PV Detection** - Fixed incorrect grid charging during active PV production
+* **WebSocket Stability** - Improved reconnection logic and error handling for energy_v2 and plugin_battery drivers
+
+### Technical
+
+* Policy engine mapping logic now respects sticky PV detection state set by `_applyPVReality()`
+* PV detection includes `pvEstimate` as additional indicator alongside grid export and battery power
+* Improved logging shows virtual grid power breakdown for better debugging
+* Enhanced WebSocket connection resilience during network fluctuations
+
+---
+
+## Previous Updates (v3.13.28)
 
 ### New Features
 
@@ -68,8 +84,8 @@ NEW in v3.13.14: Intelligent battery management system that:
 * Baseload monitor uses median of lowest 50% samples for robust calculation
 * Settings page displays visual ML score progress bars
 * Explainability engine shows weather-aware reasoning with dynamic time windows
-* General UI and logging refinements for clarity and consistency.
-* Pre charge only when it’s profitable
+* General UI and logging refinements for clarity and consistency
+* Pre charge only when it's profitable
 * Planning update when min max prices are changed by user affecting decisions
 
 ### Technical
@@ -77,13 +93,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 * Manual IP support for both P1 Meter (v1) and P1 Meter (apiv2) drivers
 * Discovery events properly ignored when manual IP is configured
 * Fixed €0.25 estimate for baseload costs to prevent API overload from 15k users
-* Internal refactoring improves stability, caching behavior, and driver initialization.
+* Internal refactoring improves stability, caching behavior, and driver initialization
 
 ---
 
 ## Previous Updates (v3.13.14)
-
-### New Features
 
 * Battery Policy driver with ML-based charging optimization
 * Trigger cards for energy grid errors, voltage swells, voltage sags, and restoration events

@@ -84,6 +84,7 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_debug_learning: '-',
       battery_soc_mirror: 50,
       grid_power_mirror: 0,
+      battery_rte: 0.75,
       last_update: new Date().toISOString(),
       override_until: null,
       weather_override: 'auto'
@@ -299,9 +300,7 @@ if (debug) this.log(
         }
 
         if (debug) this.log(`🐛 batteryPower resolved → ${batteryPower}W`);
-
-
-
+        if (debug) this.log(`🐛 gridPower value → ${gridPower}W`);
 
         await this._updateBatteryCostModel({
           batteryPower,
@@ -309,8 +308,8 @@ if (debug) this.log(
           pvState: this._pvState
         });
 
-
         // Efficiency learning
+        if (debug) this.log(`[Efficiency] About to update with grid=${gridPower}W, batt=${batteryPower}W`);
         this.efficiencyEstimator.update(
           { gridPower, batteryPower },
           { battery_power: batteryPower }
@@ -319,7 +318,15 @@ if (debug) this.log(
         // Add this logging every 5 minutes:
         if (this.efficiencyEstimator.state) {
           const s = this.efficiencyEstimator.state;
-          if (debug) this.log(`[Efficiency] Progress: charged=${s.totalChargeKwh.toFixed(2)} kWh, discharged=${s.totalDischargeKwh.toFixed(2)} kWh, current=${(s.efficiency * 100).toFixed(1)}%`);
+          if (debug) {
+            const chargedWh = (s.totalChargeKwh * 1000).toFixed(1);
+            const dischargedWh = (s.totalDischargeKwh * 1000).toFixed(1);
+            this.log(
+              `[Efficiency] Progress: charged=${s.totalChargeKwh.toFixed(4)} kWh (${chargedWh} Wh), ` +
+              `discharged=${s.totalDischargeKwh.toFixed(4)} kWh (${dischargedWh} Wh), ` +
+              `current=${(s.efficiency * 100).toFixed(1)}%`
+            );
+          }
         }
 
 
@@ -348,34 +355,79 @@ if (debug) this.log(
         }
 
         // ------------------------------------------------------
-        // ⭐ REALTIME PV STATE CHANGE DETECTIE (with hysteresis)
+        // ⭐ REALTIME PV STATE DETECTION (dual-mode)
         // ------------------------------------------------------
-        // Use hysteresis around -75W sweet spot to prevent rapid toggling:
-        // - Turn ON when grid < -125W (clear PV surplus)
-        // - Turn OFF when grid > -25W (surplus gone)
+        // Detects PV in two scenarios:
+        // 1. EXPORT MODE: Grid exporting surplus (gridPower < -200W)
+        // 2. CONSUMPTION MODE: Active PV being consumed (sun ≥40% AND daytime AND grid balanced)
+        //
+        // This handles the zero_charge_only case with daytime loads where grid ~0W
+        // but PV is actively producing and being consumed (washing machine, tumble dryer, etc.)
+        //
+        // CRITICAL: Account for battery charging when detecting PV state
+        // If battery is charging, that power would be exported if battery was in standby
         const PV_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes between PV-triggered runs
+        const PV_EXPORT_THRESHOLD = -200;     // Clear export: less than -200W
+        const PV_GRID_MIN = -100;             // Grid balance range for active consumption
+        const PV_GRID_MAX = 200;
+        const PV_SUN_THRESHOLD = 40;          // Sun score ≥40% indicates active PV
+        const PV_DAYLIGHT_START = 7;          // 7 AM
+        const PV_DAYLIGHT_END = 18;           // 6 PM
 
-        if (!this._pvState && gridPower < -125) {
-          // PV state OFF → ON (export started)
+        // Get current sun score and time
+        const currentHour = new Date().getHours();
+        const isDaylight = currentHour >= PV_DAYLIGHT_START && currentHour < PV_DAYLIGHT_END;
+        const sunScore = this.getCapabilityValue('sun_score') ?? 0;
+        const hasSunlight = sunScore >= PV_SUN_THRESHOLD;
+
+        // Calculate "virtual export" = what grid would be if battery was in standby
+        // If battery is charging (positive power), add it to grid reading
+        const batteryCharging = batteryPower > 0 ? batteryPower : 0;
+        const virtualGridPower = gridPower + batteryCharging;
+
+        // EXPORT MODE: Grid exporting clearly (surplus > 200W), accounting for battery charging
+        const hasExport = virtualGridPower < PV_EXPORT_THRESHOLD;
+
+        // CONSUMPTION MODE: Sun is shining, during daytime, grid is balanced
+        // (neither importing heavily nor exporting heavily), suggesting PV is being consumed
+        // Use virtual grid power to account for battery charging
+        const hasActivePVConsumption = isDaylight && hasSunlight && 
+                                       virtualGridPower >= PV_GRID_MIN && virtualGridPower <= PV_GRID_MAX;
+
+        // PV is active if EITHER condition is true
+        const pvNowActive = hasExport || hasActivePVConsumption;
+
+        if (!this._pvState && pvNowActive) {
+          // PV state OFF → ON
           this._pvState = true;
           const now = Date.now();
+          const reason = hasExport 
+            ? `export (virtual=${virtualGridPower}W [grid=${gridPower}W + batt=${batteryCharging}W] < ${PV_EXPORT_THRESHOLD}W)` 
+            : `consumption (sun=${sunScore}%, virtual=${virtualGridPower}W, daytime=${isDaylight})`;
+          
           if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
             this._lastPvPolicyRun = now;
-            this.log(`⚡ PV state changed (OFF → ON) → running policy`);
+            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (OFF → ON) → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
           }
-        } else if (this._pvState && gridPower > -25) {
-          // PV state ON → OFF (export stopped)
+        } else if (this._pvState && !pvNowActive) {
+          // PV state ON → OFF
           this._pvState = false;
           const now = Date.now();
+          const reason = !hasSunlight 
+            ? `sun gone (${sunScore}% < ${PV_SUN_THRESHOLD}%)` 
+            : !isDaylight 
+            ? `night (${currentHour}:00, outside ${PV_DAYLIGHT_START}–${PV_DAYLIGHT_END})` 
+            : `grid unbalanced (virtual=${virtualGridPower}W [grid=${gridPower}W + batt=${batteryCharging}W], outside ${PV_GRID_MIN}–${PV_GRID_MAX}W)`;
+          
           if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
             this._lastPvPolicyRun = now;
-            this.log(`⚡ PV state changed (ON → OFF) → running policy`);
+            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (ON → OFF) → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
           }
         }
         // Otherwise: no state change, no spam
@@ -614,6 +666,10 @@ if (debug) this.log(
       const debugTop3High = this.getCapabilityValue('policy_debug_top3high');
       if (debugTop3Low) this.homey.settings.set('policy_debug_top3low', debugTop3Low);
       if (debugTop3High) this.homey.settings.set('policy_debug_top3high', debugTop3High);
+
+      // Update battery RTE display
+      const currentRte = this.efficiencyEstimator.getEfficiency();
+      await this.setCapabilityValue('battery_rte', parseFloat((currentRte * 100).toFixed(1))).catch(this.error);
 
       await this.setCapabilityValue('recommended_mode', recommended);
 

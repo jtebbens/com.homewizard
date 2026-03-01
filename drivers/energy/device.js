@@ -310,7 +310,7 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       });
 
       if (!res || !res.ok) {
-        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'connection_error', res ? String(res.status) : 'fetch failed');
         await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
@@ -427,7 +427,7 @@ onDiscoveryLastSeenChanged(discoveryResult) {
       });
 
       if (!res || !res.ok) {
-        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'connection_error', res ? `HTTP ${res.status}` : 'fetch failed');
         await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
@@ -450,7 +450,7 @@ onDiscoveryLastSeenChanged(discoveryResult) {
       });
 
       if (!res || !res.ok) {
-        await updateCapability(this, 'connection_error', res ? res.status : 'fetch failed');
+        await updateCapability(this, 'connection_error', res ? `HTTP ${res.status}` : 'fetch failed');
         await updateCapability(this, 'alarm_connectivity', true);
         throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
