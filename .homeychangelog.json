@@ -1033,5 +1033,8 @@
   },
   "3.13.36": {
     "en": "Websocket prefetch problem when devices are unreachable"
+  },
+  "3.13.37": {
+    "en": "Fixed incorrect grid charging during active PV production"
   }
 }
