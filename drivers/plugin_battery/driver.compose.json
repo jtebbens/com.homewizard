@@ -18,6 +18,7 @@
     "meter_power.export",
     "measure_battery",
     "battery_charging_state",
+    "measure_soc",
     "measure_power",
     "measure_current",
     "measure_voltage",
@@ -84,6 +85,28 @@
         "en": "Battery State",
         "nl": "Batterij status"
       }
+    },
+    "measure_soc": {
+      "type": "number",
+      "title": {
+        "en": "Battery Level",
+        "nl": "Batterijniveau"
+      },
+      "desc": {
+        "en": "Current battery state of charge",
+        "nl": "Huidige batterij laadstatus"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "rssi": {
       "type": "number",

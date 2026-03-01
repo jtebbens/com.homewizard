@@ -1,0 +1,22 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Battery RTE",
+    "nl": "Batterij RTE"
+  },
+  "desc": {
+    "en": "Learned round-trip efficiency of battery (0-100%)",
+    "nl": "Geleerde round-trip efficiency van batterij (0-100%)"
+  },
+  "units": {
+    "en": "%",
+    "nl": "%"
+  },
+  "min": 0,
+  "max": 100,
+  "decimals": 1,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

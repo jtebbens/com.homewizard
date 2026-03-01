@@ -150,6 +150,9 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this._pollErrorCount = 0;
     this._lastPollAt = 0;
 
+    if (this.hasCapability('battery_soc')) {
+      this.removeCapability('battery_soc').catch(this.error);
+    }
 
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
@@ -423,6 +426,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       const cur = this.getCapabilityValue('measure_battery');
       if (cur !== data.state_of_charge_pct) {
         await updateCapability(this, 'measure_battery', data.state_of_charge_pct);
+        await updateCapability(this, 'measure_soc', data.state_of_charge_pct);
       }
       this._socLastUpdate = now;
     }
