@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.36",
+  "version": "3.13.37",
   "platforms": [
     "local"
   ],
@@ -3221,6 +3221,7 @@
         "policy_debug_learning",
         "battery_soc_mirror",
         "grid_power_mirror",
+        "battery_rte",
         "last_update",
         "override_until",
         "weather_override"
@@ -6111,6 +6112,28 @@
       "insights": false,
       "icon": "assets/battery.svg",
       "uiComponent": "sensor"
+    },
+    "battery_rte": {
+      "type": "number",
+      "title": {
+        "en": "Battery RTE",
+        "nl": "Batterij RTE"
+      },
+      "desc": {
+        "en": "Learned round-trip efficiency of battery (0-100%)",
+        "nl": "Geleerde round-trip efficiency van batterij (0-100%)"
+      },
+      "units": {
+        "en": "%",
+        "nl": "%"
+      },
+      "min": 0,
+      "max": 100,
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
     },
     "battery_soc_mirror": {
       "type": "number",
