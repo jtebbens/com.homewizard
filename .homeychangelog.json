@@ -1042,5 +1042,8 @@
   },
   "3.13.39": {
     "en": "Cleanup timers upon restart, throttled websocket updates to 3s"
+  },
+  "3.13.40": {
+    "en": "More verbose logging in websocket"
   }
 }
