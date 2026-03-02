@@ -1036,5 +1036,8 @@
   },
   "3.13.37": {
     "en": "Fixed incorrect grid charging during active PV production"
+  },
+  "3.13.38": {
+    "en": "Fix race condition in WebSocket cleanup causing null reference crashes"
   }
 }
