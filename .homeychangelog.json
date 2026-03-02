@@ -1048,5 +1048,8 @@
   },
   "3.13.41": {
     "en": "Troubleshooting user crashes"
+  },
+  "3.13.42": {
+    "en": "Random startup delay to avoid start cpu spikes"
   }
 }
