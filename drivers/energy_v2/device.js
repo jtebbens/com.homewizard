@@ -179,28 +179,35 @@ function getWifiQuality(strength) {
 
 async function applyMeasurementCapabilities(device, m) {
   try {
-    const mappings = {
-      // Generic
+    const now = Date.now();
+    
+    // ✅ CPU FIX: Categorize capabilities by update frequency
+    // High-frequency (realtime) capabilities: update on every message (but already throttled at WS level to 3s)
+    const realtimeCapabilities = {
       'measure_power': m.power_w,
-      'measure_voltage': m.voltage_v,
-      'measure_current': m.current_a,
-      'meter_power.consumed': m.energy_import_kwh,
-      'meter_power.returned': m.energy_export_kwh,
-      'tariff': m.tariff,
-      'measure_frequency': m.frequency_hz,
-
-      // Per phase
       'measure_power.l1': m.power_l1_w,
       'measure_power.l2': m.power_l2_w,
       'measure_power.l3': m.power_l3_w,
+    };
+    
+    // Medium-frequency capabilities: update every 10 seconds
+    const mediumFreqCapabilities = {
+      'measure_voltage': m.voltage_v,
+      'measure_current': m.current_a,
+      'measure_frequency': m.frequency_hz,
       'measure_voltage.l1': m.voltage_l1_v,
       'measure_voltage.l2': m.voltage_l2_v,
       'measure_voltage.l3': m.voltage_l3_v,
       'measure_current.l1': m.current_l1_a,
       'measure_current.l2': m.current_l2_a,
       'measure_current.l3': m.current_l3_a,
-
-      // Tariff totals
+      'tariff': m.tariff,
+    };
+    
+    // Low-frequency capabilities: update every 30 seconds
+    const lowFreqCapabilities = {
+      'meter_power.consumed': m.energy_import_kwh,
+      'meter_power.returned': m.energy_export_kwh,
       'meter_power.consumed.t1': m.energy_import_t1_kwh,
       'meter_power.produced.t1': m.energy_export_t1_kwh,
       'meter_power.consumed.t2': m.energy_import_t2_kwh,
@@ -209,8 +216,12 @@ async function applyMeasurementCapabilities(device, m) {
       'meter_power.produced.t3': m.energy_export_t3_kwh,
       'meter_power.consumed.t4': m.energy_import_t4_kwh,
       'meter_power.produced.t4': m.energy_export_t4_kwh,
-
-      // Net quality
+      'measure_power.montly_power_peak': m.monthly_power_peak_w,
+      'measure_power.average_power_15m_w': m.average_power_15m_w,
+    };
+    
+    // Very low-frequency capabilities: update every 60 seconds
+    const veryLowFreqCapabilities = {
       'long_power_fail_count': m.long_power_fail_count,
       'voltage_sag_l1': m.voltage_sag_l1_count,
       'voltage_sag_l2': m.voltage_sag_l2_count,
@@ -218,11 +229,24 @@ async function applyMeasurementCapabilities(device, m) {
       'voltage_swell_l1': m.voltage_swell_l1_count,
       'voltage_swell_l2': m.voltage_swell_l2_count,
       'voltage_swell_l3': m.voltage_swell_l3_count,
-
-      // Belgium
-      'measure_power.montly_power_peak': m.monthly_power_peak_w,
-      'measure_power.average_power_15m_w': m.average_power_15m_w,
     };
+
+    // Initialize debounce timestamps if needed
+    if (!device._lastMediumUpdate) device._lastMediumUpdate = 0;
+    if (!device._lastLowUpdate) device._lastLowUpdate = 0;
+    if (!device._lastVeryLowUpdate) device._lastVeryLowUpdate = 0;
+
+    const mappings = {
+      ...realtimeCapabilities,
+      ...(now - device._lastMediumUpdate >= 10000 ? mediumFreqCapabilities : {}),
+      ...(now - device._lastLowUpdate >= 30000 ? lowFreqCapabilities : {}),
+      ...(now - device._lastVeryLowUpdate >= 60000 ? veryLowFreqCapabilities : {}),
+    };
+    
+    // Update timestamps
+    if (now - device._lastMediumUpdate >= 10000) device._lastMediumUpdate = now;
+    if (now - device._lastLowUpdate >= 30000) device._lastLowUpdate = now;
+    if (now - device._lastVeryLowUpdate >= 60000) device._lastVeryLowUpdate = now;
 
     // Collect all capability updates as promises
     const tasks = [];
@@ -949,7 +973,7 @@ this.homey.flow
 
     this._batteryGroupInterval = setInterval(() => {
       this._updateBatteryGroup().catch(this.error);
-    }, 10000); // elke 10 seconden
+    }, 60000); // reduced from 10s to 60s for CPU efficiency
 
     this._dailyInterval = setInterval(() => {
       this._updateDaily().catch(this.error);
@@ -1567,7 +1591,9 @@ _measurementFullRefresh(m, tasks, now) {
 }
 
 _measurementFlows(m, now) {
-  if (!this._lastFlowTrigger || now - this._lastFlowTrigger > 5000) {
+  // ✅ CPU FIX: Rate-limit flow triggers to 60s
+  // energy_import_kwh changes every second at any load → was firing 12×/min
+  if (!this._lastFlowTrigger || now - this._lastFlowTrigger > 60000) {
 
     if (typeof m.energy_import_kwh === 'number' &&
         this._triggerFlowPrevious.import !== m.energy_import_kwh) {
@@ -1838,12 +1864,9 @@ async _handleBatteries(data) {
 
 
 
-  onDeleted() {
-    // Unregister from baseload monitor
-    const app = this.homey.app;
-    if (app.baseloadMonitor) {
-      app.baseloadMonitor.unregisterP1Device(this);
-    }
+  onUninit() {
+    // Cleanup intervals and timers when app stops/crashes
+    this.__deleted = true;
 
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
@@ -1887,6 +1910,17 @@ async _handleBatteries(data) {
       }
       this._flowListenerReferences = null;
     }
+  }
+
+  onDeleted() {
+    // Unregister from baseload monitor (only on explicit device deletion)
+    const app = this.homey.app;
+    if (app.baseloadMonitor) {
+      app.baseloadMonitor.unregisterP1Device(this);
+    }
+
+    // Call onUninit to cleanup timers/intervals
+    this.onUninit();
   }
 
 async onDiscoveryAvailable(discoveryResult) {
@@ -2208,6 +2242,7 @@ async _setCapabilityValue(capability, value) {
 
   // onPoll method if websocket is to heavy for Homey unit
   async onPoll() {
+    if (this.__deleted) return; // Skip if device is deleted/uninit
 
     const settings = this.getSettings();
     
@@ -2257,10 +2292,11 @@ async _setCapabilityValue(capability, value) {
 
       await this.setAvailable();
 
-     } catch (err) { 
-      this.log(`Polling error: ${err.message}`); 
-      this.setUnavailable(err.message || 'Polling error').catch(this.error); 
-    
+     } catch (err) {
+      if (!this.__deleted) {
+        this.log(`Polling error: ${err.message}`);
+        this.setUnavailable(err.message || 'Polling error').catch(this.error);
+      }
     } 
   }
 

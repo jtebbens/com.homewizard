@@ -86,6 +86,7 @@ class BatteryPolicyDevice extends Homey.Device {
       grid_power_mirror: 0,
       battery_rte: 0.75,
       last_update: new Date().toISOString(),
+      active_mode: 'unknown',
       override_until: null,
       weather_override: 'auto'
     };
@@ -305,26 +306,28 @@ if (debug) this.log(
         await this._updateBatteryCostModel({
           batteryPower,
           gridPower,
-          pvState: this._pvState
+          pvState: this._pvState,
+          soc: this.getCapabilityValue('measure_battery') ?? null
         });
 
         // Efficiency learning
-        if (debug) this.log(`[Efficiency] About to update with grid=${gridPower}W, batt=${batteryPower}W`);
+        if (debug) this.log(`[Efficiency] About to update with grid=${gridPower}W, batt=${batteryPower}W, soc=${soc}`);
         this.efficiencyEstimator.update(
           { gridPower, batteryPower },
-          { battery_power: batteryPower }
+          { battery_power: batteryPower, stateOfCharge: soc }
         );
 
         // Add this logging every 5 minutes:
         if (this.efficiencyEstimator.state) {
           const s = this.efficiencyEstimator.state;
-          if (debug) {
-            const chargedWh = (s.totalChargeKwh * 1000).toFixed(1);
-            const dischargedWh = (s.totalDischargeKwh * 1000).toFixed(1);
+          // Log progress every 5 min (every 20th call at 15s interval)
+          this._effLogCounter = (this._effLogCounter || 0) + 1;
+          if (this._effLogCounter % 20 === 0) {
+            const chargedWh   = (s.totalChargeKwh   * 1000).toFixed(0);
+            const dischargedWh = (s.totalDischargeKwh * 1000).toFixed(0);
             this.log(
-              `[Efficiency] Progress: charged=${s.totalChargeKwh.toFixed(4)} kWh (${chargedWh} Wh), ` +
-              `discharged=${s.totalDischargeKwh.toFixed(4)} kWh (${dischargedWh} Wh), ` +
-              `current=${(s.efficiency * 100).toFixed(1)}%`
+              `[RTE] learning: charged=${chargedWh}Wh / 1000Wh, discharged=${dischargedWh}Wh / 1000Wh, ` +
+              `current RTE=${( s.efficiency * 100).toFixed(1)}%`
             );
           }
         }
@@ -367,9 +370,13 @@ if (debug) this.log(
         // CRITICAL: Account for battery charging when detecting PV state
         // If battery is charging, that power would be exported if battery was in standby
         const PV_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes between PV-triggered runs
-        const PV_EXPORT_THRESHOLD = -200;     // Clear export: less than -200W
-        const PV_GRID_MIN = -100;             // Grid balance range for active consumption
-        const PV_GRID_MAX = 200;
+        // ✅ HYSTERESIS THRESHOLDS: Different values for ON vs OFF to prevent bouncing
+        const PV_EXPORT_ON = -200;            // Turn ON: Clear export < -200W
+        const PV_EXPORT_OFF = -150;           // Turn OFF: Must rise above -150W to deactivate export mode
+        const PV_GRID_MIN_ON = -100;          // Turn ON: Consumption mode starts at -100W
+        const PV_GRID_MAX_ON = 200;           // Turn ON: Consumption mode ends at +200W
+        const PV_GRID_MIN_OFF = -150;         // Turn OFF: Wider range to prevent bouncing (-150W)
+        const PV_GRID_MAX_OFF = 250;          // Turn OFF: Wider range to prevent bouncing (+250W)
         const PV_SUN_THRESHOLD = 40;          // Sun score ≥40% indicates active PV
         const PV_DAYLIGHT_START = 7;          // 7 AM
         const PV_DAYLIGHT_END = 18;           // 6 PM
@@ -381,18 +388,27 @@ if (debug) this.log(
         const hasSunlight = sunScore >= PV_SUN_THRESHOLD;
 
         // Calculate "virtual export" = what grid would be if battery was in standby
-        // If battery is charging (positive power), add it to grid reading
-        const batteryCharging = batteryPower > 0 ? batteryPower : 0;
-        const virtualGridPower = gridPower + batteryCharging;
+        // If battery is charging (+800W), that PV energy would export to grid instead
+        // So subtract charging power: grid=-1100W, batt=+800W → virtual=-1900W
+        // If battery is discharging (-800W), that's already reflected in grid reading
+        const virtualGridPower = batteryPower > 0 
+          ? gridPower - batteryPower  // Charging: subtract to show true export potential
+          : gridPower;                 // Discharging/idle: grid reading is accurate
 
-        // EXPORT MODE: Grid exporting clearly (surplus > 200W), accounting for battery charging
-        const hasExport = virtualGridPower < PV_EXPORT_THRESHOLD;
-
-        // CONSUMPTION MODE: Sun is shining, during daytime, grid is balanced
-        // (neither importing heavily nor exporting heavily), suggesting PV is being consumed
-        // Use virtual grid power to account for battery charging
-        const hasActivePVConsumption = isDaylight && hasSunlight && 
-                                       virtualGridPower >= PV_GRID_MIN && virtualGridPower <= PV_GRID_MAX;
+        // ✅ HYSTERESIS LOGIC: Use different thresholds based on current state
+        let hasExport, hasActivePVConsumption;
+        
+        if (this._pvState) {
+          // Currently ON: Use wider thresholds to stay ON (prevent false OFF)
+          hasExport = virtualGridPower < PV_EXPORT_OFF;
+          hasActivePVConsumption = isDaylight && hasSunlight && 
+                                   virtualGridPower >= PV_GRID_MIN_OFF && virtualGridPower <= PV_GRID_MAX_OFF;
+        } else {
+          // Currently OFF: Use stricter thresholds to turn ON (prevent false ON)
+          hasExport = virtualGridPower < PV_EXPORT_ON;
+          hasActivePVConsumption = isDaylight && hasSunlight && 
+                                   virtualGridPower >= PV_GRID_MIN_ON && virtualGridPower <= PV_GRID_MAX_ON;
+        }
 
         // PV is active if EITHER condition is true
         const pvNowActive = hasExport || hasActivePVConsumption;
@@ -402,8 +418,8 @@ if (debug) this.log(
           this._pvState = true;
           const now = Date.now();
           const reason = hasExport 
-            ? `export (virtual=${virtualGridPower}W [grid=${gridPower}W + batt=${batteryCharging}W] < ${PV_EXPORT_THRESHOLD}W)` 
-            : `consumption (sun=${sunScore}%, virtual=${virtualGridPower}W, daytime=${isDaylight})`;
+            ? `export (virtual=${virtualGridPower.toFixed(1)}W [grid=${gridPower}W - batt=${batteryPower}W] < ${PV_EXPORT_ON}W)` 
+            : `consumption (sun=${sunScore}%, virtual=${virtualGridPower.toFixed(1)}W, daytime=${isDaylight})`;
           
           if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
             this._lastPvPolicyRun = now;
@@ -420,7 +436,7 @@ if (debug) this.log(
             ? `sun gone (${sunScore}% < ${PV_SUN_THRESHOLD}%)` 
             : !isDaylight 
             ? `night (${currentHour}:00, outside ${PV_DAYLIGHT_START}–${PV_DAYLIGHT_END})` 
-            : `grid unbalanced (virtual=${virtualGridPower}W [grid=${gridPower}W + batt=${batteryCharging}W], outside ${PV_GRID_MIN}–${PV_GRID_MAX}W)`;
+            : `grid unbalanced (virtual=${virtualGridPower.toFixed(1)}W [grid=${gridPower}W - batt=${batteryPower}W], outside ${PV_GRID_MIN_OFF}–${PV_GRID_MAX_OFF}W)`;
           
           if (!this._lastPvPolicyRun || now - this._lastPvPolicyRun > PV_DEBOUNCE_MS) {
             this._lastPvPolicyRun = now;
@@ -435,9 +451,10 @@ if (debug) this.log(
       } catch (err) {
         this.error('Error polling P1 capabilities:', err);
       }
-    }, 5000);
+    // ✅ CPU FIX: Increased from 5s to 15s - heavy work (capability reads/writes, calculations)
+    }, 15000);
 
-    this.log('✅ P1 capability polling started (5s interval)');
+    this.log('✅ P1 capability polling started (15s interval)');
   }
 
   _schedulePolicyCheck() {
@@ -640,7 +657,8 @@ if (debug) this.log(
       const planningData = {
         batterySOC,
         policyMode,
-        currentMode: recommended,
+        recommendedMode: recommended,
+        currentMode: recommended, // will be overwritten below with actual HW mode
         maxDischargePowerW: inputs.battery?.maxDischargePowerW || 800,
         maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
         totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
@@ -668,7 +686,19 @@ if (debug) this.log(
       if (debugTop3High) this.homey.settings.set('policy_debug_top3high', debugTop3High);
 
       // Update battery RTE display
-      const currentRte = this.efficiencyEstimator.getEfficiency();
+      // Use learned efficiency with safety bounds (learned can be from old data)
+      let currentRte = this.efficiencyEstimator.getEfficiency();
+      
+      // Safety: Cap at realistic range (modern batteries: 70-85%, older: 50-70%)
+      // If learned value is unrealistic, fall back to configured value
+      const configuredRte = this.getSetting('battery_efficiency') || 0.75;
+      if (currentRte < 0.50 || currentRte > 0.85) {
+        this.log(`⚠️ Learned RTE ${(currentRte * 100).toFixed(1)}% outside realistic range, using configured ${(configuredRte * 100).toFixed(1)}%`);
+        currentRte = configuredRte;
+        // Reset the estimator to configured value
+        this.efficiencyEstimator.reset(configuredRte);
+      }
+      
       await this.setCapabilityValue('battery_rte', parseFloat((currentRte * 100).toFixed(1))).catch(this.error);
 
       await this.setCapabilityValue('recommended_mode', recommended);
@@ -729,6 +759,7 @@ if (debug) this.log(
         this.log(`📊 Scores: charge=${result.scores?.charge}, discharge=${result.scores?.discharge}, preserve=${result.scores?.preserve}`);
         this.log(`🎯 Attempting to apply: ${applyMode} (confidence: ${result.confidence}%)`);
         
+        const minConfidence = this.getSetting('min_confidence_threshold') ?? 60;
         const applied = await this._applyRecommendation(applyMode, result.confidence);
 
         if (applied) {
@@ -754,10 +785,27 @@ if (debug) this.log(
             this.error('Failed to save mode history:', e);
           }
         } else {
-          this.log(`⚠️ Failed to apply recommendation - check confidence threshold or P1 connection`);
+          if (result.confidence < minConfidence) {
+            this.log(`⏸️ Not applied: confidence ${result.confidence.toFixed(1)}% below threshold ${minConfidence}%`);
+          } else {
+            this.log(`⚠️ Failed to apply recommendation — check P1 connection`);
+          }
         }
       } else {
         this.log('Auto-apply disabled — recommendation not applied');
+      }
+
+      // Update active_mode to reflect the hardware's current actual mode
+      // and correct battery_policy_state.currentMode to match (used for SoC projection in planning view)
+      if (this.p1Device) {
+        const actualHwMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+        if (actualHwMode) {
+          await this.setCapabilityValue('active_mode', actualHwMode).catch(this.error);
+          // Patch currentMode in battery_policy_state to reflect what is actually happening
+          const existingState = this.homey.settings.get('battery_policy_state') || {};
+          existingState.currentMode = actualHwMode;
+          this.homey.settings.set('battery_policy_state', existingState);
+        }
       }
 
     } catch (error) {
@@ -1096,14 +1144,18 @@ if (debug) this.log(
         this.p1Device.getCapabilityValue('battery_group_total_capacity_kwh') ??
         null;
 
+      // Estimate number of units from total capacity (each unit ≈ 2.7 kWh @ 800 W)
+      const unitCount = totalCapacity ? Math.max(1, Math.round(totalCapacity / 2.7)) : 1;
+      const unitFallbackW = unitCount * 800;
+
       // ✅ NEW: Get max production and consumption power
       const maxProduction =
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ??
-        800;
+        unitFallbackW;
 
       const maxConsumption =
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ??
-        800;
+        unitFallbackW;
 
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
       await this.setCapabilityValue('grid_power_mirror', gridPower).catch(this.error);
@@ -1315,21 +1367,51 @@ if (debug) this.log(
 }
 
 
-  async onDeleted() {
-    this.log('BatteryPolicyDevice deleted');
-
+  async onUninit() {
+    // Cleanup intervals and timers when app stops/crashes
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
+      this.policyCheckInterval = null;
     }
 
     if (this.priceRefreshTimeout) {
       this.homey.clearTimeout(this.priceRefreshTimeout);
+      this.priceRefreshTimeout = null;
     }
 
     if (this._p1PollInterval) {
       this.homey.clearInterval(this._p1PollInterval);
-      this.log('P1 capability polling stopped');
+      this._p1PollInterval = null;
     }
+  }
+
+  async onDeleted() {
+    this.log('BatteryPolicyDevice deleted');
+
+    // Call onUninit to cleanup timers
+    await this.onUninit();
+
+    // Clear app-level settings written by this device
+    // (prevents stale data if device is re-added)
+    const settingsToClean = [
+      'battery_policy_state',
+      'policy_explainability',
+      'policy_all_prices',
+      'policy_all_prices_15min',
+      'policy_debug_top3low',
+      'policy_debug_top3high',
+      'policy_weather_hourly',
+      'policy_mode_history',
+      'device_settings',
+    ];
+    for (const key of settingsToClean) {
+      try { this.homey.settings.unset(key); } catch (_) {}
+    }
+
+    // Clear p1Device reference
+    this.p1Device = null;
+
+    this.log('BatteryPolicyDevice cleanup complete');
   }
 
   /**
@@ -1429,9 +1511,21 @@ if (debug) this.log(
   }
 
 
-  async _updateBatteryCostModel({ batteryPower, gridPower, pvState }) {
+  async _updateBatteryCostModel({ batteryPower, gridPower, pvState, soc }) {
     const intervalSeconds = 5;
     const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
+
+    // If battery is physically empty, wipe stale cost tracking in persistent store
+    const minSoc = this.getSetting('min_soc') ?? 0;
+    if (soc !== null && soc <= Math.max(minSoc, 1)) {
+      const Ecur = await this.getStoreValue('battery_energy_kwh') || 0;
+      if (Ecur > 0) {
+        this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 1)}% → clearing stale energy=${Ecur.toFixed(3)}kWh`);
+        await this.setStoreValue('battery_energy_kwh', 0);
+        await this.setStoreValue('battery_avg_cost', 0);
+      }
+      return;
+    }
 
     // Log every 60s (every 12th call) to avoid spam but confirm it's running
     this._costModelCallCount = (this._costModelCallCount || 0) + 1;

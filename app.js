@@ -30,6 +30,9 @@ class HomeWizardApp extends Homey.App {
     this.baseloadMonitor = null;
     this.p1Source = null;
 
+    // 🔍 CRASH DIAGNOSTICS: Global error handlers
+    this._setupGlobalErrorHandlers();
+
      // Debug: fetchQueue stats elke 10 seconden 
      // setInterval(() => { const stats = fetchQueue.stats(); this.log('fetchQueue stats:', stats); }, 1000);
 
@@ -59,6 +62,37 @@ class HomeWizardApp extends Homey.App {
       }, 60000);
     } */
     }
+  }
+
+  _setupGlobalErrorHandlers() {
+    // Track unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('💥 UNHANDLED PROMISE REJECTION:');
+      console.error('   Promise:', promise);
+      console.error('   Reason:', reason?.stack || reason);
+      
+      // Log to Homey
+      this.error('💥 Unhandled Promise Rejection:', reason?.stack || reason);
+    });
+
+    // Track uncaught exceptions
+    process.on('uncaughtException', (err) => {
+      console.error('💥 UNCAUGHT EXCEPTION:');
+      console.error('   Error:', err?.stack || err);
+      
+      // Log to Homey
+      this.error('💥 Uncaught Exception:', err?.stack || err);
+    });
+
+    // Track warning events (like MaxListenersExceededWarning)
+    process.on('warning', (warning) => {
+      console.warn('⚠️ PROCESS WARNING:', warning.name, warning.message);
+      console.warn('   Stack:', warning.stack);
+      
+      this.log('⚠️ Warning:', warning.name, warning.message);
+    });
+
+    this.log('✅ Global error handlers installed');
   }
 
   async onUninit() {

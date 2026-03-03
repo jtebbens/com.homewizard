@@ -19,6 +19,18 @@ const fetch = require('node-fetch');
 const wsDebug = require('./wsDebug');
 const debug = false;
 
+// 🔍 CPU CRASH DIAGNOSTICS - Only log critical events, not spam
+const CRASH_LOG_ENABLED = true;
+const CRASH_LOG_OPERATIONS = ['CONSTRUCTOR', 'START', 'START_ABORT', 'MEASURE_ERROR', 'MSG_PARSE_ERROR'];
+let globalOperationCounter = 0;
+function crashLog(deviceId, operation, data) {
+  if (!CRASH_LOG_ENABLED) return;
+  if (!CRASH_LOG_OPERATIONS.includes(operation)) return; // Filter spam
+  const opId = ++globalOperationCounter;
+  console.log(`[WS-CRASH-LOG][${opId}][${deviceId}][${operation}]`, data || '');
+  return opId;
+}
+
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
   keepAliveMsecs: 11000,
@@ -146,6 +158,9 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
  */
 class WebSocketManager {
   constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
+    this.deviceId = device?.getData?.()?.id || 'unknown';
+    crashLog(this.deviceId, 'CONSTRUCTOR', 'WebSocketManager created');
+    
     this.device = device;
     this.url = url;
     this.token = token;
@@ -184,6 +199,10 @@ class WebSocketManager {
     // ✅ Per-device failure tracking (soft limit)
     this._deviceFailures = 0;
     this._deviceFailureResetTimeout = null;
+    
+    // ✅ CPU FIX: Throttle measurement processing to prevent rapid-fire updates
+    this._lastMeasurementProcessedAt = 0;
+    this._measurementThrottleMs = 2000; // Process at most once per 2 seconds (devices send every 1s)
   }
 
   _safeSetTimeout(fn, ms) {
@@ -325,8 +344,11 @@ class WebSocketManager {
    * Start the WebSocket connection
    */
   async start() {
+    const opId = crashLog(this.deviceId, 'START', 'Beginning WebSocket connection');
+    
     if (this._stopped) {
       this.log('⚠️ WebSocket is stopped - use resume() to restart');
+      crashLog(this.deviceId, 'START_ABORT', 'Already stopped');
       return;
     }
 
@@ -529,10 +551,11 @@ class WebSocketManager {
       },
 
       on: (event, handler) => {
-        this.ws._events[event] = handler;
+        if (this.ws) this.ws._events[event] = handler;
       },
 
       removeAllListeners: (event) => {
+        if (!this.ws) return;
         if (event) {
           delete this.ws._events[event];
         } else {
@@ -547,17 +570,17 @@ class WebSocketManager {
       } catch (err) {
         this.error('❌ Failed to send pong:', err);
       }
-      const handler = this.ws._events?.pong;
+      const handler = this.ws?._events?.pong;
       if (handler) handler();
     });
 
     receiver.on('message', (data) => {
-      const handler = this.ws._events?.message;
+      const handler = this.ws?._events?.message;
       if (handler) handler(data);
     });
 
     receiver.on('close', () => {
-      const handler = this.ws._events?.close;
+      const handler = this.ws?._events?.close;
       if (handler) handler();
     });
 
@@ -676,31 +699,24 @@ class WebSocketManager {
         try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
       }, 30000);
 
-      // Enforce minimum 2 second update interval
-      const requestedInterval = this.getSetting('update_interval');
-      const updateInterval = Math.max(requestedInterval || 2000, 2000);
-      
-      if (requestedInterval && requestedInterval < 2000) {
-        this.log(`⚠️ Update interval ${requestedInterval}ms too aggressive, using 2000ms`);
-      }
-
+      // ✅ CPU FIX: Process system/batteries + any throttled measurements
+      // Reduced from constant polling to checking every 30 seconds
       this._safeSetInterval(() => {
         if (this._stopped) return;
-        if (!this.pendingMeasurement) return;
 
-        const data = this.pendingMeasurement;
-        this.pendingMeasurement = null;
-        this.lastMeasurementAt = Date.now();
-
-        try {
-          this._handleMeasurement?.(data);
-        } catch (e) {
-          this.error('❌ Error in measurement handler:', e);
+        // Process any throttled measurements
+        if (this.pendingMeasurement) {
+          const data = this.pendingMeasurement;
+          this.pendingMeasurement = null;
+          this.lastMeasurementAt = Date.now();
+          this._lastMeasurementProcessedAt = Date.now();
+          
+          try {
+            this._handleMeasurement?.(data);
+          } catch (e) {
+            this.error('❌ Error in measurement handler:', e);
+          }
         }
-      }, updateInterval);
-
-      this._safeSetInterval(() => {
-        if (this._stopped) return;
 
         if (this.pendingSystem) {
           const sys = this.pendingSystem;
@@ -721,7 +737,7 @@ class WebSocketManager {
             this.error('❌ Error in batteries handler:', e);
           }
         }
-      }, 10000);
+      }, 30000);  // Reduced from 10s to 30s for CPU efficiency
 
       const maxRetries = 30;
       let retries = 0;
@@ -762,6 +778,7 @@ class WebSocketManager {
         data = JSON.parse(msg.toString());
       } catch (err) {
         this.error('❌ Failed to parse WebSocket message:', err);
+        crashLog(devId, 'MSG_PARSE_ERROR', err.message);
         return;
       }
 
@@ -775,7 +792,23 @@ class WebSocketManager {
         this._startHeartbeatMonitor();
       }
       else if (data.type === 'measurement') {
-        this.pendingMeasurement = data.data || {};
+        // ✅ CPU FIX: Process immediately with throttling instead of polling
+        const now = Date.now();
+        
+        if (now - this._lastMeasurementProcessedAt >= this._measurementThrottleMs) {
+          this._lastMeasurementProcessedAt = now;
+          this.lastMeasurementAt = now;
+          
+          try {
+            this._handleMeasurement?.(data.data || {});
+          } catch (e) {
+            this.error('❌ Error in measurement handler:', e);
+            crashLog(devId, 'MEASURE_ERROR', e.message);
+          }
+        } else {
+          // Still store for processing by 30s interval if throttled
+          this.pendingMeasurement = data.data || {};
+        }
       }
       else if (data.type === 'system') {
         this.pendingSystem = data.data || {};
@@ -821,39 +854,41 @@ class WebSocketManager {
   async _cleanupWebSocket() {
     if (!this.ws) return;
 
-    try {
-      this.ws.removeAllListeners();
+    // Capture reference and clear immediately to prevent race conditions
+    const ws = this.ws;
+    this.ws = null;
+    this.wsActive = false;
 
-      if (this.ws._socket) {
+    try {
+      ws.removeAllListeners();
+
+      if (ws._socket) {
         for (const [event, handler] of this._socketHandlers.entries()) {
-          this.ws._socket.removeListener(event, handler);
+          ws._socket.removeListener(event, handler);
         }
         this._socketHandlers.clear();
       }
 
-      if (this.ws._receiver) {
+      if (ws._receiver) {
         try {
-          this.ws._receiver.removeAllListeners();
-          this.ws._receiver.end();
+          ws._receiver.removeAllListeners();
+          ws._receiver.end();
         } catch (err) {
           // Ignore cleanup errors
         }
       }
 
-      if (this.ws.readyState === WebSocket.OPEN) {
-        this.ws.close();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      if (this.ws.readyState !== WebSocket.CLOSED) {
-        this.ws.terminate();
+      if (ws.readyState !== WebSocket.CLOSED) {
+        ws.terminate();
       }
     } catch (err) {
       this.error('❌ Error during WebSocket cleanup:', err);
     }
-
-    this.ws = null;
-    this.wsActive = false;
   }
 
   _scheduleReconnect() {

@@ -166,22 +166,27 @@ class BaseloadMonitor {
   }
 
   _processNightSample(ts, power, rawGridPower = null, batteryPower = null) {
-    // NEW: ignore export for baseload logic
-    if (power < 0) {
-      // mark as invalid sample but do NOT trigger nightInvalid
+    // Throttle: store at most 1 sample per 30 seconds.
+    // Duration-based detection methods work correctly at any interval;
+    // 30s resolution is more than enough for 5–15 min detection windows.
+    const nowMs = ts && ts.getTime ? ts.getTime() : (typeof ts === 'number' ? ts : Date.now());
+    const lastSample = this.currentNightSamples.at(-1);
+    const lastMs = lastSample
+      ? (lastSample.ts && lastSample.ts.getTime ? lastSample.ts.getTime() : lastSample.ts)
+      : -Infinity;
+
+    if (nowMs - lastMs >= 30000) {
       this.currentNightSamples.push({ ts, power, rawGridPower, batteryPower });
-      return;
     }
 
-    this.currentNightSamples.push({ ts, power, rawGridPower, batteryPower });
+    if (power < 0) return; // export: don't trigger plateau/zero detection
 
     // Only re-run expensive detections every 30 seconds to avoid CPU overhead
     // Each update would otherwise trigger full array scans
-    const now = ts.getTime ? ts.getTime() : ts;
     const lastCheck = this._lastDetectionCheck || 0;
     
-    if (now - lastCheck >= 30000) {
-      this._lastDetectionCheck = now;
+    if (nowMs - lastCheck >= 30000) {
+      this._lastDetectionCheck = nowMs;
       this._detectHighPlateau();
       this._detectNegativeLong();
       this._detectNearZeroLong();
@@ -210,25 +215,26 @@ class BaseloadMonitor {
   _detectNearZeroLong() {
     // Near-zero detection is meant to catch grid balancing, not normal low-baseload households
     // To avoid false positives from fridge cycles in low-baseload homes:
-    // Only flag if CONTINUOUS near-zero for 20min (not cumulative with gaps)
-    
-    let maxConsecutiveNearZero = 0;
-    let currentStreak = 0;
-    
+    // Only flag if CONTINUOUS near-zero for >= nearZeroMinDuration (10 minutes).
+    // Time-based logic works correctly at any sample interval.
+
+    let maxConsecutiveMs = 0;
+    let currentStreakMs = 0;
+    let lastTs = null;
+
     for (const s of this.currentNightSamples) {
+      const ts = s.ts && s.ts.getTime ? s.ts.getTime() : s.ts;
       if (Math.abs(s.power) < this.nearZeroMargin) {
-        currentStreak++;
+        if (lastTs !== null) currentStreakMs += ts - lastTs;
       } else {
-        maxConsecutiveNearZero = Math.max(maxConsecutiveNearZero, currentStreak);
-        currentStreak = 0;
+        maxConsecutiveMs = Math.max(maxConsecutiveMs, currentStreakMs);
+        currentStreakMs = 0;
       }
+      lastTs = ts;
     }
-    maxConsecutiveNearZero = Math.max(maxConsecutiveNearZero, currentStreak);
-    
-    // With 10-second polling, 20min = 120 samples
-    const MIN_CONSECUTIVE_SAMPLES = Math.floor(this.nearZeroMinDuration / 10000);
-    
-    if (maxConsecutiveNearZero >= MIN_CONSECUTIVE_SAMPLES) {
+    maxConsecutiveMs = Math.max(maxConsecutiveMs, currentStreakMs);
+
+    if (maxConsecutiveMs >= this.nearZeroMinDuration) {
       this.flags.sawNearZeroLong = true;
       this.nightInvalid = true;
     }
@@ -357,8 +363,27 @@ class BaseloadMonitor {
     catch{return'en';}
   }
 
+  _downsampleSamples(samples, intervalMs = 30000) {
+    if (!samples.length) return [];
+    const result = [];
+    let lastKeptTs = -Infinity;
+    for (const s of samples) {
+      const ts = s.ts && s.ts.getTime ? s.ts.getTime() : (typeof s.ts === 'number' ? s.ts : 0);
+      if (ts - lastKeptTs >= intervalMs) {
+        // Strip rawGridPower/batteryPower from history — only power is needed for stats
+        result.push({ ts, power: s.power });
+        lastKeptTs = ts;
+      }
+    }
+    return result;
+  }
+
   _push(date,avg,invalid,meta={}) {
-    this.nightHistory.push({date,avg,invalid,samples:this.currentNightSamples.slice(),...meta});
+    // Downsample before storing: keep 1 sample per 30s instead of 1 per second.
+    // currentNightSamples stays at full resolution for real-time detection;
+    // history only needs statistical resolution (halved from ~14,400 → ~480/night).
+    const samples = this._downsampleSamples(this.currentNightSamples, 30000);
+    this.nightHistory.push({date,avg,invalid,samples,...meta});
     if (this.nightHistory.length>this.maxNights)
       this.nightHistory.splice(0,this.nightHistory.length-this.maxNights);
   }
