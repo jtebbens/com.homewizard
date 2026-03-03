@@ -1060,5 +1060,8 @@
   },
   "3.13.45": {
     "en": "battery-policy cleanup after removal checks"
+  },
+  "3.13.47": {
+    "en": "Websocket throttle, energy_v2 tiered updates, flow triggers rate limited, Energy socket startup offset, Battery Policy P1 polling increased from 5s to 15s"
   }
 }

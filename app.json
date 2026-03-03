@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.46",
+  "version": "3.13.47",
   "platforms": [
     "local"
   ],
@@ -6700,8 +6700,8 @@
         {
           "id": "balanced-dynamic",
           "title": {
-            "en": "Dynamic Pricing (V2)",
-            "nl": "Dynamisch Tarief (V2)"
+            "en": "Dynamic Pricing (V2 — post-saldering)",
+            "nl": "Dynamisch Tarief (V2 — na salderen)"
           }
         },
         {
