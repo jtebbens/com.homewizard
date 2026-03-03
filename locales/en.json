@@ -80,5 +80,9 @@
   "device": {
     "init": "Initializing device...",
     "unreachable": "Device unreachable"
+  },
+  "errors": {
+    "auth_failed": "Could not authenticate with your HomeWizard account",
+    "invalid_credentials": "Invalid credentials"
   }
 }

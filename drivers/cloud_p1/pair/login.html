@@ -23,54 +23,76 @@
             margin: 10px 0;
             display: none;
         }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
+
+        input.homey-form-input[type='email'] {
+            all: unset; /* Remove legacy css layout */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
             box-sizing: border-box;
+            margin: 0 1px; /* Compensate box-shadow solution for border causing to breakout layout */
+            background: var(--homey-color-component);
+            padding: var(--homey-su-1);
+            border-radius: var(--homey-border-radius-small);
+            font-size: var(--homey-font-size-default);
+            line-height: 24px;
+            color: var(--homey-color-text);
+            border: none;
+            box-shadow: 0 0 0 1px var(--homey-color-line);
+            transition: var(--homey-duration-fast) var(--homey-curve-fast-in);
+            transition-property: box-shadow, color;
+            -webkit-tap-highlight-color: transparent;
+            text-align: start;
+            width: calc(
+              100% - 2px
+            );
         }
-        
-        .info-box {
-            background-color: #e3f2fd;
-            border-left: 4px solid #2196F3;
-            padding: 12px;
-            margin: 10px 0;
+
+        input.homey-form-input[type='email']::placeholder {
+            color: var(--homey-color-text-placeholder);
+            font-weight: var(--homey-font-weight-regular);
+            opacity: 1;
+        }
+
+        input.homey-form-input[type='email']:hover {
+            box-shadow: 0 0 0 1px var(--homey-color-line-hover);
+        }
+
+        input.homey-form-input[type='email']:hover::placeholder {
+            color: var(--homey-color-text-placeholder-hover);
+        }
+
+        input.homey-form-input[type='email']:active {
+            box-shadow: 0 0 0 1px var(--homey-color-line-active);
+        }
+
+        input.homey-form-input[type='email']:active::placeholder {
+            color: var(--homey-color-text-placeholder-active);
+        }
+
+        input.homey-form-input[type='email']:focus {
+            box-shadow: 0 0 0 2px var(--homey-color-highlight);
         }
     </style>
 </head>
 <body>
     <!-- Step 1: Login -->
     <div id="step-login" class="step active">
-        <h2>HomeWizard Cloud Login</h2>
-        
-        <div class="info-box">
-            <p style="margin: 0;">Enter your HomeWizard Energy account credentials.</p>
-        </div>
+        <h1 class="homey-title">HomeWizard Cloud Login</h2>
+        <p class="homey-subtitle">Enter your HomeWizard Energy account credentials.</p>
 
         <div id="login-error" class="error"></div>
 
-        <form id="login-form">
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required autocomplete="email">
+        <form class="homey-form" id="login-form">
+            <div class="homey-form-group">
+                <label class="homey-form-label" for="email">Email</label>
+                <input class="homey-form-input" type="email" id="email" required autocomplete="email">
             </div>
 
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" required autocomplete="current-password">
+            <div class="homey-form-group">
+                <label class="homey-form-label" for="password">Password</label>
+                <input class="homey-form-input" type="password" id="password" required autocomplete="current-password">
             </div>
 
             <button type="submit" id="login-btn" class="homey-button-primary-full">Login</button>
