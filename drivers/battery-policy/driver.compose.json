@@ -9,6 +9,7 @@
     "policy_mode",
     "auto_apply",
     "recommended_mode",
+    "active_mode",
     "sun_score",
     "predicted_sun_hours",
     "confidence_score",

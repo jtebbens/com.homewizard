@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.45",
+  "version": "3.13.46",
   "platforms": [
     "local"
   ],
@@ -3210,6 +3210,7 @@
         "policy_mode",
         "auto_apply",
         "recommended_mode",
+        "active_mode",
         "sun_score",
         "predicted_sun_hours",
         "confidence_score",
@@ -6007,6 +6008,21 @@
     }
   ],
   "capabilities": {
+    "active_mode": {
+      "type": "string",
+      "title": {
+        "en": "Active Mode",
+        "nl": "Actieve Modus"
+      },
+      "desc": {
+        "en": "The battery mode that is currently active on the hardware. May differ from the recommended mode when the confidence score is below the threshold, auto-apply is off, or a manual override is active.",
+        "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is."
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "assets/icon.svg"
+    },
     "auto_apply": {
       "type": "boolean",
       "title": {

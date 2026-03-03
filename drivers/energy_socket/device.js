@@ -85,23 +85,30 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
       keepAlive: true,
-      keepAliveMsecs: 10000,
+      keepAliveMsecs: 35000, // ✅ CPU FIX: Longer than poll interval (30s) to reuse TCP connections
     });
 
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
 
-    const interval = Math.max(this.getSetting('offset_polling') || 10, 2);
-    const offset = Math.floor(Math.random() * interval * 1000);
+    // ✅ CPU FIX: Minimum 30s interval — 9 devices × HTTP polls = high steady-state CPU
+    const interval = Math.max(this.getSetting('offset_polling') || 30, 30);
+    // ✅ CPU FIX: Stagger startup over 30s (not just 0-interval) to prevent thundering herd
+    // 9 energy_socket devices + 3 plugin_battery = 12 connections at startup
+    const offset = 5000 + Math.floor(Math.random() * 30000); // 5-35s startup spread
+
+    this.log(`⏱️ Polling enabled at init, interval ${interval}s, startup delay ${Math.round(offset/1000)}s`);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
-    this.onPollInterval = setInterval(() => {
-      this.onPoll().catch(this.error);
-    }, interval * 1000);
-
+    // Start interval only after first poll completes (avoids double-firing)
     setTimeout(() => {
+      if (this.__deleted) return;
+      this.log(`🚀 First poll starting (after ${Math.round(offset/1000)}s delay)`);
       this.onPoll().catch(this.error);
+      this.onPollInterval = setInterval(() => {
+        this.onPoll().catch(this.error);
+      }, interval * 1000);
     }, offset);
 
 
@@ -128,7 +135,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     });
   }
 
-  onDeleted() {
+  onUninit() {
+    // Cleanup intervals and timers when app stops/crashes
     this.__deleted = true;
 
     if (this.onPollInterval) {
@@ -139,14 +147,20 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       clearTimeout(this._debugFlushTimeout);
       this._debugFlushTimeout = null;
     }
-    // Flush remaining logs before device deletion
-    if (this._debugBuffer && this._debugBuffer.length > 0) {
-      this._flushDebugLogs();
-    }
     // Destroy HTTP agent to close keep-alive sockets
     if (this.agent) {
       this.agent.destroy();
       this.agent = null;
+    }
+  }
+
+  onDeleted() {
+    // Call onUninit to cleanup timers
+    this.onUninit();
+
+    // Flush remaining logs before device deletion (only on explicit deletion)
+    if (this._debugBuffer && this._debugBuffer.length > 0) {
+      this._flushDebugLogs();
     }
     // Clear debug buffer
     if (this._debugBuffer) {
@@ -438,7 +452,8 @@ _flushDebugLogs() {
         }
 
         const interval = Number(newSettings.offset_polling);
-        if (interval >= 2) {  // Enforce minimum 2 second interval
+        // ✅ CPU FIX: Increased min interval from 2s to 5s (9 devices = high load)
+        if (interval >= 5) {
           this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
         }
       }

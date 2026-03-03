@@ -201,12 +201,20 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // -----------------------------------------------------
     if (settings.use_polling) {
       const intervalSec = settings.polling_interval || 10;
-      this.log(`⏱️ Polling enabled at init, interval ${intervalSec}s`);
+      // ✅ CPU FIX: Stagger startup across devices (spread over 0-30s)
+      // Prevents thundering herd: all 3 batteries firing first TLS poll simultaneously
+      const startupDelay = Math.floor(Math.random() * 30000);
+      this.log(`⏱️ Polling enabled at init, interval ${intervalSec}s, startup delay ${Math.round(startupDelay/1000)}s`);
 
-      this.onPollInterval = setInterval(
-        this.onPoll.bind(this),
-        intervalSec * 1000
-      );
+      this._startupPollTimeout = setTimeout(() => {
+        if (this.__deleted) return;
+        this._startupPollTimeout = null;
+        this.onPoll().catch(this.error);
+        this.onPollInterval = setInterval(
+          this.onPoll.bind(this),
+          intervalSec * 1000
+        );
+      }, startupDelay);
 
     } else {
       this.log('🔌 WebSocket enabled at init');
@@ -245,14 +253,21 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         }
       }, 60000);
 
-      // Battery group updater
+      // Battery group updater (reduced from 10s to 60s to lower CPU usage)
       this._batteryGroupInterval = setInterval(() => {
         this._updateBatteryGroup();
-      }, 10000);
+      }, 60000);
     }
   }
 
-  onDeleted() {
+  onUninit() {
+    // Cleanup intervals and timers when app stops/crashes
+    this.__deleted = true;
+
+    if (this._startupPollTimeout) {
+      clearTimeout(this._startupPollTimeout);
+      this._startupPollTimeout = null;
+    }
     if (this._wsWatchdog) {
       clearInterval(this._wsWatchdog);
       this._wsWatchdog = null;
@@ -278,7 +293,13 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.wsManager.stop();
       this.wsManager = null;
     }
+  }
 
+  onDeleted() {
+    // Call onUninit to cleanup timers/intervals
+    this.onUninit();
+
+    // Remove from battery group (only on explicit device deletion)
     const batteryId = this.getData().id;
     const group = this.homey.settings.get('pluginBatteryGroup') || {};
     if (group[batteryId]) {
@@ -395,15 +416,20 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       return;
     }
 
+    const devId = this.getData().id;
     if (debug) this.log('HANDLE MEASUREMENT:', data);
 
-    const now = Date.now();
-    this.lastMeasurementAt = now;
+    try {
+      const now = Date.now();
+      this.lastMeasurementAt = now;
 
-    const BATTERY_CAPACITY_WH = 2470;
+      const BATTERY_CAPACITY_WH = 2470;
+
+      // ✅ CPU FIX: Batch all capability updates to avoid blocking event loop
+      const capabilityUpdates = [];
 
     // ---------------------------------------------------------
-    // 1. REALTIME capabilities (max 1 Hz)
+    // 1. REALTIME capabilities
     // ---------------------------------------------------------
     const realtimeCaps = [
       ['measure_power', data.power_w],
@@ -415,7 +441,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     for (const [cap, val] of realtimeCaps) {
       const cur = this.getCapabilityValue(cap);
       if (cur !== val) {
-        await updateCapability(this, cap, val);
+        capabilityUpdates.push(updateCapability(this, cap, val));
       }
     }
 
@@ -425,8 +451,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     if (!this._socLastUpdate || now - this._socLastUpdate > 5000) {
       const cur = this.getCapabilityValue('measure_battery');
       if (cur !== data.state_of_charge_pct) {
-        await updateCapability(this, 'measure_battery', data.state_of_charge_pct);
-        await updateCapability(this, 'measure_soc', data.state_of_charge_pct);
+        capabilityUpdates.push(updateCapability(this, 'measure_battery', data.state_of_charge_pct));
+        capabilityUpdates.push(updateCapability(this, 'measure_soc', data.state_of_charge_pct));
       }
       this._socLastUpdate = now;
     }
@@ -439,10 +465,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       const exp = this.getCapabilityValue('meter_power.export');
 
       if (imp !== data.energy_import_kwh) {
-        await updateCapability(this, 'meter_power.import', data.energy_import_kwh);
+        capabilityUpdates.push(updateCapability(this, 'meter_power.import', data.energy_import_kwh));
       }
       if (exp !== data.energy_export_kwh) {
-        await updateCapability(this, 'meter_power.export', data.energy_export_kwh);
+        capabilityUpdates.push(updateCapability(this, 'meter_power.export', data.energy_export_kwh));
       }
 
       this._energyLastUpdate = now;
@@ -454,7 +480,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     if (!this._cyclesLastUpdate || now - this._cyclesLastUpdate > 60000) {
       const cur = this.getCapabilityValue('cycles');
       if (cur !== data.cycles) {
-        await updateCapability(this, 'cycles', data.cycles);
+        capabilityUpdates.push(updateCapability(this, 'cycles', data.cycles));
       }
       this._cyclesLastUpdate = now;
     }
@@ -468,7 +494,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     else chargingState = 'idle';
 
     if (chargingState !== this.previousChargingState) {
-      await updateCapability(this, 'battery_charging_state', chargingState);
+      capabilityUpdates.push(updateCapability(this, 'battery_charging_state', chargingState));
       this.previousChargingState = chargingState;
 
       this.homey.flow
@@ -478,7 +504,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
 
     // ---------------------------------------------------------
-    // 6. Time to full / empty (smooth + CPU‑friendly)
+    // 6. Time to full / empty
     // ---------------------------------------------------------
     if (typeof data.state_of_charge_pct === 'number' && typeof data.power_w === 'number') {
 
@@ -490,12 +516,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         let ttf = Math.round((remaining / data.power_w) * 60);
 
         if (Math.abs(this._prevTimeToFull - ttf) >= 5) {
-          await updateCapability(this, 'time_to_full', ttf);
+          capabilityUpdates.push(updateCapability(this, 'time_to_full', ttf));
           this._prevTimeToFull = ttf;
         }
 
         if (this._prevTimeToEmpty !== 0) {
-          await updateCapability(this, 'time_to_empty', 0);
+          capabilityUpdates.push(updateCapability(this, 'time_to_empty', 0));
           this._prevTimeToEmpty = 0;
         }
       }
@@ -505,12 +531,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         let tte = Math.round((current_capacity / Math.abs(data.power_w)) * 60);
 
         if (Math.abs(this._prevTimeToEmpty - tte) >= 5) {
-          await updateCapability(this, 'time_to_empty', tte);
+          capabilityUpdates.push(updateCapability(this, 'time_to_empty', tte));
           this._prevTimeToEmpty = tte;
         }
 
         if (this._prevTimeToFull !== 0) {
-          await updateCapability(this, 'time_to_full', 0);
+          capabilityUpdates.push(updateCapability(this, 'time_to_full', 0));
           this._prevTimeToFull = 0;
         }
       }
@@ -518,11 +544,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       // Idle
       else {
         if (this._prevTimeToFull !== 0) {
-          await updateCapability(this, 'time_to_full', 0);
+          capabilityUpdates.push(updateCapability(this, 'time_to_full', 0));
           this._prevTimeToFull = 0;
         }
         if (this._prevTimeToEmpty !== 0) {
-          await updateCapability(this, 'time_to_empty', 0);
+          capabilityUpdates.push(updateCapability(this, 'time_to_empty', 0));
           this._prevTimeToEmpty = 0;
         }
       }
@@ -544,10 +570,17 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
       const rounded = Math.round(estimate_kwh * 100) / 100;
       if (this.getCapabilityValue('estimate_kwh') !== rounded) {
-        await updateCapability(this, 'estimate_kwh', rounded);
+        capabilityUpdates.push(updateCapability(this, 'estimate_kwh', rounded));
       }
 
       this._estimateLastUpdate = now;
+    }
+
+    // ✅ Execute all capability updates in parallel (non-blocking)
+    if (capabilityUpdates.length > 0) {
+      Promise.allSettled(capabilityUpdates).catch(err => {
+        this.error(`❌ Capability update batch error:`, err);
+      });
     }
 
     // ---------------------------------------------------------
@@ -602,6 +635,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this._lastPower = data.power_w;
     this._lastSoC = data.state_of_charge_pct;
     this._lastCycles = data.cycles;
+    
+  } catch (err) {
+    this.error(`❌ _handleMeasurement crashed for device ${devId}:`, err?.stack || err);
+  }
   }
 
 
@@ -731,6 +768,8 @@ async _fetchFallbackSoC() {
    * Update battery group every 10 seconds
    */
 async _updateBatteryGroup() {
+  if (this.__deleted) return; // Skip if device is deleted/uninit
+
   const batteryId = this.getData()?.id;
   if (!batteryId) return;
 
@@ -808,6 +847,7 @@ async _updateBatteryGroup() {
    * Fallback poll (pure fetch)
    */
   async _fallbackPoll() {
+    if (this.__deleted) return; // Skip if device is deleted/uninit
     if (this._pollErrorCount > 0) return; // geen fallback tijdens errors
     try {
       const measurementRes = await fetchWithTimeout(`${this.url}/api/measurement`, {
@@ -839,7 +879,9 @@ async _updateBatteryGroup() {
       this.log('📡 Fallback poll completed');
 
     } catch (err) {
-      this.error('Fallback poll error:', err.message);
+      if (!this.__deleted) {
+        this.error('Fallback poll error:', err.message);
+      }
     }
   }
 
@@ -847,6 +889,8 @@ async _updateBatteryGroup() {
    * Polling (pure fetch, no timeout wrapper)
    */
   async onPoll() {
+  if (this.__deleted) return; // Skip if device is deleted/uninit
+
   const now = Date.now();
 
   // Exponential backoff bij fouten
@@ -901,9 +945,11 @@ async _updateBatteryGroup() {
     }
 
   } catch (err) {
-    this._pollErrorCount++;
-    if (this._pollErrorCount % 5 === 1) {
-      this.error('Polling error:', err.message);
+    if (!this.__deleted) {
+      this._pollErrorCount++;
+      if (this._pollErrorCount % 5 === 1) {
+        this.error('Polling error:', err.message);
+      }
     }
   }
 }

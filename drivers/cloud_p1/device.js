@@ -447,25 +447,38 @@ class CloudP1Device extends Device {
   }
 
   /**
+   * onUninit is called when the app stops/crashes
+   */
+  async onUninit() {
+    // Clean up timers
+    if (this.staleDataTimeout) {
+      clearInterval(this.staleDataTimeout);
+      this.staleDataTimeout = null;
+    }
+    
+    if (this.updateRateTimer) {
+      clearTimeout(this.updateRateTimer);
+      this.updateRateTimer = null;
+    }
+
+    if (this.cloudAPI) {
+      this.cloudAPI.disconnect();
+    }
+  }
+
+  /**
    * onDeleted is called when the user deleted the device.
    */
   async onDeleted() {
     this.log('CloudP1Device has been deleted');
 
-    // Clean up timers
-    if (this.staleDataTimeout) {
-      clearInterval(this.staleDataTimeout);
-    }
-    
-    if (this.updateRateTimer) {
-      clearTimeout(this.updateRateTimer);
+    // Unsubscribe from device (only on explicit deletion)
+    if (this.cloudAPI) {
+      this.cloudAPI.unsubscribeFromDevice(this.deviceId);
     }
 
-    if (this.cloudAPI) {
-      // Unsubscribe from this device before disconnecting
-      this.cloudAPI.unsubscribeFromDevice(this.deviceId);
-      this.cloudAPI.disconnect();
-    }
+    // Call onUninit to cleanup timers
+    await this.onUninit();
   }
 
 }

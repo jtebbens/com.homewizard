@@ -51,7 +51,51 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.37)
+## 📝 Latest Updates (v3.13.46)
+
+### New Features
+
+* **Active Mode Capability** - New `active_mode` capability shows the battery mode actually active on the hardware, which may differ from `recommended_mode` when confidence is below threshold, auto-apply is off, or a manual override is active
+* **New Policy Modes** - Added `Fixed Pricing` and `Dynamic Pricing (V2)` options to the policy mode picker
+* **Global Error Handlers** - App now catches unhandled promise rejections, uncaught exceptions, and Node.js process warnings (MaxListenersExceededWarning etc.) for better crash diagnostics
+
+### Bug Fixes
+
+* **Coverage Ratio Calculation** - Fixed inverted battery coverage ratio: a 1751 W load with 800 W max now correctly reports 46% coverage instead of 100%
+* **Multi-Unit Battery Power** - Max discharge/charge fallback now scales with battery group size (2.7 kWh/unit × 800 W/unit) instead of hardcoding 800 W regardless of how many units are installed
+* **PV Virtual Grid Calculation** - Fixed virtual grid calculation: battery charging power is now subtracted (not added) to correctly show true export potential when evaluating PV decisions
+* **WebSocket Null Guards** - Fixed crashes when `ws._events` is accessed after the socket is already cleaned up; `removeAllListeners` and event dispatch now guard against null `ws` reference
+* **Cost Model Reset** - Battery cost model now resets at or below `min_soc` even when firmware cuts discharge power to 0 W (no longer waits for `isDischarging` to be true)
+* **Sensor/History Overflow** - `LearningEngine` now uses exponential moving average (alpha=0.01) after 100 samples per slot, preventing `sum` and `count` from growing unboundedly over years
+
+### Performance (CPU)
+
+* **WebSocket Throttle** - Measurements now processed immediately on receive with a 2 s throttle, replacing the previous fixed polling interval; system/battery topics reduced to 30 s (was 10 s)
+* **energy_v2 Tiered Updates** - Capability updates split into realtime / 10 s / 30 s / 60 s tiers; voltage, current, and frequency no longer updated on every WebSocket message
+* **energy_v2 Battery Group** - Battery group interval reduced from 10 s to 60 s
+* **energy_v2 Flow Triggers** - `energy_import_kwh` flow trigger rate-limited to 60 s (was 5 s), preventing 12 triggers/min per device
+* **energy_socket Polling** - Minimum poll interval raised to 30 s (was 2 s); startup offset staggered 5–35 s; TCP keep-alive extended to 35 s to match interval
+* **plugin_battery Startup Stagger** - First poll staggered 0–30 s per device to prevent 3 simultaneous TLS handshakes at startup
+* **plugin_battery Battery Group** - Battery group interval reduced from 10 s to 60 s
+* **plugin_battery Capability Batching** - All capability updates in `_handleMeasurement` are now batched with `Promise.allSettled` (non-blocking) instead of sequential `await`
+* **Baseload Throttle** - `BaseloadMonitor._processNightSample` stores at most 1 sample per 30 s; `_detectNearZeroLong` is now time-based instead of sample-count-based; night history downsampled to 30 s resolution on save
+* **Battery Policy P1 Polling** - P1 capability polling interval increased from 5 s to 15 s
+
+### Technical
+
+* `onUninit` / `onDeleted` split across all drivers (`energy_v2`, `energy_socket`, `plugin_battery`, `cloud_p1`, `battery-policy`): timers/intervals cleaned up on both app stops and explicit device deletion; baseload deregistration and settings wipe only on deletion
+* `__deleted` guard added to `onPoll`, `_fallbackPoll`, `_updateBatteryGroup`, and `_handleMeasurement` to prevent errors after uninit
+* PV state detection uses separate hysteresis thresholds for ON (−200 W) vs OFF (−150 W) to prevent bouncing; grid range widened to −150…+250 W when already in PV state
+* `active_mode` updated after every policy run to reflect the actual `battery_group_charge_mode` capability value from the P1 device; `battery_policy_state.currentMode` patched to match for accurate SoC projection
+* RTE learning bounds enforced (50–85%); values outside this range fall back to the configured setting and trigger an estimator reset; learning threshold lowered to 1.0 kWh per side (was 2.5 kWh) for faster convergence
+* `EfficiencyEstimator.reset(eff)` method added
+* Explainability engine: soc=0 reason now mirrors policy-engine export-wins analysis; arbitrage reason now shows when price is above break-even but blocked by `min_discharge_price`; PV surplus reason mirrors PV OVERSCHOT opportunity-cost logic
+* Coverage ratio formula corrected to `min(maxDischarge / load, 1.0)` in `PolicyEngine`, `_applyPeakShavingRules`, and `ExplainabilityEngine`
+* Battery group max power fallback derived from `battery_group_total_capacity_kwh` in device, policy engine, and explainability engine
+
+---
+
+## Previous Updates (v3.13.37)
 
 ### Bug Fixes
 

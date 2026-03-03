@@ -8,6 +8,8 @@
   "values": [
     { "id": "off", "title": { "en": "Off", "nl": "Uit" } },
     { "id": "balanced", "title": { "en": "Dynamic Pricing", "nl": "Dynamisch Tarief" } },
+    { "id": "balanced-fixed", "title": { "en": "Fixed Pricing", "nl": "Vast Tarief" } },
+    { "id": "balanced-dynamic", "title": { "en": "Dynamic Pricing (V2)", "nl": "Dynamisch Tarief (V2)" } },
     { "id": "zero", "title": { "en": "Peak Shaving", "nl": "Peak Shaving" } }
   ],
   "getable": true,
