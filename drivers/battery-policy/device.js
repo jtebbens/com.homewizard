@@ -1512,7 +1512,7 @@ if (debug) this.log(
 
 
   async _updateBatteryCostModel({ batteryPower, gridPower, pvState, soc }) {
-    const intervalSeconds = 5;
+    const intervalSeconds = 15; // polling interval is 15s (every 20th call = 5 min log)
     const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
 
     // If battery is physically empty, wipe stale cost tracking in persistent store
