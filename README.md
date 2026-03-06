@@ -51,7 +51,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.47)
+## 📝 Latest Updates (v3.13.49)
 
 ### New Features
 
@@ -83,6 +83,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ### Technical
 
+* WebSocket internals refactored; debug and runtime statistics are now surfaced in the settings page for improved diagnostics
 * `onUninit` / `onDeleted` split across all drivers (`energy_v2`, `energy_socket`, `plugin_battery`, `cloud_p1`, `battery-policy`): timers/intervals cleaned up on both app stops and explicit device deletion; baseload deregistration and settings wipe only on deletion
 * `__deleted` guard added to `onPoll`, `_fallbackPoll`, `_updateBatteryGroup`, and `_handleMeasurement` to prevent errors after uninit
 * PV state detection uses separate hysteresis thresholds for ON (−200 W) vs OFF (−150 W) to prevent bouncing; grid range widened to −150…+250 W when already in PV state
