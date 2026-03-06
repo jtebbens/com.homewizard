@@ -224,28 +224,16 @@ class BatteryPolicyDevice extends Homey.Device {
 
       this.log(`Connected to P1 device: ${this.p1Device.getName()}`);
 
-      this.p1Device.on('battery_event', (payload) => {
+      // Remove stale listeners from a previous connection (e.g. reconnect)
+      this._cleanupP1Listeners();
+
+      // Single battery_event handler
+      this._onBatteryEvent = (payload) => {
         this._lastBatteryTargetW = payload.target_power_w ?? 0;
         this._lastBatteryEventTs = Date.now();
-
         this.log(`🔌 Battery target event → target=${this._lastBatteryTargetW}W`);
-      });
-
-      // DEBUG: Log all events coming from the P1 device
-      this.p1Device.on('*', (event, data) => {
-        this.log(`🐛 [DEBUG] P1 EVENT → ${event}:`, data);
-      });
-
-      // DEBUG: Log battery_event specifically
-      this.p1Device.on('battery_event', (payload) => {
-        this.log('🐛 [DEBUG] battery_event received:', payload);
-
-      this._lastBatteryTargetW = payload.target_power_w ?? 0;
-      this._lastBatteryEventTs = Date.now();
-
-      this.log(`🔋 Battery target event → target=${this._lastBatteryTargetW}W`);
-});
-
+      };
+      this.p1Device.on('battery_event', this._onBatteryEvent);
 
       this._setupP1Listeners();
 
@@ -461,10 +449,15 @@ if (debug) this.log(
     const intervalMinutes = this.getSetting('policy_interval') || 15;
     const intervalMs = intervalMinutes * 60 * 1000;
 
+    // Clear any existing timers
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
     }
+    if (this._hourBoundaryTimeout) {
+      this.homey.clearTimeout(this._hourBoundaryTimeout);
+    }
 
+    // 1) Regular interval as fallback between hour boundaries
     this.policyCheckInterval = this.homey.setInterval(
       async () => {
         if (this.getCapabilityValue('policy_enabled')) {
@@ -474,7 +467,28 @@ if (debug) this.log(
       intervalMs
     );
 
-    this.log(`Policy check scheduled every ${intervalMinutes} minutes`);
+    // 2) Align to hour boundaries — prices change on the hour.
+    //    Schedule a run ~5s after each full hour to catch new prices immediately.
+    this._scheduleHourBoundary();
+
+    this.log(`Policy check scheduled every ${intervalMinutes} minutes + aligned to hour boundaries`);
+  }
+
+  _scheduleHourBoundary() {
+    const now = Date.now();
+    const nextHour = new Date(now);
+    nextHour.setMinutes(0, 5, 0); // 5 seconds past the hour
+    nextHour.setHours(nextHour.getHours() + 1);
+    const msUntilNextHour = nextHour.getTime() - now;
+
+    this._hourBoundaryTimeout = this.homey.setTimeout(async () => {
+      if (this.getCapabilityValue('policy_enabled')) {
+        this.log(`⏰ Hour boundary reached (${new Date().getHours()}:00) → running policy check`);
+        await this._runPolicyCheck().catch(err => this.error('Hour-boundary policy check failed:', err));
+      }
+      // Schedule the next hour boundary
+      this._scheduleHourBoundary();
+    }, msUntilNextHour);
   }
 
   _schedulePriceRefresh() {
@@ -1367,11 +1381,29 @@ if (debug) this.log(
 }
 
 
+  /**
+   * Remove event listeners from the P1 device to prevent leaks on reconnect/uninit.
+   */
+  _cleanupP1Listeners() {
+    if (this.p1Device && this._onBatteryEvent) {
+      this.p1Device.removeListener('battery_event', this._onBatteryEvent);
+    }
+    this._onBatteryEvent = null;
+  }
+
   async onUninit() {
+    // Cleanup event listeners
+    this._cleanupP1Listeners();
+
     // Cleanup intervals and timers when app stops/crashes
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
       this.policyCheckInterval = null;
+    }
+
+    if (this._hourBoundaryTimeout) {
+      this.homey.clearTimeout(this._hourBoundaryTimeout);
+      this._hourBoundaryTimeout = null;
     }
 
     if (this.priceRefreshTimeout) {

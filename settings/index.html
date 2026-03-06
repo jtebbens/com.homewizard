@@ -27,17 +27,40 @@
   <style>
     body { font-family: sans-serif; padding: 20px; }
 
-    .tabs { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
-    .tab {
-      padding: 10px 16px; cursor: pointer; user-select: none;
-      border-radius: 6px 6px 0 0; margin-right: 4px; background: #eee;
+    /* ── Tab navigation ── */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #ccc;
+      gap: 4px;
+      margin-bottom: 20px;
     }
+
+    .tab {
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-radius: 6px 6px 0 0;
+      background: #eee;
+      white-space: nowrap;
+      font-size: 13px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab:hover { background: #e0e0e0; }
     .tab.active {
-      background: white; border: 1px solid #ccc;
-      border-bottom: none; font-weight: bold;
+      background: white;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      font-weight: bold;
+      color: #1a73e8;
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+
+    /* Responsive: smaller tabs on narrow screens */
+    @media (max-width: 480px) {
+      .tab { padding: 8px 10px; font-size: 12px; }
+    }
 
     .debug-box {
       background: #f3f3f3; padding: 15px; border-radius: 6px;
@@ -292,14 +315,14 @@
   <a id="support" data-i18n="settings.support.label" target="_blank"></a>
   <br><br>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs-bar">
     <div class="tab active" data-tab="baseload"  id="tab-baseload"></div>
     <div class="tab"        data-tab="planning"  id="tab-planning"></div>
-    <div class="tab"        data-tab="explain">Battery Policy</div>
-    <div class="tab"        data-tab="fetch">Device Fetch Debug</div>
-    <div class="tab"        data-tab="discovery">Discovery Debug</div>
-    <div class="tab"        data-tab="ws">WebSocket Debug</div>
-    <div class="tab"        data-tab="legacy">Legacy Fetch</div>
+    <div class="tab"        data-tab="explain">Policy</div>
+    <div class="tab"        data-tab="fetch">Fetch</div>
+    <div class="tab"        data-tab="discovery">Discovery</div>
+    <div class="tab"        data-tab="ws">WebSocket</div>
+    <div class="tab"        data-tab="legacy">Legacy</div>
   </div>
 
   <!-- TAB: BASELOAD -->
@@ -337,8 +360,26 @@
 
   <!-- TAB: WEBSOCKET -->
   <div id="ws" class="tab-content">
-    <h2>WebSocket debug</h2>
-    <pre id="ws-debug" class="debug-box">Loading…</pre>
+    <h2>WebSocket Diagnostics</h2>
+    <p style="color:#666;margin-bottom:12px;font-size:13px;">
+      Events and stats snapshots are persisted to Homey settings and survive app crashes (CPU/memory kills).
+      After a crash, reload this page to see the last state before the kill.
+    </p>
+
+    <h3 style="margin-top:0;">Device Snapshots</h3>
+    <div id="ws-snapshots" style="margin-bottom:20px;"></div>
+
+    <h3>Event Journal <span style="font-weight:normal;font-size:12px;color:#999;">(last 50 events)</span></h3>
+    <div id="ws-journal" class="debug-box" style="max-height:500px;font-size:11px;">Loading…</div>
+
+    <div id="ws-anomalies" style="margin-bottom:12px;"></div>
+
+    <div style="margin-top:12px;display:flex;gap:10px;">
+      <button id="ws-refresh-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Ververs</button>
+      <button id="ws-copy-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #2196f3;cursor:pointer;color:#2196f3;font-weight:bold;">📋 Copy Diagnostics</button>
+      <button id="ws-clear-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;color:#c00;">Wis journal</button>
+    </div>
+
   </div>
 
   <!-- TAB: BATTERY PLANNING -->
@@ -397,13 +438,14 @@
   <script>
     /* ── TAB SWITCHING ── */
     let homeyInstance = null;
+
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.tab).classList.add('active');
-        
+
         // Refresh planning when switching to planning tab
         if (tab.dataset.tab === 'planning' && homeyInstance) {
           homeyInstance.get((e, s) => {
@@ -693,8 +735,250 @@
           JSON.stringify(settings['debug_discovery'] || {}, null, 2);
 
         /* ── WEBSOCKET ── */
-        document.getElementById('ws-debug').textContent =
-          JSON.stringify(settings['debug_ws']?.slice(-20) || [], null, 2);
+        function renderWsDiagnostics(s) {
+          // --- Anomaly Detection ---
+          const anomalies = [];
+          const snapshots = s['ws_snapshots'] || {};
+          const journal = s['ws_journal'] || s['debug_ws'] || [];
+
+          for (const [id, snap] of Object.entries(snapshots)) {
+            const devShort = id.slice(0, 8);
+            if (snap.counters) {
+              const c = snap.counters;
+              if (c.handlerErrors > 0) anomalies.push(`🟡 [${devShort}] ${c.handlerErrors} handler errors`);
+              if (c.reconnects > 10) anomalies.push(`🔴 [${devShort}] ${c.reconnects} reconnects — possible loop`);
+            }
+            if (snap.reconnectAttempts > 5) anomalies.push(`🔴 [${devShort}] ${snap.reconnectAttempts} reconnect attempts`);
+            if (snap.handlerTiming) {
+              const m = snap.handlerTiming.max || {};
+              if (m.measurement > 100) anomalies.push(`🔴 [${devShort}] Slow measurement handler (max ${m.measurement}ms)`);
+              if (m.system > 100) anomalies.push(`🔴 [${devShort}] Slow system handler (max ${m.system}ms)`);
+              if (m.batteries > 100) anomalies.push(`🔴 [${devShort}] Slow batteries handler (max ${m.batteries}ms)`);
+            }
+          }
+
+          // Check journal for rapid reconnects
+          const reconnectTimes = journal
+            .filter(e => e.type === 'reconnect')
+            .map(e => new Date(e.ts).getTime())
+            .filter(t => !isNaN(t));
+          if (reconnectTimes.length >= 5) {
+            const last5 = reconnectTimes.slice(-5);
+            const span = last5[last5.length - 1] - last5[0];
+            if (span < 60000) anomalies.push(`🔴 5 reconnects in ${Math.round(span / 1000)}s — reconnect storm detected`);
+          }
+
+          const anomalyEl = document.getElementById('ws-anomalies');
+          if (anomalies.length > 0) {
+            anomalyEl.innerHTML = `<div style="background:#fff3e0;border:2px solid #ff9800;border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+              <div style="font-weight:bold;margin-bottom:6px;color:#e65100;">⚠ Anomalies Detected</div>
+              ${anomalies.map(a => `<div style="font-size:12px;margin:2px 0;">${a}</div>`).join('')}
+            </div>`;
+          } else {
+            anomalyEl.innerHTML = '';
+          }
+
+          // --- Snapshots ---
+          const snapEl = document.getElementById('ws-snapshots');
+          const devIds = Object.keys(snapshots);
+          if (devIds.length === 0) {
+            snapEl.innerHTML = '<div style="color:#999;font-size:13px;">No device snapshots yet.</div>';
+          } else {
+            let html = '';
+            for (const id of devIds) {
+              const snap = snapshots[id];
+              const conn = snap.connected ? '🟢 Connected' : '🔴 Disconnected';
+              const age = snap.timestamp ? Math.round((Date.now() - snap.timestamp) / 1000) : '?';
+              html += `<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:8px;">`;
+              html += `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;">${id.slice(0,8)}… — ${conn}</div>`;
+              html += `<div style="font-size:11px;color:#666;">Snapshot: ${snap.ts || 'unknown'} (${age}s ago)</div>`;
+              if (snap.counters) {
+                const c = snap.counters;
+                html += `<div style="font-size:11px;color:#444;margin-top:4px;">`;
+                html += `msgs: ${c.messagesReceived} | meas: ${c.measurementsProcessed}/${c.measurementsDropped} | `;
+                html += `sys: ${c.systemProcessed}/${c.systemDropped} | bat: ${c.batteriesProcessed}/${c.batteriesDeferred} | `;
+                html += `reconnects: ${c.reconnects}`;
+                html += `</div>`;
+              }
+              if (snap.reconnectAttempts > 0) {
+                html += `<div style="font-size:11px;color:#c00;margin-top:2px;">⚠ ${snap.reconnectAttempts} reconnect attempts</div>`;
+              }
+              if (snap.handlerTiming) {
+                const m = snap.handlerTiming.max || {};
+                const warnStyle = (v) => v > 100 ? 'color:#c00;font-weight:bold;' : v > 50 ? 'color:#e65100;' : 'color:#444;';
+                html += `<div style="font-size:11px;margin-top:2px;">`;
+                html += `max timing: <span style="${warnStyle(m.measurement||0)}">meas=${m.measurement||0}ms</span> `;
+                html += `<span style="${warnStyle(m.system||0)}">sys=${m.system||0}ms</span> `;
+                html += `<span style="${warnStyle(m.batteries||0)}">bat=${m.batteries||0}ms</span>`;
+                html += `</div>`;
+              }
+              html += `</div>`;
+            }
+            snapEl.innerHTML = html;
+          }
+
+          // --- Journal ---
+          const journalEl = document.getElementById('ws-journal');
+          if (journal.length === 0) {
+            journalEl.textContent = 'No events recorded.';
+          } else {
+            const typeColors = {
+              open: '#4caf50', authorized: '#2196f3', close: '#ff9800',
+              error: '#f44336', reconnect: '#9c27b0', zombie: '#e91e63',
+              preflight_fail: '#ff5722', mode_change: '#00bcd4',
+              slow_handler: '#ff5722',
+            };
+            let lines = '';
+            for (const e of journal.slice(-50).reverse()) {
+              const color = typeColors[e.type] || '#666';
+              const devShort = (e.deviceId || '').slice(0, 8);
+              lines += `<span style="color:#999">${e.ts || '?'}</span> `;
+              lines += `<span style="color:${color};font-weight:bold">${(e.type || '?').padEnd(16)}</span> `;
+              lines += `<span style="color:#888">[${devShort}]</span> `;
+              lines += `${e.message || ''}\n`;
+            }
+            journalEl.innerHTML = lines;
+          }
+
+        }
+
+        renderWsDiagnostics(settings);
+
+        // Buttons
+        document.getElementById('ws-refresh-btn').addEventListener('click', () => {
+          Homey.get((e, s) => { if (!e) renderWsDiagnostics(s); });
+        });
+        document.getElementById('ws-clear-btn').addEventListener('click', () => {
+          Homey.set('ws_journal', []);
+          Homey.set('ws_snapshots', {});
+          Homey.set('debug_ws', []);
+          document.getElementById('ws-journal').textContent = 'Cleared.';
+          document.getElementById('ws-snapshots').innerHTML = '<div style="color:#999;font-size:13px;">Cleared.</div>';
+          document.getElementById('ws-debug').textContent = '[]';
+          document.getElementById('ws-anomalies').innerHTML = '';
+        });
+
+        document.getElementById('ws-copy-btn').addEventListener('click', () => {
+          Homey.get((e, s) => {
+            if (e) { alert('Fout: ' + e.message); return; }
+            const report = buildDiagnosticReport(s);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(report).then(() => {
+                const btn = document.getElementById('ws-copy-btn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.textContent = '📋 Copy Diagnostics'; }, 2000);
+              }).catch(() => fallbackCopy(report));
+            } else {
+              fallbackCopy(report);
+            }
+          });
+        });
+
+        function fallbackCopy(text) {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;left:-999px;';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          const btn = document.getElementById('ws-copy-btn');
+          btn.textContent = '✅ Copied!';
+          setTimeout(() => { btn.textContent = '📋 Copy Diagnostics'; }, 2000);
+        }
+
+        function buildDiagnosticReport(s) {
+          const snapshots = s['ws_snapshots'] || {};
+          const journal = s['ws_journal'] || s['debug_ws'] || [];
+          const now = new Date().toISOString();
+          const lines = [];
+
+          lines.push('═══════════════════════════════════════');
+          lines.push('   HomeWizard WebSocket Diagnostic Report');
+          lines.push('═══════════════════════════════════════');
+          lines.push(`Generated: ${now}`);
+          lines.push('');
+
+          // Device snapshots
+          const devIds = Object.keys(snapshots);
+          if (devIds.length === 0) {
+            lines.push('No device snapshots available.');
+          } else {
+            for (const id of devIds) {
+              const snap = snapshots[id];
+              const age = snap.timestamp ? Math.round((Date.now() - snap.timestamp) / 1000) : '?';
+              lines.push(`── Device: ${id.slice(0,12)}… ──`);
+              lines.push(`  Connected: ${snap.connected ? 'YES' : 'NO'}`);
+              lines.push(`  Snapshot age: ${age}s (${snap.ts || '?'})`);
+              lines.push(`  Reconnect attempts: ${snap.reconnectAttempts || 0}`);
+              if (snap.counters) {
+                const c = snap.counters;
+                lines.push(`  Messages: ${c.messagesReceived || 0}`);
+                lines.push(`  Measurements: ${c.measurementsProcessed || 0} ok / ${c.measurementsDropped || 0} dropped`);
+                lines.push(`  System: ${c.systemProcessed || 0} ok / ${c.systemDropped || 0} dropped`);
+                lines.push(`  Batteries: ${c.batteriesProcessed || 0} ok / ${c.batteriesDeferred || 0} deferred`);
+                lines.push(`  Reconnects: ${c.reconnects || 0}`);
+                lines.push(`  Handler errors: ${c.handlerErrors || 0}`);
+                lines.push(`  Last connected: ${c.lastConnectedAt || 'never'}`);
+                lines.push(`  Last disconnected: ${c.lastDisconnectedAt || 'never'}`);
+              }
+              if (snap.handlerTiming) {
+                const m = snap.handlerTiming.max || {};
+                const l = snap.handlerTiming.last || {};
+                lines.push(`  Handler timing (max): meas=${m.measurement||0}ms sys=${m.system||0}ms bat=${m.batteries||0}ms`);
+                lines.push(`  Handler timing (last): meas=${l.measurement||0}ms sys=${l.system||0}ms bat=${l.batteries||0}ms`);
+              }
+              if (snap.reconnectRate) {
+                const r = snap.reconnectRate;
+                lines.push(`  Reconnect rate: ${r.perMinute}/min (${r.count} in ${Math.round(r.windowMs/1000)}s)`);
+              }
+              lines.push('');
+            }
+          }
+
+          // Anomaly detection
+          const anomalies = [];
+          for (const [id, snap] of Object.entries(snapshots)) {
+            const d = id.slice(0, 8);
+            if (snap.counters?.handlerErrors > 0) anomalies.push(`[${d}] ${snap.counters.handlerErrors} handler errors`);
+            if (snap.counters?.reconnects > 10) anomalies.push(`[${d}] ${snap.counters.reconnects} reconnects`);
+            if (snap.handlerTiming?.max) {
+              const m = snap.handlerTiming.max;
+              if (m.measurement > 100) anomalies.push(`[${d}] Slow measurement: ${m.measurement}ms`);
+              if (m.system > 100) anomalies.push(`[${d}] Slow system: ${m.system}ms`);
+              if (m.batteries > 100) anomalies.push(`[${d}] Slow batteries: ${m.batteries}ms`);
+            }
+          }
+          const reconnectTimes = journal.filter(e => e.type === 'reconnect').map(e => new Date(e.ts).getTime()).filter(t => !isNaN(t));
+          if (reconnectTimes.length >= 5) {
+            const last5 = reconnectTimes.slice(-5);
+            const span = last5[last5.length - 1] - last5[0];
+            if (span < 60000) anomalies.push(`Reconnect storm: 5 in ${Math.round(span / 1000)}s`);
+          }
+
+          if (anomalies.length > 0) {
+            lines.push('── ⚠ ANOMALIES ──');
+            anomalies.forEach(a => lines.push(`  🔴 ${a}`));
+          } else {
+            lines.push('── ✅ No anomalies detected ──');
+          }
+          lines.push('');
+
+          // Last 20 journal events
+          lines.push('── Event Journal (last 20) ──');
+          if (journal.length === 0) {
+            lines.push('  No events.');
+          } else {
+            for (const e of journal.slice(-20)) {
+              const devShort = (e.deviceId || '').slice(0, 8);
+              lines.push(`  ${e.ts || '?'}  ${(e.type || '?').padEnd(16)}  [${devShort}]  ${e.message || ''}`);
+            }
+          }
+
+          lines.push('');
+          lines.push('═══ End of report ═══');
+          return lines.join('\n');
+        }
 
         /* ── EXPLAINABILITY ── */
         function renderExplainability(data) {
