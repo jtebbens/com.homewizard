@@ -1,7 +1,7 @@
 /*
  * HomeWizard WebSocket Manager
  * Copyright (C) 2025 Jeroen Tebbens
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -11,25 +11,8 @@
 'use strict';
 
 const https = require('https');
-const tls = require('tls');
-const crypto = require('crypto');
-const { URL } = require('url');
 const WebSocket = require('ws');
-const fetch = require('node-fetch');
-const wsDebug = require('./wsDebug');
-const debug = false;
-
-// 🔍 CPU CRASH DIAGNOSTICS - Only log critical events, not spam
-const CRASH_LOG_ENABLED = true;
-const CRASH_LOG_OPERATIONS = ['CONSTRUCTOR', 'START', 'START_ABORT', 'MEASURE_ERROR', 'MSG_PARSE_ERROR'];
-let globalOperationCounter = 0;
-function crashLog(deviceId, operation, data) {
-  if (!CRASH_LOG_ENABLED) return;
-  if (!CRASH_LOG_OPERATIONS.includes(operation)) return; // Filter spam
-  const opId = ++globalOperationCounter;
-  console.log(`[WS-CRASH-LOG][${opId}][${deviceId}][${operation}]`, data || '');
-  return opId;
-}
+const fetch = require('../../includes/utils/fetchQueue');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -40,127 +23,43 @@ const SHARED_AGENT = new https.Agent({
   timeout: 10000
 });
 
-// ✅ GLOBAL circuit breaker shared across ALL WebSocketManager instances
-// Optimized for up to 5 devices (4 plugin_battery + 1 energy_v2)
-const GLOBAL_CIRCUIT_BREAKER = {
-  _consecutiveFailures: 0,
-  _isOpen: false,
-  _activeAttempts: 0,
-  _resetTimeout: null,
-  _maxConcurrentAttempts: 8,     // Allow some overlap across 5 devices
-  _failureThreshold: 25,          // 5 devices × 5 attempts each
-  _resetTimeoutMs: 300000,        // 5 minutes
-  
-  canAttempt() {
-    return !this._isOpen && this._activeAttempts < this._maxConcurrentAttempts;
-  },
-  
-  startAttempt() {
-    this._activeAttempts++;
-  },
-  
-  endAttempt() {
-    this._activeAttempts = Math.max(0, this._activeAttempts - 1);
-  },
-  
-  recordSuccess() {
-    this._consecutiveFailures = 0;
-    if (this._isOpen) {
-      console.log('🔄 Global circuit breaker CLOSED: Connection restored');
-      this._isOpen = false;
-      if (this._resetTimeout) {
-        clearTimeout(this._resetTimeout);
-        this._resetTimeout = null;
-      }
-    }
-  },
-  
-  recordFailure() {
-    this._consecutiveFailures++;
-    
-    if (this._consecutiveFailures >= this._failureThreshold && !this._isOpen) {
-      this._isOpen = true;
-      console.error(`🚨 GLOBAL CIRCUIT BREAKER OPEN`);
-      console.error(`   Total failures: ${this._consecutiveFailures} across all devices`);
-      console.error(`   This indicates a network or device availability issue`);
-      console.error(`   All reconnection attempts paused for 5 minutes`);
-      
-      if (this._resetTimeout) clearTimeout(this._resetTimeout);
-      this._resetTimeout = setTimeout(() => {
-        console.log('🔄 Global circuit breaker auto-reset after 5 minutes');
-        console.log('   Resuming connection attempts...');
-        this._isOpen = false;
-        this._consecutiveFailures = 0;
-        this._resetTimeout = null;
-      }, this._resetTimeoutMs);
-      
-      return { opened: true };
-    }
-    
-    return { opened: false };
-  },
-  
-  getBackoffDelay() {
-    // Exponential backoff: 5s, 10s, 15s, 20s, 25s, ..., max 3 minutes
-    const base = 5000 * Math.min(this._consecutiveFailures, 10);
-    const delay = Math.min(base, 180000);
-    // Add 10-20% jitter to prevent thundering herd
-    return delay * (0.9 + Math.random() * 0.2);
-  },
-  
-  isOpen() {
-    return this._isOpen;
-  },
-  
-  getFailureCount() {
-    return this._consecutiveFailures;
-  },
-  
-  getStats() {
-    return {
-      failures: this._consecutiveFailures,
-      isOpen: this._isOpen,
-      activeAttempts: this._activeAttempts,
-      threshold: this._failureThreshold,
-      maxConcurrent: this._maxConcurrentAttempts
-    };
-  }
-};
-
 /**
- * Perform a fetch with a timeout using AbortController.
+ * Perform a fetch with timeout. Passes the timeout to fetchQueue which
+ * handles abort internally via its own AbortController.
+ *
+ * @param {string} url
+ * @param {object} [options={}]
+ * @param {number} [timeout=5000]
+ * @returns {Promise<any>} Parsed JSON response
  */
 async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error('Fetch timeout'));
-    }, timeout);
-
-    fetch(url, options)
-      .then(async res => {
-        clearTimeout(timer);
-        const text = await res.text();
-        try {
-          resolve(JSON.parse(text));
-        } catch {
-          resolve(text);
-        }
-      })
-      .catch(err => {
-        clearTimeout(timer);
-        reject(err);
-      });
-  });
+  const res = await fetch(url, { ...options, timeout });
+  return await res.json();
 }
 
 /**
  * WebSocketManager
+ *
+ * Manages a resilient WebSocket connection to a HomeWizard device.
+ * Responsibilities:
+ *  - Open and authorize the WebSocket connection
+ *  - Subscribe to topics: system, measurement, batteries
+ *  - Reconnect with exponential backoff on errors/close
+ *  - Monitor heartbeat to detect stalls and zombies
+ *  - Throttle incoming data to prevent CPU overload
+ *  - Expose start/stop/restart and helper checks
+ *
+ * Constructor expects callbacks and helpers from the device instance:
+ *  - device: device reference (for optimistic setBatteryMode update)
+ *  - url: base http(s) url of the device
+ *  - token: bearer token for authorization
+ *  - log, error: logging functions
+ *  - setAvailable: mark device available
+ *  - getSetting: read device settings
+ *  - handleMeasurement, handleSystem, handleBatteries: data callbacks
  */
 class WebSocketManager {
-  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries }) {
-    this.deviceId = device?.getData?.()?.id || 'unknown';
-    crashLog(this.deviceId, 'CONSTRUCTOR', 'WebSocketManager created');
-    
+  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries, onJournalEvent }) {
     this.device = device;
     this.url = url;
     this.token = token;
@@ -172,37 +71,82 @@ class WebSocketManager {
     this._handleMeasurement = handleMeasurement;
     this._handleSystem = handleSystem;
     this._handleBatteries = handleBatteries;
+    this._onJournalEvent = onJournalEvent || null;
+    this._deviceId = device?.getData?.()?.id || 'unknown';
 
-    this.pendingMeasurement = null;
-    this.pendingSystem = null;
-    this.pendingBatteries = null;
-
+    // WebSocket instance and state
     this.ws = null;
     this.wsActive = false;
-    this.wsAuthorized = false;
     this.reconnectAttempts = 0;
     this.lastMeasurementAt = Date.now();
 
+    // Reconnect / restart guards
     this.reconnecting = false;
     this._restartCooldown = 0;
+    this._stopped = false;
 
     this._timers = new Set();
     this.pongReceived = true;
-    this._stopped = false;
-    
-    // Track socket handlers for cleanup
-    this._socketHandlers = new Map();
-    
-    // Use GLOBAL circuit breaker
-    this.circuitBreaker = GLOBAL_CIRCUIT_BREAKER;
-    
-    // ✅ Per-device failure tracking (soft limit)
-    this._deviceFailures = 0;
-    this._deviceFailureResetTimeout = null;
-    
-    // ✅ CPU FIX: Throttle measurement processing to prevent rapid-fire updates
+
+    // Throttle: measurements arrive every ~1s, process at most every 2s
     this._lastMeasurementProcessedAt = 0;
-    this._measurementThrottleMs = 2000; // Process at most once per 2 seconds (devices send every 1s)
+    this._measurementThrottleMs = 2000;
+    this._pendingMeasurement = null;
+    this._pendingMeasurementTimer = null;
+
+    // Throttle: system (wifi rssi etc.) — handler does capability writes
+    this._lastSystemProcessedAt = 0;
+    this._systemThrottleMs = 10000;
+
+    // Throttle: batteries — handler does capability writes + flow triggers
+    this._lastBatteriesProcessedAt = 0;
+    this._batteriesThrottleMs = 5000;
+    this._pendingBatteries = null;
+    this._pendingBatteriesTimer = null;
+
+    // Debug: verbose per-message logging (toggle via device setting 'ws_debug')
+    this._debug = false;
+
+    // Uptime & timing
+    this._startedAt = Date.now();
+    this._lastHandlerDurationMs = { measurement: 0, system: 0, batteries: 0 };
+    this._maxHandlerDurationMs = { measurement: 0, system: 0, batteries: 0 };
+
+    // Reconnect rate detection (ring buffer of last 20 reconnect timestamps)
+    this._reconnectTimestamps = [];
+
+    // Stats counters for getStats()
+    this._stats = {
+      messagesReceived: 0,
+      measurementsProcessed: 0,
+      measurementsDropped: 0,
+      systemProcessed: 0,
+      systemDropped: 0,
+      batteriesProcessed: 0,
+      batteriesDeferred: 0,
+      reconnects: 0,
+      lastConnectedAt: null,
+      lastDisconnectedAt: null,
+      handlerErrors: 0,
+    };
+  }
+
+  /**
+   * Write a critical event to the persistent journal.
+   * Called at key lifecycle points so events survive app kills.
+   */
+  _journal(type, message) {
+    try { this._onJournalEvent?.(type, this._deviceId, message); }
+    catch (e) { /* never let journal break the WS flow */ }
+  }
+
+  /**
+   * Persist current stats snapshot for post-crash diagnostics.
+   * Called periodically from the 30s health-check timer.
+   */
+  _persistSnapshot() {
+    try { this._onJournalEvent?.('snapshot', this._deviceId, this.getStats()); }
+    catch (e) { /* ignore */ }
   }
 
   _safeSetTimeout(fn, ms) {
@@ -233,417 +177,85 @@ class WebSocketManager {
   }
 
   /**
-   * Perform TLS + HTTP upgrade manually
-   */
-  async _openUpgradedSocket(wsUrlString) {
-    const url = new URL(wsUrlString);
-    const host = url.hostname;
-    const port = url.port || 443;
-    const path = url.pathname + (url.search || '');
-
-    return new Promise((resolve, reject) => {
-      const key = crypto.randomBytes(16).toString('base64');
-      const expectedAccept = crypto
-        .createHash('sha1')
-        .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
-        .digest('base64');
-
-      const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);
-      
-      const tlsOptions = {
-        host,
-        port,
-        rejectUnauthorized: false,
-        ALPNProtocols: ['http/1.1'],
-        timeout: 5000
-      };
-      
-      if (!isIp) {
-        tlsOptions.servername = host;
-      }
-      
-      const socket = tls.connect(tlsOptions);
-
-      let buffer = '';
-      let upgraded = false;
-      let timeoutId = null;
-
-      const fail = (err) => {
-        if (!upgraded) {
-          if (timeoutId) clearTimeout(timeoutId);
-          try { socket.destroy(); } catch {}
-          reject(err);
-        }
-      };
-
-      timeoutId = setTimeout(() => {
-        fail(new Error('WebSocket upgrade timeout (10s)'));
-      }, 10000);
-
-      socket.on('error', err => fail(err));
-      socket.on('timeout', () => fail(new Error('TLS timeout')));
-      socket.on('close', () => {
-        if (!upgraded) fail(new Error('Socket closed before upgrade'));
-      });
-
-      socket.once('connect', () => {
-        const headers = [
-          `GET ${path} HTTP/1.1`,
-          `Host: ${host}`,
-          'Upgrade: websocket',
-          'Connection: keep-alive, Upgrade',
-          `Sec-WebSocket-Key: ${key}`,
-          'Sec-WebSocket-Version: 13',
-          'Sec-WebSocket-Protocol: homewizard-api',
-          `Authorization: Bearer ${this.token}`,
-          '\r\n'
-        ].join('\r\n');
-
-        socket.write(headers);
-      });
-
-      socket.on('data', chunk => {
-        if (upgraded) return;
-        buffer += chunk.toString('utf8');
-
-        const headerEnd = buffer.indexOf('\r\n\r\n');
-        if (headerEnd === -1) return;
-
-        const header = buffer.slice(0, headerEnd);
-        const lines = header.split('\r\n');
-        const status = lines.shift();
-        const m = status.match(/^HTTP\/1\.[01] (\d{3})/);
-        const code = m ? parseInt(m[1], 10) : 0;
-
-        if (code !== 101) return fail(new Error(`WS upgrade failed: ${code}`));
-
-        const headersObj = {};
-        for (const line of lines) {
-          const idx = line.indexOf(':');
-          if (idx === -1) continue;
-          headersObj[line.slice(0, idx).trim().toLowerCase()] =
-            line.slice(idx + 1).trim();
-        }
-
-        if (headersObj['sec-websocket-accept'] !== expectedAccept) {
-          return fail(new Error('Invalid Sec-WebSocket-Accept'));
-        }
-
-        upgraded = true;
-        if (timeoutId) clearTimeout(timeoutId);
-        const leftover = buffer.slice(headerEnd + 4);
-
-        socket.removeAllListeners('data');
-        
-        resolve({ socket, leftover });
-      });
-    });
-  }
-
-  /**
-   * Start the WebSocket connection
+   * Start or restart the WebSocket connection.
+   * Runs a preflight check to verify device reachability before connecting.
    */
   async start() {
-    const opId = crashLog(this.deviceId, 'START', 'Beginning WebSocket connection');
-    
     if (this._stopped) {
-      this.log('⚠️ WebSocket is stopped - use resume() to restart');
-      crashLog(this.deviceId, 'START_ABORT', 'Already stopped');
+      this.log('⚠️ WebSocket is stopped — use resume() to restart');
       return;
     }
 
+    // Skip if already connecting
     if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
       this.log('⏸️ WebSocket is already connecting — skipping start');
       return;
     }
 
-    // ✅ Per-device soft limit: back off this device if it fails repeatedly
-    if (this._deviceFailures >= 10) {
-      this.log(`⚠️ This device has failed ${this._deviceFailures} times, waiting longer before retry`);
-      const longDelay = 60000 + Math.random() * 60000; // 1-2 minutes
-      this._safeSetTimeout(() => {
-        this._deviceFailures = 0; // Reset after long wait
-        this.start();
-      }, longDelay);
-      return;
-    }
-
-    // ✅ Check GLOBAL circuit breaker
-    if (!this.circuitBreaker.canAttempt()) {
-      if (this.circuitBreaker.isOpen()) {
-        this.log(`⚠️ Global circuit breaker OPEN (${this.circuitBreaker.getFailureCount()} total failures)`);
-      } else {
-        this.log(`⚠️ Too many global connection attempts (${this.circuitBreaker._activeAttempts})`);
+    // Clean up existing socket
+    if (this.ws) {
+      try {
+        if (this.ws.readyState === WebSocket.OPEN) this.ws.terminate();
+        else this.ws.close();
+      } catch (err) {
+        this.error('❌ Failed to clean up WebSocket:', err);
       }
-      
-      this._safeSetTimeout(() => this.start(), this.circuitBreaker.getBackoffDelay());
+      this.ws = null;
+      this.wsActive = false;
+    }
+
+    // Allow URL from settings if not provided at construction
+    const settingsUrl = this.getSetting('url');
+    if (!this.url && settingsUrl) this.url = settingsUrl;
+    if (!this.token || !this.url) {
+      this.error('❌ Missing token or URL — cannot start WebSocket');
       return;
     }
 
-    this.circuitBreaker.startAttempt();
-
+    // Preflight: verify device is reachable
     try {
-      // Clean up existing connection
-      if (this.ws) {
-        await this._cleanupWebSocket();
-      }
-
-      const settingsUrl = this.getSetting('url');
-      if (!this.url && settingsUrl) this.url = settingsUrl;
-      if (!this.token || !this.url) {
-        this.error('❌ Missing token or URL — cannot start WebSocket');
+      const res = await fetchWithTimeout(`${this.url}/api/system`, {
+        headers: { Authorization: `Bearer ${this.token}` },
+        agent: SHARED_AGENT
+      }, 3000);
+      if (!res || typeof res.cloud_enabled === 'undefined') {
+        this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
+        this._journal('preflight_fail', `Device unreachable at ${this.url}`);
+        this._scheduleReconnect();
         return;
       }
-
-      const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
-
-      // Preflight check
-      try {
-        const res = await fetchWithTimeout(`${this.url}/api/system`, {
-          headers: { Authorization: `Bearer ${this.token}` },
-          agent: SHARED_AGENT
-        }, 3000);
-
-        if (!res || typeof res.cloud_enabled === 'undefined') {
-          this.error(`❌ Device unreachable at ${this.url} - invalid response`);
-          throw new Error('Device unreachable');
-        }
-        
-        // ✅ Success - reset on successful preflight
-        this.reconnectAttempts = 0;
-        
-        // On success (after successful preflight):
-        this._deviceFailures = 0;
-        if (this._deviceFailureResetTimeout) {
-          clearTimeout(this._deviceFailureResetTimeout);
-          this._deviceFailureResetTimeout = null;
-        }
-        this.circuitBreaker.recordSuccess();
-        
-      } catch (err) {
-        this.error(`❌ Preflight check failed: ${err.message}`);
-        
-        // On failure (in catch blocks):
-        this._deviceFailures++;
-        
-        // Record failure in global circuit breaker
-        const result = this.circuitBreaker.recordFailure();
-        if (result.opened) {
-          this.error(`🚨 Global circuit breaker OPENED - too many failures across all devices`);
-        }
-        
-        // Schedule retry with exponential backoff
-        this._safeSetTimeout(() => this.start(), this.circuitBreaker.getBackoffDelay());
-        return;
-      }
-      // Perform custom HTTP upgrade
-      let upgraded;
-      try {
-        upgraded = await this._openUpgradedSocket(wsUrl);
-      } catch (err) {
-        this.error('❌ WebSocket HTTP upgrade failed:', err.message || err);
-        
-        // On failure (in catch blocks):
-        this._deviceFailures++;
-        
-        const result = this.circuitBreaker.recordFailure();
-        if (result.opened) {
-          this.error(`🚨 Global circuit breaker OPENED`);
-        }
-        
-        this._safeSetTimeout(() => this.start(), this.circuitBreaker.getBackoffDelay());
-        return;
-      }
-
-      const { socket: upgradedSocket, leftover } = upgraded;
-
-      // Create WebSocket wrapper
-      try {
-        await this._createWebSocketWrapper(upgradedSocket, leftover);
-        
-        // ✅ Record success in GLOBAL circuit breaker
-        this.circuitBreaker.recordSuccess();
-        
-      } catch (err) {
-        this.error('❌ Failed to create WebSocket wrapper:', err);
-        
-        // On failure (in catch blocks):
-        this._deviceFailures++;
-        
-        const result = this.circuitBreaker.recordFailure();
-        if (result.opened) {
-          this.error(`🚨 Global circuit breaker OPENED`);
-        }
-        
-        try { upgradedSocket.destroy(); } catch {}
-        this._safeSetTimeout(() => this.start(), this.circuitBreaker.getBackoffDelay());
-        return;
-      }
-      
     } catch (err) {
-      this.error('❌ Unexpected error in start():', err);
-      
-      // On failure (in catch blocks):
-      this._deviceFailures++;
-      
-      const result = this.circuitBreaker.recordFailure();
-      if (result.opened) {
-        this.error(`🚨 Global circuit breaker OPENED`);
-      }
-      
-      this._safeSetTimeout(() => this.start(), this.circuitBreaker.getBackoffDelay());
-    } finally {
-      // Always release attempt slot
-      this.circuitBreaker.endAttempt();
-    }
-  }
-
-  /**
-   * Create WebSocket wrapper around upgraded socket
-   */
-  async _createWebSocketWrapper(upgradedSocket, leftover) {
-    const { Receiver, Sender } = WebSocket;
-
-    const receiver = new Receiver({
-      maxPayload: 128 * 1024,
-      skipUTF8Validation: true,
-      allowSynchronousEvents: true,
-      isServer: false,
-      clientTracking: false
-    });
-
-    const sender = new Sender(upgradedSocket, { skipMasking: false });
-
-    this.ws = {
-      _socket: upgradedSocket,
-      _receiver: receiver,
-      _sender: sender,
-      readyState: WebSocket.OPEN,
-      bufferedAmount: 0,
-      _events: {},
-
-      terminate: () => {
-        try { upgradedSocket.destroy(); } catch {}
-      },
-
-      close: () => {
-        try { upgradedSocket.end(); } catch {}
-      },
-
-      ping: () => {
-        try {
-          sender.ping(Buffer.alloc(0), { mask: true });
-        } catch (err) {
-          this.error('❌ ping() failed:', err);
-        }
-      },
-
-      send: (data) => {
-        try {
-          sender.send(
-            Buffer.from(data),
-            { fin: true, opcode: 1, mask: true, rsv1: false },
-            (err) => err && this.error('❌ Sender error:', err)
-          );
-        } catch (err) {
-          this.error('❌ send() failed:', err);
-        }
-      },
-
-      on: (event, handler) => {
-        if (this.ws) this.ws._events[event] = handler;
-      },
-
-      removeAllListeners: (event) => {
-        if (!this.ws) return;
-        if (event) {
-          delete this.ws._events[event];
-        } else {
-          this.ws._events = {};
-        }
-      }
-    };
-
-    receiver.on('ping', (data) => {
-      try {
-        sender.pong(data, { mask: true });
-      } catch (err) {
-        this.error('❌ Failed to send pong:', err);
-      }
-      const handler = this.ws?._events?.pong;
-      if (handler) handler();
-    });
-
-    receiver.on('message', (data) => {
-      const handler = this.ws?._events?.message;
-      if (handler) handler(data);
-    });
-
-    receiver.on('close', () => {
-      const handler = this.ws?._events?.close;
-      if (handler) handler();
-    });
-
-    receiver.on('error', (err) => {
-      this.error('❌ Receiver error:', err);
-      try { this.ws.terminate(); } catch {}
+      this.error(`❌ Preflight check failed: ${err.message}`);
+      this._journal('preflight_fail', err.message);
       this._scheduleReconnect();
-    });
-
-    if (leftover && leftover.length) {
-      try {
-        receiver.write(Buffer.from(leftover, 'binary'));
-      } catch (err) {
-        this.error('❌ Failed to write leftover to receiver:', err);
-      }
+      return;
     }
 
-    const dataHandler = (chunk) => {
-      if (this._stopped) return;
-      try {
-        receiver.write(chunk);
-      } catch (err) {
-        this.error('❌ Receiver write failed:', err);
-      }
-    };
+    const wsUrl = this.url.replace(/^http(s)?:\/\//, 'wss://') + '/api/ws';
 
-    this._socketHandlers.set('data', dataHandler);
-    upgradedSocket.on('data', dataHandler);
-
-    const errorHandler = (err) => {
-      this.error('❌ Low-level socket error:', err.message);
-      try { this.ws.terminate(); } catch {}
-      this._scheduleReconnect();
-    };
-
-    this._socketHandlers.set('error', errorHandler);
-    upgradedSocket.on('error', errorHandler);
-
-    const endHandler = () => {
-      try { receiver.end(); } catch {}
-    };
-
-    this._socketHandlers.set('end', endHandler);
-    upgradedSocket.on('end', endHandler);
-
-    const closeHandler = () => {
-      try { receiver.end(); } catch {}
-    };
-
-    this._socketHandlers.set('close', closeHandler);
-    upgradedSocket.on('close', closeHandler);
+    // Create standard WebSocket
+    try {
+      this.ws = new WebSocket(wsUrl, {
+        agent: SHARED_AGENT,
+        perMessageDeflate: false,
+        maxPayload: 512 * 1024,
+        handshakeTimeout: 5000
+      });
+    } catch (err) {
+      this.error('❌ Failed to create WebSocket:', err);
+      this.wsActive = false;
+      return;
+    }
 
     this._safeSend = (obj) => {
-      if (this._stopped) return false;
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
-
       try {
-        const data = Buffer.from(JSON.stringify(obj));
-        sender.send(
-          data,
-          { fin: true, opcode: 1, mask: true },
-          (err) => err && this.error('❌ Sender error:', err)
-        );
+        const buffered = this.ws._socket?.bufferSize || this.ws.bufferedAmount || 0;
+        if (buffered > 512 * 1024) {
+          this.log(`⚠️ Skipping send — buffered ${buffered}`);
+          return false;
+        }
+        this.ws.send(JSON.stringify(obj));
         return true;
       } catch (err) {
         this.error('❌ safeSend failed:', err);
@@ -651,47 +263,52 @@ class WebSocketManager {
       }
     };
 
-    this._setupWebSocketHandlers();
-
-    this._safeSetTimeout(() => {
-      if (this._stopped) return;
-      const handler = this.ws._events?.open;
-      if (handler) handler();
-    }, 10);
-  }
-
-  /**
-   * Set up WebSocket event handlers
-   */
-  _setupWebSocketHandlers() {
+    // ──────────────────────── open ────────────────────────
     this.ws.on('open', () => {
       if (this._stopped) return;
-
       this.wsActive = true;
-      this.wsAuthorized = false;
+      this.lastMeasurementAt = Date.now();
       this.reconnectAttempts = 0;
-
-      const devId = this.device?.getData?.().id || 'unknown-device';
-      wsDebug.log('open', devId, 'WebSocket opened');
+      this._stats.lastConnectedAt = new Date().toISOString();
+      this.log('🔌 WebSocket opened — authorizing...');
+      this._journal('open', 'WebSocket opened');
 
       if (this.ws._socket) this.ws._socket.setKeepAlive(true, 30000);
 
       this.pongReceived = true;
 
+      // Single 30s health-check: ping/pong + heartbeat + zombie detection
       this._safeSetInterval(() => {
-        if (this._stopped) return;
         if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
         const now = Date.now();
-        const idleFor = now - this.lastMeasurementAt;
+        const idle = now - this.lastMeasurementAt;
 
-        if (!this.pongReceived && idleFor > 60000) {
-          this.log(`🧨 No pong & idle ${idleFor}ms — force closing zombie WebSocket`);
+        // Periodically persist stats snapshot (every ~5 min = every 10th tick of 30s)
+        if (!this._healthTick) this._healthTick = 0;
+        this._healthTick++;
+        if (this._healthTick % 10 === 0) this._persistSnapshot();
+
+        // No pong reply AND no data for 60s → zombie
+        if (!this.pongReceived && idle > 60000) {
+          this.log('🧨 No pong & idle — force closing zombie WebSocket');
+          this._journal('zombie', `No pong & idle ${Math.round(idle / 1000)}s — terminating`);
           try { this.ws.terminate(); } catch (e) {}
           this.ws = null;
           this.wsActive = false;
-          this.wsAuthorized = false;
           this._scheduleReconnect();
+          return;
+        }
+
+        // Request battery status if idle > 60s
+        if (idle > 60000) {
+          this._safeSend({ type: 'batteries' });
+        }
+
+        // No data for 3 minutes → full reconnect
+        if (idle > 180000) {
+          this.log('💤 No measurement in 3min — reconnecting WebSocket');
+          this.restartWebSocket();
           return;
         }
 
@@ -699,53 +316,11 @@ class WebSocketManager {
         try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
       }, 30000);
 
-      // ✅ CPU FIX: Process system/batteries + any throttled measurements
-      // Reduced from constant polling to checking every 30 seconds
-      this._safeSetInterval(() => {
-        if (this._stopped) return;
-
-        // Process any throttled measurements
-        if (this.pendingMeasurement) {
-          const data = this.pendingMeasurement;
-          this.pendingMeasurement = null;
-          this.lastMeasurementAt = Date.now();
-          this._lastMeasurementProcessedAt = Date.now();
-          
-          try {
-            this._handleMeasurement?.(data);
-          } catch (e) {
-            this.error('❌ Error in measurement handler:', e);
-          }
-        }
-
-        if (this.pendingSystem) {
-          const sys = this.pendingSystem;
-          this.pendingSystem = null;
-          try {
-            this._handleSystem?.(sys);
-          } catch (e) {
-            this.error('❌ Error in system handler:', e);
-          }
-        }
-
-        if (this.pendingBatteries) {
-          const bat = this.pendingBatteries;
-          this.pendingBatteries = null;
-          try {
-            this._handleBatteries?.(bat);
-          } catch (e) {
-            this.error('❌ Error in batteries handler:', e);
-          }
-        }
-      }, 30000);  // Reduced from 10s to 30s for CPU efficiency
-
+      // Authorize via message
       const maxRetries = 30;
       let retries = 0;
-
       const tryAuthorize = () => {
-        if (this._stopped) return;
-        if (!this.ws) return;
-
+        if (this._stopped || !this.ws) return;
         if (this.ws.readyState === WebSocket.OPEN) {
           this.log('🔐 Sending WebSocket authorization');
           this._safeSend({ type: 'authorization', data: this.token });
@@ -754,225 +329,218 @@ class WebSocketManager {
           this._safeSetTimeout(tryAuthorize, 100);
         } else {
           this.error('❌ WebSocket failed to open after timeout — giving up');
-          try { this.ws.terminate(); } catch (e) {}
+          this.ws.terminate();
           this.wsActive = false;
         }
       };
-
       tryAuthorize();
     });
 
+    // ──────────────────────── pong ────────────────────────
     this.ws.on('pong', () => {
-      if (this._stopped) return;
       this.pongReceived = true;
       this.lastMeasurementAt = Date.now();
     });
 
+    // ──────────────────────── message ────────────────────────
     this.ws.on('message', (msg) => {
       if (this._stopped) return;
 
-      const devId = this.device?.getData?.().id || 'unknown-device';
-
       let data;
-      try {
-        data = JSON.parse(msg.toString());
-      } catch (err) {
-        this.error('❌ Failed to parse WebSocket message:', err);
-        crashLog(devId, 'MSG_PARSE_ERROR', err.message);
-        return;
-      }
+      try { data = JSON.parse(msg.toString()); }
+      catch (err) { this.error('❌ Failed to parse WS message:', err); return; }
 
-      if (debug) this.log(`[WS][${devId}] TYPE=${data.type}`);
+      this._stats.messagesReceived++;
+      if (this._debug) this.log(`[WS-DBG] type=${data.type}`);
 
       if (data.type === 'authorized') {
-        wsDebug.log('authorized', devId, 'WebSocket authorized');
-        this.wsAuthorized = true;
+        this.log('✅ WebSocket authorized');
+        this._journal('authorized', 'WebSocket authorized — subscribing');
         this.lastMeasurementAt = Date.now();
         this._subscribeTopics();
-        this._startHeartbeatMonitor();
       }
       else if (data.type === 'measurement') {
-        // ✅ CPU FIX: Process immediately with throttling instead of polling
-        const now = Date.now();
-        
-        if (now - this._lastMeasurementProcessedAt >= this._measurementThrottleMs) {
-          this._lastMeasurementProcessedAt = now;
-          this.lastMeasurementAt = now;
-          
-          try {
-            this._handleMeasurement?.(data.data || {});
-          } catch (e) {
-            this.error('❌ Error in measurement handler:', e);
-            crashLog(devId, 'MEASURE_ERROR', e.message);
-          }
-        } else {
-          // Still store for processing by 30s interval if throttled
-          this.pendingMeasurement = data.data || {};
-        }
+        this._onMeasurement(data.data || {});
       }
       else if (data.type === 'system') {
-        this.pendingSystem = data.data || {};
+        this._onSystem(data.data || {});
       }
       else if (data.type === 'batteries') {
-        if (debug) {
-          const d = data.data || {};
-          this.log(
-            `[WS][${devId}] BATTERY GROUP: mode=${d.mode}, ` +
-            `target=${d.target_power_w}, permissions=${JSON.stringify(d.permissions)}`
-          );
-        }
-        this.pendingBatteries = data.data || {};
+        this._onBatteries(data.data || {});
       }
     });
 
+    // ──────────────────────── error ────────────────────────
     this.ws.on('error', (err) => {
       if (this._stopped) return;
-
       this.error(`❌ WebSocket error: ${err.code || ''} ${err.message || err}`);
-      const devId = this.device?.getData?.().id || 'unknown-device';
-      wsDebug.log('error', devId, `${err.code || ''} ${err.message || err}`);
+      this._journal('error', `${err.code || ''} ${err.message || err}`);
       this.wsActive = false;
-      this.wsAuthorized = false;
+      this._stats.lastDisconnectedAt = new Date().toISOString();
       this._scheduleReconnect();
     });
 
+    // ──────────────────────── close ────────────────────────
     this.ws.on('close', () => {
       if (this._stopped) return;
-
       this.log('🔌 WebSocket closed — retrying');
-      const devId = this.device?.getData?.().id || 'unknown-device';
-      wsDebug.log('close', devId, 'WebSocket closed');
+      this._journal('close', 'WebSocket closed');
       this.wsActive = false;
-      this.wsAuthorized = false;
+      this._stats.lastDisconnectedAt = new Date().toISOString();
       this._scheduleReconnect();
     });
+  }
+
+  // ──────────── Throttled message handlers ────────────
+
+  /**
+   * Measurement: process immediately if throttle window passed,
+   * otherwise store latest and schedule a deferred flush.
+   */
+  _onMeasurement(payload) {
+    const now = Date.now();
+    if (now - this._lastMeasurementProcessedAt >= this._measurementThrottleMs) {
+      this._lastMeasurementProcessedAt = now;
+      this.lastMeasurementAt = now;
+      this._stats.measurementsProcessed++;
+      const t0 = Date.now();
+      try { this._handleMeasurement?.(payload); }
+      catch (e) { this.error('❌ Measurement handler error:', e); this._stats.handlerErrors++; }
+      this._trackHandlerTime('measurement', Date.now() - t0);
+    } else {
+      this._stats.measurementsDropped++;
+      this._pendingMeasurement = payload;
+      if (!this._pendingMeasurementTimer) {
+        const remaining = this._measurementThrottleMs - (now - this._lastMeasurementProcessedAt);
+        this._pendingMeasurementTimer = this._safeSetTimeout(() => {
+          this._pendingMeasurementTimer = null;
+          if (this._stopped || !this._pendingMeasurement) return;
+          const pending = this._pendingMeasurement;
+          this._pendingMeasurement = null;
+          this._lastMeasurementProcessedAt = Date.now();
+          this.lastMeasurementAt = Date.now();
+          const t0 = Date.now();
+          try { this._handleMeasurement?.(pending); }
+          catch (e) { this.error('❌ Deferred measurement error:', e); this._stats.handlerErrors++; }
+          this._trackHandlerTime('measurement', Date.now() - t0);
+        }, remaining);
+      }
+    }
   }
 
   /**
-   * Clean up WebSocket and all associated resources
+   * System: process if throttle window passed, drop intermediate.
+   * Only carries wifi rssi — not critical to flush.
    */
-  async _cleanupWebSocket() {
-    if (!this.ws) return;
-
-    // Capture reference and clear immediately to prevent race conditions
-    const ws = this.ws;
-    this.ws = null;
-    this.wsActive = false;
-
-    try {
-      ws.removeAllListeners();
-
-      if (ws._socket) {
-        for (const [event, handler] of this._socketHandlers.entries()) {
-          ws._socket.removeListener(event, handler);
-        }
-        this._socketHandlers.clear();
-      }
-
-      if (ws._receiver) {
-        try {
-          ws._receiver.removeAllListeners();
-          ws._receiver.end();
-        } catch (err) {
-          // Ignore cleanup errors
-        }
-      }
-
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
-      if (ws.readyState !== WebSocket.CLOSED) {
-        ws.terminate();
-      }
-    } catch (err) {
-      this.error('❌ Error during WebSocket cleanup:', err);
+  _onSystem(payload) {
+    const now = Date.now();
+    if (now - this._lastSystemProcessedAt >= this._systemThrottleMs) {
+      this._lastSystemProcessedAt = now;
+      this._stats.systemProcessed++;
+      if (this._debug) this.log(`[WS-DBG] system processed`);
+      const t0 = Date.now();
+      try { this._handleSystem?.(payload); }
+      catch (e) { this.error('❌ System handler error:', e); this._stats.handlerErrors++; }
+      this._trackHandlerTime('system', Date.now() - t0);
+    } else {
+      this._stats.systemDropped++;
     }
   }
+
+  /**
+   * Batteries: process if throttle window passed, otherwise store
+   * latest and schedule a deferred flush so mode changes are not lost.
+   */
+  _onBatteries(payload) {
+    const now = Date.now();
+    this._pendingBatteries = payload;
+    if (now - this._lastBatteriesProcessedAt >= this._batteriesThrottleMs) {
+      this._lastBatteriesProcessedAt = now;
+      const bat = this._pendingBatteries;
+      this._pendingBatteries = null;
+      if (this._pendingBatteriesTimer) {
+        clearTimeout(this._pendingBatteriesTimer);
+        this._pendingBatteriesTimer = null;
+      }
+      this._stats.batteriesProcessed++;
+      if (this._debug) this.log(`[WS-DBG] batteries processed: mode=${bat?.mode}`);
+      const t0b = Date.now();
+      try { this._handleBatteries?.(bat); }
+      catch (e) { this.error('❌ Batteries handler error:', e); this._stats.handlerErrors++; }
+      this._trackHandlerTime('batteries', Date.now() - t0b);
+    } else if (!this._pendingBatteriesTimer) {
+      this._stats.batteriesDeferred++;
+      const remaining = this._batteriesThrottleMs - (now - this._lastBatteriesProcessedAt);
+      this._pendingBatteriesTimer = this._safeSetTimeout(() => {
+        this._pendingBatteriesTimer = null;
+        if (this._stopped || !this._pendingBatteries) return;
+        const bat = this._pendingBatteries;
+        this._pendingBatteries = null;
+        this._lastBatteriesProcessedAt = Date.now();
+        const t0d = Date.now();
+        try { this._handleBatteries?.(bat); }
+        catch (e) { this.error('❌ Deferred batteries error:', e); this._stats.handlerErrors++; }
+        this._trackHandlerTime('batteries', Date.now() - t0d);
+      }, remaining);
+    }
+  }
+
+  // ──────────── Reconnect / lifecycle ────────────
 
   _scheduleReconnect() {
-    if (this._stopped) {
-      this.log('⚠️ WebSocket stopped - skipping reconnect');
+    if (this._stopped || this.reconnecting) return;
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      this.log('⏸️ Reconnect suppressed — socket OPEN or CONNECTING');
       return;
     }
-
-    const devId = this.device?.getData?.().id || 'unknown-device';
-
-    if (this.reconnecting) {
-      wsDebug.log('reconnect_suppressed', devId, 'Already reconnecting');
-      return;
-    }
-
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      this.log('⏸️ reconnect suppressed — still CONNECTING');
-      wsDebug.log('reconnect_suppressed', devId, `State=${this.ws.readyState}`);
-      return;
-    }
-
     this.reconnecting = true;
     this.reconnectAttempts++;
-
-    const delay = this.circuitBreaker.getBackoffDelay();
-
-    this.log(`🔁 WS reconnect scheduled in ${Math.round(delay / 1000)}s (global failures: ${this.circuitBreaker.getFailureCount()})`);
-    wsDebug.log('reconnect_scheduled', devId, `${Math.round(delay / 1000)}s`);
-
+    this._stats.reconnects++;
+    this._reconnectTimestamps.push(Date.now());
+    if (this._reconnectTimestamps.length > 20) this._reconnectTimestamps.shift();
+    const base = 5000 * this.reconnectAttempts;
+    const delay = Math.min(base, 180000); // cap at 3 minutes
+    const jitter = delay * (0.9 + Math.random() * 0.2);
+    this.log(`🔁 WS reconnect in ${Math.round(jitter / 1000)}s`);
+    this._journal('reconnect', `Attempt #${this.reconnectAttempts} in ${Math.round(jitter / 1000)}s`);
+    this._persistSnapshot(); // snapshot before potential crash
     this._safeSetTimeout(() => {
-      if (this._stopped) {
-        this.log('⚠️ Reconnect cancelled - WebSocket was stopped');
-        this.reconnecting = false;
-        return;
-      }
-      
       this.reconnecting = false;
-      wsDebug.log('reconnect_execute', devId, 'Restarting WebSocket');
+      if (this._stopped) return;
       this.restartWebSocket();
-    }, delay);
+    }, jitter);
   }
 
-  async stop() {
-    if (this._stopped) {
-      this.log('⚠️ WebSocket already stopped');
-      return;
-    }
-
-    this.log('🛑 Stopping WebSocket manager...');
+  stop() {
     this._stopped = true;
-
     this._clearTimers();
     this.reconnecting = false;
-
-    await this._cleanupWebSocket();
-
-    this.wsAuthorized = false;
-    this.reconnectAttempts = 0;
-
-    this.pendingMeasurement = null;
-    this.pendingSystem = null;
-    this.pendingBatteries = null;
-
-    this.log('✅ WebSocket manager stopped');
+    if (this.ws) {
+      try {
+        if (this.ws.readyState === WebSocket.OPEN) this.ws.close();
+        else this.ws.terminate();
+      } catch (err) {
+        this.error('❌ Error closing WebSocket:', err);
+      }
+      this.ws = null;
+      this.wsActive = false;
+    }
+    this._pendingMeasurement = null;
+    this._pendingBatteries = null;
+    this._pendingMeasurementTimer = null;
+    this._pendingBatteriesTimer = null;
   }
 
   async resume() {
-    if (!this._stopped) {
-      this.log('⚠️ WebSocket not stopped - already running');
-      return;
-    }
-
-    this.log('▶️ Resuming WebSocket manager...');
+    if (!this._stopped) return;
     this._stopped = false;
     this.reconnectAttempts = 0;
     this.reconnecting = false;
-    
     await this.start();
   }
 
   _subscribeTopics() {
-    if (this._stopped) return;
-
-    ['system', 'measurement', 'batteries'].forEach((topic) => {
+    ['system', 'measurement', 'batteries'].forEach(topic => {
       this._safeSend({ type: 'subscribe', data: topic });
     });
     this.wsActive = true;
@@ -980,73 +548,214 @@ class WebSocketManager {
   }
 
   _startHeartbeatMonitor() {
-    this._safeSetInterval(() => {
-      if (this._stopped) return;
-
-      const now = Date.now();
-
-      if (!this.wsAuthorized) return;
-
-      if (this.ws?.readyState === WebSocket.OPEN &&
-          now - this.lastMeasurementAt > 60000) {
-        this._safeSend({ type: 'batteries' });
-      }
-
-      if (now - this.lastMeasurementAt > 180000) {
-        this.log('💤 No measurement in 3min — reconnecting WebSocket');
-        this.restartWebSocket();
-      }
-    }, 30000);
+    // Merged into single 30s health-check in start() — kept for API compat
   }
 
   isConnected() {
     return !this._stopped && this.ws && this.ws.readyState === WebSocket.OPEN;
   }
 
+  /**
+   * Return a snapshot of internal state for diagnostics.
+   * Call from device code: this.wsManager.getStats()
+   */
+  getStats() {
+    const now = Date.now();
+    return {
+      connected: this.isConnected(),
+      wsActive: this.wsActive,
+      stopped: this._stopped,
+      reconnecting: this.reconnecting,
+      reconnectAttempts: this.reconnectAttempts,
+      idleMs: now - this.lastMeasurementAt,
+      timersActive: this._timers.size,
+      throttle: {
+        measurement: {
+          lastProcessedAgo: now - this._lastMeasurementProcessedAt,
+          pending: !!this._pendingMeasurement,
+          timerActive: !!this._pendingMeasurementTimer,
+        },
+        system: {
+          lastProcessedAgo: now - this._lastSystemProcessedAt,
+        },
+        batteries: {
+          lastProcessedAgo: now - this._lastBatteriesProcessedAt,
+          pending: !!this._pendingBatteries,
+          timerActive: !!this._pendingBatteriesTimer,
+        },
+      },
+      counters: { ...this._stats },
+      uptimeMs: now - this._startedAt,
+      handlerTiming: {
+        last: { ...this._lastHandlerDurationMs },
+        max: { ...this._maxHandlerDurationMs },
+      },
+      reconnectRate: this._getReconnectRate(),
+    };
+  }
+
+  /**
+   * Track how long a handler callback took.
+   * If a handler exceeds 100ms that's a CPU warning sign.
+   */
+  _trackHandlerTime(name, ms) {
+    this._lastHandlerDurationMs[name] = ms;
+    if (ms > this._maxHandlerDurationMs[name]) {
+      this._maxHandlerDurationMs[name] = ms;
+    }
+    // Log slow handlers (> 100ms) — these are CPU hogs
+    if (ms > 100) {
+      this.log(`⚠️ Slow ${name} handler: ${ms}ms`);
+      this._journal('slow_handler', `${name} took ${ms}ms`);
+    }
+  }
+
+  /**
+   * Calculate reconnect rate from recent timestamps.
+   * Returns { count, windowMs, perMinute } or null if no reconnects.
+   */
+  _getReconnectRate() {
+    if (this._reconnectTimestamps.length < 2) return null;
+    const first = this._reconnectTimestamps[0];
+    const last = this._reconnectTimestamps[this._reconnectTimestamps.length - 1];
+    const windowMs = last - first;
+    if (windowMs <= 0) return null;
+    const count = this._reconnectTimestamps.length;
+    return {
+      count,
+      windowMs,
+      perMinute: Math.round((count / (windowMs / 60000)) * 10) / 10,
+    };
+  }
+
+  /**
+   * Generate a plain-text diagnostic report that users can copy-paste
+   * and share. Designed for post-crash analysis.
+   */
+  getDiagnosticReport() {
+    const stats = this.getStats();
+    const now = new Date();
+    const uptime = Math.round(stats.uptimeMs / 1000);
+    const uptimeStr = uptime > 3600
+      ? `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`
+      : `${Math.floor(uptime / 60)}m ${uptime % 60}s`;
+
+    const lines = [];
+    lines.push(`═══ WebSocket Diagnostic Report ═══`);
+    lines.push(`Generated: ${now.toISOString()}`);
+    lines.push(`Device: ${this._deviceId}`);
+    lines.push(`URL: ${this.url || 'none'}`);
+    lines.push(`Uptime: ${uptimeStr}`);
+    lines.push(``);
+    lines.push(`── Connection ──`);
+    lines.push(`Connected: ${stats.connected}`);
+    lines.push(`WS Active: ${stats.wsActive}`);
+    lines.push(`Stopped: ${stats.stopped}`);
+    lines.push(`Reconnecting: ${stats.reconnecting}`);
+    lines.push(`Reconnect attempts: ${stats.reconnectAttempts}`);
+    lines.push(`Idle: ${Math.round(stats.idleMs / 1000)}s`);
+    lines.push(`Active timers: ${stats.timersActive}`);
+    lines.push(``);
+    lines.push(`── Counters ──`);
+    const c = stats.counters;
+    lines.push(`Messages received: ${c.messagesReceived}`);
+    lines.push(`Measurements: ${c.measurementsProcessed} processed, ${c.measurementsDropped} throttled`);
+    lines.push(`System: ${c.systemProcessed} processed, ${c.systemDropped} throttled`);
+    lines.push(`Batteries: ${c.batteriesProcessed} processed, ${c.batteriesDeferred} deferred`);
+    lines.push(`Reconnects: ${c.reconnects}`);
+    lines.push(`Handler errors: ${c.handlerErrors}`);
+    lines.push(`Last connected: ${c.lastConnectedAt || 'never'}`);
+    lines.push(`Last disconnected: ${c.lastDisconnectedAt || 'never'}`);
+    lines.push(``);
+    lines.push(`── Handler Timing (ms) ──`);
+    lines.push(`Last: meas=${stats.handlerTiming.last.measurement} sys=${stats.handlerTiming.last.system} bat=${stats.handlerTiming.last.batteries}`);
+    lines.push(`Max:  meas=${stats.handlerTiming.max.measurement} sys=${stats.handlerTiming.max.system} bat=${stats.handlerTiming.max.batteries}`);
+
+    // Anomaly detection
+    const anomalies = [];
+    if (stats.handlerTiming.max.measurement > 100) anomalies.push(`🔴 Measurement handler slow (max ${stats.handlerTiming.max.measurement}ms)`);
+    if (stats.handlerTiming.max.system > 100) anomalies.push(`🔴 System handler slow (max ${stats.handlerTiming.max.system}ms)`);
+    if (stats.handlerTiming.max.batteries > 100) anomalies.push(`🔴 Batteries handler slow (max ${stats.handlerTiming.max.batteries}ms)`);
+    if (c.handlerErrors > 0) anomalies.push(`🟡 ${c.handlerErrors} handler errors occurred`);
+
+    const rate = stats.reconnectRate;
+    if (rate && rate.perMinute > 2) anomalies.push(`🔴 Rapid reconnects: ${rate.perMinute}/min (${rate.count} in ${Math.round(rate.windowMs / 1000)}s)`);
+    else if (rate && rate.perMinute > 0.5) anomalies.push(`🟡 Elevated reconnects: ${rate.perMinute}/min`);
+
+    if (c.reconnects > 10 && uptime < 600) anomalies.push(`🔴 ${c.reconnects} reconnects in ${uptimeStr} — reconnect storm`);
+    if (stats.idleMs > 180000 && stats.connected) anomalies.push(`🟡 Connected but idle for ${Math.round(stats.idleMs / 1000)}s — stale connection?`);
+
+    const msgRate = uptime > 0 ? (c.messagesReceived / uptime) : 0;
+    if (msgRate > 5) anomalies.push(`🟡 High message rate: ${msgRate.toFixed(1)}/s`);
+
+    if (anomalies.length > 0) {
+      lines.push(``);
+      lines.push(`── ⚠ Anomalies Detected ──`);
+      anomalies.forEach(a => lines.push(a));
+    } else {
+      lines.push(``);
+      lines.push(`── ✅ No anomalies detected ──`);
+    }
+
+    lines.push(``);
+    lines.push(`── Throttle ──`);
+    lines.push(`Measurement: last ${Math.round(stats.throttle.measurement.lastProcessedAgo / 1000)}s ago, pending=${stats.throttle.measurement.pending}`);
+    lines.push(`System: last ${Math.round(stats.throttle.system.lastProcessedAgo / 1000)}s ago`);
+    lines.push(`Batteries: last ${Math.round(stats.throttle.batteries.lastProcessedAgo / 1000)}s ago, pending=${stats.throttle.batteries.pending}`);
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Enable or disable verbose debug logging at runtime.
+   */
+  setDebug(enabled) {
+    this._debug = !!enabled;
+    this.log(`🔧 WS debug ${this._debug ? 'ON' : 'OFF'}`);
+  }
+
   restartWebSocket() {
     if (this._stopped) return;
-
-    const devId = this.device?.getData?.().id || 'unknown-device';
-
-    if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-      this.log('⏸️ WS is CONNECTING — skipping restart');
-      wsDebug.log('restart_suppressed', devId, `State=${this.ws.readyState}`);
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      this.log('⏸️ Socket is OPEN or CONNECTING — skipping restart');
       return;
     }
 
     const now = Date.now();
-
-    if (now - this._restartCooldown < 1000) {
+    if (now - this._restartCooldown < 3000) {
       this.log('⏸️ Skipping restart — cooldown active');
-      wsDebug.log('restart_cooldown', devId, `${now - this._restartCooldown}ms since last restart`);
       return;
     }
 
     this._restartCooldown = now;
-    wsDebug.log('restart_execute', devId, 'Restarting WebSocket');
-
     this._clearTimers();
     this._resetWebSocket();
     this.start();
   }
 
-  async _resetWebSocket() {
+  _resetWebSocket() {
     if (!this.ws) return;
-
     const state = this.ws.readyState;
-
-    if (state === WebSocket.CONNECTING || state === WebSocket.CLOSING) {
-      this.log(`⏸️ WS is ${state === WebSocket.CONNECTING ? 'CONNECTING' : 'CLOSING'} — skipping reset`);
+    if (state === WebSocket.CONNECTING) {
+      this.log('⏸️ WebSocket is still connecting — skipping termination');
       return;
     }
-
-    if (this.reconnecting) {
-      this.log('⏸️ WS reset suppressed — reconnect in progress');
-      return;
+    try {
+      if (state === WebSocket.OPEN) {
+        this.log('🔄 Terminating active WebSocket');
+        this.ws.terminate();
+      } else {
+        this.log('🔄 Closing inactive WebSocket');
+        this.ws.close();
+      }
+    } catch (err) {
+      this.error('❌ Failed to reset WebSocket:', err);
     }
-
-    await this._cleanupWebSocket();
+    this.ws = null;
+    this.wsActive = false;
   }
+
+  // ──────────── Battery control ────────────
 
   setBatteryMode(mode) {
     if (!this.isConnected()) {
@@ -1056,7 +765,6 @@ class WebSocketManager {
     }
 
     let payloadData;
-
     switch (mode) {
       case 'standby':
         payloadData = { mode: 'standby', permissions: [] };
@@ -1078,17 +786,15 @@ class WebSocketManager {
         throw new Error(`Unknown battery mode: "${mode}"`);
     }
 
-    const payload = {
-      type: 'batteries',
-      data: { ...payloadData }
-    };
-
+    const payload = { type: 'batteries', data: { ...payloadData } };
     this.log(`🔋 WS → setBatteryMode("${mode}")`);
+    this._journal('mode_change', `setBatteryMode("${mode}")`);
 
     try {
       this._safeSend(payload);
       this.log('✅ Battery mode command sent');
-      this.device._handleBatteries(payload.data);
+      // Optimistic local update so device reflects change immediately
+      this.device?._handleBatteries?.(payload.data);
     } catch (err) {
       this.error(`❌ Failed to send battery mode command: ${err.message}`);
       throw err;

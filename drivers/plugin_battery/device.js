@@ -229,6 +229,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
+        onJournalEvent: (type, deviceId, data) => {
+          if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+          else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+        },
       });
 
       this.wsManager.start();
@@ -400,6 +404,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
+        onJournalEvent: (type, deviceId, data) => {
+          if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+          else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+        },
       });
 
       this.wsManager.start();
@@ -1046,6 +1054,10 @@ async _registerCapabilityListeners() {
           getSetting: this._boundGetSetting,
           handleMeasurement: this._boundHandleMeasurement,
           handleSystem: this._boundHandleSystem,
+          onJournalEvent: (type, deviceId, data) => {
+            if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+            else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+          },
         });
 
         this.log('🔌 Starting WebSocket (polling disabled)');

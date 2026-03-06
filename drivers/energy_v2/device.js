@@ -918,7 +918,11 @@ this.homey.flow
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
-        handleBatteries: this._boundHandleBatteries
+        handleBatteries: this._boundHandleBatteries,
+        onJournalEvent: (type, deviceId, data) => {
+          if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+          else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+        },
       });
 
       this.wsManager.start();
@@ -2389,7 +2393,11 @@ async _setCapabilityValue(capability, value) {
             getSetting: this._boundGetSetting,
             handleMeasurement: this._boundHandleMeasurement,
             handleSystem: this._boundHandleSystem,
-            handleBatteries: this._boundHandleBatteries
+            handleBatteries: this._boundHandleBatteries,
+            onJournalEvent: (type, deviceId, data) => {
+              if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+              else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+            },
           });
         }
 
