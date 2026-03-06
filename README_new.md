@@ -44,7 +44,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.14)
+## 📝 Latest Updates (v3.13.49)
 
 ### New Features
 * Battery Policy driver with ML-based charging optimization
@@ -60,6 +60,9 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ### Bug Fixes
 * Fixed capability_already_exists error (cloud_p1)
+
+### Technical
+* WebSocket internals refactored; debug and runtime statistics are now surfaced in the settings page for improved diagnostics
 
 ---
 
