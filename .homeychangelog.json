@@ -1066,5 +1066,8 @@
   },
   "3.13.48": {
     "en": "Battery Policy tuning and Websocket cleared from some timers"
+  },
+  "3.13.49": {
+    "en": "Websocket refractored, debug and statistics now in settings page"
   }
 }
