@@ -1075,5 +1075,8 @@
   },
   "3.13.51": {
     "en": "Memory limit fixes"
+  },
+  "3.13.52": {
+    "en": "Negative baseload fix, RTE learing fix, Websocket slow_handler threshold adjustment"
   }
 }
