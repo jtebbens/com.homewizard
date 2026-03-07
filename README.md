@@ -51,7 +51,25 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.49)
+## 📝 Latest Updates (v3.13.52)
+
+### Bug Fixes
+
+* **Baseload Negative Values** - Fixed `BaseloadMonitor._fallback()` including negative power samples in bottom-10% calculation, which caused the baseload (sluipverbruik) to report negative values; now filters to `p >= 0 && p < 1000 W` (consistent with `_computeSmartBaseload`)
+* **Baseload Battery Correction** - Fixed `updatePower()` only correcting for battery discharge (`batteryPower < 0`) but not for charging; now applies `householdPower = gridPower − batteryPower` for both directions; result clamped to 0 to prevent negative household consumption from rounding/timing mismatches
+* **RTE Learning — Counter Reset Bug** - Fixed efficiency estimator resetting both charge and discharge counters when measured RTE < 0.50; a low ratio simply means the cycle is not complete yet (not enough discharge accumulated relative to charge); counters now preserved and continue accumulating; only reset on confirmed measurement error (RTE > 0.85) or stale counters (> 10 kWh either side)
+* **RTE Learning — SoC Null Guard** - Fixed `soc <= 5` orphan-clear guard in `EfficiencyEstimator` firing on every charge start because `null <= 5` is `true` in JavaScript; guard now requires `typeof soc === 'number'`
+* **RTE Learning — Wrong SoC Source** - Fixed `battery-policy/device.js` reading `measure_battery` capability (does not exist on the policy device → always `null`) instead of the `soc` variable already resolved from `battery_group_average_soc` on the P1 device
+
+### Technical
+
+* **WebSocket slow_handler threshold** raised from 100 ms to 250 ms to better reflect ARM CPU reality on Homey; journal entries throttled to once per handler per 5 minutes to prevent log noise
+* **WebSocket preflight_fail** journal events throttled to once per 10 minutes via `_journalThrottled()`; log output still emitted on every failure for debugging
+* **Settings page copy button** — `navigator.clipboard.writeText()` silently fails inside Homey's sandboxed iframe; now always uses `textarea + execCommand('copy')` as primary path; if that also fails a selectable textarea is shown as manual fallback
+
+---
+
+## Previous Updates (v3.13.49)
 
 ### New Features
 

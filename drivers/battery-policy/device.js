@@ -295,10 +295,10 @@ if (debug) this.log(
           batteryPower,
           gridPower,
           pvState: this._pvState,
-          soc: this.getCapabilityValue('measure_battery') ?? null
+          soc: soc
         });
 
-        // Efficiency learning
+        // Efficiency learning — use soc from P1 (battery_group_average_soc), not measure_battery
         if (debug) this.log(`[Efficiency] About to update with grid=${gridPower}W, batt=${batteryPower}W, soc=${soc}`);
         this.efficiencyEstimator.update(
           { gridPower, batteryPower },
@@ -659,7 +659,6 @@ if (debug) this.log(
       this.homey.api.realtime('explainability_update', explanation);
 
       this.homey.settings.set('policy_explainability', explanation);
-      this.setSettings({ policy_explainability: explanation });
 
       this.log('Saving explainability length:', JSON.stringify(explanation).length);
       
@@ -692,12 +691,7 @@ if (debug) this.log(
         tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
         policy_interval:     this.getSetting('policy_interval')     || 15,
       });
-      
-      // Also push the debug capabilities
-      const debugTop3Low = this.getCapabilityValue('policy_debug_top3low');
-      const debugTop3High = this.getCapabilityValue('policy_debug_top3high');
-      if (debugTop3Low) this.homey.settings.set('policy_debug_top3low', debugTop3Low);
-      if (debugTop3High) this.homey.settings.set('policy_debug_top3high', debugTop3High);
+      // debug_top3 writes moved to _gatherInputs (single write)
 
       // Update battery RTE display
       // Use learned efficiency with safety bounds (learned can be from old data)
@@ -735,8 +729,6 @@ if (debug) this.log(
         }
       }
 
-      await this.setStoreValue('last_explanation', explanation);
-
       this.lastRecommendation = result;
 
       this.log('Policy check complete:', {
@@ -755,12 +747,7 @@ if (debug) this.log(
         confidence: result.confidence
       }).catch(err => this.error('Learning policy recording failed:', err));
 
-      // ------------------------------------------------------
-      // 📊 CHART: Update visual planning image
-      // ------------------------------------------------------
-      this._updatePlanningChart(inputs, result).catch(err => 
-        this.error('Chart update failed:', err)
-      );
+      // Chart generation disabled — skip to save memory
 
       await this._triggerRecommendationChanged(result, explanation);
 
@@ -810,15 +797,13 @@ if (debug) this.log(
       }
 
       // Update active_mode to reflect the hardware's current actual mode
-      // and correct battery_policy_state.currentMode to match (used for SoC projection in planning view)
       if (this.p1Device) {
         const actualHwMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
         if (actualHwMode) {
           await this.setCapabilityValue('active_mode', actualHwMode).catch(this.error);
-          // Patch currentMode in battery_policy_state to reflect what is actually happening
-          const existingState = this.homey.settings.get('battery_policy_state') || {};
-          existingState.currentMode = actualHwMode;
-          this.homey.settings.set('battery_policy_state', existingState);
+          // Patch currentMode in already-saved planningData (avoid 2nd settings.set)
+          planningData.currentMode = actualHwMode;
+          this.homey.settings.set('battery_policy_state', planningData);
         }
       }
 
@@ -1018,12 +1003,10 @@ if (debug) this.log(
     this.homey.settings.set('policy_debug_top3low', debugTopLowText);
     this.homey.settings.set('policy_debug_top3high', debugTopHighText);
     
-    // Push all hourly prices for complete 24h planning visualization
-    if (tariffInfo?.allPrices && Array.isArray(tariffInfo.allPrices)) {
-      this.homey.settings.set('policy_all_prices', tariffInfo.allPrices);
-    }
+    // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
+    // — no need to duplicate here
     
-    // Push weather forecast with hourly sunshine data for PV prediction
+    // Push weather forecast with hourly sunshine data for PV prediction (only if changed)
     if (weatherData?.hourlyForecast && Array.isArray(weatherData.hourlyForecast)) {
       const hourlyWeather = weatherData.hourlyForecast.map(h => ({
         hour: parseInt(new Date(h.time).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
@@ -1050,8 +1033,8 @@ if (debug) this.log(
     // ------------------------------------------------------
     // ⭐ BATTERY COST MODEL INPUTS
     // ------------------------------------------------------
-    const batteryAvgCost = await this.getStoreValue('battery_avg_cost') || 0;
-    const batteryEnergyKwh = await this.getStoreValue('battery_energy_kwh') || 0;
+    const batteryAvgCost = this._costAvg ?? (await this.getStoreValue('battery_avg_cost') || 0);
+    const batteryEnergyKwh = this._costEnergy ?? (await this.getStoreValue('battery_energy_kwh') || 0);
 
     const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.75, 0.5), 1.0);
 
@@ -1550,21 +1533,26 @@ if (debug) this.log(
     // If battery is physically empty, wipe stale cost tracking in persistent store
     const minSoc = this.getSetting('min_soc') ?? 0;
     if (soc !== null && soc <= Math.max(minSoc, 1)) {
-      const Ecur = await this.getStoreValue('battery_energy_kwh') || 0;
-      if (Ecur > 0) {
-        this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 1)}% → clearing stale energy=${Ecur.toFixed(3)}kWh`);
+      if ((this._costEnergy || 0) > 0 || (this._costAvg || 0) > 0) {
+        this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 1)}% → clearing stale energy`);
+        this._costEnergy = 0;
+        this._costAvg = 0;
         await this.setStoreValue('battery_energy_kwh', 0);
         await this.setStoreValue('battery_avg_cost', 0);
       }
       return;
     }
 
-    // Log every 60s (every 12th call) to avoid spam but confirm it's running
+    // Initialize in-memory accumulators from store on first call
+    if (this._costEnergy === undefined) {
+      this._costEnergy = await this.getStoreValue('battery_energy_kwh') || 0;
+      this._costAvg = await this.getStoreValue('battery_avg_cost') || 0;
+    }
+
+    // Log every 60s (every 12th call)
     this._costModelCallCount = (this._costModelCallCount || 0) + 1;
     if (this._costModelCallCount % 12 === 0) {
-      const Ecur = await this.getStoreValue('battery_energy_kwh') || 0;
-      const Acur = await this.getStoreValue('battery_avg_cost') || 0;
-      this.log(`💰 CostModel: batteryPower=${batteryPower}W, deltaKwh=${deltaKwh.toFixed(6)}, energy=${Ecur.toFixed(3)}kWh, avgCost=€${Acur.toFixed(4)}, pvState=${pvState}`);
+      this.log(`💰 CostModel: batteryPower=${batteryPower}W, deltaKwh=${deltaKwh.toFixed(6)}, energy=${this._costEnergy.toFixed(3)}kWh, avgCost=€${this._costAvg.toFixed(4)}, pvState=${pvState}`);
     }
 
     if (Math.abs(deltaKwh) < 0.000001) return; // effectively zero
@@ -1586,27 +1574,27 @@ if (debug) this.log(
         costNew = tariff.currentPrice;
       }
 
-      const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
-      const avgOld = await this.getStoreValue('battery_avg_cost') || 0;
+      const Enew = this._costEnergy + deltaKwh;
+      const avgNew = ((this._costAvg * this._costEnergy) + (costNew * deltaKwh)) / Enew;
 
-      const Enew = Eold + deltaKwh;
-      const avgNew = ((avgOld * Eold) + (costNew * deltaKwh)) / Enew;
-
-      await this.setStoreValue('battery_energy_kwh', Enew);
-      await this.setStoreValue('battery_avg_cost', avgNew);
+      this._costEnergy = Enew;
+      this._costAvg = avgNew;
 
       if (debug) this.log(`💰 CostModel charge: +${deltaKwh.toFixed(5)}kWh @ €${costNew?.toFixed(4)}, avgCost now €${avgNew.toFixed(4)}, total ${Enew.toFixed(3)}kWh`);
 
     } else if (batteryPower < -10) {
       // Discharging
-      const Eold = await this.getStoreValue('battery_energy_kwh') || 0;
-      const Enew = Math.max(0, Eold + deltaKwh); // deltaKwh is negative
-
-      await this.setStoreValue('battery_energy_kwh', Enew);
+      this._costEnergy = Math.max(0, this._costEnergy + deltaKwh);
 
       if (this._costModelCallCount % 12 === 0) {
-        if (debug) this.log(`💰 CostModel discharge: ${deltaKwh.toFixed(5)}kWh, total ${Enew.toFixed(3)}kWh`);
+        if (debug) this.log(`💰 CostModel discharge: ${deltaKwh.toFixed(5)}kWh, total ${this._costEnergy.toFixed(3)}kWh`);
       }
+    }
+
+    // Persist to store every 2 minutes (every 8th call) instead of every 15s
+    if (this._costModelCallCount % 8 === 0) {
+      await this.setStoreValue('battery_energy_kwh', this._costEnergy);
+      await this.setStoreValue('battery_avg_cost', this._costAvg);
     }
   }
 

@@ -141,6 +141,20 @@ class WebSocketManager {
   }
 
   /**
+   * Throttled journal: only write one event per type per 10 minutes.
+   * Reduces noise for expected repeated events like preflight_fail.
+   */
+  _journalThrottled(type, message) {
+    if (!this._journalThrottleMap) this._journalThrottleMap = {};
+    const now = Date.now();
+    const last = this._journalThrottleMap[type] || 0;
+    if (now - last > 600000) {
+      this._journal(type, message);
+      this._journalThrottleMap[type] = now;
+    }
+  }
+
+  /**
    * Persist current stats snapshot for post-crash diagnostics.
    * Called periodically from the 30s health-check timer.
    */
@@ -220,13 +234,13 @@ class WebSocketManager {
       }, 3000);
       if (!res || typeof res.cloud_enabled === 'undefined') {
         this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
-        this._journal('preflight_fail', `Device unreachable at ${this.url}`);
+        this._journalThrottled('preflight_fail', `Device unreachable at ${this.url}`);
         this._scheduleReconnect();
         return;
       }
     } catch (err) {
       this.error(`❌ Preflight check failed: ${err.message}`);
-      this._journal('preflight_fail', err.message);
+      this._journalThrottled('preflight_fail', err.message);
       this._scheduleReconnect();
       return;
     }
@@ -596,17 +610,24 @@ class WebSocketManager {
 
   /**
    * Track how long a handler callback took.
-   * If a handler exceeds 100ms that's a CPU warning sign.
+   * If a handler exceeds 250ms that's a CPU warning sign.
    */
   _trackHandlerTime(name, ms) {
     this._lastHandlerDurationMs[name] = ms;
     if (ms > this._maxHandlerDurationMs[name]) {
       this._maxHandlerDurationMs[name] = ms;
     }
-    // Log slow handlers (> 100ms) — these are CPU hogs
-    if (ms > 100) {
+    // Log slow handlers (> 250ms) — these are CPU hogs
+    // Throttle: only journal once per handler per 5 min to reduce noise
+    if (ms > 250) {
       this.log(`⚠️ Slow ${name} handler: ${ms}ms`);
-      this._journal('slow_handler', `${name} took ${ms}ms`);
+      if (!this._slowHandlerThrottle) this._slowHandlerThrottle = {};
+      const now = Date.now();
+      const lastLogged = this._slowHandlerThrottle[name] || 0;
+      if (now - lastLogged > 300000) {
+        this._journal('slow_handler', `${name} took ${ms}ms`);
+        this._slowHandlerThrottle[name] = now;
+      }
     }
   }
 
