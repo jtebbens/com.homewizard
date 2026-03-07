@@ -91,13 +91,16 @@ class BaseloadMonitor {
     const now = new Date();
     if (!this._isInNightWindow(now)) return;
     
-    // Battery-aware: if battery is discharging, subtract it from grid power
-    // to get true household baseload (not including battery contribution)
+    // Battery-aware: subtract battery power from grid to get true household consumption.
+    // batteryPower > 0 = charging (grid includes charge current → subtract)
+    // batteryPower < 0 = discharging (grid reduced by discharge → subtract negative = add back)
+    // In both cases: householdPower = gridPower - batteryPower
     let householdPower = power;
-    if (typeof batteryPower === 'number' && batteryPower < 0) {
-      // Battery discharging (negative value), add to grid power to get household consumption
+    if (typeof batteryPower === 'number' && batteryPower !== 0) {
       householdPower = power - batteryPower;
     }
+    // Clamp: household power can never be negative (meter rounding / timing mismatch)
+    if (householdPower < 0) householdPower = 0;
     
     this._processNightSample(now, householdPower, power, batteryPower);
   }
@@ -536,7 +539,8 @@ class BaseloadMonitor {
     for (const n of this.nightHistory.slice(-7)) if (Array.isArray(n.samples)) r.push(...n.samples);
     const p=[];
     for (const s of r) {
-      if (typeof s.power === 'number') p.push(s.power);
+      // Filter: only non-negative values < 1000W (same logic as _computeSmartBaseload)
+      if (typeof s.power === 'number' && s.power >= 0 && s.power < 1000) p.push(s.power);
     }
     if (!p.length) return null;
     
