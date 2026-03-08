@@ -1081,5 +1081,8 @@
   },
   "3.13.53": {
     "en": "Price fix on planning"
+  },
+  "3.13.54": {
+    "en": "Charge improvement, poor sun (ie fog) and cheap prices"
   }
 }
