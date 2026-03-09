@@ -1117,14 +1117,24 @@
       
       console.log(`📊 Planning mode: ${use15Min ? '15-MINUTE' : 'HOURLY'} (${use15Min ? allPrices15min.length : allPricesHourly.length} intervals)`);
 
+      /* ── Helper to create consistent price keys ── */
+      const makePriceKey = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');  // +1 because getMonth() is 0-indexed
+        const d = String(date.getDate()).padStart(2, '0');
+        const h = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${d}-${h}-${min}`;
+      };
+
       const priceMap = {};
       
       if (use15Min) {
         // Use 15-minute data
-        allPrices15min.forEach(p => {
+        allPrices15min.forEach((p, idx) => {
           if (p && typeof p.price === 'number' && p.timestamp) {
             const d = new Date(p.timestamp);
-            const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}-${d.getUTCHours()}-${d.getUTCMinutes()}`;
+            const key = makePriceKey(d);
             priceMap[key] = p.price;
           }
         });
@@ -1134,7 +1144,9 @@
           if (p && typeof p.price === 'number' && p.timestamp) {
             const d = new Date(p.timestamp);
             for (let m = 0; m < 60; m += 15) {
-              const key = `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}-${d.getUTCHours()}-${m}`;
+              const expandedDate = new Date(d.getTime());
+              expandedDate.setMinutes(m);
+              const key = makePriceKey(expandedDate);
               priceMap[key] = p.price;
             }
           }
@@ -1192,8 +1204,8 @@
             intervalDate.setHours(h, m, 0, 0);
             const intervalEnd = new Date(intervalDate.getTime() + 15 * 60 * 1000);
 
-            const utcKey = `${intervalDate.getUTCFullYear()}-${intervalDate.getUTCMonth()}-${intervalDate.getUTCDate()}-${intervalDate.getUTCHours()}-${intervalDate.getUTCMinutes()}`;
-            const price = priceMap[utcKey] !== undefined ? priceMap[utcKey] : null;
+            const localKey = makePriceKey(intervalDate);
+            const price = priceMap[localKey] !== undefined ? priceMap[localKey] : null;
             const priceKnown = price !== null;
 
             const hasSun = (sunshineMap[h] > 0.3) || (!Object.keys(sunshineMap).length && h >= 7 && h < 19);
