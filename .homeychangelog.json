@@ -1084,5 +1084,8 @@
   },
   "3.13.54": {
     "en": "Charge improvement, poor sun (ie fog) and cheap prices"
+  },
+  "3.13.55": {
+    "en": "User report on battery policy not discharging while comments suggested it should"
   }
 }
