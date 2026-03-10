@@ -1087,5 +1087,8 @@
   },
   "3.13.55": {
     "en": "User report on battery policy not discharging while comments suggested it should"
+  },
+  "3.13.56": {
+    "en": "Explain summary text modified to active state and modified action during high prices."
   }
 }
