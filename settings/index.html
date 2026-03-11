@@ -484,8 +484,10 @@
       if (userPolicyMode === 'balanced' && tariffType === 'dynamic') {
         if (policyMode === 'discharge') return profitableToDischarge ? 'zero_discharge_only' : 'standby';
         if (policyMode === 'charge') {
-          if (actualPvNow) return 'zero_charge_only';
+          // Price wins: cheap grid charging always takes priority over PV-only mode.
+          // zero_charge_only only applies when price is above ceiling.
           if (price !== null && price <= maxChargePrice) return 'to_full';
+          if (actualPvNow) return 'zero_charge_only';
           return 'standby';
         }
         if (policyMode === 'preserve') return actualPvNow ? 'zero_charge_only' : 'standby';

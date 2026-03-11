@@ -51,7 +51,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.52)
+## 📝 Latest Updates (v3.13.57)
 
 ### Bug Fixes
 
@@ -60,6 +60,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 * **RTE Learning — Counter Reset Bug** - Fixed efficiency estimator resetting both charge and discharge counters when measured RTE < 0.50; a low ratio simply means the cycle is not complete yet (not enough discharge accumulated relative to charge); counters now preserved and continue accumulating; only reset on confirmed measurement error (RTE > 0.85) or stale counters (> 10 kWh either side)
 * **RTE Learning — SoC Null Guard** - Fixed `soc <= 5` orphan-clear guard in `EfficiencyEstimator` firing on every charge start because `null <= 5` is `true` in JavaScript; guard now requires `typeof soc === 'number'`
 * **RTE Learning — Wrong SoC Source** - Fixed `battery-policy/device.js` reading `measure_battery` capability (does not exist on the policy device → always `null`) instead of the `soc` variable already resolved from `battery_group_average_soc` on the P1 device
+* **Battery Policy bugs** - Fixed Recommended mode text to active mode, leftover battery SoC in morning to discharge. Fix for `to_full` when PV is not enough to charge battery but the market prices are at their lowest (zero_change_only vs to_full)
 
 ### Technical
 

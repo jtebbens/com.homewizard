@@ -712,7 +712,10 @@ if (debug) this.log(
       await this.setCapabilityValue('recommended_mode', recommended);
 
       await this.setCapabilityValue('confidence_score', result.confidence);
-      await this.setCapabilityValue('explanation_summary', explanation.shortSummary);
+      // explanation_summary shows the ACTIVE mode, not the recommended mode
+      const currentActiveMode = this.getCapabilityValue('active_mode') || recommended;
+      const activeSummary = this.explainabilityEngine._generateShortSummary({ hwMode: currentActiveMode }, inputs);
+      await this.setCapabilityValue('explanation_summary', activeSummary);
       await this.setCapabilityValue('last_update', new Date().toISOString());
 
       const previousMode = this.lastRecommendation?.hwMode || this.lastRecommendation?.policyMode;
@@ -804,6 +807,13 @@ if (debug) this.log(
           // Patch currentMode in already-saved planningData (avoid 2nd settings.set)
           planningData.currentMode = actualHwMode;
           this.homey.settings.set('battery_policy_state', planningData);
+
+          // Always sync explanation_summary to the actual hardware mode
+          const hwActiveSummary = this.explainabilityEngine._generateShortSummary(
+            { hwMode: actualHwMode },
+            inputs
+          );
+          await this.setCapabilityValue('explanation_summary', hwActiveSummary).catch(this.error);
         }
       }
 
