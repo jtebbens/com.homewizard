@@ -1090,5 +1090,8 @@
   },
   "3.13.56": {
     "en": "Explain summary text modified to active state and modified action during high prices."
+  },
+  "3.13.57": {
+    "en": "Fix on to_full when PV is not enough to charge during cheap prices"
   }
 }
