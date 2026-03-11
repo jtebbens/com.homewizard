@@ -1093,5 +1093,8 @@
   },
   "3.13.57": {
     "en": "Fix on to_full when PV is not enough to charge during cheap prices"
+  },
+  "3.13.58": {
+    "en": "Ratelimit on battery mode action cards, energysocket retry logic and longer timeouts"
   }
 }
