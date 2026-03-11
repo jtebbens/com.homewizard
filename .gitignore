@@ -8,6 +8,7 @@
 CLAUDE.md
 CONTEXT.md
 DEVELOPMENT.md
+SKILL.md
 
 # Optional: any other internal prompt files
 *.prompt.md
