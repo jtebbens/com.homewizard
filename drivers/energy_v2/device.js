@@ -448,6 +448,11 @@ async reconnectWithManualIP(ip) {
     this._lastFullUpdate = 0;
     this._lastDiscoveryIP = null;
 
+    // Add rate limiting state to onInit() - place near the top of onInit()
+    this._lastBatteryModeChange = 0;
+    this._batteryModeChangeCooldown = 5000; // 5 seconds minimum between changes
+
+
     this._cache = {
       external_last_payload: null,
       external_last_result: null,
@@ -519,20 +524,23 @@ async reconnectWithManualIP(ip) {
     if (!this.homey.app._flowListenersRegistered) {
       this.homey.app._flowListenersRegistered = true;
 
-    // Condition Card
-    const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
 
-    const conditionListener = ConditionCardCheckBatteryMode.registerRunListener(async ({ device, mode }) => {
-  if (!device) return false; // ✅ Prevents crashes
+// ============================================================================
+// CONDITION CARD - Check Battery Mode
+// ============================================================================
+
+const ConditionCardCheckBatteryMode = this.homey.flow.getConditionCard('check-battery-mode');
+
+ConditionCardCheckBatteryMode.registerRunListener(async ({ device, mode }) => {
+  if (!device) return false;
 
   device.log('ConditionCard: Check Battery Mode');
 
   try {
-    // ✅ Prefer WebSocket cache
     const { wsManager, url, token } = device;
 
+    // Prefer WebSocket cache
     if (wsManager?.isConnected()) {
-      // const lastBatteryState = await device.getStoreValue('last_battery_state');
       const lastBatteryState = device._cacheGet('last_battery_state');
 
       if (lastBatteryState) {
@@ -548,7 +556,7 @@ async reconnectWithManualIP(ip) {
       return false;
     }
 
-    // Update cache so condition cards see the correct mode
+    // Update cache
     device._cacheSet('last_battery_state', {
       mode: response.mode,
       permissions: response.permissions,
@@ -561,15 +569,14 @@ async reconnectWithManualIP(ip) {
     // Update capability
     await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-    // Trigger flow on change
-    if (normalized !== device._cacheGet('last_battery_mode')) {
-      device.flowTriggerBatteryMode(device);
+    // ✅ FIXED: Only trigger flow on actual change
+    const prev = device._cacheGet('last_battery_mode');
+    if (normalized !== prev) {
+      device.flowTriggerBatteryMode(device, { mode: normalized });
       device._cacheSet('last_battery_mode', normalized);
     }
 
     return mode === normalized;
-
-
 
   } catch (error) {
     device?.error('Error retrieving mode:', error);
@@ -577,55 +584,66 @@ async reconnectWithManualIP(ip) {
   }
 });
 
+// ============================================================================
+// ACTION CARD 1: Set Battery to Zero Mode
+// ============================================================================
 
-
-
-
-    this.homey.flow
+this.homey.flow
   .getActionCard('set-battery-to-zero-mode')
   .registerRunListener(async ({ device }) => {
+    if (!device) return false;
+
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'zero';
+    }
+    device._lastBatteryModeChange = now;
+
     device.log('ActionCard: Set Battery to Zero Mode');
 
     try {
       const { wsManager, url, token } = device;
 
-      // --- Prefer WebSocket ---
+      // Prefer WebSocket
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero');
         device.log('Set mode to zero via WebSocket');
         return 'zero';
       }
 
-      // --- HTTP fallback: set mode ---
+      // HTTP fallback: set mode
       const response = await api.setMode(url, token, 'zero');
       if (!response) {
         device.log('Invalid response from setMode()');
         return false;
       }
 
-      // --- Fetch real battery state after setting mode ---
+      // Fetch real battery state after setting mode
       const modeResponse = await api.getMode(url, token);
       if (!modeResponse || typeof modeResponse !== 'object') {
         device.log('⚠️ Invalid battery mode response after setMode:', modeResponse);
         return false;
       }
 
-      // --- Update cache ---
+      // Update cache
       device._cacheSet('last_battery_state', {
         mode: modeResponse.mode,
         permissions: modeResponse.permissions,
         battery_count: modeResponse.battery_count ?? 1
       });
 
-      // --- Normalize ---
+      // Normalize
       const normalized = normalizeBatteryMode(modeResponse);
 
-      // --- Update capability ---
+      // Update capability
       await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-      // --- Trigger flow on change ---
-      if (normalized !== device._cacheGet('last_battery_mode')) {
-        device.flowTriggerBatteryMode(device);
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
         device._cacheSet('last_battery_mode', normalized);
       }
 
@@ -638,48 +656,60 @@ async reconnectWithManualIP(ip) {
     }
   });
 
-
-
+// ============================================================================
+// ACTION CARD 2: Set Battery to Standby Mode
+// ============================================================================
 
 this.homey.flow
   .getActionCard('set-battery-to-standby-mode')
   .registerRunListener(async ({ device }) => {
+    if (!device) return false;
+
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'standby';
+    }
+    device._lastBatteryModeChange = now;
+
     device.log('ActionCard: Set Battery to Standby Mode');
 
     try {
       const { wsManager, url, token } = device;
 
-      // --- Prefer WebSocket ---
+      // Prefer WebSocket
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('standby');
         device.log('Set mode to standby via WebSocket');
         return 'standby';
       }
 
-      // --- HTTP fallback: set mode ---
+      // HTTP fallback: set mode
       const response = await api.setMode(url, token, 'standby');
       if (!response) return false;
 
-      // --- Fetch real battery state ---
+      // Fetch real battery state
       const modeResponse = await api.getMode(url, token);
       if (!modeResponse || typeof modeResponse !== 'object') return false;
 
-      // --- Update cache ---
+      // Update cache
       device._cacheSet('last_battery_state', {
         mode: modeResponse.mode,
         permissions: modeResponse.permissions,
         battery_count: modeResponse.battery_count ?? 1
       });
 
-      // --- Normalize ---
+      // Normalize
       const normalized = normalizeBatteryMode(modeResponse);
 
-      // --- Update capability ---
+      // Update capability
       await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-      // --- Trigger flow on change ---
-      if (normalized !== device._cacheGet('last_battery_mode')) {
-        device.flowTriggerBatteryMode(device);
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
         device._cacheSet('last_battery_mode', normalized);
       }
 
@@ -692,48 +722,60 @@ this.homey.flow
     }
   });
 
-
-
+// ============================================================================
+// ACTION CARD 3: Set Battery to Full Charge Mode
+// ============================================================================
 
 this.homey.flow
   .getActionCard('set-battery-to-full-charge-mode')
   .registerRunListener(async ({ device }) => {
+    if (!device) return false;
+
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'to_full';
+    }
+    device._lastBatteryModeChange = now;
+
     device.log('ActionCard: Set Battery to Full Charge Mode');
 
     try {
       const { wsManager, url, token } = device;
 
-      // --- Prefer WebSocket ---
+      // Prefer WebSocket
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('to_full');
         device.log('Set mode to full charge via WebSocket');
         return 'to_full';
       }
 
-      // --- HTTP fallback ---
+      // HTTP fallback
       const response = await api.setMode(url, token, 'to_full');
       if (!response) return false;
 
-      // --- Fetch real battery state ---
+      // Fetch real battery state
       const modeResponse = await api.getMode(url, token);
       if (!modeResponse || typeof modeResponse !== 'object') return false;
 
-      // --- Update cache ---
+      // Update cache
       device._cacheSet('last_battery_state', {
         mode: modeResponse.mode,
         permissions: modeResponse.permissions,
         battery_count: modeResponse.battery_count ?? 1
       });
 
-      // --- Normalize ---
+      // Normalize
       const normalized = normalizeBatteryMode(modeResponse);
 
-      // --- Update capability ---
+      // Update capability
       await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-      // --- Trigger flow on change ---
-      if (normalized !== device._cacheGet('last_battery_mode')) {
-        device.flowTriggerBatteryMode(device);
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
         device._cacheSet('last_battery_mode', normalized);
       }
 
@@ -746,48 +788,60 @@ this.homey.flow
     }
   });
 
+// ============================================================================
+// ACTION CARD 4: Set Battery to Zero Charge Only Mode
+// ============================================================================
 
-
-
-   this.homey.flow
+this.homey.flow
   .getActionCard('set-battery-to-zero-charge-only-mode')
   .registerRunListener(async ({ device }) => {
+    if (!device) return false;
+
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'zero_charge_only';
+    }
+    device._lastBatteryModeChange = now;
+
     device.log('ActionCard: Set Battery to Zero Charge Only Mode');
 
     try {
       const { wsManager, url, token } = device;
 
-      // --- Prefer WebSocket ---
+      // Prefer WebSocket
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero_charge_only');
         device.log('Set mode to zero_charge_only via WebSocket');
         return 'zero_charge_only';
       }
 
-      // --- HTTP fallback ---
+      // HTTP fallback
       const response = await api.setMode(url, token, 'zero_charge_only');
       if (!response) return false;
 
-      // --- Fetch real battery state ---
+      // Fetch real battery state
       const modeResponse = await api.getMode(url, token);
       if (!modeResponse || typeof modeResponse !== 'object') return false;
 
-      // --- Update cache ---
+      // Update cache
       device._cacheSet('last_battery_state', {
         mode: modeResponse.mode,
         permissions: modeResponse.permissions,
         battery_count: modeResponse.battery_count ?? 1
       });
 
-      // --- Normalize ---
+      // Normalize
       const normalized = normalizeBatteryMode(modeResponse);
 
-      // --- Update capability ---
+      // Update capability
       await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-      // --- Trigger flow on change ---
-      if (normalized !== device._cacheGet('last_battery_mode')) {
-        device.flowTriggerBatteryMode(device);
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
         device._cacheSet('last_battery_mode', normalized);
       }
 
@@ -800,48 +854,60 @@ this.homey.flow
     }
   });
 
-
-
+// ============================================================================
+// ACTION CARD 5: Set Battery to Zero Discharge Only Mode
+// ============================================================================
 
 this.homey.flow
   .getActionCard('set-battery-to-zero-discharge-only-mode')
   .registerRunListener(async ({ device }) => {
+    if (!device) return false;
+
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'zero_discharge_only';
+    }
+    device._lastBatteryModeChange = now;
+
     device.log('ActionCard: Set Battery to Zero Discharge Only Mode');
 
     try {
       const { wsManager, url, token } = device;
 
-      // --- Prefer WebSocket ---
+      // Prefer WebSocket
       if (wsManager?.isConnected()) {
         wsManager.setBatteryMode('zero_discharge_only');
         device.log('Set mode to zero_discharge_only via WebSocket');
         return 'zero_discharge_only';
       }
 
-      // --- HTTP fallback ---
+      // HTTP fallback
       const response = await api.setMode(url, token, 'zero_discharge_only');
       if (!response) return false;
 
-      // --- Fetch real battery state ---
+      // Fetch real battery state
       const modeResponse = await api.getMode(url, token);
       if (!modeResponse || typeof modeResponse !== 'object') return false;
 
-      // --- Update cache ---
+      // Update cache
       device._cacheSet('last_battery_state', {
         mode: modeResponse.mode,
         permissions: modeResponse.permissions,
         battery_count: modeResponse.battery_count ?? 1
       });
 
-      // --- Normalize ---
+      // Normalize
       const normalized = normalizeBatteryMode(modeResponse);
 
-      // --- Update capability ---
+      // Update capability
       await updateCapability(device, 'battery_group_charge_mode', normalized);
 
-      // --- Trigger flow on change ---
-      if (normalized !== device._cacheGet('last_battery_mode')) {
-        device.flowTriggerBatteryMode(device);
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
         device._cacheSet('last_battery_mode', normalized);
       }
 
@@ -1002,6 +1068,14 @@ this.homey.flow
 async setBatteryGroupMode(targetMode) {
   this.log(`🔋 setBatteryGroupMode(${targetMode}) called`);
 
+  // ✅ ADD RATE LIMITING HERE:
+  const now = Date.now();
+  if (now - this._lastBatteryModeChange < this._batteryModeChangeCooldown) {
+    this.log('⏸️ setBatteryGroupMode throttled - cooldown active');
+    return true; // Return success, don't spam the device
+  }
+  this._lastBatteryModeChange = now;
+
   try {
     const { wsManager, url, token } = this;
 
@@ -1050,7 +1124,11 @@ async setBatteryGroupMode(targetMode) {
     await updateCapability(this, 'battery_group_charge_mode', normalized);
 
     // --- Trigger flow if changed ---
-    this.flowTriggerBatteryMode(this, { mode: normalized });
+    const prev = this._cacheGet('last_battery_mode');
+    if (normalized !== prev) {
+      this.flowTriggerBatteryMode(this, { mode: normalized });
+      this._cacheSet('last_battery_mode', normalized);
+    }
 
     this.log(`✅ Battery group mode applied: ${normalized}`);
     return true;
@@ -2116,6 +2194,15 @@ async _registerCapabilityListeners() {
   // Battery mode picker listener
   this.registerCapabilityListener('battery_group_charge_mode', async (value) => {
     this.log(`UI changed battery_group_charge_mode → ${value}`);
+
+
+    // ✅ ADD RATE LIMITING HERE:
+    const now = Date.now();
+    if (now - this._lastBatteryModeChange < this._batteryModeChangeCooldown) {
+      this.log('⏸️ Battery mode change throttled - cooldown active');
+      return value; // Return the requested value, don't fail
+    }
+    this._lastBatteryModeChange = now;
 
     try {
       const { wsManager, url, token } = this;
