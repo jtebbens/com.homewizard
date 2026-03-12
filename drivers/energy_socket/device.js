@@ -82,6 +82,12 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._debugLogs = [];
     this.__deleted = false;
 
+    // ✅ FIX: Connection stability tracking
+    this._consecutiveFailures = 0;
+    this._consecutiveSuccesses = 0;
+    this._isMarkedUnavailable = false;
+    this._lastSuccessfulPoll = Date.now();
+
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
       keepAlive: true,
@@ -173,18 +179,27 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
    */
   onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    // ✅ FIX: Reset failure counters on rediscovery
+    this._consecutiveFailures = 0;
+    this._consecutiveSuccesses = 0;
     this.setAvailable();
+    this._isMarkedUnavailable = false;
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._debugLog(`Discovery address changed: ${this.url}`);
+    // ✅ FIX: Reset failure counters on address change
+    this._consecutiveFailures = 0;
+    this._consecutiveSuccesses = 0;
     this.setAvailable();
+    this._isMarkedUnavailable = false;
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.setAvailable();
+    this._isMarkedUnavailable = false;
   }
 
   /**
@@ -231,12 +246,13 @@ _flushDebugLogs() {
     if (!this.url) return;
 
     try {
+      // ✅ FIX: Longer timeout for poor WiFi (10s instead of 5s)
       const res = await fetchWithTimeout(`${this.url}/state`, {
         agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      });
+      }, 10000);
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -259,7 +275,7 @@ _flushDebugLogs() {
         agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' }
-      });
+      }, 10000);
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -283,7 +299,7 @@ _flushDebugLogs() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
-      });
+      }, 10000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -302,7 +318,7 @@ _flushDebugLogs() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
-      });
+      }, 10000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -313,7 +329,54 @@ _flushDebugLogs() {
   }
 
   /**
-   * GET /data + GET /state
+   * ✅ FIX: Debounced connection state management
+   * Only mark unavailable after 3 consecutive failures
+   * Only mark available after 2 consecutive successes
+   */
+  _handlePollSuccess() {
+    this._consecutiveFailures = 0;
+    this._consecutiveSuccesses++;
+    this._lastSuccessfulPoll = Date.now();
+
+    // Mark available after 2 consecutive successes (prevents flapping)
+    if (this._consecutiveSuccesses >= 2 && this._isMarkedUnavailable) {
+      this.log('✅ Connection restored (2 consecutive successes)');
+      this.setAvailable().catch(this.error);
+      this._isMarkedUnavailable = false;
+      updateCapability(this, 'connection_error', 'No errors').catch(this.error);
+      updateCapability(this, 'alarm_connectivity', false).catch(this.error);
+    } else if (!this._isMarkedUnavailable) {
+      // Already available, just update error state
+      updateCapability(this, 'connection_error', 'No errors').catch(this.error);
+      updateCapability(this, 'alarm_connectivity', false).catch(this.error);
+    }
+  }
+
+  _handlePollFailure(err) {
+    this._consecutiveSuccesses = 0;
+    this._consecutiveFailures++;
+
+    const timeSinceLastSuccess = Date.now() - this._lastSuccessfulPoll;
+
+    // Only mark unavailable after 3 consecutive failures AND 90 seconds since last success
+    // This prevents flapping on temporary WiFi glitches
+    if (this._consecutiveFailures >= 3 && timeSinceLastSuccess > 90000) {
+      if (!this._isMarkedUnavailable) {
+        this.log(`❌ Connection lost after ${this._consecutiveFailures} failures (${Math.round(timeSinceLastSuccess/1000)}s since last success)`);
+        this.setUnavailable(err.message || 'Polling error').catch(this.error);
+        this._isMarkedUnavailable = true;
+      }
+      updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
+      updateCapability(this, 'alarm_connectivity', true).catch(this.error);
+    } else {
+      // Still trying - just log the error but don't mark unavailable yet
+      this._debugLog(`Poll failed (${this._consecutiveFailures}/3): ${err.message}`);
+      updateCapability(this, 'connection_error', `Retrying (${this._consecutiveFailures}/3): ${err.message}`).catch(this.error);
+    }
+  }
+
+  /**
+   * GET /data + GET /state (with improved error handling)
    */
   async onPoll() {
   if (this.__deleted) return;
@@ -325,7 +388,7 @@ _flushDebugLogs() {
     if (settings.url) {
       this.url = settings.url;
     } else {
-      this.setUnavailable('Missing URL').catch(this.error);
+      this._handlePollFailure(new Error('Missing URL'));
       return;
     }
   }
@@ -333,18 +396,37 @@ _flushDebugLogs() {
   try {
     
     // -----------------------------
-    // GET /data
+    // GET /data (with retry on timeout)
     // -----------------------------
-    const res = await fetchWithTimeout(`${this.url}/data`, {
-      agent: this.agent,
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
+    let data;
+    let retries = 2;
+    
+    while (retries >= 0) {
+      try {
+        // ✅ FIX: Longer timeout for poor WiFi (10s instead of 5s)
+        const res = await fetchWithTimeout(`${this.url}/data`, {
+          agent: this.agent,
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        }, 10000);
 
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
-    const data = await res.json();
-    if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+        data = await res.json();
+        if (!data || typeof data !== 'object') throw new Error('Invalid JSON');
+        
+        break; // Success - exit retry loop
+        
+      } catch (err) {
+        retries--;
+        if (retries < 0) {
+          throw err; // All retries exhausted
+        }
+        // Wait 1 second before retry
+        this._debugLog(`/data failed, retrying (${2-retries}/2): ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
 
     const offset = Number(this.getSetting('offset_socket')) || 0;
     const watt = data.active_power_w + offset;
@@ -372,7 +454,7 @@ _flushDebugLogs() {
     cap('measure_current', data.active_current_a);
 
     // -----------------------------
-    // GET /state (max 1× per 30s)
+    // GET /state (max 1× per 30s, non-critical)
     // -----------------------------
     const now = Date.now();
     const mustPollState =
@@ -387,7 +469,7 @@ _flushDebugLogs() {
           agent: this.agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        });
+        }, 10000);
 
         if (!resState.ok) throw new Error(`HTTP ${resState.status}: ${resState.statusText}`);
 
@@ -399,9 +481,9 @@ _flushDebugLogs() {
         cap('locked', state.switch_lock);
 
       } catch (err) {
-        this._debugLog(`State poll failed: ${err.message}`);
-        cap('connection_error', err.message || 'State polling error');
-        await updateCapability(this, 'alarm_connectivity', true);
+        // ✅ FIX: State poll failure is non-critical - don't count as connection failure
+        this._debugLog(`State poll failed (non-critical): ${err.message}`);
+        // Don't update connection_error or alarm_connectivity for state failures
       }
     }
 
@@ -409,20 +491,16 @@ _flushDebugLogs() {
       this.setSettings({ url: this.url }).catch(this.error);
     }
 
-    cap('connection_error', 'No errors');
-    await updateCapability(this, 'alarm_connectivity', false);
-
     if (tasks.length > 0) await Promise.allSettled(tasks);
-    this.setAvailable().catch(this.error);
+    
+    // ✅ FIX: Mark as successful poll
+    this._handlePollSuccess();
 
   } catch (err) {
     if (!this.__deleted) {
       this._debugLog(`Poll failed: ${err.message}`);
-      updateCapability(this, 'connection_error', err.message || 'Polling error')
-        .catch(this.error);
-      this.setUnavailable(err.message || 'Polling error')
-        .catch(this.error);
-      await updateCapability(this, 'alarm_connectivity', true);
+      // ✅ FIX: Use debounced failure handler
+      this._handlePollFailure(err);
     }
   }
 }
