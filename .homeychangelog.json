@@ -1096,5 +1096,8 @@
   },
   "3.13.58": {
     "en": "Ratelimit on battery mode action cards, energysocket retry logic and longer timeouts"
+  },
+  "3.13.59": {
+    "en": "Fix incorrect pv charge during the night"
   }
 }
