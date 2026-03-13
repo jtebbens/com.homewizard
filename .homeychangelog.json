@@ -1099,5 +1099,8 @@
   },
   "3.13.59": {
     "en": "Fix incorrect pv charge during the night"
+  },
+  "3.13.60": {
+    "en": "Energyv2 cpu fix and websocket tuning"
   }
 }
