@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.60",
+  "version": "3.13.61",
   "platforms": [
     "local"
   ],
@@ -4989,6 +4989,19 @@
             "nl": "Fase-overbelasting meldingen"
           },
           "value": true
+        },
+        {
+          "id": "debug_logging",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable debug logging",
+            "nl": "Debug logging inschakelen"
+          },
+          "value": false,
+          "hint": {
+            "en": "Enables verbose logging for WebSocket and battery events. Disable after debugging to reduce CPU load.",
+            "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen."
+          }
         }
       ]
     },
