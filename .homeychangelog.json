@@ -1108,5 +1108,8 @@
   },
   "3.13.62": {
     "en": "Energy_v2 websocket throttle is customizable. Default 2s but can be adjusted in settings"
+  },
+  "3.13.63": {
+    "en": "Bugfix planning, still showed solar charge in the evening-night"
   }
 }
