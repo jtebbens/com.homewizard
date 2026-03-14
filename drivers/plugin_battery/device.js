@@ -229,6 +229,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
+        measurementThrottleMs: 5000, // ✅ CPU FIX: 5s for battery (was 2s) — 4 devices × 30/min instead of 4 × 120/min
         onJournalEvent: (type, deviceId, data) => {
           if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
           else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
@@ -404,6 +405,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
+        measurementThrottleMs: 5000, // ✅ CPU FIX: 5s for battery (was 2s) — 4 devices × 30/min instead of 4 × 120/min
         onJournalEvent: (type, deviceId, data) => {
           if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
           else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
@@ -437,13 +439,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       const capabilityUpdates = [];
 
     // ---------------------------------------------------------
-    // 1. REALTIME capabilities
+    // 1. REALTIME capabilities — only power changes rapidly enough to warrant every 2s
+    // ✅ CPU FIX: voltage, current, frequency moved to 5s tier (was realtime)
+    // With 4 battery devices at 2s throttle, these were firing 120×/min combined
     // ---------------------------------------------------------
     const realtimeCaps = [
       ['measure_power', data.power_w],
-      ['measure_voltage', data.voltage_v],
-      ['measure_current', data.current_a],
-      ['measure_frequency', data.frequency_hz]
     ];
 
     for (const [cap, val] of realtimeCaps) {
@@ -454,9 +455,19 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
 
     // ---------------------------------------------------------
-    // 2. SOC debounced (max 1× per 5 sec)
+    // 2. SOC + slow electrical debounced (max 1× per 5 sec)
     // ---------------------------------------------------------
     if (!this._socLastUpdate || now - this._socLastUpdate > 5000) {
+      const slowElecCaps = [
+        ['measure_voltage', data.voltage_v],
+        ['measure_current', data.current_a],
+        ['measure_frequency', data.frequency_hz],
+      ];
+      for (const [cap, val] of slowElecCaps) {
+        const cur = this.getCapabilityValue(cap);
+        if (cur !== val) capabilityUpdates.push(updateCapability(this, cap, val));
+      }
+
       const cur = this.getCapabilityValue('measure_battery');
       if (cur !== data.state_of_charge_pct) {
         capabilityUpdates.push(updateCapability(this, 'measure_battery', data.state_of_charge_pct));
@@ -1054,6 +1065,7 @@ async _registerCapabilityListeners() {
           getSetting: this._boundGetSetting,
           handleMeasurement: this._boundHandleMeasurement,
           handleSystem: this._boundHandleSystem,
+          measurementThrottleMs: 5000, // ✅ CPU FIX: 5s for battery (was 2s)
           onJournalEvent: (type, deviceId, data) => {
             if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
             else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));

@@ -59,7 +59,7 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000) {
  *  - handleMeasurement, handleSystem, handleBatteries: data callbacks
  */
 class WebSocketManager {
-  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries, onJournalEvent }) {
+  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries, onJournalEvent, measurementThrottleMs }) {
     this.device = device;
     this.url = url;
     this.token = token;
@@ -89,18 +89,23 @@ class WebSocketManager {
     this.pongReceived = true;
 
     // Throttle: measurements arrive every ~1s, process at most every 2s
+    // ✅ CPU FIX: configurable via constructor (plugin_battery uses 5s, energy_v2 uses 2s)
     this._lastMeasurementProcessedAt = 0;
-    this._measurementThrottleMs = 2000;
+    this._measurementThrottleMs = (typeof measurementThrottleMs === 'number' && measurementThrottleMs > 0)
+      ? measurementThrottleMs
+      : 2000;
     this._pendingMeasurement = null;
     this._pendingMeasurementTimer = null;
 
     // Throttle: system (wifi rssi etc.) — handler does capability writes
     this._lastSystemProcessedAt = 0;
-    this._systemThrottleMs = 10000;
+    this._systemThrottleMs = 30000; // ✅ CPU FIX: raised from 10s to 30s — WiFi RSSI doesn't need 10s updates
 
     // Throttle: batteries — handler does capability writes + flow triggers
+    // ✅ CPU FIX: raised from 5s to 30s — HomeWizard firmware pushes batteries
+    // topic on EVERY measurement (1/s). Battery mode changes are rare; 30s is plenty.
     this._lastBatteriesProcessedAt = 0;
-    this._batteriesThrottleMs = 5000;
+    this._batteriesThrottleMs = 30000;
     this._pendingBatteries = null;
     this._pendingBatteriesTimer = null;
 
@@ -814,8 +819,14 @@ class WebSocketManager {
     try {
       this._safeSend(payload);
       this.log('✅ Battery mode command sent');
-      // Optimistic local update so device reflects change immediately
-      this.device?._handleBatteries?.(payload.data);
+      // ✅ CPU FIX: Optimistic update via setImmediate to avoid blocking the send path.
+      // Previously called _handleBatteries synchronously which triggered capability
+      // writes + setSettings() in the same tick as the WS send.
+      setImmediate(() => {
+        if (!this._stopped) {
+          this.device?._handleBatteries?.(payload.data);
+        }
+      });
     } catch (err) {
       this.error(`❌ Failed to send battery mode command: ${err.message}`);
       throw err;

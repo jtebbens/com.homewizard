@@ -86,6 +86,22 @@
   },
   "value": true
  },
+ {
+  "id": "ws_throttle_ms",
+  "type": "number",
+  "label": {
+    "en": "WebSocket update interval (seconds)",
+    "nl": "WebSocket update interval (seconden)"
+  },
+  "hint": {
+    "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
+    "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2."
+  },
+  "value": 2,
+  "min": 2,
+  "max": 10,
+  "step": 1
+},
   {
   "id": "show_gas",
   "type": "checkbox",
@@ -103,5 +119,18 @@
       "nl": "Fase-overbelasting meldingen"
     },
     "value": true
+  },
+  {
+    "id": "debug_logging",
+    "type": "checkbox",
+    "label": {
+      "en": "Enable debug logging",
+      "nl": "Debug logging inschakelen"
+    },
+    "value": false,
+    "hint": {
+      "en": "Enables verbose logging for WebSocket and battery events. Disable after debugging to reduce CPU load.",
+      "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen."
+    }
   } 
 ]

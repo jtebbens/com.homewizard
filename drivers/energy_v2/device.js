@@ -17,7 +17,7 @@ const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
 const wsDebug = require('../../includes/v2/wsDebug');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
-const debug = false;
+const debug = false; // Legacy constant — use this._debugLogging at runtime (toggle via device settings)
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -970,6 +970,10 @@ this.homey.flow
 
     this.pollingEnabled = !!settings.use_polling;
     
+    // ✅ Debug logging via settings (toggle in device settings without redeploy)
+    this._debugLogging = this.getSetting('debug_logging') ?? false;
+    if (this._debugLogging) this.log('🐛 Debug logging enabled via settings');
+    
     if (this.pollingEnabled) {
       this.log('⚙️ Polling enabled via settings');
       this.startPolling();
@@ -985,6 +989,7 @@ this.homey.flow
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
         handleBatteries: this._boundHandleBatteries,
+        measurementThrottleMs: (this.getSetting('ws_throttle_ms') || 2) * 1000,
         onJournalEvent: (type, deviceId, data) => {
           if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
           else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
@@ -1302,13 +1307,6 @@ async _updateBatteryGroup() {
   // --- If we have ANY batteries, continue ---
   if (batteries.length === 0) return;
 
-  // ⭐ Ensure battery_group_charge_mode reflects the last known vendor state
-  const vendorState = this._cacheGet('last_battery_state');
-  if (vendorState && vendorState.mode) {
-    const normalized = normalizeBatteryMode(vendorState);
-    await updateCapability(this, 'battery_group_charge_mode', normalized);
-  }
-
 
   // 5. Weighted SoC calculation
   let totalCapacity = 0;
@@ -1407,9 +1405,20 @@ async _updateDaily() {
 }
 
 _getLocalTimeSafe() {
-  const tz = 'Europe/Brussels';
-  const iso = new Date().toLocaleString('sv-SE', { timeZone: tz });
-  return new Date(iso);
+  // ✅ CPU FIX: Cache the Intl.DateTimeFormat instance — creating it per call
+  // is expensive (loads IANA timezone DB each time, called 1440×/day)
+  if (!this._tzFormatter) {
+    this._tzFormatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Brussels',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    });
+  }
+  const parts = this._tzFormatter.formatToParts(new Date());
+  const p = {};
+  for (const { type, value } of parts) p[type] = value;
+  return new Date(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`);
 }
 
 _dailyMidnightReset(m, showGas, hour, minute) {
@@ -1666,7 +1675,10 @@ _measurementPhases(m, tasks, settings, homeyLang) {
 }
 
 _measurementFullRefresh(m, tasks, now) {
-  if (!this._lastFullUpdate || now - this._lastFullUpdate > 10000) {
+  // ✅ CPU FIX: Raised from 10s to 30s — applyMeasurementCapabilities iterates
+  // over ~25 capabilities and calls getCapabilityValue() on each; at 10s that
+  // was 6×/min of 25+ Homey API calls. 30s cuts this work by 66%.
+  if (!this._lastFullUpdate || now - this._lastFullUpdate > 30000) {
     tasks.push(applyMeasurementCapabilities(this, m).catch(this.error));
     this._lastFullUpdate = now;
   }
@@ -1801,19 +1813,11 @@ async _handleBatteries(data) {
   try {
     if (debug) this.log('⚡ Battery event data:', data);
 
-    // --- Device existence guards ---
+    // --- Device existence guard ---
+    // ✅ CPU FIX: Removed pointless getDriver/getDevice lookup — _handleBatteries
+    // already runs on the device instance itself, no need to look it up again.
     const dataObj = this.getData();
     if (!dataObj?.id) return;
-
-    let deviceInstance;
-    try {
-      const driver = this.homey.drivers.getDriver('energy_v2');
-      deviceInstance = driver?.getDevice(dataObj);
-    } catch (err) {
-      if (err.message?.includes('Could not get device')) return;
-      throw err;
-    }
-    if (!deviceInstance) return;
 
     // --- Normalize payload ---
     const battery = Array.isArray(data) ? data[0] : data;
@@ -1861,18 +1865,21 @@ async _handleBatteries(data) {
       this.flowTriggerBatteryMode(this);
       this._cacheSet('last_battery_mode', normalizedMode);
 
-      try {
-        await this.setSettings({ mode: normalizedMode });
-      } catch (err) {
+      // ✅ CPU FIX: fire-and-forget — setSettings writes to persistent storage
+      // and blocks the event loop if awaited on every battery update
+      this.setSettings({ mode: normalizedMode }).catch(err => {
         this.error('❌ Failed to update setting "mode":', err);
-      }
+      });
     }
 
     // --- Update battery power capabilities ---
-    await this._setCapabilityValue('measure_power.battery_group_power_w', payload.power_w ?? 0);
-    await this._setCapabilityValue('measure_power.battery_group_target_power_w', payload.target_power_w ?? 0);
-    await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0);
-    await this._setCapabilityValue('measure_power.battery_group_max_production_w', payload.max_production_w ?? 0);
+    // ✅ CPU FIX: Run in parallel instead of 4 sequential awaits
+    await Promise.allSettled([
+      this._setCapabilityValue('measure_power.battery_group_power_w', payload.power_w ?? 0),
+      this._setCapabilityValue('measure_power.battery_group_target_power_w', payload.target_power_w ?? 0),
+      this._setCapabilityValue('measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0),
+      this._setCapabilityValue('measure_power.battery_group_max_production_w', payload.max_production_w ?? 0),
+    ]);
 
     // --- Store raw WS battery state for condition cards ---
     const prev = this._cacheGet('last_battery_state') || {};
@@ -2481,6 +2488,7 @@ async _setCapabilityValue(capability, value) {
             handleMeasurement: this._boundHandleMeasurement,
             handleSystem: this._boundHandleSystem,
             handleBatteries: this._boundHandleBatteries,
+            measurementThrottleMs: (this.getSetting('ws_throttle_ms') || 2) * 1000,
             onJournalEvent: (type, deviceId, data) => {
               if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
               else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
@@ -2497,6 +2505,20 @@ async _setCapabilityValue(capability, value) {
     if ('phase_overload_notifications' in MySettings.newSettings) {
       this._phaseOverloadNotificationsEnabled = MySettings.newSettings.phase_overload_notifications;
       this.log('Phase overload notifications changed to:', this._phaseOverloadNotificationsEnabled);
+    }
+
+    if (MySettings.changedKeys.includes('debug_logging')) {
+      this._debugLogging = MySettings.newSettings.debug_logging ?? false;
+      this.log(`🐛 Debug logging ${this._debugLogging ? 'enabled' : 'disabled'}`);
+      // Also toggle WebSocket verbose logging
+      this.wsManager?.setDebug(this._debugLogging);
+    }
+
+    if (MySettings.changedKeys.includes('ws_throttle_ms')) {
+      const throttleSec = MySettings.newSettings.ws_throttle_ms || 2;
+      this.log(`⚙️ WS measurement throttle changed to ${throttleSec}s — restarting WebSocket`);
+      // Throttle is set at construction time, so we need a full WS restart
+      this.wsManager?.restartWebSocket();
     }
     
     return true;
