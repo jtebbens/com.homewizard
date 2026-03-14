@@ -1111,5 +1111,8 @@
   },
   "3.13.63": {
     "en": "Bugfix planning, still showed solar charge in the evening-night"
+  },
+  "3.13.64": {
+    "en": "Improved websocket log and tracking to detect issues"
   }
 }
