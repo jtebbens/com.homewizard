@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.13.61",
+  "version": "3.13.62",
   "platforms": [
     "local"
   ],
@@ -4971,6 +4971,22 @@
             "nl": "Gebruik polling in plaats van WebSocket"
           },
           "value": true
+        },
+        {
+          "id": "ws_throttle_ms",
+          "type": "number",
+          "label": {
+            "en": "WebSocket update interval (seconds)",
+            "nl": "WebSocket update interval (seconden)"
+          },
+          "hint": {
+            "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
+            "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2."
+          },
+          "value": 2,
+          "min": 2,
+          "max": 10,
+          "step": 1
         },
         {
           "id": "show_gas",

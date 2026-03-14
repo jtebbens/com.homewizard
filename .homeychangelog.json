@@ -1105,5 +1105,8 @@
   },
   "3.13.61": {
     "en": "Websocket tuning for both energy_v2 and plugin batteyr"
+  },
+  "3.13.62": {
+    "en": "Energy_v2 websocket throttle is customizable. Default 2s but can be adjusted in settings"
   }
 }
