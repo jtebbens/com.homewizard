@@ -1102,5 +1102,8 @@
   },
   "3.13.60": {
     "en": "Energyv2 cpu fix and websocket tuning"
+  },
+  "3.13.61": {
+    "en": "Websocket tuning for both energy_v2 and plugin batteyr"
   }
 }
