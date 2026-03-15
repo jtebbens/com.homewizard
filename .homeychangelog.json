@@ -1120,5 +1120,8 @@
   },
   "3.13.68": {
     "en": "OptimizationEngine added which computes the optimal charge and discharge schedule across a full 24hours"
+  },
+  "3.13.69": {
+    "en": "Bugfixes in optimization and battery-policy"
   }
 }
