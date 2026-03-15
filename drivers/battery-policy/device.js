@@ -849,27 +849,6 @@ if (debug) this.log(
     const maxChargePowerW    = inputs.battery?.maxChargePowerW    || 800;
     const maxDischargePowerW = inputs.battery?.maxDischargePowerW || 800;
 
-    // Use learned RTE (validated in the same way as the RTE capability update)
-    let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
-    if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.85)) {
-      learnedRte = this.getSetting('battery_efficiency') || 0.75;
-    }
-
-    // Build 24-hour consumption forecast from learned patterns
-    const consumptionWPerSlot = [];
-    if (this.learningEngine) {
-      const now = new Date();
-      for (let h = 0; h < prices.length; h++) {
-        const futureTime = new Date(now.getTime() + h * 3_600_000);
-        consumptionWPerSlot.push(this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
-      }
-    }
-
-    this.log(`🔮 Optimizer: computing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
-    this.optimizationEngine.compute(
-      prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW,
-      learnedRte, consumptionWPerSlot.length > 0 ? consumptionWPerSlot : null
-    );
     // Build per-slot PV power estimate from shortwave radiation forecast
     // Formula: pvPowerW = pvPeakW × (radiation_W_m2 / 1000)
     // At 1000 W/m² (STC) the system produces its rated peak output.
@@ -884,7 +863,7 @@ if (debug) this.log(
         }));
     }
 
-    this.log(`🔮 Optimizer: computing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak)`);
+    this.log(`🔮 Optimizer: recomputing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak)`);
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast);
   }
 

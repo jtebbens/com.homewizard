@@ -1869,7 +1869,7 @@ async _handleBatteries(data) {
     // --- Trigger flow only on real mode change ---
     if (normalizedMode !== lastBatteryMode) {
       const lastCommanded = this._cacheGet('last_commanded_mode');
-      if (lastCommanded !== null && normalizedMode !== lastCommanded) {
+      if (lastCommanded != null && normalizedMode !== lastCommanded) {
         this.log(`⚠️ External battery mode override detected! Commanded: ${lastCommanded} → actual: ${normalizedMode}`);
         const extKey = 'external_mode_overrides';
         const stored = this.homey.settings.get(extKey) || { count: 0, last: null };
