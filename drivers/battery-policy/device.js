@@ -9,6 +9,7 @@ const SunMultiSource = require('../../lib/sun-multisource');
 const LearningEngine = require('../../lib/learning-engine');
 const BatteryChartGenerator = require('../../lib/battery-chart-generator');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
+const OptimizationEngine = require('../../lib/optimization-engine');
 
 const debug = false;
 
@@ -30,6 +31,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // Initialize learning engine
     await this.learningEngine.initialize();
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
+    this.optimizationEngine = new OptimizationEngine(this.getSettings());
 
 
     // State
@@ -631,6 +633,12 @@ if (debug) this.log(
         return;
       }
 
+      // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update)
+      if (this.optimizationEngine.isStale() && inputs.tariff) {
+        this._recomputeOptimizer(inputs);
+      }
+      inputs.optimizer = this.optimizationEngine;
+
       const result = this.policyEngine.calculatePolicy(inputs);
 
       // ------------------------------------------------------
@@ -824,6 +832,25 @@ if (debug) this.log(
         `Error: ${error.message}`
       );
     }
+  }
+
+  /**
+   * (Re)compute the OptimizationEngine schedule from the current inputs.
+   * Called lazily in _runPolicyCheck whenever the schedule is stale.
+   */
+  _recomputeOptimizer(inputs) {
+    const prices = inputs.tariff?.allPrices || inputs.tariff?.next24Hours;
+    if (!prices || prices.length === 0) return;
+
+    const soc = inputs.battery?.stateOfCharge ?? 50;
+    const capacityKwh = inputs.battery?.totalCapacityKwh;
+    if (!capacityKwh || capacityKwh <= 0) return;
+
+    const maxChargePowerW    = inputs.battery?.maxChargePowerW    || 800;
+    const maxDischargePowerW = inputs.battery?.maxDischargePowerW || 800;
+
+    this.log(`🔮 Optimizer: computing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh)`);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW);
   }
 
   /**
@@ -1305,6 +1332,7 @@ if (debug) this.log(
     // Update internal modules
     this.policyEngine.updateSettings(newSettings);
     this.tariffManager.updateSettings(newSettings);
+    this.optimizationEngine.updateSettings(newSettings);
 
     // Handle interval change
     if (changedKeys.includes('policy_interval')) {
