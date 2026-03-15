@@ -708,6 +708,7 @@ if (debug) this.log(
       }
       
       await this.setCapabilityValue('battery_rte', parseFloat((currentRte * 100).toFixed(1))).catch(this.error);
+      this.homey.settings.set('battery_efficiency_effective', currentRte);
 
       await this.setCapabilityValue('recommended_mode', recommended);
 
@@ -888,7 +889,7 @@ if (debug) this.log(
       // When exporting, PV must also be covering any battery charge
       const batteryCharge = batt > 0 ? batt : 0;
       pvFromGrid += batteryCharge;
-    } else if (grid > 0 && batt > 100) {
+    } else if (grid > 0 && batt > 100 && sunScore > 0) {
       // Grid importing + battery charging: PV might be contributing
       // This is conservative: only count if battery is actively charging
       // Real PV = battery charge power (assuming zero-charge-only mode)
@@ -1070,7 +1071,8 @@ if (debug) this.log(
         avgCost: batteryAvgCost,
         energyKwh: batteryEnergyKwh,
         breakEven
-      }
+      },
+      previousHwMode: this.lastRecommendation?.hwMode ?? null
     };
 
   }
