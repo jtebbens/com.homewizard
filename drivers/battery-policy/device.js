@@ -870,6 +870,22 @@ if (debug) this.log(
       prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW,
       learnedRte, consumptionWPerSlot.length > 0 ? consumptionWPerSlot : null
     );
+    // Build per-slot PV power estimate from shortwave radiation forecast
+    // Formula: pvPowerW = pvPeakW × (radiation_W_m2 / 1000)
+    // At 1000 W/m² (STC) the system produces its rated peak output.
+    let pvForecast = null;
+    const pvCapacityW = inputs.settings?.pv_capacity_w || 0;
+    if (pvCapacityW > 0 && Array.isArray(inputs.weather?.hourlyForecast)) {
+      pvForecast = inputs.weather.hourlyForecast
+        .filter(h => typeof h.radiationWm2 === 'number')
+        .map(h => ({
+          timestamp: h.time instanceof Date ? h.time.toISOString() : h.time,
+          pvPowerW: Math.round(pvCapacityW * (h.radiationWm2 / 1000))
+        }));
+    }
+
+    this.log(`🔮 Optimizer: computing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak)`);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast);
   }
 
   /**
