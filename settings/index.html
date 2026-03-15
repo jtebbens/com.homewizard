@@ -759,6 +759,14 @@
             }
           }
 
+          // Check for external battery mode changes (3rd party app / UI interference)
+          const extModeChanges = s['capability_api_mode_changes'] || { count: 0, last: null };
+          if (extModeChanges.count > 10) {
+            anomalies.push(`🔴 ${extModeChanges.count}× capability_api_mode_change — likely a 3rd party app repeatedly overriding the battery mode. Last: ${extModeChanges.last?.mode || '?'} at ${extModeChanges.last?.ts || '?'}`);
+          } else if (extModeChanges.count > 0) {
+            anomalies.push(`🟡 ${extModeChanges.count}× capability_api_mode_change — battery mode set via Homey capability API (UI, external Flow, or 3rd party app). Last: ${extModeChanges.last?.mode || '?'}`);
+          }
+
           // Check journal for rapid reconnects
           const reconnectTimes = journal
             .filter(e => e.type === 'reconnect')
@@ -828,7 +836,7 @@
               open: '#4caf50', authorized: '#2196f3', close: '#ff9800',
               error: '#f44336', reconnect: '#9c27b0', zombie: '#e91e63',
               preflight_fail: '#ff5722', mode_change: '#00bcd4',
-              slow_handler: '#ff5722',
+              slow_handler: '#ff5722', capability_api_mode_change: '#e91e63',
             };
             let lines = '';
             for (const e of journal.slice(-50).reverse()) {
@@ -854,6 +862,7 @@
           Homey.set('ws_journal', []);
           Homey.set('ws_snapshots', {});
           Homey.set('debug_ws', []);
+          Homey.set('capability_api_mode_changes', { count: 0, last: null });
           document.getElementById('ws-journal').textContent = 'Cleared.';
           document.getElementById('ws-snapshots').innerHTML = '<div style="color:#999;font-size:13px;">Cleared.</div>';
           document.getElementById('ws-debug').textContent = '[]';
@@ -973,6 +982,13 @@
             if (span < 60000) anomalies.push(`Reconnect storm: 5 in ${Math.round(span / 1000)}s`);
           }
 
+          const extModeChanges = s['capability_api_mode_changes'] || { count: 0, last: null };
+          if (extModeChanges.count > 10) {
+            anomalies.push(`capability_api_mode_change: ${extModeChanges.count}× — likely 3rd party app overriding battery mode. Last: ${extModeChanges.last?.mode || '?'} at ${extModeChanges.last?.ts || '?'}`);
+          } else if (extModeChanges.count > 0) {
+            anomalies.push(`capability_api_mode_change: ${extModeChanges.count}× — battery mode set via Homey capability API. Last: ${extModeChanges.last?.mode || '?'}`);
+          }
+
           if (anomalies.length > 0) {
             lines.push('── ⚠ ANOMALIES ──');
             anomalies.forEach(a => lines.push(`  🔴 ${a}`));
@@ -999,8 +1015,19 @@
 
         /* ── EXPLAINABILITY ── */
         function renderExplainability(data) {
-          if (!data) { document.getElementById('explain-summary').innerText = 'Nog geen analyse beschikbaar.'; return; }
-          document.getElementById('explain-summary').innerText = data.summary;
+          if (!data) { document.getElementById('explain-summary').innerHTML = '<em>Nog geen analyse beschikbaar.</em>'; return; }
+
+          const mode = data.recommendation;
+          const modeInfo = HW_MODES[mode] || { icon: '❓', nl: mode || '?', badge: '' };
+          const conf = Math.round(data.confidence ?? 0);
+          const confColor = conf >= 80 ? '#4caf50' : conf >= 60 ? '#fb8c00' : '#e53935';
+          document.getElementById('explain-summary').innerHTML =
+            `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">` +
+              `<span class="hw-badge ${modeInfo.badge}" style="font-size:14px;padding:4px 10px">${modeInfo.icon} ${modeInfo.nl}</span>` +
+              `<span style="font-size:13px;color:${confColor};font-weight:bold">${conf}% zekerheid</span>` +
+            `</div>` +
+            `<div style="font-size:13px;color:#ccc">${data.shortSummary || ''}</div>` +
+            `<div style="font-size:12px;color:#888;margin-top:6px">${data.summary || ''}</div>`;
           const avg = data?.batteryCost?.avgCost ?? null;
           const be = data?.batteryCost?.breakEven ?? null;
           const price = data?.effectivePrice ?? null;
@@ -1013,17 +1040,55 @@
 
           if (price !== null && be !== null) {
             const diff = price - be;
-            document.getElementById('arb-signal').innerText =
-              diff > 0.01 ? `Ontladen (+€${diff.toFixed(3)}/kWh)` :
-                diff < -0.01 ? `Laden (–€${Math.abs(diff).toFixed(3)}/kWh)` :
-                  'Rond break-even';
+            const actualMode = data?.recommendation ?? '';
+            const isDischargeMode = ['zero_discharge_only', 'discharge'].includes(actualMode);
+            const isChargeMode = ['to_full', 'zero_charge_only', 'charge'].includes(actualMode);
+            let signal;
+            if (diff > 0.01) {
+              signal = isDischargeMode
+                ? `Ontladen (+€${diff.toFixed(3)}/kWh)`
+                : `Ontladen theoretisch (+€${diff.toFixed(3)}/kWh) — geblokkeerd`;
+            } else if (diff < -0.01) {
+              signal = isChargeMode
+                ? `Laden (–€${Math.abs(diff).toFixed(3)}/kWh)`
+                : `Laden theoretisch (–€${Math.abs(diff).toFixed(3)}/kWh) — geblokkeerd`;
+            } else {
+              signal = 'Rond break-even';
+            }
+            document.getElementById('arb-signal').innerText = signal;
           }
 
           const reasonsList = document.getElementById('explain-reasons');
           reasonsList.innerHTML = '';
+          const weightMap = {
+            critical: { dots: '●●●●', color: '#e53935', label: 'Doorslaggevend' },
+            high:     { dots: '●●●○', color: '#fb8c00', label: 'Belangrijk' },
+            medium:   { dots: '●●○○', color: '#fdd835', label: 'Meespeelt' },
+            low:      { dots: '●○○○', color: '#9e9e9e', label: 'Info' }
+          };
+          const categoryMap = {
+            battery:      'Batterij',
+            tariff:       'Tarief',
+            arbitrage:    'Arbitrage',
+            pv:           'Zonne-energie',
+            weather:      'Weer',
+            sun_forecast: 'Zonprognose',
+            strategy:     'Strategie',
+            load:         'Belasting',
+            RTE:          'Efficiëntie',
+            peak:         'Piekuren',
+            time:         'Tijdstip',
+            confidence:   'Zekerheid'
+          };
+          const modeTextColor = { charge: '#4CAF50', discharge: '#FF9800', preserve: '#2196F3' };
           data.reasons.forEach(r => {
             const li = document.createElement('li');
-            li.textContent = `${r.icon} ${r.text}`;
+            const w = weightMap[r.impact] || weightMap.low;
+            const cat = categoryMap[r.category] || r.category || '';
+            const textColor = modeTextColor[r.supportedMode] || '#e0e0e0';
+            li.innerHTML = `<span title="${w.label}" style="color:${w.color};font-size:0.8em;letter-spacing:1px;margin-right:6px">${w.dots}</span>`
+              + `<span style="display:inline-block;font-size:0.7em;background:#333;color:#aaa;border-radius:3px;padding:0 4px;margin-right:5px;vertical-align:middle">${cat}</span>`
+              + `<span style="color:${textColor}">${r.icon} ${r.text}</span>`;
             reasonsList.appendChild(li);
           });
 
@@ -1041,7 +1106,7 @@
             const maxScore = Math.max(s.charge || 0, s.discharge || 0, s.preserve || 0);
             const winner = maxScore === s.charge ? 'charge' : maxScore === s.discharge ? 'discharge' : 'preserve';
             const labels = { charge: '🔌 Laden', discharge: '⚡ Ontladen', preserve: '🛡️ Beschermen' };
-            const colors = { charge: '#4CAF50', discharge: '#2196F3', preserve: '#FF9800' };
+            const colors = { charge: '#4CAF50', discharge: '#FF9800', preserve: '#2196F3' };
             scoresVisual.innerHTML = ['charge', 'discharge', 'preserve'].map(mode => {
               const score = s[mode] || 0;
               const pct = maxScore > 0 ? (score / maxScore * 100) : 0;
@@ -1097,7 +1162,7 @@
 
       /* ── Engine settings ── */
       const deviceSettings = settings['device_settings'] || {};
-      const battEff = deviceSettings['battery_efficiency'] || 0.75;
+      const battEff = settings['battery_efficiency_effective'] || deviceSettings['battery_efficiency'] || 0.75;
       const minProfit = deviceSettings['min_profit_margin'] || 0.01;
       const maxChgPrice = deviceSettings['max_charge_price'] || 0.15;
       const minDchPrice = deviceSettings['min_discharge_price'] || 0.30;

@@ -600,6 +600,7 @@ this.homey.flow
       return 'zero';
     }
     device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'zero');
 
     device.log('ActionCard: Set Battery to Zero Mode');
 
@@ -672,6 +673,7 @@ this.homey.flow
       return 'standby';
     }
     device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'standby');
 
     device.log('ActionCard: Set Battery to Standby Mode');
 
@@ -738,6 +740,7 @@ this.homey.flow
       return 'to_full';
     }
     device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'to_full');
 
     device.log('ActionCard: Set Battery to Full Charge Mode');
 
@@ -804,6 +807,7 @@ this.homey.flow
       return 'zero_charge_only';
     }
     device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'zero_charge_only');
 
     device.log('ActionCard: Set Battery to Zero Charge Only Mode');
 
@@ -870,6 +874,7 @@ this.homey.flow
       return 'zero_discharge_only';
     }
     device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'zero_discharge_only');
 
     device.log('ActionCard: Set Battery to Zero Discharge Only Mode');
 
@@ -1080,6 +1085,7 @@ async setBatteryGroupMode(targetMode) {
     return true; // Return success, don't spam the device
   }
   this._lastBatteryModeChange = now;
+  this._cacheSet('last_commanded_mode', targetMode);
 
   try {
     const { wsManager, url, token } = this;
@@ -1862,6 +1868,16 @@ async _handleBatteries(data) {
 
     // --- Trigger flow only on real mode change ---
     if (normalizedMode !== lastBatteryMode) {
+      const lastCommanded = this._cacheGet('last_commanded_mode');
+      if (lastCommanded !== null && normalizedMode !== lastCommanded) {
+        this.log(`⚠️ External battery mode override detected! Commanded: ${lastCommanded} → actual: ${normalizedMode}`);
+        const extKey = 'external_mode_overrides';
+        const stored = this.homey.settings.get(extKey) || { count: 0, last: null };
+        stored.count += 1;
+        stored.last = { from: lastCommanded, to: normalizedMode, ts: new Date().toISOString() };
+        this.homey.settings.set(extKey, stored);
+      }
+
       this.flowTriggerBatteryMode(this);
       this._cacheSet('last_battery_mode', normalizedMode);
 
@@ -2200,16 +2216,26 @@ async _registerCapabilityListeners() {
 
   // Battery mode picker listener
   this.registerCapabilityListener('battery_group_charge_mode', async (value) => {
-    this.log(`UI changed battery_group_charge_mode → ${value}`);
+    // Track capability API mode changes (Homey UI, 3rd party apps, external Flows)
+    // Does NOT count energy_v2 own action cards or battery-policy (they bypass this listener)
+    // High counts = likely a 3rd party app repeatedly overriding the battery mode
+    const _extKey = 'capability_api_mode_changes';
+    const _extStored = this.homey.settings.get(_extKey) || { count: 0, last: null };
+    _extStored.count += 1;
+    _extStored.last = { mode: value, ts: new Date().toISOString() };
+    this.homey.settings.set(_extKey, _extStored);
+    wsDebug.log('capability_api_mode_change', this.getData().id,
+      `mode="${value}" count=${_extStored.count}`);
+    this.log(`⚠️ capability_api_mode_change #${_extStored.count} → ${value} (Homey capability API: UI, 3rd party app, or external Flow)`);
 
-
-    // ✅ ADD RATE LIMITING HERE:
+    // Rate limiting
     const now = Date.now();
     if (now - this._lastBatteryModeChange < this._batteryModeChangeCooldown) {
       this.log('⏸️ Battery mode change throttled - cooldown active');
       return value; // Return the requested value, don't fail
     }
     this._lastBatteryModeChange = now;
+    this._cacheSet('last_commanded_mode', value);
 
     try {
       const { wsManager, url, token } = this;
