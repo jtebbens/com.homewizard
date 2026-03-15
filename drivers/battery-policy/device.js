@@ -863,8 +863,23 @@ if (debug) this.log(
         }));
     }
 
-    this.log(`🔮 Optimizer: recomputing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak)`);
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast);
+    // Learned round-trip efficiency from efficiencyEstimator
+    let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
+    if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.85)) learnedRte = null;
+
+    // 24h consumption forecast from learning engine
+    let consumptionWPerSlot = null;
+    if (this.learningEngine) {
+      const now = new Date();
+      consumptionWPerSlot = [];
+      for (let h = 0; h < prices.length; h++) {
+        const futureTime = new Date(now.getTime() + h * 3_600_000);
+        consumptionWPerSlot.push(this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
+      }
+    }
+
+    this.log(`🔮 Optimizer: recomputing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot);
   }
 
   /**
