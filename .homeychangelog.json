@@ -1114,5 +1114,8 @@
   },
   "3.13.64": {
     "en": "Improved websocket log and tracking to detect issues"
+  },
+  "3.13.65": {
+    "en": "Change explainability for battery policy with tags and weight"
   }
 }
