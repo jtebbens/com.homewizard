@@ -1123,5 +1123,8 @@
   },
   "3.13.69": {
     "en": "Bugfixes in optimization and battery-policy"
+  },
+  "3.13.70": {
+    "en": "Color code style aligned with Homewizard colors and fixed Homewizard Legacy debug fetch tab data"
   }
 }
