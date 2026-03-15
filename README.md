@@ -51,7 +51,26 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.58)
+## 📝 Latest Updates (v3.13.68)
+
+### Battery Policy
+
+* **OptimizationEngine** - New dynamic-programming scheduler that computes the optimal charge/discharge schedule across the full 24-hour price horizon. The policy engine now has genuine lookahead instead of relying purely on heuristics, improving decisions around when to charge cheap and discharge at peak.
+* **Explainability color coding** - Policy decision reasons now show color-coded tags with relative weights, making it easier to understand what drove the recommendation.
+
+### Bug Fixes
+
+* **Planning solar charge** - Fixed planning page incorrectly showing solar charge in the evening/night hours
+* **Incorrect PV charge at night** - Fixed battery policy charging from grid during nighttime when PV flag was incorrectly set
+
+### Technical
+
+* **WebSocket throttle configurable** - `energy_v2` WebSocket measurement throttle is now adjustable in device settings (default 2s)
+* **WebSocket logging** - Improved WebSocket connection tracking and diagnostics in the settings page
+
+---
+
+## Previous Updates (v3.13.58)
 
 ### Bug Fixes
 
