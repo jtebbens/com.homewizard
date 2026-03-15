@@ -1117,5 +1117,8 @@
   },
   "3.13.65": {
     "en": "Change explainability for battery policy with tags and weight"
+  },
+  "3.13.68": {
+    "en": "OptimizationEngine added which computes the optimal charge and discharge schedule across a full 24hours"
   }
 }
