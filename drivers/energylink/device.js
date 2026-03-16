@@ -78,6 +78,8 @@ class HomeWizardEnergylink extends Homey.Device {
       // -----------------------------
       const value_s1 = entry.t1;
       const value_s2 = entry.t2;
+      // const factor_s1 = entry.c1 ?? 1;
+      // const factor_s2 = entry.c2 ?? 1;
 
       const energy_current_cons = entry.used?.po ?? 0;
       const energy_daytotal_cons = entry.used?.dayTotal ?? 0;

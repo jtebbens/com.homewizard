@@ -215,9 +215,8 @@ module.exports = (function() {
   const url = `http://${homewizard_ip}/${homewizard_pass}${uri_part}`;
 
   if (!circuitBreakerAllows(device)) {
-  // circuit_open dont log
-  return callback('circuit_open', []);
-}
+    return callback('circuit_open', []);
+  }
 
   // Wrap callback to ensure it's only called once and to clean up references
   const safeCallback = (err, data) => {
