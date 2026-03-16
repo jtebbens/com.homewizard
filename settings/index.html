@@ -1047,11 +1047,11 @@
             if (diff > 0.01) {
               signal = isDischargeMode
                 ? `Ontladen (+€${diff.toFixed(3)}/kWh)`
-                : `Ontladen theoretisch (+€${diff.toFixed(3)}/kWh) — geblokkeerd`;
+                : `Prijs gunstig voor ontladen (+€${diff.toFixed(3)}/kWh) — nu geblokkeerd`;
             } else if (diff < -0.01) {
               signal = isChargeMode
                 ? `Laden (–€${Math.abs(diff).toFixed(3)}/kWh)`
-                : `Laden theoretisch (–€${Math.abs(diff).toFixed(3)}/kWh) — geblokkeerd`;
+                : `Prijs gunstig voor laden (–€${Math.abs(diff).toFixed(3)}/kWh) — nu geblokkeerd`;
             } else {
               signal = 'Rond break-even';
             }
