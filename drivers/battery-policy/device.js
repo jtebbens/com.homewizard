@@ -5,7 +5,6 @@ const WeatherForecaster = require('../../lib/weather-forecaster');
 const PolicyEngine = require('../../lib/policy-engine');
 const TariffManager = require('../../lib/tariff-manager');
 const ExplainabilityEngine = require('../../lib/explainability-engine');
-const SunMultiSource = require('../../lib/sun-multisource');
 const LearningEngine = require('../../lib/learning-engine');
 const BatteryChartGenerator = require('../../lib/battery-chart-generator');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
@@ -24,7 +23,6 @@ class BatteryPolicyDevice extends Homey.Device {
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = new ExplainabilityEngine(this.homey);
-    this.sunMulti = new SunMultiSource(this.homey);
     this.learningEngine = new LearningEngine(this.homey, this);
     this.chartGenerator = new BatteryChartGenerator(this.homey);
     
@@ -998,42 +996,6 @@ if (debug) this.log(
       }
     }
 
-    let sun = null;
-    const loc = await this._getLocationFromSetting();
-
-    if (loc) {
-      const { latitude, longitude } = loc;
-
-      this.log("SunMulti loc:", loc);
-
-      const gfs = await this.sunMulti.fetchGFS(latitude, longitude);
-      const harmonie = await this.sunMulti.fetchHarmonie(latitude, longitude);
-
-      this.log("SunMulti GFS sunshine sample:", gfs?.hourly?.sunshine_duration?.slice(0, 6));
-      this.log("SunMulti ICON-D2 sunshine sample:", harmonie?.hourly?.sunshine_duration?.slice(0, 6));
-
-      const sunScoreGFS = this.sunMulti.calculateSunScore(
-        gfs?.hourly?.sunshine_duration,
-        gfs?.hourly?.time
-      );
-
-      const sunScoreHarmonie = this.sunMulti.calculateSunScore(
-        harmonie?.hourly?.sunshine_duration,
-        harmonie?.hourly?.time
-      );
-
-      const consistency = this.sunMulti.compareScores(sunScoreGFS, sunScoreHarmonie);
-
-      this.log("SunMulti scores:", sunScoreGFS, sunScoreHarmonie, consistency);
-
-      sun = {
-        gfs: sunScoreGFS,
-        harmonie: sunScoreHarmonie,
-        consistent: consistency.consistent,
-        diff: consistency.diff
-      };
-    }
-
     const batteryState = await this._getBatteryState();
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
 
@@ -1078,13 +1040,18 @@ if (debug) this.log(
       const hourlyWeather = weatherData.hourlyForecast.map(h => ({
         hour: parseInt(new Date(h.time).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
         sunshine: h.sunshine,
-        cloudCover: h.cloudCover
+        cloudCover: h.cloudCover,
+        radiationWm2: h.radiationWm2
       }));
       this.homey.settings.set('policy_weather_hourly', hourlyWeather);
     }
 
     // Estimate PV production using grid analysis + sun model
-    const sunScore = sun ? Math.max(sun.gfs ?? 0, sun.harmonie ?? 0) : 0;
+    // Use next-4h sunshine only — tomorrow's forecast must not inflate the current PV estimate
+    const sunScore = weatherData
+      ? Math.min(100, Math.round((weatherData.sunshineNext4Hours / 4) * 100))
+      : 0;
+    const sun = { gfs: sunScore, harmonie: sunScore };
     const pvEstimateW = this._estimatePvProduction({
       gridPower: batteryState.gridPower,
       batteryPower: batteryState.groupPower,
