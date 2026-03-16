@@ -1126,5 +1126,8 @@
   },
   "3.13.70": {
     "en": "Color code style aligned with Homewizard colors and fixed Homewizard Legacy debug fetch tab data"
+  },
+  "3.13.71": {
+    "en": "Added PV charge reasons to explainability view"
   }
 }
