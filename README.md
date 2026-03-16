@@ -51,7 +51,36 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.13.68)
+## 📝 Latest Updates (v3.14.0)
+
+### Battery Policy — 15-Minute Pricing
+
+* **15-min price granularity** - Policy decisions now use the actual 15-minute spot price instead of the hourly average, enabling more precise charge/discharge timing during short price dips or peaks
+* **Optimizer on 15-min slots** - The 24h dynamic-programming scheduler now plans across 96 slots (15-min) instead of 24 hourly slots, making it possible to exploit short cheap windows (e.g. wind surplus at night)
+* **Xadi provider corrected** - Price formula fixed to use server-applied markup + 21% VAT (`vat=0.21`), matching KwhPrice output exactly
+
+### Battery Policy — Explainability
+
+* **Reasons match the winning mode** - Decision reasons are now filtered to only show why the actual recommendation was made; conflicting reasons from other modes no longer appear
+* **Mapping explanation** - When scoring favours charging but conditions prevent it (price above ceiling, no PV), a prominent notice now explains the gap: *"Laden wint (score 140) maar prijs €0.26 > max laadprijs €0.14 → Standby: wacht op betere conditie"*
+* **Battery very low reason** - SoC between 1–10% now correctly shows "Batterij erg laag — laden aanbevolen" instead of "normaal bereik"
+* **Zero mode threshold** - Explainability engine now mirrors policy engine exactly: respects `min_soc = 0` without a hardcoded 1% floor
+
+### Bug Fixes
+
+* **Weather forecast timezone** - Fixed 1-hour offset caused by `timezone: auto` + appending Z; now uses `timezone: UTC`
+* **Sunshine duration ensemble** - Fixed all-zero sunshine when using multi-model Open-Meteo requests (`models=` parameter causes model-specific key names like `sunshine_duration_ecmwf_ifs04`; plain key absent)
+* **Planning SoC projection** - Fixed all hours showing standby due to early return `if (soc < minSoc) return 'standby'` in planning display; radiation-based PV formula corrected (`pvCapW × radiation/1000` instead of `maxChgW × factor`)
+* **ZERO MODE threshold** - Policy engine and explainability now both respect user's `min_soc` setting; removed hardcoded 5% / 1% floors
+
+### Technical
+
+* **36-hour forecast horizon** - Weather forecaster extended from 24h to 36h to always cover tonight + full tomorrow even when run in the evening
+* **SunMultiSource removed** - Replaced with WeatherForecaster ensemble (3-model average); next-4h radiation used for PV estimation
+
+---
+
+## Previous Updates (v3.13.68)
 
 ### Battery Policy
 
