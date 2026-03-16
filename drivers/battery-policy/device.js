@@ -837,8 +837,19 @@ if (debug) this.log(
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
   _recomputeOptimizer(inputs) {
-    const prices = inputs.tariff?.allPrices || inputs.tariff?.next24Hours;
+    // Prefer 15-min prices for finer-grained optimization; fall back to hourly
+    const now = new Date();
+    const raw15min = inputs.tariff?.allPrices15min;
+    const rawPrices = (raw15min?.length > 0)
+      ? raw15min.filter(p => new Date(p.timestamp) >= now)
+      : (inputs.tariff?.allPrices || inputs.tariff?.next24Hours);
+    const prices = rawPrices;
     if (!prices || prices.length === 0) return;
+
+    // Slot duration in ms (15 min = 900_000, 1 hour = 3_600_000)
+    const slotMs = (prices.length >= 2)
+      ? (new Date(prices[1].timestamp) - new Date(prices[0].timestamp))
+      : 3_600_000;
 
     const soc = inputs.battery?.stateOfCharge ?? 50;
     const capacityKwh = inputs.battery?.totalCapacityKwh;
@@ -871,12 +882,13 @@ if (debug) this.log(
       const now = new Date();
       consumptionWPerSlot = [];
       for (let h = 0; h < prices.length; h++) {
-        const futureTime = new Date(now.getTime() + h * 3_600_000);
+        const futureTime = new Date(now.getTime() + h * slotMs);
         consumptionWPerSlot.push(this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
       }
     }
 
-    this.log(`🔮 Optimizer: recomputing 24h schedule (${prices.length} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
+    const slotLabel = slotMs === 900_000 ? '15-min' : '1h';
+    this.log(`🔮 Optimizer: recomputing schedule (${prices.length} × ${slotLabel} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot);
   }
 
