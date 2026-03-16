@@ -57,7 +57,6 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 * **15-min price granularity** - Policy decisions now use the actual 15-minute spot price instead of the hourly average, enabling more precise charge/discharge timing during short price dips or peaks
 * **Optimizer on 15-min slots** - The 24h dynamic-programming scheduler now plans across 96 slots (15-min) instead of 24 hourly slots, making it possible to exploit short cheap windows (e.g. wind surplus at night)
-* **Xadi provider corrected** - Price formula fixed to use server-applied markup + 21% VAT (`vat=0.21`), matching KwhPrice output exactly
 
 ### Battery Policy — Explainability
 
