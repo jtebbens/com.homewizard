@@ -25,13 +25,34 @@
   </script>
 
   <style>
-    body { font-family: sans-serif; padding: 20px; }
+    :root {
+      --bg:        #0A0A0A;
+      --surface:   #202020;
+      --surface2:  #232323;
+      --border:    #3f3f3f;
+      --purple:    #5f6fff;
+      --purple-lt: #8b9fff;
+      --green:     #20F29B;
+      --green-lt:  #02DACE;
+      --text:      #ffffff;
+      --muted:     #A0A0A0;
+      --dim:       #808080;
+      --red:       #F87171;
+      --orange:    #FB923C;
+      --blue:      #60A5FA;
+      --yellow:    #FCD34D;
+      --teal:      #02DACE;
+    }
+
+    body { font-family: sans-serif; padding: 20px; background: var(--bg); color: var(--text); }
+    a { color: var(--purple-lt); }
+    h1, h2, h3 { color: var(--text); }
 
     /* ── Tab navigation ── */
     .tabs {
       display: flex;
       flex-wrap: wrap;
-      border-bottom: 1px solid #ccc;
+      border-bottom: 1px solid var(--border);
       gap: 4px;
       margin-bottom: 20px;
     }
@@ -41,18 +62,19 @@
       cursor: pointer;
       user-select: none;
       border-radius: 6px 6px 0 0;
-      background: #eee;
+      background: var(--surface2);
+      color: var(--muted);
       white-space: nowrap;
       font-size: 13px;
       transition: background 0.15s, color 0.15s;
     }
-    .tab:hover { background: #e0e0e0; }
+    .tab:hover { background: var(--surface); color: var(--text); }
     .tab.active {
-      background: white;
-      border: 1px solid #ccc;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-bottom: none;
       font-weight: bold;
-      color: #1a73e8;
+      color: var(--purple-lt);
     }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -63,19 +85,43 @@
     }
 
     .debug-box {
-      background: #f3f3f3; padding: 15px; border-radius: 6px;
+      background: var(--surface); padding: 15px; border-radius: 6px;
+      border: 1px solid var(--border);
       font-family: monospace; font-size: 12px; white-space: pre-wrap;
       word-break: break-word; max-height: 400px; overflow: auto;
+      color: var(--text);
     }
 
     table { border-collapse: collapse; width: 100%; margin-top: 16px; }
-    th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
-    th { background: #f0f0f0; }
+    th, td { border: 1px solid var(--border); padding: 6px 8px; font-size: 13px; }
+    th { background: var(--surface2); color: var(--text); }
+
+    button {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+    button:hover { background: var(--surface); border-color: var(--purple); }
+
+    select {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    details summary { color: var(--muted); cursor: pointer; }
 
     /* ── Planning Cards ── */
     .planning-hour-card {
-      background: #fafafa;
-      border: 2px solid #e0e0e0;
+      background: var(--surface);
+      border: 2px solid var(--border);
       border-radius: 10px;
       padding: 12px;
       text-align: center;
@@ -85,50 +131,50 @@
     }
     .planning-hour-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
     .planning-hour-card:active {
       transform: scale(0.95);
     }
     .planning-hour-card.current {
-      border-color: #4CAF50 !important;
-      background: #e8f5e9;
-      box-shadow: 0 0 15px rgba(76,175,80,0.3);
+      border-color: var(--green) !important;
+      background: rgba(32,242,155,0.08);
+      box-shadow: 0 0 15px rgba(32,242,155,0.25);
     }
-    .planning-hour-card.cheap   { background: linear-gradient(135deg,#c8e6c9 0%,#fafafa 100%); }
-    .planning-hour-card.expensive { background: linear-gradient(135deg,#ffcdd2 0%,#fafafa 100%); }
-    .planning-hour-card.unknown { opacity:.6; background:#f5f5f5; }
+    .planning-hour-card.cheap   { background: linear-gradient(135deg,rgba(32,242,155,0.12) 0%,var(--surface) 100%); }
+    .planning-hour-card.expensive { background: linear-gradient(135deg,rgba(248,113,113,0.12) 0%,var(--surface) 100%); }
+    .planning-hour-card.unknown { opacity:.5; background: var(--surface2); }
 
     /* hwMode colour accents on card border */
-    .planning-hour-card.hw-to_full          { border-color: #1565C0; }
-    .planning-hour-card.hw-zero_charge_only  { border-color: #F9A825; }
-    .planning-hour-card.hw-zero_discharge_only{ border-color: #6A1B9A; }
-    .planning-hour-card.hw-zero             { border-color: #00838F; }
-    .planning-hour-card.hw-standby          { border-color: #e0e0e0; }
+    .planning-hour-card.hw-to_full           { border-color: var(--purple); }
+    .planning-hour-card.hw-zero_charge_only  { border-color: var(--purple-lt); }
+    .planning-hour-card.hw-zero_discharge_only{ border-color: var(--green); }
+    .planning-hour-card.hw-zero             { border-color: var(--orange); }
+    .planning-hour-card.hw-standby          { border-color: var(--border); }
 
-    .planning-hour-time  { font-size:16px; font-weight:bold; margin-bottom:8px; }
-    .planning-hour-price { font-size:14px; margin-bottom:8px; color:#666; font-weight:600; }
+    .planning-hour-time  { font-size:16px; font-weight:bold; margin-bottom:8px; color: var(--text); }
+    .planning-hour-price { font-size:14px; margin-bottom:8px; color: var(--muted); font-weight:600; }
     .planning-hour-mode  { font-size:36px; margin:10px 0; }
-    .planning-hour-mode-text { font-size:11px; color:#666; margin-bottom:8px; }
-    .planning-hour-details   { font-size:11px; color:#999; margin-top:8px; }
+    .planning-hour-mode-text { font-size:11px; color: var(--muted); margin-bottom:8px; }
+    .planning-hour-details   { font-size:11px; color: var(--dim); margin-top:8px; }
 
     .planning-status-item  { text-align:center; }
-    .planning-status-label { font-size:12px; color:#666; margin-bottom:5px; }
-    .planning-status-value { font-size:22px; font-weight:bold; }
+    .planning-status-label { font-size:12px; color: var(--muted); margin-bottom:5px; }
+    .planning-status-value { font-size:22px; font-weight:bold; color: var(--text); }
 
     .planning-legend-item {
       display:flex; align-items:center; gap:10px;
-      padding:8px; background:white; border-radius:6px;
+      padding:8px; background: var(--surface2); border-radius:6px;
     }
     .planning-legend-icon { font-size:24px; min-width:32px; text-align:center; }
 
     .planning-day-marker {
       grid-column: 1 / -1;
       padding: 12px 16px;
-      background: linear-gradient(90deg,#2196F3,#1976D2);
-      color: white; font-weight:bold; font-size:16px;
+      background: linear-gradient(40deg, #20F29B, #02DACE);
+      color: #0A0A0A; font-weight:bold; font-size:16px;
       border-radius:8px; margin:8px 0;
-      box-shadow:0 2px 4px rgba(0,0,0,.1);
+      box-shadow:0 2px 8px rgba(32,242,155,0.3);
     }
 
     /* hwMode badge pill inside card */
@@ -141,20 +187,20 @@
       margin-top: 4px;
       letter-spacing: 0.5px;
     }
-    .hw-badge-to_full           { background:#1565C0; color:#fff; }
-    .hw-badge-zero_charge_only  { background:#F9A825; color:#333; }
-    .hw-badge-zero_discharge_only { background:#6A1B9A; color:#fff; }
-    .hw-badge-zero              { background:#00838F; color:#fff; }
-    .hw-badge-standby           { background:#e0e0e0; color:#555; }
+    .hw-badge-to_full           { background: var(--purple); color:#fff; }
+    .hw-badge-zero_charge_only  { background: var(--purple-lt); color:#000; }
+    .hw-badge-zero_discharge_only { background: var(--green); color:#000; }
+    .hw-badge-zero              { background: var(--orange); color:#000; }
+    .hw-badge-standby           { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 
     /* ══════════════════════════════════════════════════════════
        15-MINUTE PLANNING STYLES
        ══════════════════════════════════════════════════════════ */
-    
+
     /* Price variation indicator */
     .price-variation {
       font-size: 11px;
-      color: #ff9800;
+      color: var(--orange);
       font-weight: bold;
       margin: 4px 0;
     }
@@ -164,7 +210,7 @@
       bottom: 8px;
       right: 8px;
       font-size: 20px;
-      color: #2196F3;
+      color: var(--purple-lt);
       font-weight: bold;
     }
 
@@ -176,7 +222,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.75);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -188,14 +234,15 @@
     }
 
     .modal-content {
-      background: white;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 12px;
       max-width: 500px;
       width: 100%;
       max-height: 80vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
     }
 
     .modal-header {
@@ -203,7 +250,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px 20px;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid var(--border);
     }
 
     .modal-close {
@@ -214,7 +261,7 @@
       padding: 0;
       width: 32px;
       height: 32px;
-      color: #666;
+      color: var(--muted);
     }
 
     .modal-body {
@@ -229,7 +276,7 @@
       gap: 8px;
       align-items: center;
       padding: 12px 0;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--border);
     }
 
     .interval-detail-row:last-child {
@@ -239,6 +286,7 @@
     .interval-time {
       font-weight: bold;
       font-size: 14px;
+      color: var(--text);
     }
 
     .interval-icon {
@@ -248,17 +296,18 @@
 
     .interval-mode {
       font-size: 13px;
-      color: #666;
+      color: var(--muted);
     }
 
     .interval-price {
       font-weight: 600;
       text-align: right;
+      color: var(--text);
     }
 
     .interval-soc {
       font-size: 12px;
-      color: #999;
+      color: var(--dim);
       text-align: right;
     }
 
@@ -266,21 +315,21 @@
       display: flex;
       justify-content: space-between;
       padding: 16px 20px;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--border);
     }
 
     .modal-footer button {
       padding: 8px 16px;
-      border: 1px solid #2196F3;
-      background: white;
-      color: #2196F3;
+      border: 1px solid var(--purple);
+      background: transparent;
+      color: var(--purple-lt);
       border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
     }
 
     .modal-footer button:disabled {
-      opacity: 0.5;
+      opacity: 0.3;
       cursor: not-allowed;
     }
 
@@ -328,15 +377,15 @@
   <!-- TAB: BASELOAD -->
   <div id="baseload" class="tab-content active">
     <h2>Sluipverbruik grafiek</h2>
-    <div id="baseload-cost" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:15px;margin-bottom:20px;">
-      <div style="font-size:14px;color:#666;margin-bottom:8px;">Huidig sluipverbruik</div>
-      <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#212529;margin-bottom:12px;">Laden...</div>
-      <div id="baseload-cost-details" style="font-size:13px;color:#6c757d;line-height:1.6;">Berekening wordt uitgevoerd...</div>
+    <div id="baseload-cost" style="background:#1a1a1a;border:1px solid #2d2d2d;border-radius:8px;padding:15px;margin-bottom:20px;">
+      <div style="font-size:14px;color:#A0A0A0;margin-bottom:8px;">Huidig sluipverbruik</div>
+      <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#ffffff;margin-bottom:12px;">Laden...</div>
+      <div id="baseload-cost-details" style="font-size:13px;color:#A0A0A0;line-height:1.6;">Berekening wordt uitgevoerd...</div>
     </div>
     <canvas id="baseloadChart" height="150"></canvas>
     <h3>Samples van geselecteerde nacht</h3>
     <select id="nightSelector"></select>
-    <button id="toggleSamplesBtn" style="margin-top:10px;padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Toon samples</button>
+    <button id="toggleSamplesBtn" style="margin-top:10px;">Toon samples</button>
     <div id="sampleContainer" style="display:none;margin-top:15px;">
       <table id="sampleTable">
         <thead><tr><th>Tijd</th><th>Vermogen (W)</th></tr></thead>
@@ -349,7 +398,7 @@
   <div id="fetch" class="tab-content">
     <h2>Device Fetch Debug</h2>
     <pre id="fetch-debug" class="debug-box">Loading…</pre>
-    <button id="clear-fetch-btn" style="margin-top:10px;padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Wis fetch-logs</button>
+    <button id="clear-fetch-btn" style="margin-top:10px;">Wis fetch-logs</button>
   </div>
 
   <!-- TAB: DISCOVERY -->
@@ -361,10 +410,11 @@
   <!-- TAB: WEBSOCKET -->
   <div id="ws" class="tab-content">
     <h2>WebSocket Diagnostics</h2>
-    <p style="color:#666;margin-bottom:12px;font-size:13px;">
+    <p style="color:#A0A0A0;margin-bottom:12px;font-size:13px;">
       Events and stats snapshots are persisted to Homey settings and survive app crashes (CPU/memory kills).
       After a crash, reload this page to see the last state before the kill.
     </p>
+
 
     <h3 style="margin-top:0;">Device Snapshots</h3>
     <div id="ws-snapshots" style="margin-bottom:20px;"></div>
@@ -375,9 +425,9 @@
     <div id="ws-anomalies" style="margin-bottom:12px;"></div>
 
     <div style="margin-top:12px;display:flex;gap:10px;">
-      <button id="ws-refresh-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;">Ververs</button>
-      <button id="ws-copy-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #2196f3;cursor:pointer;color:#2196f3;font-weight:bold;">📋 Copy Diagnostics</button>
-      <button id="ws-clear-btn" style="padding:8px 14px;font-size:13px;border-radius:6px;border:1px solid #ccc;cursor:pointer;color:#c00;">Wis journal</button>
+      <button id="ws-refresh-btn">Ververs</button>
+      <button id="ws-copy-btn" style="border-color:#5f6fff;color:#8b9fff;font-weight:bold;">📋 Copy Diagnostics</button>
+      <button id="ws-clear-btn" style="color:#F87171;border-color:#F87171;">Wis journal</button>
     </div>
 
   </div>
@@ -385,9 +435,9 @@
   <!-- TAB: BATTERY PLANNING -->
   <div id="planning" class="tab-content">
     <h2 id="planning-title"></h2>
-    <p id="planning-subtitle" style="color:#666;margin-bottom:20px;"></p>
-    <div id="planning-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;padding:15px;background:#f8f8f8;border-radius:8px;"></div>
-    <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#f8f8f8;border-radius:8px;"></div>
+    <p id="planning-subtitle" style="color:#A0A0A0;margin-bottom:20px;"></p>
+    <div id="planning-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
+    <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
     <div id="planning-grid"></div>
     <!-- Modal for 15-min detail -->
     <div id="hourDetailModal" class="hour-detail-modal" onclick="closeHourDetail(event)"></div>
@@ -402,8 +452,8 @@
       margin: 15px 0;
       padding: 12px;
       border-radius: 8px;
-      background: #f7f7f7;
-      border: 1px solid #ddd;
+      background: #1a1a1a;
+      border: 1px solid #2d2d2d;
       font-size: 13px;
       line-height: 1.4;
     ">
@@ -422,17 +472,18 @@
     <h3>ML Decision Scores</h3>
     <div id="explain-scores-visual" style="margin-bottom:20px;"></div>
     <details style="margin-bottom:20px;">
-      <summary style="cursor:pointer;color:#666;font-size:12px;">Toon raw scores (debug)</summary>
+      <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Toon raw scores (debug)</summary>
       <pre id="explain-scores" class="debug-box" style="margin-top:10px;"></pre>
     </details>
     <h3>Tijdstip</h3>
-    <div id="explain-timestamp" style="font-size:12px;color:#666;"></div>
+    <div id="explain-timestamp" style="font-size:12px;color:#A0A0A0;"></div>
   </div>
 
   <!-- TAB: LEGACY FETCH -->
   <div id="legacy" class="tab-content">
     <h2>Legacy Fetch debug</h2>
     <pre id="legacyfetch-debug" class="debug-box">Loading…</pre>
+    <button id="legacy-refresh-btn" style="margin-top:10px;">↻ Ververs</button>
   </div>
 
   <script>
@@ -450,6 +501,12 @@
         if (tab.dataset.tab === 'planning' && homeyInstance) {
           homeyInstance.get((e, s) => {
             if (!e) renderBatteryPlanning(s, homeyInstance);
+          });
+        }
+        // Refresh legacy fetch debug when switching to legacy tab
+        if (tab.dataset.tab === 'legacy' && homeyInstance) {
+          homeyInstance.get((e, s) => {
+            if (!e) renderLegacyDebug(s);
           });
         }
       });
@@ -652,7 +709,7 @@
           document.getElementById('baseload-cost-details').innerHTML = `
             <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) =
             <strong>~€${monthlyCost.toFixed(2)}/maand</strong> (€${yearlyCost.toFixed(0)}/jaar)<br>
-            <span style="font-size:12px;color:#999;">Typisch sluipverbruik: 200-300W</span>
+            <span style="font-size:12px;color:#808080;">Typisch sluipverbruik: 200-300W</span>
           `;
         } else {
           document.getElementById('baseload-value').innerText = 'Geen data';
@@ -669,7 +726,7 @@
             labels,
             datasets: [{
               label: 'Watt', data: values,
-              borderColor: 'rgba(0,150,255,1)', backgroundColor: 'rgba(0,150,255,0.2)',
+              borderColor: 'rgba(32,242,155,1)', backgroundColor: 'rgba(32,242,155,0.15)',
               spanGaps: true,
               pointBackgroundColor: invalid.map(v => v ? 'red' : 'green'),
               pointRadius: 5
@@ -780,8 +837,8 @@
 
           const anomalyEl = document.getElementById('ws-anomalies');
           if (anomalies.length > 0) {
-            anomalyEl.innerHTML = `<div style="background:#fff3e0;border:2px solid #ff9800;border-radius:8px;padding:10px 14px;margin-bottom:8px;">
-              <div style="font-weight:bold;margin-bottom:6px;color:#e65100;">⚠ Anomalies Detected</div>
+            anomalyEl.innerHTML = `<div style="background:#1a0e00;border:2px solid #FB923C;border-radius:8px;padding:10px 14px;margin-bottom:8px;">
+              <div style="font-weight:bold;margin-bottom:6px;color:#FB923C;">⚠ Anomalies Detected</div>
               ${anomalies.map(a => `<div style="font-size:12px;margin:2px 0;">${a}</div>`).join('')}
             </div>`;
           } else {
@@ -792,30 +849,30 @@
           const snapEl = document.getElementById('ws-snapshots');
           const devIds = Object.keys(snapshots);
           if (devIds.length === 0) {
-            snapEl.innerHTML = '<div style="color:#999;font-size:13px;">No device snapshots yet.</div>';
+            snapEl.innerHTML = '<div style="color:#808080;font-size:13px;">No device snapshots yet.</div>';
           } else {
             let html = '';
             for (const id of devIds) {
               const snap = snapshots[id];
               const conn = snap.connected ? '🟢 Connected' : '🔴 Disconnected';
               const age = snap.timestamp ? Math.round((Date.now() - snap.timestamp) / 1000) : '?';
-              html += `<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:10px;margin-bottom:8px;">`;
+              html += `<div style="background:#1a1a1a;border:1px solid #2d2d2d;border-radius:6px;padding:10px;margin-bottom:8px;">`;
               html += `<div style="font-weight:bold;font-size:13px;margin-bottom:4px;">${id.slice(0,8)}… — ${conn}</div>`;
-              html += `<div style="font-size:11px;color:#666;">Snapshot: ${snap.ts || 'unknown'} (${age}s ago)</div>`;
+              html += `<div style="font-size:11px;color:#A0A0A0;">Snapshot: ${snap.ts || 'unknown'} (${age}s ago)</div>`;
               if (snap.counters) {
                 const c = snap.counters;
-                html += `<div style="font-size:11px;color:#444;margin-top:4px;">`;
+                html += `<div style="font-size:11px;color:#ffffff;margin-top:4px;">`;
                 html += `msgs: ${c.messagesReceived} | meas: ${c.measurementsProcessed}/${c.measurementsDropped} | `;
                 html += `sys: ${c.systemProcessed}/${c.systemDropped} | bat: ${c.batteriesProcessed}/${c.batteriesDeferred} | `;
                 html += `reconnects: ${c.reconnects}`;
                 html += `</div>`;
               }
               if (snap.reconnectAttempts > 0) {
-                html += `<div style="font-size:11px;color:#c00;margin-top:2px;">⚠ ${snap.reconnectAttempts} reconnect attempts</div>`;
+                html += `<div style="font-size:11px;color:#F87171;margin-top:2px;">⚠ ${snap.reconnectAttempts} reconnect attempts</div>`;
               }
               if (snap.handlerTiming) {
                 const m = snap.handlerTiming.max || {};
-                const warnStyle = (v) => v > 100 ? 'color:#c00;font-weight:bold;' : v > 50 ? 'color:#e65100;' : 'color:#444;';
+                const warnStyle = (v) => v > 100 ? 'color:#F87171;font-weight:bold;' : v > 50 ? 'color:#FB923C;' : 'color:#A0A0A0;';
                 html += `<div style="font-size:11px;margin-top:2px;">`;
                 html += `max timing: <span style="${warnStyle(m.measurement||0)}">meas=${m.measurement||0}ms</span> `;
                 html += `<span style="${warnStyle(m.system||0)}">sys=${m.system||0}ms</span> `;
@@ -842,9 +899,9 @@
             for (const e of journal.slice(-50).reverse()) {
               const color = typeColors[e.type] || '#666';
               const devShort = (e.deviceId || '').slice(0, 8);
-              lines += `<span style="color:#999">${e.ts || '?'}</span> `;
+              lines += `<span style="color:#808080">${e.ts || '?'}</span> `;
               lines += `<span style="color:${color};font-weight:bold">${(e.type || '?').padEnd(16)}</span> `;
-              lines += `<span style="color:#888">[${devShort}]</span> `;
+              lines += `<span style="color:#808080">[${devShort}]</span> `;
               lines += `${e.message || ''}\n`;
             }
             journalEl.innerHTML = lines;
@@ -864,7 +921,7 @@
           Homey.set('debug_ws', []);
           Homey.set('capability_api_mode_changes', { count: 0, last: null });
           document.getElementById('ws-journal').textContent = 'Cleared.';
-          document.getElementById('ws-snapshots').innerHTML = '<div style="color:#999;font-size:13px;">Cleared.</div>';
+          document.getElementById('ws-snapshots').innerHTML = '<div style="color:#808080;font-size:13px;">Cleared.</div>';
           document.getElementById('ws-debug').textContent = '[]';
           document.getElementById('ws-anomalies').innerHTML = '';
         });
@@ -898,7 +955,7 @@
               if (!box) {
                 box = document.createElement('textarea');
                 box.id = 'ws-copy-fallback';
-                box.style.cssText = 'width:100%;height:200px;font-family:monospace;font-size:11px;margin-top:8px;border:2px solid #2196f3;border-radius:6px;padding:8px;';
+                box.style.cssText = 'width:100%;height:200px;font-family:monospace;font-size:11px;margin-top:8px;border:2px solid #5f6fff;border-radius:6px;padding:8px;background:#1a1a1a;color:#ffffff;';
                 box.readOnly = true;
                 document.getElementById('ws-copy-btn').parentElement.appendChild(box);
               }
@@ -1026,8 +1083,8 @@
               `<span class="hw-badge ${modeInfo.badge}" style="font-size:14px;padding:4px 10px">${modeInfo.icon} ${modeInfo.nl}</span>` +
               `<span style="font-size:13px;color:${confColor};font-weight:bold">${conf}% zekerheid</span>` +
             `</div>` +
-            `<div style="font-size:13px;color:#ccc">${data.shortSummary || ''}</div>` +
-            `<div style="font-size:12px;color:#888;margin-top:6px">${data.summary || ''}</div>`;
+            `<div style="font-size:13px;color:#ffffff">${data.shortSummary || ''}</div>` +
+            `<div style="font-size:12px;color:#A0A0A0;margin-top:6px">${data.summary || ''}</div>`;
           const avg = data?.batteryCost?.avgCost ?? null;
           const be = data?.batteryCost?.breakEven ?? null;
           const price = data?.effectivePrice ?? null;
@@ -1080,7 +1137,7 @@
             time:         'Tijdstip',
             confidence:   'Zekerheid'
           };
-          const modeTextColor = { charge: '#4CAF50', discharge: '#FF9800', preserve: '#2196F3' };
+          const modeTextColor = { charge: '#5f6fff', discharge: '#20F29B', preserve: '#FB923C' };
           data.reasons.forEach(r => {
             const li = document.createElement('li');
             const w = weightMap[r.impact] || weightMap.low;
@@ -1106,7 +1163,7 @@
             const maxScore = Math.max(s.charge || 0, s.discharge || 0, s.preserve || 0);
             const winner = maxScore === s.charge ? 'charge' : maxScore === s.discharge ? 'discharge' : 'preserve';
             const labels = { charge: '🔌 Laden', discharge: '⚡ Ontladen', preserve: '🛡️ Beschermen' };
-            const colors = { charge: '#4CAF50', discharge: '#FF9800', preserve: '#2196F3' };
+            const colors = { charge: '#5f6fff', discharge: '#20F29B', preserve: '#FB923C' };
             scoresVisual.innerHTML = ['charge', 'discharge', 'preserve'].map(mode => {
               const score = s[mode] || 0;
               const pct = maxScore > 0 ? (score / maxScore * 100) : 0;
@@ -1115,15 +1172,15 @@
                 <div style="margin-bottom:15px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                     <span style="font-weight:${isW ? 'bold' : 'normal'};font-size:14px;">${labels[mode]}${isW ? ' ✓' : ''}</span>
-                    <span style="font-family:monospace;font-size:13px;color:#666;">${score.toFixed(1)}</span>
+                    <span style="font-family:monospace;font-size:13px;color:#A0A0A0;">${score.toFixed(1)}</span>
                   </div>
-                  <div style="background:#e0e0e0;border-radius:4px;height:24px;overflow:hidden;">
+                  <div style="background:#2d2d2d;border-radius:4px;height:24px;overflow:hidden;">
                     <div style="background:${colors[mode]};width:${pct}%;height:100%;transition:width .3s ease;${isW ? 'box-shadow:0 0 8px rgba(0,0,0,.3);' : ''}"></div>
                   </div>
                 </div>`;
             }).join('');
           } else {
-            scoresVisual.innerHTML = '<p style="color:#999;">Geen scores beschikbaar</p>';
+            scoresVisual.innerHTML = '<p style="color:#808080;">Geen scores beschikbaar</p>';
           }
 
           document.getElementById('explain-scores').textContent = JSON.stringify(data.scores, null, 2);
@@ -1137,8 +1194,28 @@
         Homey.on('explainability_update', data => renderExplainability(data));
 
         /* ── LEGACY FETCH ── */
-        document.getElementById('legacyfetch-debug').textContent =
-          JSON.stringify(settings['debug_legacy_fetch']?.slice(-50) || [], null, 2);
+        function renderLegacyDebug(s) {
+          const raw = s['debug_legacy_fetch'];
+          const entries = raw || [];
+          const box = document.getElementById('legacyfetch-debug');
+          console.log('[LegacyDebug] raw value:', typeof raw, Array.isArray(raw), raw);
+          if (entries.length === 0) {
+            box.textContent = 'Geen fouten geregistreerd.';
+          } else {
+            box.textContent = JSON.stringify(entries.slice(-50), null, 2);
+          }
+        }
+        renderLegacyDebug(settings);
+
+        document.getElementById('legacy-refresh-btn').addEventListener('click', () => {
+          Homey.get((e, s) => { if (!e) renderLegacyDebug(s); });
+        });
+
+        Homey.on('settings.set', changedKey => {
+          if (changedKey === 'debug_legacy_fetch' && document.getElementById('legacy').classList.contains('active')) {
+            Homey.get((e, s) => { if (!e) renderLegacyDebug(s); });
+          }
+        });
 
         /* ── BATTERY PLANNING ── */
         await renderBatteryPlanning(settings, Homey);
@@ -1388,11 +1465,11 @@
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Max Laadprijs' : 'Max Charge Price'}</div>
-          <div class="planning-status-value" style="font-size:18px;color:#4CAF50;">€${maxChgPrice.toFixed(3)}</div>
+          <div class="planning-status-value" style="font-size:18px;color:#8b9fff;">€${maxChgPrice.toFixed(3)}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Min Ontlaadprijs' : 'Min Discharge Price'}</div>
-          <div class="planning-status-value" style="font-size:18px;color:#2196F3;">€${minDchPrice.toFixed(3)}</div>
+          <div class="planning-status-value" style="font-size:18px;color:#20F29B;">€${minDchPrice.toFixed(3)}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Resolutie' : 'Resolution'}</div>
@@ -1409,7 +1486,7 @@
             <div class="planning-legend-icon">${m.icon}</div>
             <div>
               <strong>${lang === 'nl' ? m.nl : m.en}</strong>
-              <div style="font-size:11px;color:#999;font-family:monospace;">${mode}</div>
+              <div style="font-size:11px;color:#808080;font-family:monospace;">${mode}</div>
             </div>
           </div>`;
       }).join('');
@@ -1449,9 +1526,9 @@
           );
 
           if (hasOpportunisticCharge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#FF9800;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#5f6fff;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
           } else if (hasOpportunisticDischarge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#9C27B0;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#20F29B;color:#000;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
           }
         }
 
@@ -1469,7 +1546,7 @@
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
               SoC: ${avgSoc.toFixed(0)}%<br>
-              ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#4CAF50' : avgPrice >= minDchPrice ? '#2196F3' : '#bbb'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
+              ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#8b9fff' : avgPrice >= minDchPrice ? '#20F29B' : '#808080'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
             </div>
             <div class="expand-indicator">+</div>
           </div>`;

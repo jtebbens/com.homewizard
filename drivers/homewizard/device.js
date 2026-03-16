@@ -90,7 +90,6 @@ class HomeWizardDevice extends Homey.Device {
 
     // ⬅️ BELANGRIJK: bind device instance mee als laatste argument
     this.callnewAsyncBound = (...args) => callnewAsync(...args, this);
-    this._lastLegacySync = 0;
 
     
     homewizard.setDeviceInstance(this.getData().id, this);
@@ -200,12 +199,6 @@ class HomeWizardDevice extends Homey.Device {
 
   syncLegacyDebugToSettings() {
   try {
-    const now = Date.now();
-    if (now - (this._lastLegacySync || 0) < 2000) {
-      // max 1 sync per 2 seconden
-      return;
-    }
-    this._lastLegacySync = now;
 
     const devices = homewizard.self?.devices || {};
     const LEGACY_MAX_LOG = 500;
@@ -215,7 +208,6 @@ class HomeWizardDevice extends Homey.Device {
       .flat()
       .filter(entry => entry && typeof entry === 'object')
       .filter(entry => !(entry.type === 'raw_response' && entry.status === 200));
-
 
     const formatted = all.map(entry => {
       const iso = entry.t || entry.ts || new Date().toISOString();
@@ -248,7 +240,9 @@ class HomeWizardDevice extends Homey.Device {
     });
 
     const trimmed = formatted.slice(-LEGACY_MAX_LOG);
-    this.homey.settings.set('debug_legacy_fetch', trimmed);
+    if (trimmed.length > 0) {
+      this.homey.settings.set('debug_legacy_fetch', trimmed);
+    }
 
   } catch (e) {
     this.log('Legacy debug sync failed:', e.message);
@@ -263,6 +257,7 @@ class HomeWizardDevice extends Homey.Device {
     this.refreshIntervalId = setInterval(() => {
       if (debug) { this.log('--Start HomeWizard Polling-- '); }
       this.getStatus(devices);
+      this.syncLegacyDebugToSettings();
     }, 1000 * 20);
   }
 
