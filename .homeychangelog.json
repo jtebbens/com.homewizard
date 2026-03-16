@@ -1129,5 +1129,8 @@
   },
   "3.13.71": {
     "en": "Added PV charge reasons to explainability view"
+  },
+  "3.14.0": {
+    "en": "Battery Policy now uses 15min prices, weather forecast 36h, Radiation-based SoC in planning, improved reason"
   }
 }
