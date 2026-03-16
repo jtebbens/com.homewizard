@@ -528,7 +528,6 @@
     ══════════════════════════════════════════════════════════ */
     function mapToHwMode(policyMode, ctx) {
       const { price, soc, minSoc, maxSoc, hasPV, tariffType, userPolicyMode, maxChargePrice, minDischargePrice, batteryEfficiency } = ctx;
-      if (soc < minSoc) return 'standby';
       const actualPvNow = hasPV;
       const profitableToDischarge = price !== null && price >= minDischargePrice;
 
@@ -1311,11 +1310,13 @@
       parseTop3(settings['policy_debug_top3high'], peakHours);
       parseTop3(settings['policy_debug_top3low'], cheapHoursSet);
 
-      /* ── Sunshine forecast ── */
+      /* ── Sunshine & radiation forecast ── */
       const sunshineMap = {};
+      const radiationMap = {};
       (settings['policy_weather_hourly'] || []).forEach(w => {
-        if (w && typeof w.hour === 'number' && typeof w.sunshine === 'number') {
-          sunshineMap[w.hour] = w.sunshine;
+        if (w && typeof w.hour === 'number') {
+          if (typeof w.sunshine === 'number') sunshineMap[w.hour] = w.sunshine;
+          if (typeof w.radiationWm2 === 'number') radiationMap[w.hour] = w.radiationWm2;
         }
       });
 
@@ -1335,6 +1336,7 @@
       const maxDischW = policyState?.maxDischargePowerW || 800;
       const maxChgW = policyState?.maxChargePowerW || 800;
       const capKwh = policyState?.totalCapacityKwh || 2.8;
+      const pvCapW = deviceSettings['pv_capacity_w'] || 3000;
 
       /* ── Build 15-minute intervals array ── */
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1353,12 +1355,13 @@
             const priceKnown = price !== null;
 
             const hasSun = (sunshineMap[h] > 0.3) || (!Object.keys(sunshineMap).length && h >= 7 && h < 19);
+            const radiationWm2 = radiationMap[h] ?? (hasSun ? 300 : 0);
             const isPast = intervalEnd <= now;
             const isCurrent = !isPast && intervalDate <= now && intervalEnd > now;
 
             intervals.push({
               day, hour: h, minute: m, timestamp: intervalDate,
-              price, priceKnown, hasSun, isCurrent, isPast,
+              price, priceKnown, hasSun, radiationWm2, isCurrent, isPast,
               isPeak: peakHours.has(h), isCheap: cheapHoursSet.has(h),
               soc: 0, hwMode: 'standby', policyMode: 'preserve'
             });
@@ -1403,10 +1406,14 @@
             let delta = 0;
             // ✅ 15-minute delta (¼ of hourly)
             if (prev.hwMode === 'to_full') delta = +(maxChgW / 1000 / capKwh) * 100 * 0.25;
-            else if (prev.hwMode === 'zero_charge_only') delta = +(maxChgW * 0.5 / 1000 / capKwh) * 100 * 0.25;
+            else if (prev.hwMode === 'zero_charge_only') {
+              // PV output = pvCapacity × (radiation/1000), capped at maxChgW
+              const pvOutputW = Math.min(pvCapW * (prev.radiationWm2 ?? 300) / 1000, maxChgW);
+              delta = +(pvOutputW / 1000 / capKwh) * 100 * 0.25;
+            }
             else if (prev.hwMode === 'zero_discharge_only') delta = -(maxDischW / 1000 / capKwh) * 100 * 0.25;
             else if (prev.hwMode === 'zero') delta = -(maxDischW * 0.5 / 1000 / capKwh) * 100 * 0.25;
-            interval.soc = Math.max(minSoc, Math.min(100, prev.soc + delta));
+            interval.soc = Math.min(100, Math.max(0, prev.soc + delta));
           }
 
           if (interval.isCurrent && policyState?.currentMode) {
