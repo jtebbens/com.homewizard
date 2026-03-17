@@ -14,6 +14,7 @@
   "capabilities": [
     "identify",
     "dim",
+    "led_brightness_pct",
     "meter_power.import",
     "meter_power.export",
     "measure_battery",
@@ -35,6 +36,12 @@
     "meterPowerExportedCapability": "meter_power.export"
   },
   "capabilitiesOptions": {
+    "dim": {
+      "title": {
+        "en": "LED Brightness",
+        "nl": "LED Helderheid"
+      }
+    },
     "measure_power": {
       "title": {
         "en": "Current usage",
