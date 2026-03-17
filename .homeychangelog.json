@@ -1132,5 +1132,8 @@
   },
   "3.14.0": {
     "en": "Battery Policy now uses 15min prices, weather forecast 36h, Radiation-based SoC in planning, improved reason"
+  },
+  "3.14.1": {
+    "en": "Sun radiation fixes, cloud coverage. Dim led workaround percentage"
   }
 }

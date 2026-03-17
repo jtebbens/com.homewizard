@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.14.0",
+  "version": "3.14.1",
   "platforms": [
     "local"
   ],
@@ -5437,6 +5437,7 @@
       "capabilities": [
         "identify",
         "dim",
+        "led_brightness_pct",
         "meter_power.import",
         "meter_power.export",
         "measure_battery",
@@ -5458,6 +5459,12 @@
         "meterPowerExportedCapability": "meter_power.export"
       },
       "capabilitiesOptions": {
+        "dim": {
+          "title": {
+            "en": "LED Brightness",
+            "nl": "LED Helderheid"
+          }
+        },
         "measure_power": {
           "title": {
             "en": "Current usage",
@@ -6352,6 +6359,24 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "assets/icon.svg"
+    },
+    "led_brightness_pct": {
+      "type": "number",
+      "title": {
+        "en": "LED Brightness",
+        "nl": "LED Helderheid"
+      },
+      "getable": true,
+      "setable": true,
+      "uiComponent": "sensor",
+      "insights": false,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "units": {
+        "en": "%",
+        "nl": "%"
+      }
     },
     "long_power_fail_count": {
       "type": "number",
