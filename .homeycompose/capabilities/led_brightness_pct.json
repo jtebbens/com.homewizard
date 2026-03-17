@@ -1,0 +1,18 @@
+{
+  "type": "number",
+  "title": {
+    "en": "LED Brightness",
+    "nl": "LED Helderheid"
+  },
+  "getable": true,
+  "setable": true,
+  "uiComponent": "sensor",
+  "insights": false,
+  "min": 0,
+  "max": 100,
+  "step": 1,
+  "units": {
+    "en": "%",
+    "nl": "%"
+  }
+}

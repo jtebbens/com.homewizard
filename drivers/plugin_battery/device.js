@@ -154,6 +154,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.removeCapability('battery_soc').catch(this.error);
     }
 
+    if (this.hasCapability('dim')) {
+      this.removeCapability('dim').catch(this.error);
+    }
+
+
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 
@@ -696,14 +701,14 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   // LED brightness → Homey dim (0–1)
   // ---------------------------------------------------------
   if (typeof data.status_led_brightness_pct === 'number') {
-    const apiValue = data.status_led_brightness_pct; // 0–100
-    const dimValue = apiValue / 100;                 // 0–1
-
     if (!this._dimLastUpdate || now - this._dimLastUpdate > 5000) {
-      const cur = this.getCapabilityValue('dim');
+      const dimValue = data.status_led_brightness_pct / 100; // 0–100 → 0–1
 
-      if (cur !== dimValue) {
+      if (this.getCapabilityValue('dim') !== dimValue) {
         updateCapability(this, 'dim', dimValue);
+      }
+      if (this.getCapabilityValue('led_brightness_pct') !== data.status_led_brightness_pct) {
+        updateCapability(this, 'led_brightness_pct', data.status_led_brightness_pct);
       }
 
       this._dimLastUpdate = now;
@@ -721,6 +726,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     const caps = [
       'identify',
       'dim',
+      'led_brightness_pct',
       'meter_power.import',
       'meter_power.export',
       'measure_power',
@@ -988,7 +994,7 @@ async _registerCapabilityListeners() {
 
   // LED BRIGHTNESS
   this.registerCapabilityListener('dim', async (value) => {
-    // value is 0–1 → API wil 0–100
+    // value is 0–1 → API wants 0–100
     const brightness = Math.round(value * 100);
 
     try {

@@ -19,15 +19,14 @@ class BatteryPolicyDevice extends Homey.Device {
     this.log('BatteryPolicyDevice initialized');
 
     // Components
-    this.weatherForecaster = new WeatherForecaster(this.homey);
+    this.learningEngine = new LearningEngine(this.homey, this);
+    await this.learningEngine.initialize();
+
+    this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = new ExplainabilityEngine(this.homey);
-    this.learningEngine = new LearningEngine(this.homey, this);
     this.chartGenerator = new BatteryChartGenerator(this.homey);
-    
-    // Initialize learning engine
-    await this.learningEngine.initialize();
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
     this.optimizationEngine = new OptimizationEngine(this.getSettings());
 
@@ -302,7 +301,8 @@ if (debug) this.log(
         if (debug) this.log(`[Efficiency] About to update with grid=${gridPower}W, batt=${batteryPower}W, soc=${soc}`);
         this.efficiencyEstimator.update(
           { gridPower, batteryPower },
-          { battery_power: batteryPower, stateOfCharge: soc }
+          { battery_power: batteryPower, stateOfCharge: soc },
+          this.getCapabilityValue('active_mode') || null
         );
 
         // Add this logging every 5 minutes:
@@ -317,6 +317,20 @@ if (debug) this.log(
               `[RTE] learning: charged=${chargedWh}Wh / 1000Wh, discharged=${dischargedWh}Wh / 1000Wh, ` +
               `current RTE=${( s.efficiency * 100).toFixed(1)}%`
             );
+          }
+
+          // Log RTE insights every 4h (every 960th call at 15s interval)
+          if (this._effLogCounter % 960 === 0) {
+            const insights = this.efficiencyEstimator.getEfficiencyInsights();
+            if (insights) {
+              const pw = insights.rteByPower;
+              const m = insights.rteByMode;
+              this.log(
+                `[RTE] Insights (${insights.cycleCount} cycli) per modus: ` +
+                Object.entries(m).map(([k, v]) => `${k}=${v.rte}% (${v.n}x)`).join(', ')
+              );
+              this.log(`[RTE] Advies: ${insights.recommendation}`);
+            }
           }
         }
 
@@ -1032,7 +1046,11 @@ if (debug) this.log(
 
     // Learning statistics
     const learningStats = this.learningEngine.getStatistics();
-    const debugLearningText = `days=${learningStats.days_tracking} samples=${learningStats.total_samples} coverage=${learningStats.pattern_coverage}% pv_acc=${learningStats.pv_accuracy}% @${now}`;
+    const rteInsights = this.efficiencyEstimator.getEfficiencyInsights();
+    const rteModeSummary = rteInsights
+      ? Object.entries(rteInsights.rteByMode).map(([k, v]) => `${k}=${v.rte}%(${v.n}x)`).join(' ')
+      : `rte=${(this.efficiencyEstimator.getEfficiency() * 100).toFixed(1)}% (<5 cycli)`;
+    const debugLearningText = `days=${learningStats.days_tracking} samples=${learningStats.total_samples} coverage=${learningStats.pattern_coverage}% pv_acc=${learningStats.pv_accuracy}% | rte: ${rteModeSummary} @${now}`;
 
     await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
