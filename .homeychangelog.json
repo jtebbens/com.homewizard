@@ -1141,5 +1141,8 @@
   },
   "3.14.3": {
     "en": "Azitmuth and angle added for better PV graph plotting"
+  },
+  "3.14.4": {
+    "en": "Expected kW per hour added in planning"
   }
 }
