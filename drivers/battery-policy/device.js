@@ -587,7 +587,11 @@ if (debug) this.log(
 
       const { latitude, longitude } = loc;
 
-      this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude);
+      const devSettings = this.getSettings();
+      const pvTilt = devSettings.pv_estimation_enabled && typeof devSettings.pv_tilt === 'number' ? devSettings.pv_tilt : null;
+      const pvAzimuth = devSettings.pv_estimation_enabled && typeof devSettings.pv_azimuth === 'number' ? devSettings.pv_azimuth : null;
+
+      this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude, pvTilt, pvAzimuth);
 
       const sunScore = this.weatherForecaster.calculateSunScore(this.weatherData);
 
@@ -1406,7 +1410,7 @@ if (debug) this.log(
     }
 
     // Weather update
-    if (changedKeys.includes('weather_location')) {
+    if (changedKeys.some(k => ['weather_location', 'pv_tilt', 'pv_azimuth'].includes(k))) {
       this.weatherForecaster.invalidateCache();
       this.homey.setTimeout(() => {
         this._updateWeather().catch(err => this.error(err));
