@@ -188,12 +188,12 @@
         "type": "number",
         "label": { "en": "Battery Efficiency (RTE)", "nl": "Batterij efficiëntie (RTE)" },
         "hint": {
-          "en": "Round-trip efficiency: the percentage of energy you get back from what you put in. Typical values: 0.70-0.85 (70-85%). This is used for break-even calculations and profit margins. The system will also learn actual efficiency from real charge/discharge cycles.",
-          "nl": "Round-trip efficiëntie: het percentage energie dat je terugkrijgt van wat je erin stopt. Typische waarden: 0,70-0,85 (70-85%). Dit wordt gebruikt voor break-even berekeningen en winstmarges. Het systeem leert ook de werkelijke efficiëntie van echte laad/ontlaad cycli."
+          "en": "Round-trip efficiency: the percentage of energy you get back from what you put in. The system learns the actual efficiency from real charge/discharge cycles and will override this value automatically. Typical measured values for HomeWizard: 0.72-0.82 (72-82%).",
+          "nl": "Round-trip efficiëntie: het percentage energie dat je terugkrijgt van wat je erin stopt. Het systeem leert de werkelijke efficiëntie van echte laad/ontlaad cycli en overschrijft deze waarde automatisch. Typische gemeten waarden voor HomeWizard: 0,72-0,82 (72-82%)."
         },
-        "value": 0.75,
+        "value": 0.78,
         "min": 0.50,
-        "max": 0.95,
+        "max": 0.97,
         "step": 0.01,
         "units": "RTE",
         "visible": { "when": "tariff_type", "is": "dynamic" }
@@ -293,6 +293,36 @@
         "min": 0,
         "max": 20000,
         "step": 100,
+        "visible": { "when": "pv_estimation_enabled", "is": true }
+      },
+      {
+        "id": "pv_tilt",
+        "type": "number",
+        "label": { "en": "Panel Tilt (°)", "nl": "Paneel helling (°)" },
+        "hint": {
+          "en": "Roof/panel tilt angle in degrees. 0° = flat (horizontal), 90° = vertical. Typical roof: 30–40°.",
+          "nl": "Helling van het dak/paneel in graden. 0° = plat (horizontaal), 90° = verticaal. Typisch dak: 30–40°."
+        },
+        "units": "°",
+        "value": 35,
+        "min": 0,
+        "max": 90,
+        "step": 5,
+        "visible": { "when": "pv_estimation_enabled", "is": true }
+      },
+      {
+        "id": "pv_azimuth",
+        "type": "number",
+        "label": { "en": "Panel Azimuth (°)", "nl": "Paneel azimuth (°)" },
+        "hint": {
+          "en": "Panel facing direction: -90° = East, 0° = South, 90° = West. E.g. southwest = 45°.",
+          "nl": "Richting panelen: -90° = Oost, 0° = Zuid, 90° = West. Bijv. zuidwest = 45°."
+        },
+        "units": "°",
+        "value": 0,
+        "min": -90,
+        "max": 90,
+        "step": 5,
         "visible": { "when": "pv_estimation_enabled", "is": true }
       }
     ]
