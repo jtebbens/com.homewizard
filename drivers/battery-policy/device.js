@@ -62,6 +62,22 @@ class BatteryPolicyDevice extends Homey.Device {
       this._schedulePriceRefresh();
     }
 
+    // Push device settings immediately so planning page has correct values after restart
+    // (normally pushed on every _runPolicyCheck, but that runs with a delay)
+    const s = this.getSettings();
+    this.homey.settings.set('device_settings', {
+      max_charge_price:    s.max_charge_price    || 0.19,
+      min_discharge_price: s.min_discharge_price || 0.22,
+      min_soc:             s.min_soc             || 10,
+      max_soc:             s.max_soc             || 95,
+      battery_efficiency:  s.battery_efficiency  || 0.78,
+      min_profit_margin:   s.min_profit_margin   || 0.01,
+      tariff_type:         s.tariff_type         || 'dynamic',
+      policy_interval:     s.policy_interval     || 15,
+      pv_capacity_w:       s.pv_capacity_w       || 0,
+      pv_estimation_enabled: s.pv_estimation_enabled || false,
+    });
+
     this.log('BatteryPolicyDevice ready');
   }
 
@@ -83,7 +99,7 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_debug_learning: '-',
       battery_soc_mirror: 50,
       grid_power_mirror: 0,
-      battery_rte: 0.75,
+      battery_rte: 0.78,
       last_update: new Date().toISOString(),
       active_mode: 'unknown',
       override_until: null,
@@ -706,10 +722,12 @@ if (debug) this.log(
         min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
         min_soc:             this.getSetting('min_soc')             || 10,
         max_soc:             this.getSetting('max_soc')             || 95,
-        battery_efficiency:  this.getSetting('battery_efficiency')  || 0.75,
+        battery_efficiency:  this.getSetting('battery_efficiency') || 0.78,
         min_profit_margin:   this.getSetting('min_profit_margin')   || 0.01,
         tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
         policy_interval:     this.getSetting('policy_interval')     || 15,
+        pv_capacity_w:       this.getSetting('pv_capacity_w')       || 0,
+        pv_estimation_enabled: this.getSetting('pv_estimation_enabled') || false,
       });
       // debug_top3 writes moved to _gatherInputs (single write)
 
@@ -717,11 +735,11 @@ if (debug) this.log(
       // Use learned efficiency with safety bounds (learned can be from old data)
       let currentRte = this.efficiencyEstimator.getEfficiency();
       
-      // Safety: Cap at realistic range (modern batteries: 70-85%, older: 50-70%)
+      // Safety: Cap at realistic range for LFP batteries (AC-AC typically 70-97%)
       // If learned value is unrealistic, fall back to configured value
-      const configuredRte = this.getSetting('battery_efficiency') || 0.75;
-      if (currentRte < 0.50 || currentRte > 0.85) {
-        this.log(`⚠️ Learned RTE ${(currentRte * 100).toFixed(1)}% outside realistic range, using configured ${(configuredRte * 100).toFixed(1)}%`);
+      const configuredRte = this.getSetting('battery_efficiency') || 0.78;
+      if (currentRte < 0.50 || currentRte > 0.97) {
+        this.log(`⚠️ Learned RTE ${(currentRte * 100).toFixed(1)}% outside realistic range for LFP, using configured ${(configuredRte * 100).toFixed(1)}%`);
         currentRte = configuredRte;
         // Reset the estimator to configured value
         this.efficiencyEstimator.reset(configuredRte);
@@ -888,7 +906,7 @@ if (debug) this.log(
 
     // Learned round-trip efficiency from efficiencyEstimator
     let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
-    if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.85)) learnedRte = null;
+    if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.97)) learnedRte = null;
 
     // 24h consumption forecast from learning engine
     let consumptionWPerSlot = null;
@@ -1065,14 +1083,22 @@ if (debug) this.log(
     // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
     // — no need to duplicate here
     
-    // Push weather forecast with hourly sunshine data for PV prediction (only if changed)
-    if (weatherData?.hourlyForecast && Array.isArray(weatherData.hourlyForecast)) {
-      const hourlyWeather = weatherData.hourlyForecast.map(h => ({
-        hour: parseInt(new Date(h.time).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
-        sunshine: h.sunshine,
-        cloudCover: h.cloudCover,
-        radiationWm2: h.radiationWm2
-      }));
+    // Push weather forecast with hourly radiation data for PV visualization.
+    // Prefer dailyProfiles (full 24h including past hours) over hourlyForecast (future only).
+    const weatherSource = weatherData?.dailyProfiles ?? weatherData?.hourlyForecast;
+    if (weatherSource && Array.isArray(weatherSource)) {
+      const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const hourlyWeather = weatherSource.map(h => {
+        const t = new Date(h.time);
+        const hAmsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        return {
+          hour: parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
+          day: hAmsDate > nowAmsDate ? 1 : 0,
+          sunshine: h.sunshine,
+          cloudCover: h.cloudCover,
+          radiationWm2: h.radiationWm2
+        };
+      });
       this.homey.settings.set('policy_weather_hourly', hourlyWeather);
     }
 
@@ -1100,7 +1126,7 @@ if (debug) this.log(
     const batteryAvgCost = this._costAvg ?? (await this.getStoreValue('battery_avg_cost') || 0);
     const batteryEnergyKwh = this._costEnergy ?? (await this.getStoreValue('battery_energy_kwh') || 0);
 
-    const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.75, 0.5), 1.0);
+    const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.78, 0.5), 1.0);
 
     // Break-even prijs (€/kWh)
     const breakEven = batteryAvgCost > 0
@@ -1360,6 +1386,20 @@ if (debug) this.log(
     this.tariffManager.updateSettings(newSettings);
     this.optimizationEngine.updateSettings(newSettings);
 
+    // Push updated settings immediately so planning page reflects the change
+    this.homey.settings.set('device_settings', {
+      max_charge_price:    newSettings.max_charge_price    || 0.19,
+      min_discharge_price: newSettings.min_discharge_price || 0.22,
+      min_soc:             newSettings.min_soc             || 10,
+      max_soc:             newSettings.max_soc             || 95,
+      battery_efficiency:  newSettings.battery_efficiency  || 0.78,
+      min_profit_margin:   newSettings.min_profit_margin   || 0.01,
+      tariff_type:         newSettings.tariff_type         || 'dynamic',
+      policy_interval:     newSettings.policy_interval     || 15,
+      pv_capacity_w:       newSettings.pv_capacity_w       || 0,
+      pv_estimation_enabled: newSettings.pv_estimation_enabled || false,
+    });
+
     // Handle interval change
     if (changedKeys.includes('policy_interval')) {
       this._schedulePolicyCheck();
@@ -1416,12 +1456,14 @@ if (debug) this.log(
         min_discharge_price: newSettings.min_discharge_price || 0.22,
         min_soc:             newSettings.min_soc             || 10,
         max_soc:             newSettings.max_soc             || 95,
-        battery_efficiency:  newSettings.battery_efficiency  || 0.75,
+        battery_efficiency:  newSettings.battery_efficiency || 0.78,
         min_profit_margin:   newSettings.min_profit_margin   || 0.01,
         tariff_type:         newSettings.tariff_type         || 'dynamic',
         policy_interval:     newSettings.policy_interval     || 15,
+        pv_capacity_w:       newSettings.pv_capacity_w       || 0,
+        pv_estimation_enabled: newSettings.pv_estimation_enabled || false,
       });
-      
+
       // Then run policy with new settings
       this.homey.setTimeout(() => {
         this._runPolicyCheck().catch(err => this.error(err));

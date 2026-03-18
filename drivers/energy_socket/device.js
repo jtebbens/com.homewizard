@@ -91,17 +91,20 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
       keepAlive: true,
-      keepAliveMsecs: 35000, // ✅ CPU FIX: Longer than poll interval (30s) to reuse TCP connections
+      keepAliveMsecs: 10000, // Longer than minimum poll interval (5s) to reuse TCP connections
     });
 
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
 
-    // ✅ CPU FIX: Minimum 30s interval — 9 devices × HTTP polls = high steady-state CPU
-    const interval = Math.max(this.getSetting('offset_polling') || 30, 30);
-    // ✅ CPU FIX: Stagger startup over 30s (not just 0-interval) to prevent thundering herd
-    // 9 energy_socket devices + 3 plugin_battery = 12 connections at startup
-    const offset = 5000 + Math.floor(Math.random() * 30000); // 5-35s startup spread
+    // Minimum 5s interval — balances real-time use cases (solar control) against CPU load.
+    // Note: users with many energy_socket devices should use ≥15s to avoid high CPU.
+    const interval = Math.max(this.getSetting('offset_polling') || 10, 2);
+    if (interval < 8) {
+      this.log(`⚠️ Fast polling (${interval}s) — acceptable for 1-2 devices; use ≥10s if you have many energy sockets`);
+    }
+    // Stagger startup to prevent thundering herd on multi-device setups
+    const offset = 1000 + Math.floor(Math.random() * 9000); // 1-10s startup spread
 
     this.log(`⏱️ Polling enabled at init, interval ${interval}s, startup delay ${Math.round(offset/1000)}s`);
 
@@ -531,7 +534,7 @@ _flushDebugLogs() {
 
         const interval = Number(newSettings.offset_polling);
         // ✅ CPU FIX: Increased min interval from 2s to 5s (9 devices = high load)
-        if (interval >= 5) {
+        if (interval >= 2) {
           this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
         }
       }

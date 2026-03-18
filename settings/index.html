@@ -177,6 +177,15 @@
       box-shadow:0 2px 8px rgba(32,242,155,0.3);
     }
 
+    .pv-curve-row {
+      grid-column: 1 / -1;
+      background: rgba(20,20,20,0.6);
+      border-radius: 8px;
+      padding: 6px 6px 2px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(255,215,0,0.15);
+    }
+
     /* hwMode badge pill inside card */
     .hw-badge {
       display: inline-block;
@@ -527,8 +536,9 @@
        mapToHwMode - EXACT MIRROR OF PolicyEngine
     ══════════════════════════════════════════════════════════ */
     function mapToHwMode(policyMode, ctx) {
-      const { price, soc, minSoc, maxSoc, hasPV, tariffType, userPolicyMode, maxChargePrice, minDischargePrice, batteryEfficiency } = ctx;
+      const { price, soc, minSoc, maxSoc, hasPV, pvEstimateW, tariffType, userPolicyMode, maxChargePrice, minDischargePrice, batteryEfficiency } = ctx;
       const actualPvNow = hasPV;
+      const pvStrong = hasPV && (pvEstimateW ?? 0) >= 400; // mirrors backend: ≥400W = strong PV
       const profitableToDischarge = price !== null && price >= minDischargePrice;
 
       if (userPolicyMode === 'zero') {
@@ -540,8 +550,9 @@
       if (userPolicyMode === 'balanced' && tariffType === 'dynamic') {
         if (policyMode === 'discharge') return profitableToDischarge ? 'zero_discharge_only' : 'standby';
         if (policyMode === 'charge') {
-          // Price wins: cheap grid charging always takes priority over PV-only mode.
-          // zero_charge_only only applies when price is above ceiling.
+          // Strong PV: harvest solar surplus, skip grid import even when price is cheap.
+          if (pvStrong) return 'zero_charge_only';
+          // Weak/no PV: use price-based decision.
           if (price !== null && price <= maxChargePrice) return 'to_full';
           if (actualPvNow) return 'zero_charge_only';
           return 'standby';
@@ -594,6 +605,109 @@
       if (scores.charge > scores.preserve && scores.charge > scores.discharge) winner = 'charge';
       if (scores.discharge > scores.preserve && scores.discharge > scores.charge) winner = 'discharge';
       return winner;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       PV CURVE HELPER
+    ══════════════════════════════════════════════════════════ */
+    function renderPvCurve(day, radiationMap, pvCapW) {
+      const W = 480, H = 220;
+      const pad = { l: 40, r: 12, t: 16, b: 28 };
+      const iW = W - pad.l - pad.r;
+      const iH = H - pad.t - pad.b;
+
+      const PR = 0.85; // Performance Ratio: accounts for temperature, inverter & wiring losses
+      const pvWatts = Array.from({length: 24}, (_, h) =>
+        Math.round(Math.min(1.0, (radiationMap[h] ?? 0) / 1000) * pvCapW * PR)
+      );
+
+      const peakW = Math.max(...pvWatts);
+      if (peakW < 50) return '';
+
+      // Round maxY up to a nice grid step
+      const gridStep = pvCapW <= 2000 ? 500 : pvCapW <= 5000 ? 1000 : 2000;
+      const maxY = Math.ceil(peakW / gridStep) * gridStep;
+      const peakH = pvWatts.indexOf(peakW);
+
+      const toX = h => pad.l + (h / 23) * iW;
+      const toY = w => pad.t + iH - (w / maxY) * iH;
+
+      const pts = pvWatts.map((w, h) => [toX(h), toY(w)]);
+
+      // Smooth cubic bezier (Catmull-Rom → Bezier)
+      const smoothCurve = (points) => {
+        let d = `M ${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+        for (let i = 1; i < points.length; i++) {
+          const p0 = points[i - 2] || points[0];
+          const p1 = points[i - 1];
+          const p2 = points[i];
+          const p3 = points[i + 1] || p2;
+          const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+          const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+          const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+          const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+          d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+        }
+        return d;
+      };
+
+      const baseline = toY(0).toFixed(1);
+      const curvePath = smoothCurve(pts);
+      const fillPath = `${curvePath} L ${pts[23][0].toFixed(1)},${baseline} L ${pts[0][0].toFixed(1)},${baseline} Z`;
+
+      // Horizontal grid lines at each gridStep
+      const gridLines = [];
+      const yAxisLabels = [];
+      for (let w = 0; w <= maxY; w += gridStep) {
+        const y = toY(w).toFixed(1);
+        gridLines.push(`<line x1="${pad.l}" y1="${y}" x2="${(pad.l + iW).toFixed(1)}" y2="${y}" stroke="#333" stroke-width="1"/>`);
+        const label = w >= 1000 ? `${(w/1000).toFixed(w % 1000 === 0 ? 0 : 1)}k` : `${w}`;
+        yAxisLabels.push(`<text x="${(pad.l - 5).toFixed(1)}" y="${(parseFloat(y) + 3).toFixed(1)}" text-anchor="end" fill="#888" font-size="11">${label}</text>`);
+      }
+
+      const peakX = pts[peakH][0];
+      const peakY = pts[peakH][1];
+      const peakKw = (peakW / 1000).toFixed(2);
+      const labelX = Math.min(peakX + 6, W - 44);
+      const labelY = Math.max(peakY - 6, pad.t + 11);
+
+      const axisHours = [0, 4, 8, 12, 16, 20, 23];
+      const hourLabels = axisHours.map(h => {
+        const x = toX(h).toFixed(1);
+        return `<text x="${x}" y="${H - 6}" text-anchor="middle" fill="#777" font-size="10">${h}:00</text>`;
+      }).join('');
+
+      const gradId = `pvGrad${day}`;
+      const clipId = `pvClip${day}`;
+
+      return `<div class="pv-curve-row">
+        <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block;">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FFD700" stop-opacity="0.55"/>
+              <stop offset="100%" stop-color="#FFD700" stop-opacity="0.04"/>
+            </linearGradient>
+            <clipPath id="${clipId}">
+              <rect x="${pad.l}" y="${pad.t}" width="${iW}" height="${iH}"/>
+            </clipPath>
+          </defs>
+          ${gridLines.join('')}
+          ${yAxisLabels.join('')}
+          ${(() => {
+            if (day !== 0) return '';
+            const d = new Date();
+            const amsH = parseInt(d.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false }));
+            const nowH = amsH + d.getMinutes() / 60;
+            const nx = (pad.l + (nowH / 23) * iW).toFixed(1);
+            return `<line x1="${nx}" y1="${pad.t}" x2="${nx}" y2="${pad.t + iH}" stroke="#fff" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>`;
+          })()}
+          <path d="${fillPath}" fill="url(#${gradId})" clip-path="url(#${clipId})"/>
+          <path d="${curvePath}" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${clipId})"/>
+          <circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="5" fill="#FFD700"/>
+          <text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" fill="#FFD700" font-size="13" font-weight="bold">${peakKw} kW</text>
+          ${hourLabels}
+        </svg>
+      </div>`;
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -1310,13 +1424,22 @@
       parseTop3(settings['policy_debug_top3high'], peakHours);
       parseTop3(settings['policy_debug_top3low'], cheapHoursSet);
 
-      /* ── Sunshine & radiation forecast ── */
-      const sunshineMap = {};
-      const radiationMap = {};
+      /* ── Sunshine & radiation forecast (per day) ── */
+      const sunshineMap = {};    // legacy fallback (day-agnostic)
+      const radiationMap = {};   // legacy fallback
+      const sunshineByDay = [{}, {}];
+      const radiationByDay = [{}, {}];
       (settings['policy_weather_hourly'] || []).forEach(w => {
         if (w && typeof w.hour === 'number') {
-          if (typeof w.sunshine === 'number') sunshineMap[w.hour] = w.sunshine;
-          if (typeof w.radiationWm2 === 'number') radiationMap[w.hour] = w.radiationWm2;
+          const d = (w.day === 1) ? 1 : 0;
+          if (typeof w.sunshine === 'number') {
+            sunshineMap[w.hour] = w.sunshine;
+            sunshineByDay[d][w.hour] = w.sunshine;
+          }
+          if (typeof w.radiationWm2 === 'number') {
+            radiationMap[w.hour] = w.radiationWm2;
+            radiationByDay[d][w.hour] = w.radiationWm2;
+          }
         }
       });
 
@@ -1332,11 +1455,22 @@
 
       const maxFuturePrice = priceValues.length ? Math.max(...priceValues) : null;
 
+      /* ── Effective dynamic max charge price (mirrors backend _getDynamicChargePrice) ── */
+      const allPricesFlat = use15Min ? allPrices15min : allPricesHourly;
+      const futureDynPrices = allPricesFlat
+        .filter(p => p && typeof p.price === 'number' && p.price > 0 && new Date(p.timestamp || p.time) > new Date())
+        .map(p => p.price);
+      const maxFutureDynPrice = futureDynPrices.length ? Math.max(...futureDynPrices) : null;
+      const dynamicChgThreshold = maxFutureDynPrice ? (maxFutureDynPrice * battEff) - minProfit : maxChgPrice;
+      const maxByDischarge = (minDchPrice * battEff) - minProfit;
+      const effectiveChgPrice = Math.max(maxChgPrice, Math.min(dynamicChgThreshold, maxByDischarge));
+
       /* ── Battery power limits ── */
       const maxDischW = policyState?.maxDischargePowerW || 800;
       const maxChgW = policyState?.maxChargePowerW || 800;
       const capKwh = policyState?.totalCapacityKwh || 2.8;
       const pvCapW = deviceSettings['pv_capacity_w'] || 3000;
+      const pvEnabled = !!(deviceSettings['pv_estimation_enabled']) && pvCapW > 0;
 
       /* ── Build 15-minute intervals array ── */
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1354,8 +1488,10 @@
             const price = priceMap[localKey] !== undefined ? priceMap[localKey] : null;
             const priceKnown = price !== null;
 
-            const hasSun = (sunshineMap[h] > 0.3) || (!Object.keys(sunshineMap).length && h >= 7 && h < 19);
-            const radiationWm2 = radiationMap[h] ?? (hasSun ? 300 : 0);
+            const sMap = sunshineByDay[day];
+            const rMap = radiationByDay[day];
+            const hasSun = ((sMap[h] ?? sunshineMap[h] ?? -1) > 0.3) || (!Object.keys(sunshineMap).length && h >= 7 && h < 19);
+            const radiationWm2 = rMap[h] ?? radiationMap[h] ?? (hasSun ? 300 : 0);
             const isPast = intervalEnd <= now;
             const isCurrent = !isPast && intervalDate <= now && intervalEnd > now;
 
@@ -1425,15 +1561,16 @@
           const scoreCtx = {
             price: interval.price, isPeak: interval.isPeak, isCheap: interval.isCheap,
             hasSun: interval.hasSun, soc: interval.soc,
-            maxChargePrice: maxChgPrice, minDischargePrice: minDchPrice,
+            maxChargePrice: effectiveChgPrice, minDischargePrice: minDchPrice,
             batteryEfficiency: battEff, minProfitMargin: minProfit,
             futureExpensiveAvgPrice, maxFuturePrice, maxSoc, minSoc
           };
 
           const mapCtx = {
             price: interval.price, soc: interval.soc, minSoc, maxSoc,
-            hasPV: interval.hasSun, tariffType, userPolicyMode,
-            maxChargePrice: maxChgPrice, minDischargePrice: minDchPrice,
+            hasPV: interval.hasSun, pvEstimateW: Math.round(pvCapW * ((interval.radiationWm2 ?? 0) / 1000)),
+            tariffType, userPolicyMode,
+            maxChargePrice: effectiveChgPrice, minDischargePrice: minDchPrice,
             batteryEfficiency: battEff, minProfitMargin: minProfit,
             futureExpensiveAvgPrice, maxFuturePrice, isCheap: interval.isCheap
           };
@@ -1472,7 +1609,7 @@
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Max Laadprijs' : 'Max Charge Price'}</div>
-          <div class="planning-status-value" style="font-size:18px;color:#8b9fff;">€${maxChgPrice.toFixed(3)}</div>
+          <div class="planning-status-value" style="font-size:18px;color:#8b9fff;">€${maxChgPrice.toFixed(3)}${effectiveChgPrice > maxChgPrice + 0.005 ? `<span style="font-size:12px;color:#aaa;"> / €${effectiveChgPrice.toFixed(3)} dyn</span>` : ''}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Min Ontlaadprijs' : 'Min Discharge Price'}</div>
@@ -1514,7 +1651,29 @@
           )[d.getDay()];
           const dateStr = d.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
           const label = day === 0 ? (lang === 'nl' ? 'Vandaag' : 'Today') : (lang === 'nl' ? 'Morgen' : 'Tomorrow');
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}</div>`;
+
+          // Cycle detection: count charge↔discharge transitions for this day
+          const dayHours = hourlyGroups.filter(g => g.day === day && !g.intervals.every(i => i.isPast));
+          let cycleTransitions = 0, prevCycleType = null;
+          for (const g of dayHours) {
+            const m = g.dominantMode;
+            const t = ['to_full', 'zero_charge_only'].includes(m) ? 'charge'
+              : m === 'zero_discharge_only' ? 'discharge' : null;
+            if (t && t !== prevCycleType && prevCycleType !== null) cycleTransitions++;
+            if (t) prevCycleType = t;
+          }
+          const cycleCount = Math.ceil(cycleTransitions / 2);
+          const cycleLabel = cycleCount >= 2
+            ? (lang === 'nl' ? ` · 🔄 ${cycleCount}× cyclus` : ` · 🔄 ${cycleCount}× cycle`)
+            : cycleCount === 1
+              ? (lang === 'nl' ? ' · 🔋 1× cyclus' : ' · 🔋 1× cycle')
+              : '';
+
+          const dynChgLabel = effectiveChgPrice > maxChgPrice + 0.005
+            ? ` · ⚡ max €${effectiveChgPrice.toFixed(2)} (dyn)` : '';
+
+          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW) : '';
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${pvCurve}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);

@@ -101,7 +101,7 @@
             "nl": "Interval in seconden"
           },
           "value": 10,
-          "min": 1
+          "min": 2
         },
         {
           "id": "cloud",
