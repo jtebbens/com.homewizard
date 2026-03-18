@@ -1711,7 +1711,7 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%<br>
+              SoC: ${avgSoc.toFixed(0)}%${(() => { const pvW = pvEnabled ? Math.round(Math.min(1.0, (radiationByDay[day][hour] ?? 0) / 1000) * pvCapW * 0.85) : 0; return pvW > 50 ? ` · ☀️ ${(pvW/1000).toFixed(1)}kW` : ''; })()}<br>
               ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#8b9fff' : avgPrice >= minDchPrice ? '#20F29B' : '#808080'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
             </div>
             <div class="expand-indicator">+</div>
