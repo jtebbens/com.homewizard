@@ -1135,5 +1135,8 @@
   },
   "3.14.1": {
     "en": "Sun radiation fixes, cloud coverage. Dim led workaround percentage"
+  },
+  "3.14.2": {
+    "en": "Added estimate Solar graph in planner. Energy-socket interval changed back"
   }
 }
