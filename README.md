@@ -51,7 +51,23 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.14.0)
+## 📝 Latest Updates (v3.14.4)
+
+### Battery Policy — Planning Improvements
+
+* **Expected kW per hour** - Planning view now shows the expected solar production per hour based on weather forecast and system parameters
+* **Azimuth & angle support** - PV graph plotting uses panel azimuth and tilt angle for more accurate solar curve calculations
+* **Estimated solar graph** - Planning page shows a visual estimate of expected PV production across the day
+
+### Bug Fixes & Improvements
+
+* **Energy socket polling** - Minimum polling interval corrected; interval reverted to previous stable value
+* **Sun radiation fixes** - Cloud coverage handling and radiation calculation improvements
+* **LED brightness** - Workaround percentage for dim LED on plugin battery
+
+---
+
+## Previous Updates (v3.14.0)
 
 ### Battery Policy — 15-Minute Pricing
 

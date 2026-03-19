@@ -198,6 +198,10 @@ class HomeWizardDevice extends Homey.Device {
   }
 
   syncLegacyDebugToSettings() {
+  const now = Date.now();
+  if (this._lastLegacySyncAt && now - this._lastLegacySyncAt < 20000) return;
+  this._lastLegacySyncAt = now;
+
   try {
 
     const devices = homewizard.self?.devices || {};
