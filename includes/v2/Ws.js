@@ -324,10 +324,14 @@ class WebSocketManager {
           this._safeSend({ type: 'batteries' });
         }
 
-        // No data for 3 minutes → full reconnect
+        // No data for 3 minutes → force-close zombie (device may still respond to pings but stopped streaming)
         if (idle > 180000) {
-          this.log('💤 No measurement in 3min — reconnecting WebSocket');
-          this.restartWebSocket();
+          this.log(`💤 No measurement in 3min (${Math.round(idle / 1000)}s) — force closing zombie WebSocket`);
+          this._journal('zombie', `Idle ${Math.round(idle / 1000)}s, no measurements — force restart`);
+          try { this.ws.terminate(); } catch (e) {}
+          this.ws = null;
+          this.wsActive = false;
+          this._scheduleReconnect();
           return;
         }
 
@@ -358,7 +362,8 @@ class WebSocketManager {
     // ──────────────────────── pong ────────────────────────
     this.ws.on('pong', () => {
       this.pongReceived = true;
-      this.lastMeasurementAt = Date.now();
+      // Do NOT update lastMeasurementAt here — only actual measurement data should reset the idle timer.
+      // Updating on pong would mask a zombie: device alive at TCP level but stopped streaming data.
     });
 
     // ──────────────────────── message ────────────────────────
