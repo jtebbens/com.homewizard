@@ -1147,5 +1147,8 @@
   },
   "3.14.5": {
     "en": "Various bugfixes"
+  },
+  "3.14.6": {
+    "en": "Improved fetch statistics and added dynamic interval when user has over 20 energy-sockets making app crash"
   }
 }
