@@ -88,6 +88,30 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._isMarkedUnavailable = false;
     this._lastSuccessfulPoll = Date.now();
 
+    // Persistent fetch stats — restored from settings across restarts
+    const allStoredStats = this.homey.settings.get('fetch_device_stats') || {};
+    const stored = allStoredStats[this.getName()] || {};
+    this._fetchStats = {
+      total:         stored.total         || 0,
+      ok:            stored.ok            || 0,
+      failed:        stored.failed        || 0,
+      timeouts:      stored.timeouts      || 0,
+      avgResponseMs: stored.avgResponseMs || 0,
+      lastError:     stored.lastError     || null,
+      lastErrorAt:   stored.lastErrorAt   || null,
+      since:         stored.since         || new Date().toISOString(),
+      // WiFi stats
+      rssiAvg:       stored.rssiAvg       || null,
+      rssiMin:       stored.rssiMin       || null,
+      rssiMax:       stored.rssiMax       || null,
+      // mDNS stats
+      lastDiscoveryAt:    stored.lastDiscoveryAt    || null,
+      lastDiscoveryEvent: stored.lastDiscoveryEvent || null,
+    };
+    // Flush stats to store every 60s, staggered by device index to prevent thundering herd
+    // (safeIndex is set below — forward reference is fine since this runs after allDevices lookup)
+    this._statsFlushTimer = null; // set after safeIndex is known
+
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
       keepAlive: true,
@@ -97,16 +121,43 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
 
-    // Minimum 5s interval — balances real-time use cases (solar control) against CPU load.
-    // Note: users with many energy_socket devices should use ≥15s to avoid high CPU.
-    const interval = Math.max(this.getSetting('offset_polling') || 10, 2);
-    if (interval < 8) {
-      this.log(`⚠️ Fast polling (${interval}s) — acceptable for 1-2 devices; use ≥10s if you have many energy sockets`);
-    }
-    // Stagger startup to prevent thundering herd on multi-device setups
-    const offset = 1000 + Math.floor(Math.random() * 9000); // 1-10s startup spread
+    // Auto-scale interval based on device count to prevent fetchQueue overflow.
+    // fetchQueue: MAX_CONCURRENT=4, ~1s/request → throughput ~4 req/s
+    // Each device does 2 req/poll → min interval = ceil(deviceCount / 2)
+    const allDevices = this.driver.getDevices();
+    const deviceCount = allDevices.length;
+    const myIndex = allDevices.indexOf(this);
+    const safeIndex = myIndex >= 0 ? myIndex : 0;
 
-    this.log(`⏱️ Polling enabled at init, interval ${interval}s, startup delay ${Math.round(offset/1000)}s`);
+    const userInterval = Math.max(this.getSetting('offset_polling') || 10, 2);
+    const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
+    const interval = Math.max(userInterval, minInterval);
+
+    if (interval > userInterval) {
+      this.log(`⚠️ Polling interval auto-scaled: ${userInterval}s → ${interval}s (${deviceCount} devices)`);
+      // Only notify once (from the first device) to avoid notification spam on multi-device setups
+      if (safeIndex === 0) {
+        this.homey.notifications.createNotification({
+          excerpt: `Energy Socket polling auto-scaled naar ${interval}s (${deviceCount} devices). Verhoog je polling-instelling om deze melding te verbergen.`,
+        }).catch(() => {});
+      }
+    }
+
+    // Deterministic spread: device index determines start offset so devices never poll simultaneously.
+    // First device starts after 500ms, others evenly spread across the full interval.
+    const offset = safeIndex === 0
+      ? 500
+      : Math.round((safeIndex / deviceCount) * interval * 1000);
+
+    this.log(`⏱️ Polling interval ${interval}s (user: ${userInterval}s), spread offset ${Math.round(offset / 1000)}s (device ${safeIndex + 1}/${deviceCount})`);
+
+    // Stagger stats flush: 10s between devices, every 5min (settings writes are ~130ms each)
+    const flushDelay = 300000 + safeIndex * 10000;
+    setTimeout(() => {
+      if (this.__deleted) return;
+      this._flushFetchStats();
+      this._statsFlushTimer = setInterval(() => this._flushFetchStats(), 300000);
+    }, flushDelay);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
@@ -156,6 +207,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       clearTimeout(this._debugFlushTimeout);
       this._debugFlushTimeout = null;
     }
+    if (this._statsFlushTimer) {
+      clearInterval(this._statsFlushTimer);
+      this._statsFlushTimer = null;
+    }
+    this._flushFetchStats();
     // Destroy HTTP agent to close keep-alive sockets
     if (this.agent) {
       this.agent.destroy();
@@ -180,8 +236,16 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   /**
    * Discovery handlers
    */
+  _trackDiscovery(event) {
+    if (this._fetchStats) {
+      this._fetchStats.lastDiscoveryAt = new Date().toISOString();
+      this._fetchStats.lastDiscoveryEvent = event;
+    }
+  }
+
   onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this._trackDiscovery('available');
     // ✅ FIX: Reset failure counters on rediscovery
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses = 0;
@@ -191,6 +255,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this._trackDiscovery('address_changed');
     this._debugLog(`Discovery address changed: ${this.url}`);
     // ✅ FIX: Reset failure counters on address change
     this._consecutiveFailures = 0;
@@ -201,6 +266,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
+    this._trackDiscovery('last_seen');
     this.setAvailable();
     this._isMarkedUnavailable = false;
   }
@@ -240,6 +306,27 @@ _flushDebugLogs() {
   } catch (err) {
     this.error('Failed to flush debug logs:', err.message || err);
   }
+}
+
+_flushFetchStats() {
+  if (!this._fetchStats) return;
+  const t0 = Date.now();
+  // If the settings entry for this device was cleared (reset button), reset in-memory stats too
+  try {
+    const allStats = this.homey.settings.get('fetch_device_stats') || {};
+    if (!allStats[this.getName()]) {
+      this._fetchStats = {
+        total: 0, ok: 0, failed: 0, timeouts: 0,
+        avgResponseMs: 0, lastError: null, lastErrorAt: null,
+        since: new Date().toISOString(),
+        rssiAvg: null, rssiMin: null, rssiMax: null,
+      };
+    }
+    allStats[this.getName()] = this._fetchStats;
+    this.homey.settings.set('fetch_device_stats', allStats);
+  } catch (_) {}
+  // setStoreValue is redundant — data is already in homey.settings above
+  this.log(`💾 _flushFetchStats took ${Date.now() - t0}ms`);
 }
 
   /**
@@ -336,10 +423,23 @@ _flushDebugLogs() {
    * Only mark unavailable after 3 consecutive failures
    * Only mark available after 2 consecutive successes
    */
-  _handlePollSuccess() {
+  _handlePollSuccess(elapsedMs, rssi) {
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses++;
     this._lastSuccessfulPoll = Date.now();
+
+    // Update fetch stats
+    const s = this._fetchStats;
+    s.total++;
+    s.ok++;
+    if (elapsedMs != null) {
+      s.avgResponseMs = Math.round(s.avgResponseMs + (elapsedMs - s.avgResponseMs) / s.ok);
+    }
+    if (rssi != null) {
+      s.rssiAvg = s.rssiAvg == null ? rssi : Math.round(s.rssiAvg + (rssi - s.rssiAvg) / s.ok);
+      if (s.rssiMin == null || rssi < s.rssiMin) s.rssiMin = rssi;
+      if (s.rssiMax == null || rssi > s.rssiMax) s.rssiMax = rssi;
+    }
 
     // Mark available after 2 consecutive successes (prevents flapping)
     if (this._consecutiveSuccesses >= 2 && this._isMarkedUnavailable) {
@@ -349,15 +449,24 @@ _flushDebugLogs() {
       updateCapability(this, 'connection_error', 'No errors').catch(this.error);
       updateCapability(this, 'alarm_connectivity', false).catch(this.error);
     } else if (!this._isMarkedUnavailable) {
-      // Already available, just update error state
-      updateCapability(this, 'connection_error', 'No errors').catch(this.error);
-      updateCapability(this, 'alarm_connectivity', false).catch(this.error);
+      // Already available — alarm_connectivity is already false, only clear error text if needed
+      if (this._consecutiveFailures > 0 || this._consecutiveSuccesses === 1) {
+        updateCapability(this, 'connection_error', 'No errors').catch(this.error);
+      }
     }
   }
 
   _handlePollFailure(err) {
     this._consecutiveSuccesses = 0;
     this._consecutiveFailures++;
+
+    // Update fetch stats
+    const s = this._fetchStats;
+    s.total++;
+    s.failed++;
+    if (err && (err.message === 'TIMEOUT' || err.name === 'AbortError')) s.timeouts++;
+    s.lastError = err ? (err.message || String(err)) : 'unknown';
+    s.lastErrorAt = new Date().toISOString();
 
     const timeSinceLastSuccess = Date.now() - this._lastSuccessfulPoll;
 
@@ -385,6 +494,7 @@ _flushDebugLogs() {
   if (this.__deleted) return;
 
   const settings = this.getSettings();
+  const pollStart = Date.now();
 
   // URL restore when needed
   if (!this.url) {
@@ -495,9 +605,9 @@ _flushDebugLogs() {
     }
 
     if (tasks.length > 0) await Promise.allSettled(tasks);
-    
+
     // ✅ FIX: Mark as successful poll
-    this._handlePollSuccess();
+    this._handlePollSuccess(Date.now() - pollStart, data.wifi_strength);
 
   } catch (err) {
     if (!this.__deleted) {

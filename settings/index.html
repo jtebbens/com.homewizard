@@ -95,6 +95,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 16px; }
     th, td { border: 1px solid var(--border); padding: 6px 8px; font-size: 13px; }
     th { background: var(--surface2); color: var(--text); }
+    #fetch-stats-table th, #fetch-stats-table td { font-size: 11px; padding: 4px 6px; }
 
     button {
       background: var(--surface2);
@@ -405,7 +406,29 @@
 
   <!-- TAB: FETCH -->
   <div id="fetch" class="tab-content">
-    <h2>Device Fetch Debug</h2>
+    <h2>Device Fetch Stats</h2>
+    <table id="fetch-stats-table">
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Uptime</th>
+          <th>Mislukt</th>
+          <th>Timeouts</th>
+          <th>Totaal</th>
+          <th>Gem. (ms)</th>
+          <th>WiFi (gem/min)</th>
+          <th>mDNS</th>
+          <th>Laatste fout</th>
+          <th>Sinds</th>
+        </tr>
+      </thead>
+      <tbody id="fetch-stats-body">
+        <tr><td colspan="10" style="text-align:center;color:#888">Laden…</td></tr>
+      </tbody>
+    </table>
+    <button id="reset-fetch-stats-btn" style="margin-top:10px;">Reset stats</button>
+
+    <h2 style="margin-top:24px;">Fetch Logs</h2>
     <pre id="fetch-debug" class="debug-box">Loading…</pre>
     <button id="clear-fetch-btn" style="margin-top:10px;">Wis fetch-logs</button>
   </div>
@@ -876,7 +899,72 @@
 
         /* ── FETCH DEBUG ── */
         const fetchBox = document.getElementById('fetch-debug');
+
+        function renderFetchStats(s) {
+          const allStats = s.fetch_device_stats || {};
+          const tbody = document.getElementById('fetch-stats-body');
+          const entries = Object.entries(allStats);
+          if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#888">Nog geen stats — wacht op eerste flush (60s na start).</td></tr>';
+            return;
+          }
+          // Sort by uptime ascending (worst first)
+          entries.sort((a, b) => {
+            const ua = a[1].total > 0 ? a[1].ok / a[1].total : 1;
+            const ub = b[1].total > 0 ? b[1].ok / b[1].total : 1;
+            return ua - ub;
+          });
+          tbody.innerHTML = entries.map(([name, st]) => {
+            const uptime = st.total > 0 ? Math.round(st.ok / st.total * 100) : 100;
+            const uptimeColor = uptime >= 99 ? '' : uptime >= 95 ? 'color:#fb923c' : 'color:#f87171';
+            const uptimeCell = `<td style="${uptimeColor}">${uptime}%</td>`;
+
+            const failRate = st.total > 0 ? Math.round(st.failed / st.total * 100) : 0;
+            const failCell = st.failed > 0
+              ? `<td style="color:#f87171">${st.failed} (${failRate}%)</td>`
+              : `<td>${st.failed}</td>`;
+
+            const toCell = st.timeouts > 0
+              ? `<td style="color:#fb923c">${st.timeouts}</td>`
+              : `<td>${st.timeouts}</td>`;
+
+            const rssi = st.rssiAvg != null
+              ? `${st.rssiAvg}% / ${st.rssiMin}%`
+              : '—';
+            const rssiColor = st.rssiAvg != null && st.rssiAvg < 30 ? 'color:#f87171'
+                            : st.rssiAvg != null && st.rssiAvg < 60 ? 'color:#fb923c' : '';
+
+            const lastErr = st.lastError
+              ? `<span title="${st.lastErrorAt || ''}">${st.lastError.substring(0, 35)}</span>`
+              : '—';
+            const since = st.since ? new Date(st.since).toLocaleDateString('nl-NL') : '—';
+
+            let mdnsCell = '—';
+            if (st.lastDiscoveryAt) {
+              const ago = Math.round((Date.now() - new Date(st.lastDiscoveryAt).getTime()) / 60000);
+              const agoStr = ago < 60 ? `${ago}m` : `${Math.round(ago/60)}u`;
+              const eventLabel = { available: 'avail', address_changed: 'ip↑', last_seen: 'seen' }[st.lastDiscoveryEvent] || st.lastDiscoveryEvent;
+              const mdnsColor = ago > 60 ? 'color:#f87171' : ago > 15 ? 'color:#fb923c' : '';
+              mdnsCell = `<span style="${mdnsColor}" title="${st.lastDiscoveryAt}">${eventLabel} ${agoStr} geleden</span>`;
+            }
+
+            return `<tr>
+              <td>${name}</td>
+              ${uptimeCell}
+              ${failCell}
+              ${toCell}
+              <td>${st.total}</td>
+              <td>${st.avgResponseMs || '—'}</td>
+              <td style="${rssiColor}">${rssi}</td>
+              <td>${mdnsCell}</td>
+              <td>${lastErr}</td>
+              <td>${since}</td>
+            </tr>`;
+          }).join('');
+        }
+
         function renderFetchDebug(s) {
+          renderFetchStats(s);
           const logs = s.debug_logs || [];
           fetchBox.textContent = (!Array.isArray(logs) || logs.length === 0)
             ? 'Geen fetch-logs beschikbaar.'
@@ -886,7 +974,7 @@
         renderFetchDebug(settings);
 
         Homey.on('settings.set', changedKey => {
-          if (changedKey === 'debug_logs') {
+          if (changedKey === 'debug_logs' || changedKey === 'fetch_device_stats') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
           if (changedKey === 'battery_policy_state' || changedKey === 'device_settings') {
@@ -900,6 +988,10 @@
 
         document.getElementById('clear-fetch-btn').addEventListener('click', () => {
           Homey.set('debug_logs', []);
+        });
+
+        document.getElementById('reset-fetch-stats-btn').addEventListener('click', () => {
+          Homey.set('fetch_device_stats', {});
         });
 
         /* ── DISCOVERY ── */
