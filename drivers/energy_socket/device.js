@@ -326,7 +326,7 @@ _flushFetchStats() {
     this.homey.settings.set('fetch_device_stats', allStats);
   } catch (_) {}
   // setStoreValue is redundant — data is already in homey.settings above
-  this.log(`💾 _flushFetchStats took ${Date.now() - t0}ms`);
+  //this.log(`💾 _flushFetchStats took ${Date.now() - t0}ms`);
 }
 
   /**
