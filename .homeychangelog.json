@@ -1153,5 +1153,8 @@
   },
   "3.14.7": {
     "en": "Performance tracking energy-socket fetch calls"
+  },
+  "3.14.8": {
+    "en": "Weather and solar improvement estimation on kWh, centralized fetchWithTimeout"
   }
 }
