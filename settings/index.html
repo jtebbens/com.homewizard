@@ -639,7 +639,7 @@
       const iW = W - pad.l - pad.r;
       const iH = H - pad.t - pad.b;
 
-      const PR = 0.85; // Performance Ratio: accounts for temperature, inverter & wiring losses
+      const PR = 0.75; // Performance Ratio: inverter, wiring, temperature & soiling losses (~0.70–0.80 typical NL)
       const pvWatts = Array.from({length: 24}, (_, h) =>
         Math.round(Math.min(1.0, (radiationMap[h] ?? 0) / 1000) * pvCapW * PR)
       );
@@ -695,6 +695,7 @@
       const peakX = pts[peakH][0];
       const peakY = pts[peakH][1];
       const peakKw = (peakW / 1000).toFixed(2);
+      const totalKwh = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
       const labelX = Math.min(peakX + 6, W - 44);
       const labelY = Math.max(peakY - 6, pad.t + 11);
 
@@ -708,6 +709,7 @@
       const clipId = `pvClip${day}`;
 
       return `<div class="pv-curve-row">
+        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ~${totalKwh} kWh verwacht</div>
         <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block;">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
