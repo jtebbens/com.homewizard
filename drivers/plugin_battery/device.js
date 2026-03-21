@@ -154,11 +154,6 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       this.removeCapability('battery_soc').catch(this.error);
     }
 
-    if (this.hasCapability('dim')) {
-      this.removeCapability('dim').catch(this.error);
-    }
-
-
     await this._updateCapabilities();
     await this._registerCapabilityListeners();
 

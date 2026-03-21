@@ -593,6 +593,19 @@ if (debug) this.log(
 
       this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude, pvTilt, pvAzimuth);
 
+      // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
+      const pvCapW = devSettings.pv_capacity_w || 0;
+      const PR = 0.75; // Performance Ratio: inverter, wiring, temperature & soiling (~0.70–0.80 typical NL)
+      if (pvCapW > 0 && Array.isArray(this.weatherData.dailyProfiles)) {
+        const todayDate = new Date().toISOString().slice(0, 10);
+        const todayKwh = this.weatherData.dailyProfiles
+          .filter(h => h.time.toISOString().startsWith(todayDate))
+          .reduce((sum, h) => sum + (pvCapW * PR * (h.radiationWm2 / 1000)), 0) / 1000;
+        this.weatherData.pvKwhToday = Math.round(todayKwh * 10) / 10;
+      } else {
+        this.weatherData.pvKwhToday = null;
+      }
+
       const sunScore = this.weatherForecaster.calculateSunScore(this.weatherData);
 
       await this.setCapabilityValue('sun_score', sunScore);
