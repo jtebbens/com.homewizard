@@ -1,29 +1,8 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
-
+const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
 const http = require('http');
-
-async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const res = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    return res;
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw new Error('TIMEOUT');
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 
 

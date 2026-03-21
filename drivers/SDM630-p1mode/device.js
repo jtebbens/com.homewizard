@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 
-const fetch = require('node-fetch');
+const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
 // const POLL_INTERVAL = 1000 * 1; // 1 seconds
 
 // const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
@@ -116,10 +116,10 @@ async onInit() {
     }
 
     try {
-      let res = await fetch(`${this.url}/data`);
+      let res = await fetchWithTimeout(`${this.url}/data`);
       if (!res || !res.ok) {
         await new Promise((resolve) => setTimeout(resolve, 60000));
-        res = await fetch(`${this.url}/data`);
+        res = await fetchWithTimeout(`${this.url}/data`);
         if (!res || !res.ok) throw new Error(res ? res.statusText : 'Unknown error during fetch');
       }
 
