@@ -12,7 +12,7 @@
 
 const https = require('https');
 const WebSocket = require('ws');
-const fetch = require('../../includes/utils/fetchQueue');
+const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
 
 const SHARED_AGENT = new https.Agent({
   keepAlive: true,
@@ -22,20 +22,6 @@ const SHARED_AGENT = new https.Agent({
   rejectUnauthorized: false,
   timeout: 10000
 });
-
-/**
- * Perform a fetch with timeout. Passes the timeout to fetchQueue which
- * handles abort internally via its own AbortController.
- *
- * @param {string} url
- * @param {object} [options={}]
- * @param {number} [timeout=5000]
- * @returns {Promise<any>} Parsed JSON response
- */
-async function fetchWithTimeout(url, options = {}, timeout = 5000) {
-  const res = await fetch(url, { ...options, timeout });
-  return await res.json();
-}
 
 /**
  * WebSocketManager
@@ -233,10 +219,11 @@ class WebSocketManager {
 
     // Preflight: verify device is reachable
     try {
-      const res = await fetchWithTimeout(`${this.url}/api/system`, {
+      const httpRes = await fetchWithTimeout(`${this.url}/api/system`, {
         headers: { Authorization: `Bearer ${this.token}` },
         agent: SHARED_AGENT
       }, 3000);
+      const res = httpRes.ok ? await httpRes.json() : null;
       if (!res || typeof res.cloud_enabled === 'undefined') {
         this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
         this._journalThrottled('preflight_fail', `Device unreachable at ${this.url}`);

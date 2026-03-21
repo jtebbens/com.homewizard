@@ -1,7 +1,7 @@
 'use strict';
 
-const fetch = require('node-fetch');
 const https = require('https');
+const fetchWithTimeout = require('../utils/fetchWithTimeout');
 
 module.exports = (function () {
   const api = {};
@@ -11,35 +11,6 @@ module.exports = (function () {
     keepAliveMsecs: 11000,
     rejectUnauthorized: false,
   });
-
-  async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
-    let settled = false;
-
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        reject(new Error('TIMEOUT'));
-      }
-    }, timeoutMs);
-
-    fetch(url, options)
-      .then(res => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          resolve(res);
-        }
-      })
-      .catch(err => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timer);
-          reject(err);
-        }
-      });
-  });
-}
 
 
   /**
