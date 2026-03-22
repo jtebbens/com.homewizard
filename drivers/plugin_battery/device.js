@@ -8,12 +8,7 @@ const wsDebug = require('../../includes/v2/wsDebug');
 const api = require('../../includes/v2/Api');
 const debug = false;
 
-// Shared HTTPS agent (no timeout wrapper)
-const agent = new https.Agent({
-  rejectUnauthorized: false,
-  keepAlive: true,
-  keepAliveMsecs: 15000
-});
+// Per-device HTTPS agent is created in onInit() and destroyed in onUninit()
 
 
 // ---------------------------------------------------------
@@ -149,6 +144,15 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     this._pollErrorCount = 0;
     this._lastPollAt = 0;
+
+    // Per-device HTTPS agent — destroyed in onUninit() to prevent socket accumulation
+    this._httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+      keepAlive: true,
+      keepAliveMsecs: 15000,
+      maxSockets: 2,
+      maxFreeSockets: 2,
+    });
 
     if (this.hasCapability('battery_soc')) {
       this.removeCapability('battery_soc').catch(this.error);
@@ -297,6 +301,12 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     if (this.wsManager) {
       this.wsManager.stop();
       this.wsManager = null;
+    }
+
+    // Destroy HTTPS agent to close all keep-alive TLS sockets
+    if (this._httpsAgent) {
+      this._httpsAgent.destroy();
+      this._httpsAgent = null;
     }
   }
 
@@ -760,7 +770,7 @@ async _fetchFallbackSoC() {
         Authorization: `Bearer ${this.token}`,
         'X-Api-Version': '2'
       },
-      agent
+      agent: this._httpsAgent
     });
 
     if (!res.ok) {
@@ -817,7 +827,7 @@ async _updateBatteryGroup() {
         Authorization: `Bearer ${this.token}`,
         'X-Api-Version': '2'
       },
-      agent
+      agent: this._httpsAgent
     });
 
     if (res.ok) {
@@ -875,7 +885,7 @@ async _updateBatteryGroup() {
           Authorization: `Bearer ${this.token}`,
           'X-Api-Version': '2'
         },
-        agent
+        agent: this._httpsAgent
       });
 
       if (measurementRes.ok) {
@@ -888,7 +898,7 @@ async _updateBatteryGroup() {
           Authorization: `Bearer ${this.token}`,
           'X-Api-Version': '2'
         },
-        agent
+        agent: this._httpsAgent
       });
 
       if (systemRes.ok) {
@@ -931,7 +941,7 @@ async _updateBatteryGroup() {
         Authorization: `Bearer ${this.token}`,
         'X-Api-Version': '2'
       },
-      agent
+      agent: this._httpsAgent
     });
 
     if (measurementRes.ok) {
@@ -951,7 +961,7 @@ async _updateBatteryGroup() {
         Authorization: `Bearer ${this.token}`,
         'X-Api-Version': '2'
       },
-      agent
+      agent: this._httpsAgent
     });
 
     if (systemRes.ok) {
