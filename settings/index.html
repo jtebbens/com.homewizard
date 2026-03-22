@@ -203,6 +203,15 @@
     .hw-badge-zero              { background: var(--orange); color:#000; }
     .hw-badge-standby           { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 
+    /* Weather condition badge — top-right corner of hourly card */
+    .weather-badge {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      font-size: 14px;
+      line-height: 1;
+    }
+
     /* ══════════════════════════════════════════════════════════
        15-MINUTE PLANNING STYLES
        ══════════════════════════════════════════════════════════ */
@@ -631,15 +640,33 @@
     }
 
     /* ══════════════════════════════════════════════════════════
+       WMO WEATHER CODE → EMOJI
+    ══════════════════════════════════════════════════════════ */
+    function wmoIcon(code, radiationWm2) {
+      const isNight = (radiationWm2 ?? 0) === 0;
+      if (code === 0)                    return isNight ? '🌙' : '☀️';
+      if (code <= 1)                     return isNight ? '🌙' : '🌤';
+      if (code <= 2)                     return isNight ? '🌑' : '⛅';
+      if (code <= 3)                     return '☁️';
+      if (code === 45 || code === 48)    return '🌫';
+      if (code <= 57)                    return '🌦';  // drizzle
+      if (code <= 67)                    return '🌧';  // rain
+      if (code <= 77)                    return '🌨';  // snow
+      if (code <= 82)                    return '🌦';  // showers
+      if (code <= 86)                    return '🌨';  // snow showers
+      return '⛈';                                     // thunderstorm
+    }
+
+    /* ══════════════════════════════════════════════════════════
        PV CURVE HELPER
     ══════════════════════════════════════════════════════════ */
-    function renderPvCurve(day, radiationMap, pvCapW) {
+    function renderPvCurve(day, radiationMap, pvCapW, PR = 0.75) {
       const W = 480, H = 220;
       const pad = { l: 40, r: 12, t: 16, b: 28 };
       const iW = W - pad.l - pad.r;
       const iH = H - pad.t - pad.b;
 
-      const PR = 0.75; // Performance Ratio: inverter, wiring, temperature & soiling losses (~0.70–0.80 typical NL)
+      // PR comes from device setting pv_performance_ratio (default 0.75)
       const pvWatts = Array.from({length: 24}, (_, h) =>
         Math.round(Math.min(1.0, (radiationMap[h] ?? 0) / 1000) * pvCapW * PR)
       );
@@ -652,7 +679,7 @@
       const maxY = Math.ceil(peakW / gridStep) * gridStep;
       const peakH = pvWatts.indexOf(peakW);
 
-      const toX = h => pad.l + (h / 23) * iW;
+      const toX = h => pad.l + ((h + 0.5) / 24) * iW;
       const toY = w => pad.t + iH - (w / maxY) * iH;
 
       const pts = pvWatts.map((w, h) => [toX(h), toY(w)]);
@@ -1527,6 +1554,7 @@
       const radiationMap = {};   // legacy fallback
       const sunshineByDay = [{}, {}];
       const radiationByDay = [{}, {}];
+      const weatherCodeByDay = [{}, {}];
       (settings['policy_weather_hourly'] || []).forEach(w => {
         if (w && typeof w.hour === 'number') {
           const d = (w.day === 1) ? 1 : 0;
@@ -1537,6 +1565,9 @@
           if (typeof w.radiationWm2 === 'number') {
             radiationMap[w.hour] = w.radiationWm2;
             radiationByDay[d][w.hour] = w.radiationWm2;
+          }
+          if (typeof w.weatherCode === 'number') {
+            weatherCodeByDay[d][w.hour] = w.weatherCode;
           }
         }
       });
@@ -1566,9 +1597,10 @@
       /* ── Battery power limits ── */
       const maxDischW = policyState?.maxDischargePowerW || 800;
       const maxChgW = policyState?.maxChargePowerW || 800;
-      const capKwh = policyState?.totalCapacityKwh || 2.8;
+      const capKwh = policyState?.totalCapacityKwh || (policyState?.batteryCount ?? 1) * 2.688;
       const pvCapW = deviceSettings['pv_capacity_w'] || 3000;
       const pvEnabled = !!(deviceSettings['pv_estimation_enabled']) && pvCapW > 0;
+      const pvPR = deviceSettings['pv_performance_ratio'] || 0.75;
 
       /* ── Build 15-minute intervals array ── */
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1699,7 +1731,7 @@
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Huidige SoC' : 'Current SoC'}</div>
-          <div class="planning-status-value">${currentSOC}%</div>
+          <div class="planning-status-value">${currentSOC}% · ${(currentSOC / 100 * capKwh).toFixed(1)} kWh${(policyState?.batteryCount ?? 1) > 1 ? ` · ${policyState.batteryCount}×` : ''}</div>
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${lang === 'nl' ? 'Gem. Prijs' : 'Avg. Price'}</div>
@@ -1770,7 +1802,7 @@
           const dynChgLabel = effectiveChgPrice > maxChgPrice + 0.005
             ? ` · ⚡ max €${effectiveChgPrice.toFixed(2)} (dyn)` : '';
 
-          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW) : '';
+          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR) : '';
           dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${pvCurve}`;
         }
 
@@ -1796,12 +1828,16 @@
           }
         }
 
+        const wCode = weatherCodeByDay[day]?.[hour] ?? -1;
+        const weatherBadge = wCode >= 0 ? `<span class="weather-badge">${wmoIcon(wCode, radiationByDay[day]?.[hour])}</span>` : '';
+
         return `
           ${dayMarker}
-          <div class="planning-hour-card ${isCurrent ? 'current' : ''} hw-${dominantMode}" 
-               style="${pastStyle}" 
+          <div class="planning-hour-card ${isCurrent ? 'current' : ''} hw-${dominantMode}"
+               style="${pastStyle}"
                onclick="showHourDetail(${idx})">
             ${opportunisticBadge}
+            ${weatherBadge}
             <div class="planning-hour-time">${String(hour).padStart(2, '0')}:00</div>
             <div class="planning-hour-price">${priceDisplay}</div>
             ${hasVariation ? `<div class="price-variation">⚠️ ±€${priceVariation.toFixed(3)}</div>` : ''}
@@ -1809,7 +1845,7 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%${(() => { const pvW = pvEnabled ? Math.round(Math.min(1.0, (radiationByDay[day][hour] ?? 0) / 1000) * pvCapW * 0.85) : 0; return pvW > 50 ? ` · ☀️ ${(pvW/1000).toFixed(1)}kW` : ''; })()}<br>
+              SoC: ${avgSoc.toFixed(0)}%${(() => { const pvW = pvEnabled ? Math.round(Math.min(1.0, (radiationByDay[day][hour] ?? 0) / 1000) * pvCapW * pvPR) : 0; return pvW > 50 ? ` · ☀️ ${(pvW/1000).toFixed(1)}kW` : ''; })()}<br>
               ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#8b9fff' : avgPrice >= minDchPrice ? '#20F29B' : '#808080'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
             </div>
             <div class="expand-indicator">+</div>

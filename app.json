@@ -3722,6 +3722,27 @@
                 "when": "pv_estimation_enabled",
                 "is": true
               }
+            },
+            {
+              "id": "pv_performance_ratio",
+              "type": "number",
+              "label": {
+                "en": "Performance Ratio (PR)",
+                "nl": "Prestatieratio (PR)"
+              },
+              "hint": {
+                "en": "Fraction of theoretical PV output actually delivered, accounting for inverter losses, wiring, temperature, and soiling. Typical range: 0.65–0.80. Lower this value if the planning page consistently overestimates your actual production.",
+                "nl": "Fractie van het theoretisch PV-vermogen dat daadwerkelijk wordt geleverd, rekening houdend met omvormerverlies, bedrading, temperatuur en vervuiling. Typisch bereik: 0,65–0,80. Verlaag deze waarde als de planningspagina uw werkelijke productie stelselmatig overschat."
+              },
+              "units": "PR",
+              "value": 0.75,
+              "min": 0.5,
+              "max": 0.9,
+              "step": 0.01,
+              "visible": {
+                "when": "pv_estimation_enabled",
+                "is": true
+              }
             }
           ]
         },
