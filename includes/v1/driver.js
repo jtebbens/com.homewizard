@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const fetch = require('node-fetch');
+const fetchWithTimeout = require('../utils/fetchWithTimeout');
 
 
 module.exports = class HomeWizardEnergyWatermeterDriver extends Homey.Driver {
@@ -51,16 +51,20 @@ logDiscovery(status, detail = null) {
   await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
     try {
       const url = `http://${discoveryResult.address}:${discoveryResult.port}/api`;
-      const res = await fetch(url);
+      const res = await fetchWithTimeout(url, {}, 5000);
       if (!res.ok) throw new Error(res.statusText);
 
       const data = await res.json();
 
-      this.logDiscovery('ok', `Found ${data.product_name} at ${discoveryResult.address}`);
+      const productName = typeof data.product_name === 'string' && data.product_name
+        ? data.product_name
+        : (data.product_type || 'HomeWizard Device');
 
-      let name = data.product_name;
+      this.logDiscovery('ok', `Found ${productName} at ${discoveryResult.address}`);
+
+      let name = productName;
       if (numberOfDiscoveryResults > 1) {
-        name = `${data.product_name} (${data.serial})`;
+        name = `${productName} (${data.serial || discoveryResult.id})`;
       }
 
       devices.push({
@@ -114,10 +118,7 @@ async onRepair(session, device) {
 
     // Test connection to device
     try {
-      const response = await fetch(`http://${ip}/api`, {
-        method: 'GET',
-        timeout: 5000
-      });
+      const response = await fetchWithTimeout(`http://${ip}/api`, { method: 'GET' }, 5000);
 
       if (!response.ok) {
         throw new Error(this.homey.__('repair.connection_failed'));

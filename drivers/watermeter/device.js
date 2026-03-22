@@ -36,10 +36,13 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
   async onInit() {
 
     this._debugLogs = [];
+    this.__deleted = false;
 
     this.agent = new http.Agent({
       keepAlive: true,
       keepAliveMsecs: 10000,
+      maxSockets: 2,
+      maxFreeSockets: 2,
     });
 
 
@@ -58,7 +61,9 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
-    setTimeout(() => {
+    this._startupPollTimeout = setTimeout(() => {
+      if (this.__deleted) return;
+      this._startupPollTimeout = null;
       this.onPoll().catch(this.error);
       this.onPollInterval = setInterval(() => {
         this.onPoll().catch(this.error);
@@ -84,11 +89,29 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     });
   }
 
-  onDeleted() {
+  onUninit() {
+    this.__deleted = true;
+
+    if (this._startupPollTimeout) {
+      clearTimeout(this._startupPollTimeout);
+      this._startupPollTimeout = null;
+    }
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
     }
+    if (this._debugFlushTimeout) {
+      clearTimeout(this._debugFlushTimeout);
+      this._debugFlushTimeout = null;
+    }
+    if (this.agent) {
+      this.agent.destroy();
+      this.agent = null;
+    }
+  }
+
+  onDeleted() {
+    this.onUninit();
   }
 
   /**
@@ -172,6 +195,8 @@ _flushDebugLogs() {
    * GET /data
    */
   async onPoll() {
+    if (this.__deleted) return;
+
     const settings = this.getSettings();
 
     if (!this.url) {
