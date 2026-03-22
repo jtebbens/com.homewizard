@@ -595,7 +595,7 @@ if (debug) this.log(
 
       // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
       const pvCapW = devSettings.pv_capacity_w || 0;
-      const PR = 0.75; // Performance Ratio: inverter, wiring, temperature & soiling (~0.70–0.80 typical NL)
+      const PR = devSettings.pv_performance_ratio || 0.75;
       if (pvCapW > 0 && Array.isArray(this.weatherData.dailyProfiles)) {
         const todayDate = new Date().toISOString().slice(0, 10);
         const todayKwh = this.weatherData.dailyProfiles
@@ -728,6 +728,7 @@ if (debug) this.log(
         maxDischargePowerW: inputs.battery?.maxDischargePowerW || 800,
         maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
         totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
+        batteryCount: Math.max(1, Math.round((inputs.battery?.totalCapacityKwh ?? 2.688) / 2.688)),
         lastUpdate: new Date().toISOString()
       };
       this.homey.settings.set('battery_policy_state', planningData);
@@ -743,8 +744,9 @@ if (debug) this.log(
         min_profit_margin:   this.getSetting('min_profit_margin')   || 0.01,
         tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
         policy_interval:     this.getSetting('policy_interval')     || 15,
-        pv_capacity_w:       this.getSetting('pv_capacity_w')       || 0,
-        pv_estimation_enabled: this.getSetting('pv_estimation_enabled') || false,
+        pv_capacity_w:          this.getSetting('pv_capacity_w')          || 0,
+        pv_estimation_enabled:  this.getSetting('pv_estimation_enabled')  || false,
+        pv_performance_ratio:   this.getSetting('pv_performance_ratio')   || 0.75,
       });
       // debug_top3 writes moved to _gatherInputs (single write)
 
@@ -1113,7 +1115,8 @@ if (debug) this.log(
           day: hAmsDate > nowAmsDate ? 1 : 0,
           sunshine: h.sunshine,
           cloudCover: h.cloudCover,
-          radiationWm2: h.radiationWm2
+          radiationWm2: h.radiationWm2,
+          weatherCode: h.weatherCode ?? 0
         };
       });
       this.homey.settings.set('policy_weather_hourly', hourlyWeather);
@@ -1249,8 +1252,8 @@ if (debug) this.log(
         this.p1Device.getCapabilityValue('battery_group_total_capacity_kwh') ??
         null;
 
-      // Estimate number of units from total capacity (each unit ≈ 2.7 kWh @ 800 W)
-      const unitCount = totalCapacity ? Math.max(1, Math.round(totalCapacity / 2.7)) : 1;
+      // Estimate number of units from total capacity (each unit = 2.688 kWh @ 800 W)
+      const unitCount = totalCapacity ? Math.max(1, Math.round(totalCapacity / 2.688)) : 1;
       const unitFallbackW = unitCount * 800;
 
       // ✅ NEW: Get max production and consumption power

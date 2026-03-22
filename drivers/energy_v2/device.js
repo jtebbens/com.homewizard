@@ -1198,12 +1198,16 @@ _mergeBatterySources(realtime, group) {
   for (const rt of realtime) {
     const g = group[rt.id] || {};
 
-    // Explicit realtime vs fallback selection
-    const capacity = (typeof rt.capacity === 'number' && rt.capacity > 0)
+    // Normalize capacity to exact unit spec (2688 Wh/unit).
+    // Firmware rounds to 2.8 kWh; we convert to unit count and back for precision.
+    const UNIT_KWH = 2.688;
+    const rawCapacity = (typeof rt.capacity === 'number' && rt.capacity > 0)
       ? rt.capacity
       : (typeof g.capacity_kwh === 'number' && g.capacity_kwh > 0)
         ? g.capacity_kwh
-        : 2.8; // default
+        : UNIT_KWH;
+    const unitCount = Math.max(1, Math.round(rawCapacity / UNIT_KWH));
+    const capacity = unitCount * UNIT_KWH;
 
     const soc = (typeof rt.soc === 'number')
       ? rt.soc   // realtime 0% is valid

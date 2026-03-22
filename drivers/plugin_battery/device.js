@@ -20,7 +20,7 @@ const agent = new https.Agent({
 // estimateBatteryKWh (unchanged)
 // ---------------------------------------------------------
 function estimateBatteryKWh(loadPct, cycles, inverterEfficiency) {
-  const nominalCapacity = 2.8;
+  const nominalCapacity = 2.688; // HW battery spec: 2688 Wh per unit
   const referenceCycles = 6000;
   const referenceDegradation = 0.7;
 
@@ -841,7 +841,7 @@ async _updateBatteryGroup() {
   // 6. Update group
   const info = {
     id: batteryId,
-    capacity_kwh: 2.8,
+    capacity_kwh: 2.688,
     cycles: this._lastCycles ?? 0,
     power_w: this._lastPower ?? 0,
     soc_pct: Math.round(soc),
