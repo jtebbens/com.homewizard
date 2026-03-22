@@ -1156,5 +1156,8 @@
   },
   "3.14.8": {
     "en": "Weather and solar improvement estimation on kWh, centralized fetchWithTimeout"
+  },
+  "3.14.9": {
+    "en": "Plugin battery fetch connection pool fix, energy-socket pairing fallback + timeout and watermeter fix."
   }
 }
