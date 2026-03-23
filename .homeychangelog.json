@@ -1168,5 +1168,8 @@
   },
   "3.14.12": {
     "en": "Bug hunting"
+  },
+  "3.14.13": {
+    "en": "Pairing sockets limited to 4 concurrent additions"
   }
 }
