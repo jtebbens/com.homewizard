@@ -1159,5 +1159,8 @@
   },
   "3.14.9": {
     "en": "Plugin battery fetch connection pool fix, energy-socket pairing fallback + timeout and watermeter fix."
+  },
+  "3.14.10": {
+    "en": "Crash hunting added logging"
   }
 }
