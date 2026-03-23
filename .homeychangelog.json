@@ -1171,5 +1171,8 @@
   },
   "3.14.13": {
     "en": "Pairing sockets limited to 4 concurrent additions"
+  },
+  "3.14.14": {
+    "en": "Only 2 connections allowed at pairing"
   }
 }
