@@ -1174,5 +1174,8 @@
   },
   "3.14.14": {
     "en": "Only 2 connections allowed at pairing"
+  },
+  "3.14.15": {
+    "en": "Ignore already paired devices"
   }
 }
