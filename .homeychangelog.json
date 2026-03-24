@@ -1180,5 +1180,8 @@
   },
   "3.14.16": {
     "en": "Battery policy improvements, Soc projection, Solar yield learning, Weekend/weekday consumption patterns, consumption awareness, battery cycle costs"
+  },
+  "3.14.17": {
+    "en": "Bugfix planning grid charging while solar is forecasted later"
   }
 }
