@@ -1177,5 +1177,8 @@
   },
   "3.14.15": {
     "en": "Ignore already paired devices"
+  },
+  "3.14.16": {
+    "en": "Battery policy improvements, Soc projection, Solar yield learning, Weekend/weekday consumption patterns, consumption awareness, battery cycle costs"
   }
 }
