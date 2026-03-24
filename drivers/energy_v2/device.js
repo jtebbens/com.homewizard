@@ -27,9 +27,11 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// Create an agent that skips TLS verification
+// Shared HTTPS agent (module-level) — maxSockets begrensd om RSS te beperken bij meerdere devices
 const agent = new https.Agent({
-  rejectUnauthorized: false
+  rejectUnauthorized: false,
+  maxSockets: 2,
+  maxFreeSockets: 1,
 });
 
 
@@ -2053,7 +2055,7 @@ async onDiscoveryAvailable(discoveryResult) {
     try {
       const res = await fetchWithTimeout(`${this.url}/api/system`, {
         headers: { Authorization: `Bearer ${this.token}` },
-        agent: new https.Agent({ rejectUnauthorized: false })
+        agent
       }, 3000);
 
       if (!res || typeof res.cloud_enabled === 'undefined') {

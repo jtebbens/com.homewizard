@@ -48,35 +48,57 @@ logDiscovery(status, detail = null) {
 
 
   const devices = [];
-  await Promise.all(Object.values(discoveryResults).map(async (discoveryResult) => {
-    try {
-      const url = `http://${discoveryResult.address}:${discoveryResult.port}/api`;
-      const res = await fetchWithTimeout(url, {}, 5000);
-      if (!res.ok) throw new Error(res.statusText);
+  const results = Object.values(discoveryResults);
 
-      const data = await res.json();
+  // Al-gepaarde devices hoeven niet opnieuw geverifieerd te worden via HTTP —
+  // we kennen hun naam al. Alleen nieuwe (nog niet gepaarde) devices fetchen.
+  // Dit voorkomt een RSS-piek van 16+ gelijktijdige fetches bij grote setups.
+  const pairedMap = new Map(
+    this.getDevices().map(d => [d.getData().id, d.getName()])
+  );
 
-      const productName = typeof data.product_name === 'string' && data.product_name
-        ? data.product_name
-        : (data.product_type || 'HomeWizard Device');
-
-      this.logDiscovery('ok', `Found ${productName} at ${discoveryResult.address}`);
-
-      let name = productName;
-      if (numberOfDiscoveryResults > 1) {
-        name = `${productName} (${data.serial || discoveryResult.id})`;
-      }
-
-      devices.push({
-        name,
-        data: { id: discoveryResult.id },
-      });
-
-    } catch (err) {
-      console.log(`Discovery failed for ${discoveryResult.id}:`, err.message);
-      this.logDiscovery('error', err.message);
+  for (const r of results) {
+    if (pairedMap.has(r.id)) {
+      devices.push({ name: pairedMap.get(r.id), data: { id: r.id } });
     }
-  }));
+  }
+
+  const newResults = results.filter(r => !pairedMap.has(r.id));
+  console.log(`[DISCOVERY] ${pairedMap.size} al-gepaird (geen fetch), ${newResults.length} nieuw te verifiëren`);
+
+  const CONCURRENCY = 2;
+  for (let i = 0; i < newResults.length; i += CONCURRENCY) {
+    const batch = newResults.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async (discoveryResult) => {
+      try {
+        const url = `http://${discoveryResult.address}:${discoveryResult.port}/api`;
+        const res = await fetchWithTimeout(url, {}, 2000);
+        if (!res.ok) throw new Error(res.statusText);
+
+        const data = await res.json();
+
+        const productName = typeof data.product_name === 'string' && data.product_name
+          ? data.product_name
+          : (data.product_type || 'HomeWizard Device');
+
+        this.logDiscovery('ok', `Found ${productName} at ${discoveryResult.address}`);
+
+        let name = productName;
+        if (numberOfDiscoveryResults > 1) {
+          name = `${productName} (${data.serial || discoveryResult.id})`;
+        }
+
+        devices.push({
+          name,
+          data: { id: discoveryResult.id },
+        });
+
+      } catch (err) {
+        console.log(`Discovery failed for ${discoveryResult.id}:`, err.message);
+        this.logDiscovery('error', err.message);
+      }
+    }));
+  }
 
   if (devices.length === 0) {
     this.logDiscovery('not_found', 'No devices responded to mDNS');

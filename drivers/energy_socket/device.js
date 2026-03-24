@@ -4,6 +4,16 @@ const Homey = require('homey');
 const http = require('http');
 const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
 
+// Eén gedeelde HTTP agent voor alle energy socket devices.
+// maxSockets:4 = max 4 gelijktijdige verbindingen over alle devices heen.
+// Dit bespaart ~14 Agent-instanties + OS-sockets t.o.v. 1-per-device.
+const SHARED_SOCKET_AGENT = new http.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 10000,
+  maxSockets: 4,
+  maxFreeSockets: 2,
+});
+
 
 
 /**
@@ -92,11 +102,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     // (safeIndex is set below — forward reference is fine since this runs after allDevices lookup)
     this._statsFlushTimer = null; // set after safeIndex is known
 
-    // KeepAlive agent (blijft)
-    this.agent = new http.Agent({
-      keepAlive: true,
-      keepAliveMsecs: 10000, // Longer than minimum poll interval (5s) to reuse TCP connections
-    });
+    this.agent = SHARED_SOCKET_AGENT;
 
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
@@ -192,11 +198,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       this._statsFlushTimer = null;
     }
     this._flushFetchStats();
-    // Destroy HTTP agent to close keep-alive sockets
-    if (this.agent) {
-      this.agent.destroy();
-      this.agent = null;
-    }
+    // Gedeelde agent NIET destroyen — die wordt gebruikt door alle energy socket devices
+    this.agent = null;
   }
 
   onDeleted() {
