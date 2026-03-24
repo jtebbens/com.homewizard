@@ -973,14 +973,17 @@ if (debug) this.log(
     let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
     if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.97)) learnedRte = null;
 
-    // 24h consumption forecast from learning engine
+    // 24h consumption forecast from learning engine, floored by baseload when available.
+    // BaseloadMonitor is optional (requires P1 baseload feature to be active).
+    const baseloadW = this.homey.app?.baseloadMonitor?.currentBaseload ?? 0;
     let consumptionWPerSlot = null;
     if (this.learningEngine) {
       const now = new Date();
       consumptionWPerSlot = [];
       for (let h = 0; h < prices.length; h++) {
         const futureTime = new Date(now.getTime() + h * slotMs);
-        consumptionWPerSlot.push(this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
+        const learned = this.learningEngine.getPredictedConsumption(futureTime) ?? 0;
+        consumptionWPerSlot.push(Math.max(learned, baseloadW));
       }
     }
 

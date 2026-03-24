@@ -51,19 +51,16 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.14.4)
+## 📝 Latest Updates (v3.14.15)
 
-### Battery Policy — Planning Improvements
+### Battery Policy — Planning & Intelligence
 
-* **Expected kW per hour** - Planning view now shows the expected solar production per hour based on weather forecast and system parameters
-* **Azimuth & angle support** - PV graph plotting uses panel azimuth and tilt angle for more accurate solar curve calculations
-* **Estimated solar graph** - Planning page shows a visual estimate of expected PV production across the day
-
-### Bug Fixes & Improvements
-
-* **Energy socket polling** - Minimum polling interval corrected; interval reverted to previous stable value
-* **Sun radiation fixes** - Cloud coverage handling and radiation calculation improvements
-* **LED brightness** - Workaround percentage for dim LED on plugin battery
+* **Single source of truth** - Planning view now reads directly from the optimizer schedule; no duplicate policy logic in the frontend
+* **Accurate SoC projection** - Forward pass now reflects PV-assisted charging during preserve slots (firmware runs zero_charge_only when PV is available)
+* **Solar yield learning** - Per-slot yield factors (W per W/m²) learned from actual PV measurements, absorbing panel capacity, orientation, PR and shading into one number. Approach inspired by de Gruijter's app
+* **Weekend/weekday consumption patterns** - Learning engine distinguishes weekday vs weekend consumption; falls back to group average until enough per-day samples accumulate
+* **Consumption-aware planning** - Optimizer uses learned consumption forecasts per slot; discharge offsetting local consumption is valued at full retail price vs 30% for export
+* **Battery cycle cost** - Configurable degradation cost (€/kWh discharged); optimizer only cycles the battery when the price spread exceeds the cycle cost, preventing unprofitable small arbitrage rounds
 
 ---
 
