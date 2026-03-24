@@ -19,10 +19,22 @@
 'use strict';
 
 const Homey = require('homey');
-
-// const v8 = require('v8');
+const v8 = require('v8');
 
 const Testing = false;
+
+// Helper: log current heap in MB via v8 (process.memoryUsage rss fails on Homey sandbox)
+function logMem(label) {
+  try {
+    const hs = v8.getHeapStatistics();
+    const heap = (hs.used_heap_size    / 1024 / 1024).toFixed(1);
+    const total = (hs.total_heap_size  / 1024 / 1024).toFixed(1);
+    const ext  = (hs.external_memory   / 1024 / 1024).toFixed(1);
+    console.log(`[MEM] ${label}: heap=${heap}/${total}MB ext=${ext}MB`);
+  } catch (e) {
+    console.log(`[MEM] ${label}: unavailable (${e.message})`);
+  }
+}
 
 class HomeWizardApp extends Homey.App {
   async onInit() {
@@ -33,34 +45,27 @@ class HomeWizardApp extends Homey.App {
     // 🔍 CRASH DIAGNOSTICS: Global error handlers
     this._setupGlobalErrorHandlers();
 
-     // Debug: fetchQueue stats elke 10 seconden 
-     // setInterval(() => { const stats = fetchQueue.stats(); this.log('fetchQueue stats:', stats); }, 1000);
+    // 🔍 MEMORY DIAGNOSTICS: Log heap every 5s for first 3 minutes
+    // This helps identify which device/engine causes memory ceiling on startup
+    let _memCount = 0;
+    logMem('app-start');
+    this._memInterval = setInterval(() => {
+      _memCount++;
+      logMem(`T+${_memCount * 5}s`);
+      if (_memCount >= 36) { // 3 minutes
+        clearInterval(this._memInterval);
+        this._memInterval = null;
+        console.log('[MEM] Memory monitor stopped after 3 minutes');
+      }
+    }, 5000);
 
       if (process.env.DEBUG === '1' && Testing) {
-        try { 
+        try {
           require('inspector').waitForDebugger();
         }
         catch (error) {
           require('inspector').open(9225, '0.0.0.0', true);
       }
-    
-    // Only enable memory monitor when running locally (CLI dev mode)
-    /* if (Homey.platform === 'local') {
-      this._memInterval = setInterval(() => {
-        try {
-          const hs = v8.getHeapStatistics();
-          const heapUsed = (hs.used_heap_size / 1024 / 1024).toFixed(1);
-          const heapTotal = (hs.total_heap_size / 1024 / 1024).toFixed(1);
-          const external = (hs.external_memory / 1024 / 1024).toFixed(1);
-
-          this.log(
-            `Memory(V8): HeapUsed=${heapUsed}MB HeapTotal=${heapTotal}MB External=${external}MB`
-          );
-        } catch (err) {
-          this.error('Memory monitor failed:', err.message);
-        }
-      }, 60000);
-    } */
     }
   }
 

@@ -12,19 +12,32 @@ const OptimizationEngine = require('../../lib/optimization-engine');
 
 const debug = false;
 
+function _memMB(label) {
+  try {
+    const hs = require('v8').getHeapStatistics();
+    const heap = (hs.used_heap_size   / 1024 / 1024).toFixed(1);
+    const tot  = (hs.total_heap_size  / 1024 / 1024).toFixed(1);
+    console.log(`[MEM][BatteryPolicy] ${label}: heap=${heap}/${tot}MB`);
+  } catch (_) {
+    console.log(`[MEM][BatteryPolicy] ${label}: unavailable`);
+  }
+}
 
 class BatteryPolicyDevice extends Homey.Device {
 
   async onInit() {
     this.log('BatteryPolicyDevice initialized');
+    _memMB('onInit-start');
 
     // Components
     this.learningEngine = new LearningEngine(this.homey, this);
     await this.learningEngine.initialize();
+    _memMB('after-learningEngine.initialize');
 
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
+    _memMB('after-engines-created');
     this.explainabilityEngine = new ExplainabilityEngine(this.homey);
     this.chartGenerator = new BatteryChartGenerator(this.homey);
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
@@ -42,6 +55,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
 
     await this._initializeCapabilities();
+    _memMB('after-initializeCapabilities');
     this._registerCapabilityListeners();
 
     // Connect P1 after short delay
@@ -54,9 +68,9 @@ class BatteryPolicyDevice extends Homey.Device {
 
     // Weather fetch only in dynamic
     if (this.getSettings().tariff_type === 'dynamic') {
-      this._updateWeather().catch(err =>
-        this.error('Initial weather fetch failed:', err)
-      );
+      this._updateWeather()
+        .then(() => _memMB('after-weather-fetch'))
+        .catch(err => this.error('Initial weather fetch failed:', err));
       
       // Schedule periodic price refresh (every 30 minutes)
       this._schedulePriceRefresh();
@@ -79,6 +93,7 @@ class BatteryPolicyDevice extends Homey.Device {
     });
 
     this.log('BatteryPolicyDevice ready');
+    _memMB('onInit-done');
   }
 
   async _initializeCapabilities() {
