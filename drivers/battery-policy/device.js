@@ -566,6 +566,9 @@ if (debug) this.log(
               this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources})`);
 
               if (priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
+                // Always recompute optimizer after price refresh — new data may include
+                // tomorrow's prices (96→192 slots) that change the optimal schedule.
+                this.optimizationEngine.updateSettings({});
                 await this._runPolicyCheck();
               }
             } catch (err) {
@@ -610,13 +613,30 @@ if (debug) this.log(
 
       // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
       const pvCapW = devSettings.pv_capacity_w || 0;
-      const PR = devSettings.pv_performance_ratio || 0.75;
-      if (pvCapW > 0 && Array.isArray(this.weatherData.dailyProfiles)) {
-        const todayDate = new Date().toISOString().slice(0, 10);
-        const todayKwh = this.weatherData.dailyProfiles
-          .filter(h => h.time.toISOString().startsWith(todayDate))
-          .reduce((sum, h) => sum + (pvCapW * PR * (h.radiationWm2 / 1000)), 0) / 1000;
-        this.weatherData.pvKwhToday = Math.round(todayKwh * 10) / 10;
+      const PR     = devSettings.pv_performance_ratio || 0.75;
+      if (Array.isArray(this.weatherData.dailyProfiles)) {
+        const todayDate    = new Date().toISOString().slice(0, 10);
+        const todayProfiles = this.weatherData.dailyProfiles.filter(h => h.time.toISOString().startsWith(todayDate));
+        const yfs           = this.learningEngine?.getSolarYieldFactorsSmoothed();
+        const learnedSlots  = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
+
+        let todayKwh;
+        if (learnedSlots >= 10) {
+          // Learned model: sum(radiation × yieldFactor) / 1000 — no pvCapW or PR needed
+          todayKwh = todayProfiles.reduce((sum, h) => {
+            const slotIndex = h.time.getUTCHours() * 4;
+            const yf = yfs[slotIndex] ?? 0;
+            return sum + h.radiationWm2 * yf;
+          }, 0) / 1000;
+          this.log(`☀️ PV forecast (learned, ${learnedSlots} slots): ${todayKwh.toFixed(1)} kWh`);
+        } else if (pvCapW > 0) {
+          // Fallback: configured capacity × performance ratio
+          todayKwh = todayProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
+          this.log(`☀️ PV forecast (fallback PR=${PR}, ${learnedSlots} slots learned): ${todayKwh.toFixed(1)} kWh`);
+        } else {
+          todayKwh = null;
+        }
+        this.weatherData.pvKwhToday = todayKwh !== null ? Math.round(todayKwh * 10) / 10 : null;
       } else {
         this.weatherData.pvKwhToday = null;
       }
@@ -633,6 +653,9 @@ if (debug) this.log(
         sun4h: this.weatherData.sunshineNext4Hours,
         sunScore
       });
+
+      // Invalidate optimizer — new PV forecast may change the optimal charge schedule.
+      this.optimizationEngine.updateSettings({});
 
     } catch (error) {
       this.error('Weather update failed:', error);
@@ -924,18 +947,26 @@ if (debug) this.log(
     const maxChargePowerW    = inputs.battery?.maxChargePowerW    || 800;
     const maxDischargePowerW = inputs.battery?.maxDischargePowerW || 800;
 
-    // Build per-slot PV power estimate from shortwave radiation forecast
-    // Formula: pvPowerW = pvPeakW × (radiation_W_m2 / 1000)
-    // At 1000 W/m² (STC) the system produces its rated peak output.
+    // Build per-slot PV power estimate from radiation forecast.
+    // Prefer the learned per-slot yield factors (W per W/m²) — no pvCapW or PR needed.
+    // Falls back to configured capacity × PR when insufficient data (<10 learned slots).
     let pvForecast = null;
     const pvCapacityW = inputs.settings?.pv_capacity_w || 0;
-    if (pvCapacityW > 0 && Array.isArray(inputs.weather?.hourlyForecast)) {
+    const pvPR        = inputs.settings?.pv_performance_ratio || 0.75;
+    if (Array.isArray(inputs.weather?.hourlyForecast)) {
+      const yfs          = this.learningEngine?.getSolarYieldFactorsSmoothed();
+      const learnedSlots = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
+
       pvForecast = inputs.weather.hourlyForecast
         .filter(h => typeof h.radiationWm2 === 'number')
-        .map(h => ({
-          timestamp: h.time instanceof Date ? h.time.toISOString() : h.time,
-          pvPowerW: Math.round(pvCapacityW * (h.radiationWm2 / 1000))
-        }));
+        .map(h => {
+          const d   = h.time instanceof Date ? h.time : new Date(h.time);
+          const pvW = learnedSlots >= 10
+            ? Math.round(h.radiationWm2 * (yfs[(d.getUTCHours() * 4)] ?? 0))
+            : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
+          return { timestamp: d.toISOString(), pvPowerW: pvW };
+        })
+        .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
     }
 
     // Learned round-trip efficiency from efficiencyEstimator
@@ -956,6 +987,14 @@ if (debug) this.log(
     const slotLabel = slotMs === 900_000 ? '15-min' : '1h';
     this.log(`🔮 Optimizer: recomputing schedule (${prices.length} × ${slotLabel} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot);
+
+    // Persist planning schedule for the settings UI (single source of truth).
+    // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
+    const slots = this.optimizationEngine._schedule?.slots;
+    if (slots?.length > 0) {
+      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null);
+      this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
+    }
   }
 
   /**
@@ -965,6 +1004,35 @@ if (debug) this.log(
   _updatePvProduction(powerW) {
     this._pvProductionW = powerW;
     this._pvProductionTimestamp = Date.now();
+
+    // Feed live measurement into the solar yield-factor learner.
+    // Requires radiation data from the latest weather fetch.
+    const radiation = this._getInterpolatedRadiation(Date.now());
+    if (radiation !== null && this.learningEngine) {
+      this.learningEngine.updateSolarYieldFactor(new Date(), powerW, radiation);
+    }
+  }
+
+  /**
+   * Interpolate radiation (W/m²) from hourly weather forecast at a given moment.
+   * Returns null when no weather data is available.
+   */
+  _getInterpolatedRadiation(nowMs) {
+    const forecast = this.weatherData?.hourlyForecast;
+    if (!Array.isArray(forecast) || forecast.length === 0) return null;
+
+    let prev = null, next = null;
+    for (const h of forecast) {
+      const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
+      if (t <= nowMs) prev = { t, r: h.radiationWm2 };
+      else if (!next)  { next = { t, r: h.radiationWm2 }; break; }
+    }
+    if (!prev && !next) return null;
+    if (!prev) return next.r;
+    if (!next) return prev.r;
+
+    const ratio = (nowMs - prev.t) / (next.t - prev.t);
+    return prev.r + (next.r - prev.r) * ratio;
   }
 
   /**
@@ -1560,6 +1628,7 @@ if (debug) this.log(
       'policy_debug_top3high',
       'policy_weather_hourly',
       'policy_mode_history',
+      'policy_optimizer_schedule',
       'device_settings',
     ];
     for (const key of settingsToClean) {
