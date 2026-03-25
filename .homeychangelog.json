@@ -1183,5 +1183,8 @@
   },
   "3.14.17": {
     "en": "Bugfix planning grid charging while solar is forecasted later"
+  },
+  "3.14.18": {
+    "en": "Baseload fix with plugin batteries that zero the overall usage, watts should be seen as baseload"
   }
 }
