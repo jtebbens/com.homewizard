@@ -4,9 +4,7 @@ const Homey = require('homey');
 const WeatherForecaster = require('../../lib/weather-forecaster');
 const PolicyEngine = require('../../lib/policy-engine');
 const TariffManager = require('../../lib/tariff-manager');
-const ExplainabilityEngine = require('../../lib/explainability-engine');
 const LearningEngine = require('../../lib/learning-engine');
-const BatteryChartGenerator = require('../../lib/battery-chart-generator');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
 const OptimizationEngine = require('../../lib/optimization-engine');
 
@@ -38,8 +36,8 @@ class BatteryPolicyDevice extends Homey.Device {
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     _memMB('after-engines-created');
-    this.explainabilityEngine = new ExplainabilityEngine(this.homey);
-    this.chartGenerator = new BatteryChartGenerator(this.homey);
+    this.explainabilityEngine = null; // lazy-loaded on first policy check
+    this.chartGenerator = null;       // lazy-loaded on first chart request
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
     this.optimizationEngine = new OptimizationEngine(this.getSettings());
 
@@ -800,6 +798,10 @@ if (debug) this.log(
         this.log(`📊 Learning adjusted confidence: ${originalConfidence} → ${result.confidence} (${confidenceAdjustment > 0 ? '+' : ''}${confidenceAdjustment})`);
       }
 
+      if (!this.explainabilityEngine) {
+        this.explainabilityEngine = new (require('../../lib/explainability-engine'))(this.homey);
+        _memMB('after-lazy-load-explainability');
+      }
       const explanation = this.explainabilityEngine.generateExplanation(
         result,
         inputs,
@@ -1797,6 +1799,9 @@ if (debug) this.log(
         language
       };
 
+      if (!this.chartGenerator) {
+        this.chartGenerator = new (require('../../lib/battery-chart-generator'))(this.homey);
+      }
       const imageBuffer = this.chartGenerator.generateChart(chartData);
       
       if (!imageBuffer) {
