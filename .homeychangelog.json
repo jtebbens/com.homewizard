@@ -1186,5 +1186,8 @@
   },
   "3.14.18": {
     "en": "Baseload fix with plugin batteries that zero the overall usage, watts should be seen as baseload"
+  },
+  "3.14.19": {
+    "en": "Baseload fix with plugin battery and heap memory fix at startup, processes postponed for later use rather all update upon starting app"
   }
 }
