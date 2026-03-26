@@ -208,7 +208,7 @@
       position: absolute;
       top: 2px;
       right: 2px;
-      font-size: 14px;
+      font-size: 18px;
       line-height: 1;
     }
 
@@ -572,6 +572,7 @@
       if (code === 0)                    return isNight ? '🌙' : '☀️';
       if (code <= 1)                     return isNight ? '🌙' : '🌤';
       if (code <= 2)                     return isNight ? '🌑' : '⛅';
+      if (isNight)                       return '';   // geen weer-icoontje 's nachts
       if (code <= 3)                     return '☁️';
       if (code === 45 || code === 48)    return '🌫';
       if (code <= 57)                    return '🌦';  // drizzle
@@ -1238,15 +1239,29 @@
         function renderExplainability(data) {
           if (!data) { document.getElementById('explain-summary').innerHTML = '<em>Nog geen analyse beschikbaar.</em>'; return; }
 
-          const mode = data.recommendation;
-          const modeInfo = HW_MODES[mode] || { icon: '❓', nl: mode || '?', badge: '' };
           const conf = Math.round(data.confidence ?? 0);
           const confColor = conf >= 80 ? '#4caf50' : conf >= 60 ? '#fb8c00' : '#e53935';
+
+          // policyMode (charge/discharge/preserve) drives the scores — show that as primary decision
+          const POLICY_LABELS = {
+            charge:    { icon: '🔌', nl: 'Laden',       badge: 'hw-badge-to_full' },
+            discharge: { icon: '⚡', nl: 'Ontladen',    badge: 'hw-badge-zero_discharge_only' },
+            preserve:  { icon: '🛡️', nl: 'Beschermen', badge: 'hw-badge-standby' }
+          };
+          const policyInfo = POLICY_LABELS[data.policyMode] || { icon: '❓', nl: data.policyMode || '?', badge: '' };
+
+          // hwMode is the actual implementation of that decision
+          const hwInfo = HW_MODES[data.hwMode] || null;
+          const hwBadge = hwInfo
+            ? `<span class="hw-badge ${hwInfo.badge}" style="font-size:12px;padding:3px 8px">${hwInfo.icon} ${hwInfo.nl}</span>`
+            : '';
+
           document.getElementById('explain-summary').innerHTML =
-            `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">` +
-              `<span class="hw-badge ${modeInfo.badge}" style="font-size:14px;padding:4px 10px">${modeInfo.icon} ${modeInfo.nl}</span>` +
+            `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">` +
+              `<span class="hw-badge ${policyInfo.badge}" style="font-size:14px;padding:4px 10px">${policyInfo.icon} ${policyInfo.nl}</span>` +
               `<span style="font-size:13px;color:${confColor};font-weight:bold">${conf}% zekerheid</span>` +
             `</div>` +
+            (hwInfo ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:#A0A0A0;">Geïmplementeerd als ${hwBadge}${data.hwMode === 'zero_charge_only' && data.policyMode === 'preserve' ? ' — om eventuele zonne-energie op te vangen' : ''}</div>` : '') +
             `<div style="font-size:13px;color:#ffffff">${data.shortSummary || ''}</div>` +
             `<div style="font-size:12px;color:#A0A0A0;margin-top:6px">${data.summary || ''}</div>`;
           const avg = data?.batteryCost?.avgCost ?? null;
@@ -1675,7 +1690,11 @@
 
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
-        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgPvW, day } = hourGroup;
+        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, day } = hourGroup;
+        // Use same radiation-based formula as the chart so tooltip and curve always match.
+        const displayPvW = pvEnabled
+          ? Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR)
+          : 0;
         const hwDef = HW_MODES[dominantMode] || HW_MODES.standby;
         const priceDisplay = avgPrice !== null ? `€${avgPrice.toFixed(3)}` : '?';
 
@@ -1711,7 +1730,16 @@
             ? ` · ⚡ max €${effectiveChgPrice.toFixed(2)} (dyn)` : '';
 
           const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR) : '';
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${pvCurve}`;
+          let weatherTs = '';
+          if (day === 0 && pvEnabled) {
+            const fetchedAt = settings['policy_weather_fetched_at'];
+            if (fetchedAt) {
+              const d = new Date(fetchedAt);
+              const timeStr = d.toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+              weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}</div>`;
+            }
+          }
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${weatherTs}${pvCurve}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);
@@ -1753,7 +1781,7 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%${avgPvW > 50 ? ` · PV ☀️ ${(avgPvW/1000).toFixed(1)}kW` : ''}<br>
+              SoC: ${avgSoc.toFixed(0)}%${displayPvW > 50 ? ` · PV ☀️ ${(displayPvW/1000).toFixed(1)}kW` : ''}<br>
               ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#8b9fff' : avgPrice >= minDchPrice ? '#20F29B' : '#808080'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
             </div>
             <div class="expand-indicator">+</div>

@@ -95,11 +95,11 @@ class HomeWizardDriver extends Homey.Driver {
       try {
         const status = await new Promise((resolve, reject) => {
           homewizard.callnew(id, '/get-status', (err, res) => {
-            if (err) return reject(err);
+            if (err) return reject(new Error(err?.message || String(err) || 'Unknown HW error'));
             resolve(res);
           });
         });
-        hwPreset = status?.preset;
+        hwPreset = status?.response?.preset;
       } catch (err) {
         this.log(`WARN: set_preset → HW verification failed (${err.message}). Falling back to Homey state.`);
       }
