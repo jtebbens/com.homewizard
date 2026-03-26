@@ -158,28 +158,34 @@ _flushDebugLogs() {
    */
   async setCloudOn() {
     if (!this.url) return;
-
-    const res = await fetchWithTimeout(`${this.url}/system`, {
-      agent,
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: true })
-    });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    try {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
+        agent,
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: true })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    } catch (err) {
+      this._debugLog(`Cloud ON failed: ${err.code || ''} ${err.message || err}`);
+      this.error('Failed to enable cloud:', err);
+    }
   }
 
   async setCloudOff() {
     if (!this.url) return;
-
-    const res = await fetchWithTimeout(`${this.url}/system`, {
-      agent,
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cloud_enabled: false })
-    });
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    try {
+      const res = await fetchWithTimeout(`${this.url}/system`, {
+        agent,
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cloud_enabled: false })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    } catch (err) {
+      this._debugLog(`Cloud OFF failed: ${err.code || ''} ${err.message || err}`);
+      this.error('Failed to disable cloud:', err);
+    }
   }
 
   /**
