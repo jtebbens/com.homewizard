@@ -227,6 +227,14 @@ class BaseloadMonitor {
 
     for (const s of this.currentNightSamples) {
       const ts = s.ts && s.ts.getTime ? s.ts.getTime() : s.ts;
+      // If no battery data was provided and grid is near-zero, skip this sample:
+      // we cannot distinguish genuine near-zero from battery compensation.
+      const unknownBattery = s.batteryPower === null || s.batteryPower === undefined;
+      const rawNearZero = Math.abs(s.rawGridPower ?? s.power) < this.nearZeroMargin;
+      if (unknownBattery && rawNearZero) {
+        lastTs = ts;
+        continue;
+      }
       if (Math.abs(s.power) < this.nearZeroMargin) {
         if (lastTs !== null) currentStreakMs += ts - lastTs;
       } else {
@@ -331,6 +339,17 @@ class BaseloadMonitor {
     }
 
     this.invalidNightCounter=0;
+
+    // Detect nights where battery compensation masked consumption:
+    // >50% of samples have no battery data and near-zero household power.
+    // These are unreliable — skip silently without triggering notifications.
+    const uncorrectedNearZero = this.currentNightSamples.filter(s =>
+      (s.batteryPower === null || s.batteryPower === undefined) &&
+      Math.abs(s.rawGridPower ?? s.power) < this.nearZeroMargin).length;
+    if (uncorrectedNearZero / this.currentNightSamples.length > 0.5) {
+      this._push(dateKey, null, true, { fridgeCycles: cycles, batteryMasked: true });
+      return;
+    }
 
     const valid = this.nightHistory.slice(-7).filter(n=>!n.invalid && typeof n.avg==='number');
     if (!valid.length) {

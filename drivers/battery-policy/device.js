@@ -267,6 +267,36 @@ class BatteryPolicyDevice extends Homey.Device {
 
       this._setupP1Listeners();
 
+      // Seed RTE from hardware meters immediately at startup
+      try {
+        const battDriver = this.homey.drivers.getDriver('plugin_battery');
+        if (battDriver) {
+          let totalImport = 0, totalExport = 0;
+          for (const dev of battDriver.getDevices()) {
+            totalImport += dev.getCapabilityValue('meter_power.import') || 0;
+            totalExport += dev.getCapabilityValue('meter_power.export') || 0;
+          }
+          const newRte = this.efficiencyEstimator.updateFromMeters(totalImport, totalExport);
+          if (newRte) this.policyEngine.updateSettings({ battery_efficiency: newRte });
+        }
+      } catch (e) { /* driver not available yet */ }
+
+      // Restore last known mode immediately so the battery doesn't sit in firmware
+      // default (zero_charge_only) during the gap between restart and first policy run.
+      try {
+        const modeHistory = this.homey.settings.get('policy_mode_history');
+        if (Array.isArray(modeHistory) && modeHistory.length > 0) {
+          const lastEntry = modeHistory[modeHistory.length - 1];
+          const lastMode  = lastEntry?.hwMode;
+          if (lastMode) {
+            this.log(`🔄 Restoring last known mode on startup: ${lastMode}`);
+            await this._applyRecommendation(lastMode, 100);
+          }
+        }
+      } catch (e) {
+        this.log('Could not restore last mode on startup:', e.message);
+      }
+
       await this._runPolicyCheck();
 
     } catch (error) {
@@ -344,10 +374,28 @@ if (debug) this.log(
           if (this._effLogCounter % 20 === 0) {
             const chargedWh   = (s.totalChargeKwh   * 1000).toFixed(0);
             const dischargedWh = (s.totalDischargeKwh * 1000).toFixed(0);
+            const balance = s.totalDischargeKwh > 0
+              ? (s.totalChargeKwh / s.totalDischargeKwh).toFixed(2) : '—';
             this.log(
               `[RTE] learning: charged=${chargedWh}Wh / 1000Wh, discharged=${dischargedWh}Wh / 1000Wh, ` +
-              `current RTE=${( s.efficiency * 100).toFixed(1)}%`
+              `balance=${balance} (>1.4 = wacht), current RTE=${( s.efficiency * 100).toFixed(1)}%`
             );
+          }
+
+          // Update RTE from hardware meters every hour (240 × 15s)
+          if (this._effLogCounter % 240 === 0) {
+            try {
+              const battDriver = this.homey.drivers.getDriver('plugin_battery');
+              if (battDriver) {
+                let totalImport = 0, totalExport = 0;
+                for (const dev of battDriver.getDevices()) {
+                  totalImport += dev.getCapabilityValue('meter_power.import') || 0;
+                  totalExport += dev.getCapabilityValue('meter_power.export') || 0;
+                }
+                const newRte = this.efficiencyEstimator.updateFromMeters(totalImport, totalExport);
+                if (newRte) this.policyEngine.updateSettings({ battery_efficiency: newRte });
+              }
+            } catch (e) { /* driver not available */ }
           }
 
           // Log RTE insights every 4h (every 960th call at 15s interval)
@@ -620,7 +668,10 @@ if (debug) this.log(
         const yfs           = this.learningEngine?.getSolarYieldFactorsSmoothed();
         const learnedSlots  = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
 
-        let todayKwh;
+        const now = new Date();
+        const futureProfiles = todayProfiles.filter(h => h.time > now);
+
+        let todayKwh, remainingKwh;
         if (learnedSlots >= 10) {
           // Learned model: sum(radiation × yieldFactor) / 1000 — no pvCapW or PR needed
           todayKwh = todayProfiles.reduce((sum, h) => {
@@ -628,15 +679,23 @@ if (debug) this.log(
             const yf = yfs[slotIndex] ?? 0;
             return sum + h.radiationWm2 * yf;
           }, 0) / 1000;
-          this.log(`☀️ PV forecast (learned, ${learnedSlots} slots): ${todayKwh.toFixed(1)} kWh`);
+          remainingKwh = futureProfiles.reduce((sum, h) => {
+            const slotIndex = h.time.getUTCHours() * 4;
+            const yf = yfs[slotIndex] ?? 0;
+            return sum + h.radiationWm2 * yf;
+          }, 0) / 1000;
+          this.log(`☀️ PV forecast (learned, ${learnedSlots} slots): ${todayKwh.toFixed(1)} kWh today, ${remainingKwh.toFixed(1)} kWh remaining`);
         } else if (pvCapW > 0) {
           // Fallback: configured capacity × performance ratio
-          todayKwh = todayProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
-          this.log(`☀️ PV forecast (fallback PR=${PR}, ${learnedSlots} slots learned): ${todayKwh.toFixed(1)} kWh`);
+          todayKwh     = todayProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
+          remainingKwh = futureProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
+          this.log(`☀️ PV forecast (fallback PR=${PR}, ${learnedSlots} slots learned): ${todayKwh.toFixed(1)} kWh today, ${remainingKwh.toFixed(1)} kWh remaining`);
         } else {
           todayKwh = null;
+          remainingKwh = null;
         }
-        this.weatherData.pvKwhToday = todayKwh !== null ? Math.round(todayKwh * 10) / 10 : null;
+        this.weatherData.pvKwhToday     = todayKwh     !== null ? Math.round(todayKwh     * 10) / 10 : null;
+        this.weatherData.pvKwhRemaining = remainingKwh !== null ? Math.round(remainingKwh * 10) / 10 : null;
       } else {
         this.weatherData.pvKwhToday = null;
       }
@@ -961,9 +1020,12 @@ if (debug) this.log(
         .filter(h => typeof h.radiationWm2 === 'number')
         .map(h => {
           const d   = h.time instanceof Date ? h.time : new Date(h.time);
-          const pvW = learnedSlots >= 10
+          const rawPvW = learnedSlots >= 10
             ? Math.round(h.radiationWm2 * (yfs[(d.getUTCHours() * 4)] ?? 0))
             : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
+          // Cap at installed system capacity — learned yield factors can overshoot on
+          // exceptional days, but the inverter/system can never exceed its rated peak.
+          const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
           return { timestamp: d.toISOString(), pvPowerW: pvW };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
@@ -981,9 +1043,13 @@ if (debug) this.log(
       const now = new Date();
       consumptionWPerSlot = [];
       for (let h = 0; h < prices.length; h++) {
-        const futureTime = new Date(now.getTime() + h * slotMs);
+        // Use the actual price slot timestamp so consumption aligns with the right hour,
+        // not now + h * slotMs which drifts when prices don't start exactly at 'now'.
+        const futureTime = new Date(prices[h].timestamp);
         const learned = this.learningEngine.getPredictedConsumption(futureTime) ?? 0;
-        consumptionWPerSlot.push(Math.max(learned, baseloadW));
+        // Use baseload only when learning has no data yet for this slot (learned = 0).
+        // Learned values already include baseload (recorded from grid import).
+        consumptionWPerSlot.push(learned > 0 ? learned : baseloadW);
       }
     }
 
@@ -1123,7 +1189,14 @@ if (debug) this.log(
   }
 
   async _gatherInputs() {
-    const settings = this.getSettings();
+    const settings = { ...this.getSettings() };
+
+    // Override battery_efficiency with learned meter-based RTE when available,
+    // so policy engine, explainability, and settings page all use the same value.
+    const learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
+    if (learnedRte && learnedRte > 0.50 && learnedRte < 0.99) {
+      settings.battery_efficiency = learnedRte;
+    }
 
     let weatherData = null;
 
@@ -1206,6 +1279,9 @@ if (debug) this.log(
         };
       });
       this.homey.settings.set('policy_weather_hourly', hourlyWeather);
+      if (weatherData.fetchedAt) {
+        this.homey.settings.set('policy_weather_fetched_at', new Date(weatherData.fetchedAt).toISOString());
+      }
     }
 
     // Estimate PV production using grid analysis + sun model

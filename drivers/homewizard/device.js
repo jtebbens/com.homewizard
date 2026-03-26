@@ -302,9 +302,11 @@ class HomeWizardDevice extends Homey.Device {
       continue;
     }
 
-    // Only log on real deviation
+    // HW is authoritative during polling — sync Homey if there's a mismatch
     if (hwPreset !== homeyPreset) {
-      this.log(`WARN: HW preset ${hwPreset} differs from Homey preset ${homeyPreset}. Ignoring.`);
+      this.log(`Preset mismatch: Homey=${homeyPreset}, HW=${hwPreset} → syncing Homey to HW`);
+      await device.setStoreValue('preset', hwPreset);
+      await device.setCapabilityValue('preset', String(hwPreset)).catch(this.error);
     }
 
     } catch (err) {

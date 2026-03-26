@@ -1588,18 +1588,20 @@ async _handleMeasurement(m) {
 }
 
 _validateMeasurementContext() {
+  if (this.__deleted) return false;
+
   const dataObj = this.getData();
   if (!dataObj || !dataObj.id) {
     this.log('⚠️ Ignoring measurement: device no longer exists');
     return false;
   }
-  
+
   // Check if app instance is still valid (not destroyed)
   if (!this.homey) {
     this.log('⚠️ Ignoring measurement: app instance has been destroyed');
     return false;
   }
-  
+
   return true;
 }
 
@@ -1622,10 +1624,12 @@ _measurementPower(m, tasks) {
     cap('measure_power.l1', m.power_l1_w);
     cap('measure_power.l2', m.power_l2_w);
     cap('measure_power.l3', m.power_l3_w);
-
-    // Feed baseload monitor with battery-aware power
-    this._onNewPowerValue(m.power_w);
   }
+
+  // Always feed baseload monitor, even when power unchanged.
+  // If battery holds grid at 0W constantly, the value never changes but we
+  // still need periodic samples for the night window.
+  this._onNewPowerValue(m.power_w);
 }
 
 _onNewPowerValue(gridPower) {
