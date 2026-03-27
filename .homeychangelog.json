@@ -1192,5 +1192,8 @@
   },
   "3.14.20": {
     "en": "Extra logging baseload detection with batteries"
+  },
+  "3.14.21": {
+    "en": "Tuned log rules to only night summary"
   }
 }
