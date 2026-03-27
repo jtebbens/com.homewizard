@@ -1189,5 +1189,8 @@
   },
   "3.14.19": {
     "en": "Baseload fix with plugin battery and heap memory fix at startup, processes postponed for later use rather all update upon starting app"
+  },
+  "3.14.20": {
+    "en": "Extra logging baseload detection with batteries"
   }
 }
