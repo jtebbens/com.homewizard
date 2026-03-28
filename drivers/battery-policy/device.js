@@ -431,7 +431,7 @@ if (debug) this.log(
         // ------------------------------------------------------
         if (gridPower > 0) {
           // Only record import (consumption), not export
-          await this.learningEngine.recordConsumption(gridPower).catch(err => 
+          await this.learningEngine.recordConsumption(gridPower).catch(err =>
             this.error('Learning consumption recording failed:', err)
           );
         }

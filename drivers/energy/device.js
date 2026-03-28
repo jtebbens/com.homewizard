@@ -274,7 +274,18 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
   _onNewPowerValue(power) {
     const app = this.homey.app;
     if (app.baseloadMonitor) {
-      app.baseloadMonitor.updatePowerFromDevice(this, power);
+      let batteryPower = null;
+      try {
+        const battDriver = this.homey.drivers.getDriver('plugin_battery');
+        if (battDriver) {
+          let total = 0;
+          for (const dev of battDriver.getDevices()) {
+            total += dev.getCapabilityValue('measure_power') || 0;
+          }
+          if (total !== 0) batteryPower = total;
+        }
+      } catch (_) {}
+      app.baseloadMonitor.updatePowerFromDevice(this, power, batteryPower);
     }
   }
 

@@ -7,8 +7,13 @@
 **WebSocket-Based (Real-Time, Low Latency):**
 - `energy_v2` - P1 meter with API v2 (WebSocket preferred, polling fallback)
 - `plugin_battery` - Battery system via WebSocket (real-time power updates)
+- `cloud_p1` - Cloud-connected P1 meter
+- `cloud_watermeter` - Cloud-connected water meter
 - Communication: WSS connection to device, ~2 second measurement intervals
 - Manager: `includes/v2/Ws.js` - Handles connection, authorization, reconnection logic
+
+**Intelligence / Automation:**
+- `battery-policy` - Autonomous battery charge/discharge optimizer; runs 6 engines eagerly + 2 lazy
 
 **HTTP Polling-Based (API v1 & v2):**
 - `energy` - P1 meter classic API (10s polling default, configurable)
@@ -45,9 +50,18 @@
 | `drivers/energy/device.js` | P1 APIv1 driver | Polling-based, gas/water processing, power quality triggers |
 | `drivers/plugin_battery/device.js` | Battery driver | WebSocket real-time, polling fallback |
 | `drivers/battery-policy/device.js` | Battery policy automation | ML-based charging optimization, PV estimation, learning engine |
-| `lib/policy-engine.js` | Battery decision logic | Score-based mode selection, profitability checks |
+| `lib/policy-engine.js` | Battery decision logic | Score-based mode selection, profitability checks, delay-charge |
+| `lib/optimization-engine.js` | 24h DP optimizer | Dynamic programming schedule over 15-min slots |
 | `lib/learning-engine.js` | Historical learning | Consumption patterns, PV accuracy tracking, confidence adjustments |
-| `lib/xadi-provider.js` | Dynamic pricing | Day-ahead pricing via Xadi API, 30-min refresh |
+| `lib/efficiency-estimator.js` | RTE tracking | Round-trip efficiency learning from charge/discharge cycles |
+| `lib/tariff-manager.js` | Price orchestration | Routes 15-min and hourly prices, `_expandHourlyTo15Min` fallback |
+| `lib/merged-price-provider.js` | Price aggregation | Combines Xadi + KwhPrice; Xadi wins conflicts; 1h cache |
+| `lib/xadi-provider.js` | Xadi pricing | Day-ahead via API, native 15-min intervals |
+| `lib/kwhprice-provider.js` | KwhPrice pricing | kwhprice.eu scraper (Chart.js JS arrays, 96 slots today only) |
+| `lib/weather-forecaster.js` | Solar/weather | Open-Meteo ensemble + tilted radiation; sunrise/sunset |
+| `lib/explainability-engine.js` | Decision explainer | Generates `reasons[]` per policy run; lazy-loaded |
+| `lib/planner-engine.js` | Schedule planner | Day schedule builder for UI chart |
+| `lib/battery-chart-generator.js` | Chart data | Price/SoC chart for settings page; lazy-loaded |
 
 ---
 
@@ -330,7 +344,10 @@ try {
 
 ## Version History Key Milestones
 
+- **v3.14.x** - 15-min pricing (kwhprice.eu Chart.js parser), ExplainabilityEngine improvements, BaseloadMonitor battery correction
+- **v3.13.x** - MergedPriceProvider (Xadi + KwhPrice), delay-charge strategy, OptimizationEngine 24h-DP
+- **v3.12.x** - ExplainabilityEngine, BatteryChartGenerator (both lazy-loaded), LearningEngine maturity
 - **v3.11.10** - CPU optimization (caching, detection throttling), baseload near-zero fix
 - **v3.9.29** - Baseload monitor introduced (sluipverbruik tracking)
-- **v3.8.22** - WebSocket optimization, fetcQueue centralization
+- **v3.8.22** - WebSocket optimization, fetchQueue centralization
 - **v3.0+** - Battery support, modular P1 driver, API v2
