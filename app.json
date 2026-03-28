@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.14.21",
+  "version": "3.14.22",
   "platforms": [
     "local"
   ],
@@ -5078,6 +5078,15 @@
           "label": {
             "en": "Show gas meter",
             "nl": "Gas meter weergeven"
+          },
+          "value": true
+        },
+        {
+          "id": "baseload_notifications",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable baseload notifications",
+            "nl": "Sluipverbruik meldingen inschakelen"
           },
           "value": true
         },
