@@ -1195,5 +1195,8 @@
   },
   "3.14.21": {
     "en": "Tuned log rules to only night summary"
+  },
+  "3.14.22": {
+    "en": "Baseload fix for energy_v2 (notification tag added), PV Graph planning adjusted, added green line with actual Watts production vs estimate"
   }
 }
