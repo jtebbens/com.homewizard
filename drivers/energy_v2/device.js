@@ -474,6 +474,8 @@ async reconnectWithManualIP(ip) {
     }
     app.baseloadMonitor.registerP1Device(this);
     app.baseloadMonitor.trySetMaster(this);
+    this._baseloadNotificationsEnabled = this.getSetting('baseload_notifications') ?? true;
+    app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
 
     const settings = this.getSettings();
     this.log('Settings for P1 apiv2: ', settings.polling_interval);
@@ -1635,8 +1637,32 @@ _measurementPower(m, tasks) {
 _onNewPowerValue(gridPower) {
   const app = this.homey.app;
   if (app.baseloadMonitor) {
-    // Get battery power if available
-    const batteryPower = this.getCapabilityValue('measure_power.battery_group_power_w');
+    // Primary: plugin_battery devices (read directly from battery API — most accurate)
+    let batteryPower = null;
+    let batterySource = null;
+    try {
+      const battDriver = this.homey.drivers.getDriver('plugin_battery');
+      if (battDriver) {
+        let total = 0;
+        let count = 0;
+        for (const dev of battDriver.getDevices()) {
+          total += dev.getCapabilityValue('measure_power') || 0;
+          count++;
+        }
+        if (count > 0) {
+          batteryPower = total;
+          batterySource = `plugin_battery(${count})`;
+        }
+      }
+    } catch (_) {}
+    // Fallback: P1 API capability (only when no plugin_battery devices present)
+    if (batterySource === null) {
+      const p1batt = this.getCapabilityValue('measure_power.battery_group_power_w');
+      if (typeof p1batt === 'number') {
+        batteryPower = p1batt;
+        batterySource = 'p1api';
+      }
+    }
     app.baseloadMonitor.updatePowerFromDevice(this, gridPower, batteryPower);
   }
 }
@@ -2514,6 +2540,15 @@ async _setCapabilityValue(capability, value) {
         this.wsManager.resume();
       }
 
+    }
+
+    if ('baseload_notifications' in MySettings.newSettings) {
+      this._baseloadNotificationsEnabled = MySettings.newSettings.baseload_notifications;
+      const app = this.homey.app;
+      if (app.baseloadMonitor) {
+        app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
+      }
+      this.log('Baseload notifications changed to:', this._baseloadNotificationsEnabled);
     }
 
     if ('phase_overload_notifications' in MySettings.newSettings) {

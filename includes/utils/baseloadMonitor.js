@@ -101,7 +101,7 @@ class BaseloadMonitor {
     }
     // Clamp: household power can never be negative (meter rounding / timing mismatch)
     if (householdPower < 0) householdPower = 0;
-    
+
     this._processNightSample(now, householdPower, power, batteryPower);
   }
 
@@ -224,6 +224,7 @@ class BaseloadMonitor {
     let maxConsecutiveMs = 0;
     let currentStreakMs = 0;
     let lastTs = null;
+    let skippedBatteryKnown = 0;
 
     for (const s of this.currentNightSamples) {
       const ts = s.ts && s.ts.getTime ? s.ts.getTime() : s.ts;
@@ -232,6 +233,15 @@ class BaseloadMonitor {
       const unknownBattery = s.batteryPower === null || s.batteryPower === undefined;
       const rawNearZero = Math.abs(s.rawGridPower ?? s.power) < this.nearZeroMargin;
       if (unknownBattery && rawNearZero) {
+        // Can't distinguish battery compensation from true near-zero — skip.
+        lastTs = ts;
+        continue;
+      }
+      if (!unknownBattery) {
+        // Battery power is known → householdPower is a real measurement, not grid
+        // balancing noise. Even a 50W baseload looks "near-zero" against the 80W
+        // margin. Don't contribute to the near-zero streak.
+        skippedBatteryKnown++;
         lastTs = ts;
         continue;
       }
@@ -298,6 +308,15 @@ class BaseloadMonitor {
   _finalizeNight() {
     const dateKey = new Date().toISOString().slice(0,10);
     const cycles = this._detectFridgeCycles(this.currentNightSamples);
+
+    // [DEBUG] One-line night summary for diagnosing battery correction
+    {
+      const total = this.currentNightSamples.length;
+      const withBatt = this.currentNightSamples.filter(s => s.batteryPower !== null && s.batteryPower !== undefined).length;
+      const avgGrid = total ? Math.round(this.currentNightSamples.reduce((a,s)=>(a + (s.rawGridPower ?? s.power)),0) / total) : null;
+      const avgHousehold = total ? Math.round(this.currentNightSamples.reduce((a,s)=>a+s.power,0) / total) : null;
+      console.log(`[BaseloadMonitor] night ${dateKey}: ${total} samples, ${withBatt} with battery data, avgGrid=${avgGrid}W, avgHousehold=${avgHousehold}W, invalid=${this.nightInvalid}${this.nightInvalid ? ` (${Object.entries(this.flags).filter(([,v])=>v).map(([k])=>k).join(',')})` : ''}`);
+    }
 
     if (this.currentNightSamples.length===0) {
       this._push(dateKey,null,true,{fridgeCycles:cycles});

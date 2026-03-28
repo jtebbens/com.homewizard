@@ -112,6 +112,15 @@
   "value": true
   },
   {
+    "id": "baseload_notifications",
+    "type": "checkbox",
+    "label": {
+      "en": "Enable baseload notifications",
+      "nl": "Sluipverbruik meldingen inschakelen"
+    },
+    "value": true
+  },
+  {
     "id": "phase_overload_notifications",
     "type": "checkbox",
     "label": {
