@@ -51,7 +51,35 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.14.16)
+## 📝 Latest Updates (v3.14.24+)
+
+### Battery Policy — Planning & Optimizer
+
+* **Discharge SoC projection now consumption-aware** - `zero_discharge_only` keeps grid at ~0W by matching discharge to actual house consumption (variable 0–800W), not fixed max discharge power. Planning chart SoC curve now reflects real depletion speed based on learned consumption per slot
+* **Discharge floor consistent between DP and display** - Optimizer now enforces `min_discharge_price` as a hard constraint in backward induction; eliminates the bug where planning showed "standby" but SoC dropped (DP had internally discharged below the threshold)
+* **Opportunistic discharge in dynamic mode** - When `respect_minmax` is disabled, the DP uses `opportunistic_discharge_floor` (default €0.20) instead of `min_discharge_price`, consistent with the policy engine's opportunistic logic. Planning display matches
+* **Pre-peak urgent charging** - When an expensive hour is ≤30 min away and SoC is below target, policy switches to `to_full` even when PV is producing (≥400W), ensuring the battery fills in time
+
+### Battery Policy — Weather & PV
+
+* **Lat/lon location fields** - Weather location now uses separate latitude/longitude number fields instead of a city name text field. Existing city names are automatically migrated on first startup
+* **Forecast blending** - New weather fetch is blended with the previous cache (α=0.6) to smooth sudden Open-Meteo model-run jumps; prevents PV forecast from jumping between runs
+* **Weather refresh interval** - Cache refresh now uses the existing `weather_update_interval` setting (default 3h, min 1h) instead of a hardcoded 3-hour interval
+
+### Battery Policy — Scoring
+
+* **PV overschot score rebalanced** - Score reduced from +1000 to +250 to keep all scores in the readable 20–300 range; still dominates preserve but no longer produces scores like 1170
+
+### Bug Fixes
+
+* **`battery_group_charge_mode` capability missing** - Self-healing guard added: if the capability is absent when a battery event arrives, it is re-added before `setCapabilityValue()` is called, preventing repeated "Invalid Capability" errors
+* **BaseloadMonitor false oscillation** - `_detectOscillation()` now trims 1 outlier from each end before computing the range; a single bad sample from battery mode-transition measurement lag no longer invalidates an otherwise clean night
+* **BaseloadMonitor energy_v2** - Battery power sourced from `plugin_battery` (accurate) instead of the P1 `payload.power_w` field (unreliable when firmware doesn't report battery state)
+* **Settings crash on PV/weather change** - `homey.settings.unset()` is synchronous; removed erroneous `.catch()` call that crashed when settings were changed
+
+---
+
+## Previous Updates (v3.14.19)
 
 ### Battery Policy — Planning & Intelligence
 
