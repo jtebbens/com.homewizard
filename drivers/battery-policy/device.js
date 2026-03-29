@@ -1074,7 +1074,13 @@ if (debug) this.log(
 
     const slotLabel = slotMs === 900_000 ? '15-min' : '1h';
     this.log(`🔮 Optimizer: recomputing schedule (${prices.length} × ${slotLabel} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot);
+    const respectMinMax = (inputs.settings?.policy_mode === 'balanced-dynamic')
+      ? false
+      : inputs.settings?.respect_minmax !== false;
+    const minDischargePrice = respectMinMax
+      ? (inputs.settings?.min_discharge_price ?? 0)
+      : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice);
 
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
