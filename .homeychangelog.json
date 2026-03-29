@@ -1198,5 +1198,8 @@
   },
   "3.14.22": {
     "en": "Baseload fix for energy_v2 (notification tag added), PV Graph planning adjusted, added green line with actual Watts production vs estimate"
+  },
+  "3.14.23": {
+    "en": "Baseload fix (oscillation), Changed city looking for weather to long lat method instead"
   }
 }
