@@ -51,8 +51,10 @@ async function updateCapability(device, capability, value) {
     // --- SPECIAL CASE: battery_group_charge_mode ---
     // This capability is managed exclusively by _updateBatteryGroup().
     if (capability === 'battery_group_charge_mode') {
-      // Only update value, never add/remove
       if (value != null && current !== value) {
+        if (!device.hasCapability(capability)) {
+          await safeAddCapability(device, capability);
+        }
         await device.setCapabilityValue(capability, value);
       }
       return;

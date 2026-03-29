@@ -49,6 +49,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._lastPvEstimateW = 0; // For EMA smoothing
     this._pvProductionW = null; // User-provided PV production via flow card
     this._pvProductionTimestamp = null; // When the PV data was last updated
+    this._pvActualHourly = null; // Accumulator for chart: {date, hourly[], sums[], counts[]}
     this._pvState = false; // Track PV state with hysteresis
     this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
 
@@ -63,6 +64,9 @@ class BatteryPolicyDevice extends Homey.Device {
 
     // Schedule periodic checks
     this._schedulePolicyCheck();
+
+    // Migrate legacy weather_location (city name) to weather_latitude/weather_longitude
+    await this._migrateWeatherLocation();
 
     // Weather fetch only in dynamic
     if (this.getSettings().tariff_type === 'dynamic') {
@@ -646,7 +650,7 @@ if (debug) this.log(
         return;
       }
 
-      const loc = await this._getLocationFromSetting();
+      const loc = this._getLocationFromSetting();
       if (!loc) return;
 
       const { latitude, longitude } = loc;
@@ -719,39 +723,51 @@ if (debug) this.log(
     }
   }
 
-  async _getLocationFromSetting() {
+  async _migrateWeatherLocation() {
+    const settings = this.getSettings();
+    if (settings.weather_latitude && settings.weather_latitude !== 0) return; // already migrated
+
+    const oldLoc = settings.weather_location;
+    if (!oldLoc || oldLoc.trim() === '') return; // nothing to migrate
+
+    try {
+      let lat, lon;
+
+      if (oldLoc.includes(',')) {
+        const [a, b] = oldLoc.split(',').map(v => parseFloat(v.trim()));
+        if (!isNaN(a) && !isNaN(b)) { lat = a; lon = b; }
+      } else {
+        const geo = await this.weatherForecaster.lookupCity(oldLoc.trim());
+        if (geo) { lat = geo.latitude; lon = geo.longitude; }
+      }
+
+      if (lat != null && lon != null) {
+        await this.setSettings({ weather_latitude: lat, weather_longitude: lon });
+        this.log(`Migrated weather_location "${oldLoc}" → lat=${lat}, lon=${lon}`);
+      } else {
+        this.error(`Could not migrate weather_location "${oldLoc}" — user must re-enter coordinates`);
+      }
+    } catch (err) {
+      this.error('Weather location migration failed:', err);
+    }
+  }
+
+  _getLocationFromSetting() {
     const settings = this.getSettings();
 
     if (settings.tariff_type !== 'dynamic') {
       return null;
     }
 
-    const loc = this.getSetting('weather_location');
+    const lat = settings.weather_latitude;
+    const lon = settings.weather_longitude;
 
-    if (!loc || loc.trim() === '') {
+    if (!lat || !lon || lat === 0 || lon === 0) {
       this.error('Weather location not set (dynamic mode)');
       return null;
     }
 
-    if (loc.includes(',')) {
-      const [lat, lon] = loc.split(',').map(v => v.trim());
-      if (!isNaN(lat) && !isNaN(lon)) {
-        return { latitude: parseFloat(lat), longitude: parseFloat(lon) };
-      }
-      this.error('Invalid lat/lon format');
-      return null;
-    }
-
-    const geo = await this.weatherForecaster.lookupCity(loc);
-    if (!geo) {
-      this.error(`Could not resolve location: ${loc}`);
-      return null;
-    }
-
-    return {
-      latitude: geo.latitude,
-      longitude: geo.longitude
-    };
+    return { latitude: lat, longitude: lon };
   }
 
   async _runPolicyCheck() {
@@ -828,6 +844,7 @@ if (debug) this.log(
         maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
         totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
         batteryCount: Math.max(1, Math.round((inputs.battery?.totalCapacityKwh ?? 2.688) / 2.688)),
+        pvLearnedSlots: this.learningEngine?.getSolarLearnedSlotCount() ?? 0,
         lastUpdate: new Date().toISOString()
       };
       this.homey.settings.set('battery_policy_state', planningData);
@@ -1066,6 +1083,23 @@ if (debug) this.log(
       const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null);
       this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
     }
+
+    // Persist hourly PV forecast so the settings chart uses the same values as the optimizer.
+    // Keyed by Amsterdam local hour (0-23) for the next 48h (today + tomorrow).
+    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
+      const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const pvForecastByDay = [{}, {}];
+      for (const { timestamp, pvPowerW } of pvForecast) {
+        const t = new Date(timestamp);
+        const tDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const tHour = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        const dayIdx = tDate === nowAmsDate ? 0 : 1;
+        if (dayIdx === 0 || tDate > nowAmsDate) {
+          pvForecastByDay[dayIdx][tHour] = pvPowerW;
+        }
+      }
+      this.homey.settings.set('policy_pv_forecast_hourly', pvForecastByDay);
+    }
   }
 
   /**
@@ -1082,6 +1116,43 @@ if (debug) this.log(
     if (radiation !== null && this.learningEngine) {
       this.learningEngine.updateSolarYieldFactor(new Date(), powerW, radiation);
     }
+
+    // Accumulate actual PV per Amsterdam hour for planning chart display.
+    const nowAms = new Date();
+    const todayStr = nowAms.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const amsHour = parseInt(nowAms.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+
+    if (!this._pvActualHourly || this._pvActualHourly.date !== todayStr) {
+      const saved = this.homey.settings.get('policy_pv_actual_today');
+      if (saved && saved.date === todayStr && Array.isArray(saved.hourly)) {
+        this._pvActualHourly = {
+          date: todayStr,
+          hourly: saved.hourly,
+          sums:   saved.sums   || new Array(24).fill(0),
+          counts: saved.counts || new Array(24).fill(0),
+        };
+      } else {
+        this._pvActualHourly = {
+          date:   todayStr,
+          hourly: new Array(24).fill(null),
+          sums:   new Array(24).fill(0),
+          counts: new Array(24).fill(0),
+        };
+      }
+    }
+
+    this._pvActualHourly.sums[amsHour]   += powerW;
+    this._pvActualHourly.counts[amsHour] += 1;
+    this._pvActualHourly.hourly[amsHour]  = Math.round(
+      this._pvActualHourly.sums[amsHour] / this._pvActualHourly.counts[amsHour]
+    );
+
+    this.homey.settings.set('policy_pv_actual_today', {
+      date:   this._pvActualHourly.date,
+      hourly: this._pvActualHourly.hourly,
+      sums:   this._pvActualHourly.sums,
+      counts: this._pvActualHourly.counts,
+    });
   }
 
   /**
@@ -1206,7 +1277,7 @@ if (debug) this.log(
       if (
         !this.weatherData ||
         !this.weatherData.fetchedAt ||
-        Date.now() - this.weatherData.fetchedAt > (3 * 60 * 60 * 1000)
+        Date.now() - this.weatherData.fetchedAt > ((settings.weather_update_interval || 1) * 60 * 60 * 1000)
       ) {
         await this._updateWeather();
       }
@@ -1590,7 +1661,7 @@ if (debug) this.log(
     }
 
     // Weather update
-    if (changedKeys.some(k => ['weather_location', 'pv_tilt', 'pv_azimuth'].includes(k))) {
+    if (changedKeys.some(k => ['weather_latitude', 'weather_longitude', 'pv_tilt', 'pv_azimuth'].includes(k))) {
       this.weatherForecaster.invalidateCache();
       this.homey.setTimeout(() => {
         this._updateWeather().catch(err => this.error(err));
@@ -1621,7 +1692,8 @@ if (debug) this.log(
     // ✅ FIX: Add threshold settings to policy run triggers
     const requiresPolicyRun =
       changedKeys.includes('policy_interval') ||
-      changedKeys.includes('weather_location') ||
+      changedKeys.includes('weather_latitude') ||
+      changedKeys.includes('weather_longitude') ||
       changedKeys.includes('p1_device_id') ||
       changedKeys.includes('enable_dynamic_pricing') ||
       changedKeys.includes('tariff_type') ||
