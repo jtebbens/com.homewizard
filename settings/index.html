@@ -586,23 +586,31 @@
     /* ══════════════════════════════════════════════════════════
        PV CURVE HELPER
     ══════════════════════════════════════════════════════════ */
-    function renderPvCurve(day, radiationMap, pvCapW, PR = 0.75) {
+    function renderPvCurve(day, radiationMap, pvCapW, PR = 0.75, pvActualHourly = null, pvForecastMap = null) {
       const W = 480, H = 220;
       const pad = { l: 40, r: 12, t: 16, b: 28 };
       const iW = W - pad.l - pad.r;
       const iH = H - pad.t - pad.b;
 
-      // PR comes from device setting pv_performance_ratio (default 0.75)
+      // Use optimizer's learned forecast when available, otherwise fall back to PR estimate.
       const pvWatts = Array.from({length: 24}, (_, h) =>
-        Math.round(Math.min(1.0, (radiationMap[h] ?? 0) / 1000) * pvCapW * PR)
+        pvForecastMap?.[h] != null
+          ? pvForecastMap[h]
+          : Math.round(Math.min(1.0, (radiationMap[h] ?? 0) / 1000) * pvCapW * PR)
       );
+
+      // Actual PV per hour (only day 0, only if data available)
+      const actualWatts = (day === 0 && Array.isArray(pvActualHourly))
+        ? pvActualHourly.slice(0, 24)
+        : null;
 
       const peakW = Math.max(...pvWatts);
       if (peakW < 50) return '';
 
-      // Round maxY up to a nice grid step
+      // Round maxY up to a nice grid step — include actual values so they never clip
+      const peakActual = actualWatts ? Math.max(0, ...actualWatts.map(v => v ?? 0)) : 0;
       const gridStep = pvCapW <= 2000 ? 500 : pvCapW <= 5000 ? 1000 : 2000;
-      const maxY = Math.ceil(peakW / gridStep) * gridStep;
+      const maxY = Math.ceil(Math.max(peakW, peakActual) / gridStep) * gridStep;
       const peakH = pvWatts.indexOf(peakW);
 
       const toX = h => pad.l + ((h + 0.5) / 24) * iW;
@@ -635,6 +643,41 @@
       const curvePath = smoothCurve(pts);
       const fillPath = `${curvePath} L ${pts[23][0].toFixed(1)},${baseline} L ${pts[0][0].toFixed(1)},${baseline} Z`;
 
+      // Build actual PV line segments (skip gaps where no data)
+      let actualLineSvg = '';
+      let actualPeakSvg = '';
+      let actualKwhSvg  = '';
+      if (actualWatts) {
+        const actualPts = actualWatts
+          .map((w, h) => w !== null ? [toX(h), toY(w), h, w] : null);
+        // Draw connected segments, breaking on nulls
+        let seg = [];
+        const segments = [];
+        for (const pt of actualPts) {
+          if (pt) { seg.push(pt); }
+          else if (seg.length) { segments.push(seg); seg = []; }
+        }
+        if (seg.length) segments.push(seg);
+
+        const actualPaths = segments.map(s => {
+          if (s.length === 1) {
+            return `<circle cx="${s[0][0].toFixed(1)}" cy="${s[0][1].toFixed(1)}" r="3" fill="#4ADE80"/>`;
+          }
+          const d = smoothCurve(s.map(p => [p[0], p[1]]));
+          return `<path d="${d}" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${`pvClip${day}`})"/>`;
+        }).join('');
+        actualLineSvg = actualPaths;
+
+        // Peak dot on actual line
+        const actualNonNull = actualWatts.map((w, h) => ({w: w ?? 0, h}));
+        const actualPeak = actualNonNull.reduce((best, cur) => cur.w > best.w ? cur : best, {w:0, h:0});
+        if (actualPeak.w > 50) {
+          actualPeakSvg = `<circle cx="${toX(actualPeak.h).toFixed(1)}" cy="${toY(actualPeak.w).toFixed(1)}" r="4" fill="#4ADE80"/>`;
+          const actualKwh = (actualWatts.reduce((s, v) => s + (v ?? 0), 0) / 1000).toFixed(1);
+          actualKwhSvg = `<text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 12}" text-anchor="end" fill="#4ADE80" font-size="11">⚡ ${actualKwh} kWh werkelijk</text>`;
+        }
+      }
+
       // Horizontal grid lines at each gridStep
       const gridLines = [];
       const yAxisLabels = [];
@@ -662,7 +705,7 @@
       const clipId = `pvClip${day}`;
 
       return `<div class="pv-curve-row">
-        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ~${totalKwh} kWh verwacht</div>
+        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ~${totalKwh} kWh verwacht${pvForecastMap ? ' (geleerd)' : ' (schatting)'}</div>
         <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block;">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
@@ -685,6 +728,9 @@
           })()}
           <path d="${fillPath}" fill="url(#${gradId})" clip-path="url(#${clipId})"/>
           <path d="${curvePath}" fill="none" stroke="#FFD700" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#${clipId})"/>
+          ${actualLineSvg}
+          ${actualPeakSvg}
+          ${actualKwhSvg}
           <circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="5" fill="#FFD700"/>
           <text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" fill="#FFD700" font-size="13" font-weight="bold">${peakKw} kW</text>
           ${hourLabels}
@@ -937,7 +983,7 @@
           if (changedKey === 'debug_logs' || changedKey === 'fetch_device_stats') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
-          if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule') {
+          if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule' || changedKey === 'policy_pv_actual_today') {
             Homey.get((e, s) => {
               if (!e && document.getElementById('planning').classList.contains('active')) {
                 renderBatteryPlanning(s, Homey);
@@ -1490,6 +1536,16 @@
       parseTop3(settings['policy_debug_top3high'], peakHours);
       parseTop3(settings['policy_debug_top3low'], cheapHoursSet);
 
+      /* ── PV forecast per day (from optimizer, uses learned yield factors) ── */
+      const pvForecastByDay = settings['policy_pv_forecast_hourly'] || [{}, {}];
+
+      /* ── Actual PV production (today only, from flow card) ── */
+      const pvActualToday = settings['policy_pv_actual_today'];
+      const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const pvActualHourly = (pvActualToday?.date === todayStr && Array.isArray(pvActualToday?.hourly))
+        ? pvActualToday.hourly
+        : null;
+
       /* ── Sunshine & radiation forecast (per day) ── */
       const sunshineMap = {};    // legacy fallback (day-agnostic)
       const radiationMap = {};   // legacy fallback
@@ -1729,14 +1785,16 @@
           const dynChgLabel = effectiveChgPrice > maxChgPrice + 0.005
             ? ` · ⚡ max €${effectiveChgPrice.toFixed(2)} (dyn)` : '';
 
-          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR) : '';
+          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR, pvActualHourly, pvForecastByDay[day]) : '';
           let weatherTs = '';
           if (day === 0 && pvEnabled) {
             const fetchedAt = settings['policy_weather_fetched_at'];
             if (fetchedAt) {
               const d = new Date(fetchedAt);
               const timeStr = d.toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
-              weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}</div>`;
+              const pvLearnedSlots = policyState?.pvLearnedSlots ?? 0;
+              const learnNote  = pvLearnedSlots >= 10 ? '' : ' (min. 10 voor leren)';
+              weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}<br>📈 ${pvLearnedSlots}/96 PV-slots geleerd${learnNote}</div>`;
             }
           }
           dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${weatherTs}${pvCurve}`;

@@ -264,18 +264,16 @@ class BaseloadMonitor {
   _detectOscillation() {
     const w = this._lastSamples(this.oscillationWindow);
     if (w.length<4) return;
-    
-    // Avoid spread operators, use simple loop for min/max
-    let minPower = w[0].power;
-    let maxPower = w[0].power;
-    for (let i = 1; i < w.length; i++) {
-      const p = w[i].power;
-      if (p < minPower) minPower = p;
-      if (p > maxPower) maxPower = p;
-    }
-    
-    if (maxPower - minPower >= this.oscillationAmplitude) {
-      this.flags.sawOscillation=true; 
+
+    // Trim 1 outlier from each end before computing range.
+    // A single bad sample (e.g. battery mode-transition measurement lag) must not
+    // invalidate the night; only sustained oscillation should.
+    const sorted = w.map(s => s.power).sort((a, b) => a - b);
+    const lo = sorted[1];
+    const hi = sorted[sorted.length - 2];
+
+    if (hi - lo >= this.oscillationAmplitude) {
+      this.flags.sawOscillation=true;
       this.nightInvalid=true;
     }
   }
