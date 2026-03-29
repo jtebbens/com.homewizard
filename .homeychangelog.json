@@ -1201,5 +1201,8 @@
   },
   "3.14.23": {
     "en": "Baseload fix (oscillation), Changed city looking for weather to long lat method instead"
+  },
+  "3.14.24": {
+    "en": "Cheap tariff fix when battery is not full but pv cant cover it"
   }
 }
