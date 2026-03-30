@@ -1031,16 +1031,19 @@ if (debug) this.log(
     let pvForecast = null;
     const pvCapacityW = inputs.settings?.pv_capacity_w || 0;
     const pvPR        = inputs.settings?.pv_performance_ratio || 0.75;
+    const yfs          = this.learningEngine?.getSolarYieldFactorsSmoothed();
+    const learnedSlots = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
+
     if (Array.isArray(inputs.weather?.hourlyForecast)) {
-      const yfs          = this.learningEngine?.getSolarYieldFactorsSmoothed();
-      const learnedSlots = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
 
       pvForecast = inputs.weather.hourlyForecast
         .filter(h => typeof h.radiationWm2 === 'number')
         .map(h => {
           const d   = h.time instanceof Date ? h.time : new Date(h.time);
+          // Yield factor slot index: hour*4 (hourly data always on the hour, minutes=0)
+          const slotIdx = d.getUTCHours() * 4;
           const rawPvW = learnedSlots >= 10
-            ? Math.round(h.radiationWm2 * (yfs[(d.getUTCHours() * 4)] ?? 0))
+            ? Math.round(h.radiationWm2 * (yfs[slotIdx] ?? 0))
             : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
@@ -1093,17 +1096,39 @@ if (debug) this.log(
     // Persist hourly PV forecast so the settings chart uses the same values as the optimizer.
     // Keyed by Amsterdam local hour (0-23) for the next 48h (today + tomorrow).
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
-      const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const now         = new Date();
+      const nowAmsDate  = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const nowAmsHour  = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
       const pvForecastByDay = [{}, {}];
+
+      // Future hours: one pvForecast entry per hour — map directly by Amsterdam local hour.
       for (const { timestamp, pvPowerW } of pvForecast) {
-        const t = new Date(timestamp);
-        const tDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const tHour = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        const t      = new Date(timestamp);
+        const tDate  = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const tHour  = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
         const dayIdx = tDate === nowAmsDate ? 0 : 1;
         if (dayIdx === 0 || tDate > nowAmsDate) {
           pvForecastByDay[dayIdx][tHour] = pvPowerW;
         }
       }
+
+      // Past hours today: apply the same learned yield factors to dailyProfiles radiation so
+      // the chart line is consistent across the full day. Without this, past hours fall back to
+      // pvCapW × PR × radiation/1000 which underestimates partial-sunrise slots (e.g. the first
+      // morning slot after DST where the sun rose mid-hour but learned data knows the real yield).
+      if (learnedSlots >= 10 && yfs && Array.isArray(inputs.weather?.dailyProfiles)) {
+        for (const h of inputs.weather.dailyProfiles) {
+          const d     = h.time instanceof Date ? h.time : new Date(h.time);
+          const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          if (hDate !== nowAmsDate) continue;
+          const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+          if (hHour >= nowAmsHour) continue;            // only truly past hours
+          if (pvForecastByDay[0][hHour] != null) continue; // don't overwrite future slots
+          const rawPvW = Math.round(h.radiationWm2 * (yfs[d.getUTCHours() * 4] ?? 0));
+          pvForecastByDay[0][hHour] = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
+        }
+      }
+
       this.homey.settings.set('policy_pv_forecast_hourly', pvForecastByDay);
     }
   }
