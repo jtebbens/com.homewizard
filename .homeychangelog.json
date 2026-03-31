@@ -1204,5 +1204,8 @@
   },
   "3.14.24": {
     "en": "Cheap tariff fix when battery is not full but pv cant cover it"
+  },
+  "3.14.25": {
+    "en": "Balance-dynamic mapping fix, discharge price adjustment"
   }
 }
