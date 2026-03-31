@@ -1207,5 +1207,8 @@
   },
   "3.14.25": {
     "en": "Balance-dynamic mapping fix, discharge price adjustment"
+  },
+  "3.14.26": {
+    "en": "More planning tariff tuning"
   }
 }
