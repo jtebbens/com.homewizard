@@ -1210,5 +1210,8 @@
   },
   "3.14.26": {
     "en": "More planning tariff tuning"
+  },
+  "3.14.27": {
+    "en": "Use household usage to calculate discharge policy. Added diagnostic caption to easier support remote problems."
   }
 }
