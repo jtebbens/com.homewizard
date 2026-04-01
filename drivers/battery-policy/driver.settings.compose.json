@@ -161,7 +161,11 @@
         "id": "min_discharge_price",
         "type": "number",
         "label": { "en": "Min Discharge Price (€/kWh)", "nl": "Minimale ontlaadprijs (€/kWh)" },
-        "value": 0.30,
+        "hint": {
+          "en": "The battery will never discharge below this price — even if the break-even calculation would allow it. Once the cost model has enough data (≥0.5 kWh tracked), discharge also requires the price to exceed the learned break-even (charge cost ÷ efficiency + half cycle degradation cost). The effective minimum is whichever is higher: this setting or the break-even.",
+          "nl": "De batterij ontlaadt nooit onder deze prijs — ook niet als de break-even berekening het zou toestaan. Zodra het kostenmodel voldoende data heeft (≥0,5 kWh bijgehouden), is ook vereist dat de prijs boven de geleerde break-even ligt (laadkosten ÷ efficiëntie + halve cyclusdegradatiekosten). De effectieve drempel is de hoogste van deze instelling en de break-even."
+        },
+        "value": 0.22,
         "min": 0,
         "max": 1,
         "step": 0.01,
