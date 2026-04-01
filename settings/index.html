@@ -516,6 +516,11 @@
       <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Toon raw scores (debug)</summary>
       <pre id="explain-scores" class="debug-box" style="margin-top:10px;"></pre>
     </details>
+    <details style="margin-bottom:20px;">
+      <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Diagnose — kopieer dit bij een supportvraag</summary>
+      <pre id="policy-debug-box" class="debug-box" style="margin-top:10px;font-size:11px;user-select:all;">—</pre>
+      <button id="policy-debug-copy-btn" style="margin-top:8px;padding:6px 14px;background:#5f6fff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">📋 Kopieer</button>
+    </details>
     <h3>Tijdstip</h3>
     <div id="explain-timestamp" style="font-size:12px;color:#A0A0A0;"></div>
   </div>
@@ -1410,6 +1415,8 @@
 
           document.getElementById('explain-scores').textContent = JSON.stringify(data.scores, null, 2);
           document.getElementById('explain-timestamp').innerText = `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
+
+          // Diagnostic snapshot is rendered inside renderBatteryPlanning (has access to policyState + deviceSettings)
         }
 
         let explainRaw = settings['policy_explainability'];
@@ -1586,6 +1593,81 @@
       const pvCapW = deviceSettings['pv_capacity_w'] || 3000;
       const pvEnabled = !!(deviceSettings['pv_estimation_enabled']) && pvCapW > 0;
       const pvPR = deviceSettings['pv_performance_ratio'] || 0.75;
+
+      /* ── Support diagnostic snapshot ── */
+      (function renderDiagnosticSnapshot() {
+        const dbg = settings['policy_last_run_debug'];
+        const ps  = policyState || {};
+        const ds  = deviceSettings;
+        const fmt = v => (v != null ? String(v) : '—');
+        const fmtE = v => (v != null ? `€${Number(v).toFixed(3)}` : '—');
+
+        const lines = [
+          '=== HomeWizard Battery Policy — Support Info ===',
+          `Tijdstip:       ${new Date().toISOString()}`,
+          '',
+          '--- Batterij ---',
+          `Aantal:         ${fmt(ps.batteryCount)}    Capaciteit: ${fmt(ps.totalCapacityKwh != null ? ps.totalCapacityKwh.toFixed(2) : null)} kWh`,
+          `Max laad:       ${fmt(ps.maxChargePowerW)}W    Max ontlaad: ${fmt(ps.maxDischargePowerW)}W`,
+          `SoC nu:         ${fmt(ps.batterySOC)}%    Modus nu: ${fmt(ps.currentMode)}`,
+          '',
+          '--- PV ---',
+          `Capaciteit:     ${fmt(ds.pv_capacity_w)}W    Geleerde slots: ${fmt(ps.pvLearnedSlots)}/96`,
+          `PR instelling:  ${fmt(ds.pv_performance_ratio)}    PV actief: ${fmt(ds.pv_estimation_enabled)}`,
+          '',
+          '--- Instellingen ---',
+          `Beleidsmodus:   ${fmt(ds.policy_mode || ps.policyMode)}    Tarieftype: ${fmt(ds.tariff_type)}`,
+          `Strict min/max: ${fmt(ds.respect_minmax ?? true)}`,
+          `Max laadprijs:  ${fmtE(ds.max_charge_price)}    Min ontlaadprijs: ${fmtE(ds.min_discharge_price)}`,
+          `Min SoC:        ${fmt(ds.min_soc ?? 0)}%    Max SoC: ${fmt(ds.max_soc ?? 95)}%`,
+          `Efficiëntie:    ${fmt(ds.battery_efficiency ?? 0.75)}    Cycluskosten: ${fmtE(ds.cycle_cost_per_kwh ?? 0.075)}/kWh`,
+          `Opp. ontlaad:   ${fmtE(ds.opportunistic_discharge_floor ?? 0.20)}`,
+        ];
+
+        if (dbg) {
+          const d = typeof dbg === 'string' ? JSON.parse(dbg) : dbg;
+          lines.push(
+            '',
+            `--- Laatste policy run (v${fmt(d.appVersion)}) ---`,
+            `Tijdstip:       ${fmt(d.ts)}`,
+            `Prijs:          ${fmtE(d.price)}    SoC: ${fmt(d.soc)}%    Huidig verbruik: ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}`,
+            `Scores:         laden=${fmt(d.scores?.charge)}  ontladen=${fmt(d.scores?.discharge)}  behoud=${fmt(d.scores?.preserve)}`,
+            `Beslissing:     ${fmt(d.policyMode)}  →  ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
+            `Break-even:     ${fmtE(d.breakEven)}    Gem. kostprijs: ${fmtE(d.avgCost)}`,
+            `Optimizer:      ${fmt(d.optimizer)}`,
+            `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
+          );
+        } else {
+          lines.push('', '--- Laatste policy run ---', '(nog geen data)');
+        }
+
+        const box = document.getElementById('policy-debug-box');
+        if (box) box.textContent = lines.join('\n');
+
+        const btn = document.getElementById('policy-debug-copy-btn');
+        if (btn && !btn._listenerAdded) {
+          btn._listenerAdded = true;
+          btn.addEventListener('click', () => {
+            const text = document.getElementById('policy-debug-box')?.textContent || '';
+            navigator.clipboard.writeText(text).then(() => {
+              btn.textContent = '✅ Gekopieerd';
+              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+            }).catch(() => {
+              // Fallback for environments without clipboard API
+              const ta = document.createElement('textarea');
+              ta.value = text;
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+              btn.textContent = '✅ Gekopieerd';
+              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+            });
+          });
+        }
+      })();
 
       /* ── Build 15-minute intervals array ── */
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());

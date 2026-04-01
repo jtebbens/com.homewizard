@@ -771,6 +771,11 @@ if (debug) this.log(
   }
 
   async _runPolicyCheck() {
+    if (this._policyCheckRunning) {
+      this.log('Policy check already in progress, skipping concurrent call');
+      return;
+    }
+    this._policyCheckRunning = true;
     try {
       if (!this.getCapabilityValue('policy_enabled')) {
         this.log('Policy disabled, skipping check');
@@ -914,6 +919,12 @@ if (debug) this.log(
         summary: explanation.summary
       });
 
+      // Store compact diagnostic for user-facing troubleshooting (settings page).
+      if (result.debug) {
+        result.debug.appVersion = require('../../app.json').version;
+        this.homey.settings.set('policy_last_run_debug', result.debug);
+      }
+
       // ------------------------------------------------------
       // 📊 LEARNING: Record policy decision
       // ------------------------------------------------------
@@ -996,6 +1007,8 @@ if (debug) this.log(
       await this.setCapabilityValue('explanation_summary',
         `Error: ${error.message}`
       );
+    } finally {
+      this._policyCheckRunning = false;
     }
   }
 
