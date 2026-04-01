@@ -947,7 +947,7 @@ if (debug) this.log(
           try {
             const modeHistory = this.homey.settings.get('policy_mode_history') || [];
             const currentPrice = result.tariff?.currentPrice ?? null;
-            const currentSoc   = this.getCapabilityValue('measure_battery') ?? null;
+            const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
             modeHistory.push({
               ts:     new Date().toISOString(),
               hwMode: applyMode,
