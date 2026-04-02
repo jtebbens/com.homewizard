@@ -1216,5 +1216,8 @@
   },
   "3.14.28": {
     "en": "Added zero mode during PV surplus and certain tariffs with less margin to profit (ie 0.01 profit)"
+  },
+  "3.14.29": {
+    "en": "Energy-socket http agent adjustments, battery-policy explainability reasoning improvements"
   }
 }
