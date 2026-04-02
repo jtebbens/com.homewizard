@@ -1235,6 +1235,11 @@ if (debug) this.log(
       const maxAge = 5 * 60 * 1000; // 5 minutes
       
       if (age < maxAge) {
+        // When flow card reports 0W, reset the EMA so the fallback estimator
+        // doesn't keep returning stale high values after sunset.
+        if (this._pvProductionW === 0 && this._lastPvEstimateW > 0) {
+          this._lastPvEstimateW = 0;
+        }
         if (settings.enable_logging) {
           this.log(`PV from flow card: ${this._pvProductionW}W (age: ${Math.round(age/1000)}s)`);
         }

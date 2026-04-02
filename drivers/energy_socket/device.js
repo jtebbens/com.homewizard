@@ -77,6 +77,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._consecutiveSuccesses = 0;
     this._isMarkedUnavailable = false;
     this._lastSuccessfulPoll = Date.now();
+    this._pollRunning = false; // Guard against concurrent polls
 
     // Persistent fetch stats — restored from settings across restarts
     const allStoredStats = this.homey.settings.get('fetch_device_stats') || {};
@@ -319,13 +320,12 @@ _flushFetchStats() {
     if (!this.url) return;
 
     try {
-      // ✅ FIX: Longer timeout for poor WiFi (10s instead of 5s)
       const res = await fetchWithTimeout(`${this.url}/state`, {
         agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }, 10000);
+      }, 5000);
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -348,7 +348,7 @@ _flushFetchStats() {
         agent: this.agent,
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' }
-      }, 10000);
+      }, 5000);
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -372,7 +372,7 @@ _flushFetchStats() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: true })
-      }, 10000);
+      }, 5000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -391,7 +391,7 @@ _flushFetchStats() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cloud_enabled: false })
-      }, 10000);
+      }, 5000);
 
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -476,6 +476,13 @@ _flushFetchStats() {
   async onPoll() {
   if (this.__deleted) return;
 
+  // ✅ CPU FIX: Guard against concurrent polls — setInterval fires regardless
+  // of whether the previous poll completed. Without this, a failing device
+  // (10s interval, 3×5s timeout = 17s per poll) piles up concurrent polls
+  // that exhaust the shared HTTP agent (maxSockets=4) and starve other devices.
+  if (this._pollRunning) return;
+  this._pollRunning = true;
+
   const settings = this.getSettings();
   const pollStart = Date.now();
 
@@ -485,6 +492,7 @@ _flushFetchStats() {
       this.url = settings.url;
     } else {
       this._handlePollFailure(new Error('Missing URL'));
+      this._pollRunning = false;
       return;
     }
   }
@@ -495,16 +503,20 @@ _flushFetchStats() {
     // GET /data (with retry on timeout)
     // -----------------------------
     let data;
-    let retries = 2;
+
+    // ✅ CPU FIX: When device is already marked unavailable, don't retry —
+    // a single attempt is enough to detect recovery. Retries on an unreachable
+    // device waste 3×5s = 15s of socket time on the shared agent.
+    const maxRetries = this._isMarkedUnavailable ? 0 : 1;
+    let retries = maxRetries;
     
     while (retries >= 0) {
       try {
-        // ✅ FIX: Longer timeout for poor WiFi (10s instead of 5s)
         const res = await fetchWithTimeout(`${this.url}/data`, {
           agent: this.agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        }, 10000);
+        }, 5000);
 
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
 
@@ -519,7 +531,7 @@ _flushFetchStats() {
           throw err; // All retries exhausted
         }
         // Wait 1 second before retry
-        this._debugLog(`/data failed, retrying (${2-retries}/2): ${err.message}`);
+        this._debugLog(`/data failed, retrying (${maxRetries-retries}/${maxRetries}): ${err.message}`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
@@ -539,7 +551,7 @@ _flushFetchStats() {
     cap('measure_power.l1', data.active_power_l1_w);
     cap('rssi', data.wifi_strength);
 
-    if (data.total_power_export_t1_kwh > 1) {
+    if (data.total_power_export_t1_kwh > 0) {
       cap('meter_power.produced.t1', data.total_power_export_t1_kwh);
     }
 
@@ -565,7 +577,7 @@ _flushFetchStats() {
           agent: this.agent,
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
-        }, 10000);
+        }, 5000);
 
         if (!resState.ok) throw new Error(`HTTP ${resState.status}: ${resState.statusText}`);
 
@@ -598,6 +610,8 @@ _flushFetchStats() {
       // ✅ FIX: Use debounced failure handler
       this._handlePollFailure(err);
     }
+  } finally {
+    this._pollRunning = false;
   }
 }
 
