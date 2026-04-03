@@ -6252,6 +6252,13 @@
             "en": "Full Charge",
             "nl": "Volledig laden"
           }
+        },
+        {
+          "id": "predictive",
+          "title": {
+            "en": "Predictive (HW Smart Charging)",
+            "nl": "Slim laden (HomeWizard)"
+          }
         }
       ]
     },
