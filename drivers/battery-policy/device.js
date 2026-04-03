@@ -1163,6 +1163,18 @@ if (debug) this.log(
           return { timestamp: d.toISOString(), pvPowerW: pvW };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
+
+      // Expose tomorrow's PV kWh to the policy engine so it can make better
+      // preserve/discharge decisions without relying solely on Open-Meteo sunshine_duration.
+      if (pvForecast && inputs.weather) {
+        const tomorrowDateStr = new Date(now.getTime() + 86_400_000)
+          .toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const pvWhTomorrow = pvForecast
+          .filter(({ timestamp }) =>
+            new Date(timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === tomorrowDateStr)
+          .reduce((sum, { pvPowerW }) => sum + pvPowerW, 0); // W × 1h each = Wh
+        inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrow / 100) / 10; // 1 decimal
+      }
     }
 
     // Learned round-trip efficiency from efficiencyEstimator
@@ -2085,7 +2097,7 @@ if (debug) this.log(
         const day = d.toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', weekday: 'short', day: 'numeric', month: 'numeric' });
         return day;
       }
-      return fmt2(s.hour) + ':00';
+      return String(s.hour);
     });
     const prices  = shown.map(s => s.price != null ? Math.round(s.price * 1000) / 1000 : null);
     const socs    = shown.map(s => s.soc != null ? s.soc : null);
@@ -2207,8 +2219,8 @@ if (debug) this.log(
             display: true,
             labels: {
               color: '#9a9a9a',
-              font: { size: 10 },
-              padding: 10,
+              font: { size: 13 },
+              padding: 12,
               usePointStyle: true,
               filter: function(item) { return !item.text.startsWith('_'); },
             },
@@ -2219,24 +2231,24 @@ if (debug) this.log(
               `Batterij ${dayLabel}  |  SoC: ${socLine}  |  Nu: ${modeLine}  |  ${updLine}`,
             ],
             color: '#cccccc',
-            font: { size: 11 },
+            font: { size: 13 },
             padding: { bottom: 4 },
           },
         },
         scales: {
           x: {
-            ticks: { color: '#9a9a9a', font: { size: 10 }, maxRotation: 0, autoSkip: false },
+            ticks: { color: '#9a9a9a', font: { size: 13 }, maxRotation: 0, autoSkip: false },
             grid: { color: '#2a2a2a' },
           },
           yPrice: {
             position: 'left',
             ticks: {
               color: '#9a9a9a',
-              font: { size: 10 },
+              font: { size: 12 },
               callback: (v) => v.toFixed(2),
             },
             grid: { color: '#2a2a2a' },
-            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 9 } },
+            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 11 } },
           },
           ySoc: {
             position: 'right',
@@ -2244,11 +2256,11 @@ if (debug) this.log(
             max: 100,
             ticks: {
               color: 'rgba(255,255,255,0.6)',
-              font: { size: 10 },
+              font: { size: 12 },
               callback: (v) => `${v}%`,
             },
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 9 } },
+            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 11 } },
           },
           yPv: {
             display: true,
@@ -2257,12 +2269,12 @@ if (debug) this.log(
             max: compact?.pvCapacityW > 0 ? compact.pvCapacityW : pvMax * 1.2,
             ticks: {
               color: '#FCD34D',
-              font: { size: 10 },
+              font: { size: 12 },
               maxTicksLimit: 4,
               callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}kW` : `${v}W`,
             },
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'PV', color: '#FCD34D', font: { size: 9 } },
+            title: { display: true, text: 'PV', color: '#FCD34D', font: { size: 11 } },
           },
         },
       },
