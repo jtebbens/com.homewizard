@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--homey-background-color, #fff);
+      color: var(--homey-text-color, #1a1a1a);
+      overflow: hidden;
+      padding: 10px 12px 6px;
+      height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #1c1c1e; color: #f2f2f7; }
+      .divider { border-color: #3a3a3c; }
+      .axis-label { color: #8e8e93; }
+      .price-label { color: #8e8e93; }
+      .empty { color: #8e8e93; }
+    }
+
+    /* Header row */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .title {
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.5;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .updated {
+      font-size: 10px;
+      opacity: 0.4;
+    }
+    .refresh-btn {
+      background: rgba(128,128,128,0.15);
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      opacity: 0.75;
+      padding: 2px 6px;
+      line-height: 1;
+      color: inherit;
+    }
+    .refresh-btn:active { opacity: 1; transform: rotate(180deg); }
+
+    /* Status pill row */
+    .status-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      background: rgba(128,128,128,0.1);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .pill-icon { font-size: 11px; }
+    .pill-val  { font-weight: 600; }
+
+    /* SVG chart */
+    .chart-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+    svg.chart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .price-label {
+      font-size: 9px;
+      fill: currentColor;
+      opacity: 0.55;
+    }
+    .axis-label {
+      font-size: 9px;
+      fill: currentColor;
+      opacity: 0.55;
+    }
+
+    /* Mode icon bar */
+    .mode-bar {
+      display: flex;
+      gap: 1px;
+      flex-shrink: 0;
+      overflow: hidden;
+      /* align with chart data area: PAD_L=32 / W=400 = 8% */
+      padding-left: 8%;
+    }
+    .mode-slot {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      padding: 1px 0;
+      border-radius: 3px;
+      min-width: 0;
+      line-height: 1.4;
+    }
+
+    /* Empty / loading state */
+    .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 12px;
+      opacity: 0.5;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(128,128,128,0.15);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="title">Batterij planning</span>
+  <span class="updated" id="updated"></span>
+  <button class="refresh-btn" id="refresh-btn" title="Vernieuwen">↻</button>
+</div>
+
+<div class="status-row" id="status-row">
+  <div class="empty" style="padding:0">Laden...</div>
+</div>
+
+<hr class="divider">
+
+<div class="chart-wrap" id="chart-wrap">
+  <div class="empty" id="empty-msg">Wacht op eerstvolgende beleidsrun…</div>
+</div>
+
+<div class="mode-bar" id="mode-bar"></div>
+
+<script>
+'use strict';
+
+const MODE_COLORS = {
+  to_full:             '#5f6fff',  // HW paars — laden van net
+  zero_charge_only:    '#8b9fff',  // HW licht-paars — PV laden
+  zero_discharge_only: '#20F29B',  // HW groen — ontladen
+  zero:                '#FB923C',  // HW oranje — nul op meter
+  standby:             '#808080',  // neutraal grijs
+  predictive:          '#02DACE'   // HW teal — slim laden
+};
+const MODE_ICONS = {
+  to_full:             '⚡',
+  zero_charge_only:    '☀️',
+  zero_discharge_only: '🔋',
+  zero:                '↕️',
+  standby:             '⏸',
+  predictive:          '🤖'
+};
+const MODE_LABELS = {
+  to_full:             'Laden',
+  zero_charge_only:    'PV laden',
+  zero_discharge_only: 'Ontladen',
+  zero:                'Nul',
+  standby:             'Standby',
+  predictive:          'Slim laden'
+};
+
+function fmt2(n) { return String(n).padStart(2, '0'); }
+function fmtPrice(p) { return p != null ? '€' + p.toFixed(2) : '–'; }
+function fmtSoc(s)   { return s != null ? Math.round(s) + '%' : '–'; }
+
+function relativeTime(isoStr) {
+  if (!isoStr) return '';
+  const diff = Math.round((Date.now() - new Date(isoStr).getTime()) / 60000);
+  if (diff < 1)  return 'nu';
+  if (diff < 60) return diff + 'min geleden';
+  return Math.round(diff / 60) + 'u geleden';
+}
+
+function renderStatus(data) {
+  const row = document.getElementById('status-row');
+  const modeColor = MODE_COLORS[data.currentMode] || '#546e7a';
+  const modeIcon  = MODE_ICONS[data.currentMode]  || '⏸';
+  const modeLabel = MODE_LABELS[data.currentMode] || data.currentMode || '–';
+
+  row.innerHTML = `
+    <div class="pill">
+      <span class="pill-icon">🔋</span>
+      <span class="pill-val">${fmtSoc(data.currentSoc)}</span>
+    </div>
+    <div class="pill">
+      <span class="pill-icon">💶</span>
+      <span class="pill-val">${fmtPrice(data.currentPrice)}</span>
+    </div>
+    <div class="pill" style="background:${modeColor}22;color:${modeColor}">
+      <span class="pill-icon">${modeIcon}</span>
+      <span class="pill-val">${modeLabel}</span>
+    </div>
+  `;
+}
+
+function renderModeBar(slots) {
+  const bar = document.getElementById('mode-bar');
+  if (!slots || slots.length === 0) { bar.innerHTML = ''; return; }
+
+  // One icon per hour (first slot of each hour), up to 24 hours
+  const hourlyMap = new Map();
+  for (const s of slots) { if (!hourlyMap.has(s.hour)) hourlyMap.set(s.hour, s); }
+  const shown = [...hourlyMap.values()].slice(0, 24);
+  bar.innerHTML = shown.map(s => {
+    const col = MODE_COLORS[s.mode] || '#546e7a';
+    const ico = MODE_ICONS[s.mode]  || '⏸';
+    return `<div class="mode-slot" style="background:${col}22;color:${col}" title="${fmt2(s.hour)}:00 ${MODE_LABELS[s.mode] || s.mode}">${ico}</div>`;
+  }).join('');
+}
+
+function renderSvg(slots) {
+  const wrap = document.getElementById('chart-wrap');
+  const empty = document.getElementById('empty-msg');
+  if (!slots || slots.length === 0) {
+    if (empty) empty.style.display = 'flex';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  // H includes chart area + SoC strip (8px) + time axis (16px)
+  const W = 400, H = 144;
+  const PAD_L = 32, PAD_R = 4, PAD_T = 6;
+  const SOC_H = 8, AXIS_H = 16;
+  const PAD_B = SOC_H + AXIS_H + 4;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  const shown = slots.slice(0, 96);
+  const prices = shown.map(s => s.price).filter(p => p != null && !isNaN(p));
+  const pvs    = shown.map(s => s.pvW || 0);
+
+  if (prices.length === 0) return;
+
+  const priceMin = Math.max(0, Math.min(...prices) - 0.02);
+  const priceMax = Math.max(...prices) + 0.02;
+  const priceRange = priceMax - priceMin || 0.01;
+  const pvMax  = Math.max(...pvs, 1);
+
+  const slotW = chartW / shown.length;
+
+  function priceY(p) {
+    return PAD_T + chartH - ((p - priceMin) / priceRange) * chartH;
+  }
+  function pvY(w) {
+    return PAD_T + chartH - (w / pvMax) * chartH * 0.45; // PV uses bottom 45% of chart height
+  }
+
+  const now = Date.now();
+  let svgParts = [];
+
+  // Background mode rectangles
+  shown.forEach((s, i) => {
+    const x = PAD_L + i * slotW;
+    const col = MODE_COLORS[s.mode] || '#546e7a';
+    const isPast = s.ts < now;
+    svgParts.push(
+      `<rect x="${x.toFixed(1)}" y="${PAD_T}" width="${slotW.toFixed(1)}" height="${chartH}" fill="${col}" opacity="${isPast ? 0.07 : 0.15}"/>`
+    );
+  });
+
+  // PV forecast area (polygon)
+  if (pvs.some(v => v > 0)) {
+    const baseY = PAD_T + chartH;
+    let pts = `${PAD_L},${baseY}`;
+    shown.forEach((s, i) => {
+      const x  = PAD_L + i * slotW;
+      const xr = x + slotW;
+      const y  = pvY(s.pvW || 0);
+      pts += ` ${x.toFixed(1)},${y.toFixed(1)} ${xr.toFixed(1)},${y.toFixed(1)}`;
+    });
+    pts += ` ${(PAD_L + chartW).toFixed(1)},${baseY}`;
+    svgParts.push(`<polygon points="${pts}" fill="#FFD700" opacity="0.30"/>`);
+  }
+
+  // Price step line
+  let pricePath = '';
+  shown.forEach((s, i) => {
+    if (s.price == null || isNaN(s.price)) return;
+    const x  = PAD_L + i * slotW;
+    const xr = x + slotW;
+    const y  = priceY(s.price).toFixed(1);
+    pricePath += pricePath ? `L${x.toFixed(1)},${y} L${xr.toFixed(1)},${y} ` : `M${x.toFixed(1)},${y} L${xr.toFixed(1)},${y} `;
+  });
+  if (pricePath) {
+    svgParts.push(`<path d="${pricePath}" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.8" stroke-linejoin="round"/>`);
+  }
+
+  // Current time marker
+  if (shown[0] && shown[shown.length - 1]) {
+    const firstTs = shown[0].ts;
+    const lastTs  = shown[shown.length - 1].ts + 3600000;
+    const span = lastTs - firstTs;
+    if (span > 0 && now >= firstTs && now <= lastTs) {
+      const nowX = PAD_L + ((now - firstTs) / span) * chartW;
+      svgParts.push(
+        `<line x1="${nowX.toFixed(1)}" y1="${PAD_T}" x2="${nowX.toFixed(1)}" y2="${PAD_T + chartH}" stroke="white" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.7"/>`
+      );
+    }
+  }
+
+  // Y-axis price labels (3 levels)
+  const priceLevels = [priceMin, (priceMin + priceMax) / 2, priceMax];
+  priceLevels.forEach(p => {
+    const y = priceY(p);
+    svgParts.push(
+      `<line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${PAD_L + chartW}" y2="${y.toFixed(1)}" stroke="currentColor" opacity="0.08" stroke-width="0.5"/>`,
+      `<text x="${PAD_L - 2}" y="${(y + 3).toFixed(1)}" text-anchor="end" class="price-label">€${p.toFixed(2)}</text>`
+    );
+  });
+
+  // SoC strip below chart (extra gap so it clears the price axis labels)
+  const socStripY = PAD_T + chartH + 8;
+  // Background track
+  svgParts.push(`<rect x="${PAD_L}" y="${socStripY}" width="${chartW}" height="${SOC_H}" fill="currentColor" opacity="0.08" rx="3"/>`);
+  svgParts.push(`<text x="${PAD_L - 2}" y="${(socStripY + SOC_H - 1).toFixed(1)}" text-anchor="end" class="price-label">SoC</text>`);
+  shown.forEach((s, i) => {
+    if (s.soc == null) return;
+    const x    = PAD_L + i * slotW;
+    const barW = Math.max(0, (s.soc / 100) * slotW - 0.5);
+    const hue  = s.soc > 50 ? '#20F29B' : s.soc > 20 ? '#FB923C' : '#F87171';
+    svgParts.push(`<rect x="${x.toFixed(1)}" y="${socStripY}" width="${barW.toFixed(1)}" height="${SOC_H}" fill="${hue}" opacity="0.7" rx="2"/>`);
+  });
+
+  // X-axis time labels: one per hour, only at the first slot of that hour, every 4 hours
+  const axisY = socStripY + SOC_H + 11;
+  const seenHours = new Set();
+  shown.forEach((s, i) => {
+    if (seenHours.has(s.hour)) return;
+    seenHours.add(s.hour);
+    if (s.hour % 4 !== 0) return;
+    const x = PAD_L + i * slotW + slotW / 2;
+    svgParts.push(
+      `<text x="${x.toFixed(1)}" y="${axisY.toFixed(1)}" text-anchor="middle" class="axis-label">${fmt2(s.hour)}</text>`
+    );
+  });
+
+  // PV peak label (top-right of chart)
+  if (pvs.some(v => v > 0)) {
+    const peakW = Math.max(...pvs);
+    const peakKw = (peakW / 1000).toFixed(1);
+    svgParts.push(
+      `<text x="${(PAD_L + chartW - 2).toFixed(1)}" y="${(PAD_T + 9).toFixed(1)}" text-anchor="end" class="price-label" fill="#FCD34D">☀ max ${peakKw}kW</text>`
+    );
+  }
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" class="chart">${svgParts.join('')}</svg>`;
+  wrap.innerHTML = svg;
+}
+
+function renderChart(data) {
+  if (!data) { showEmpty(); return; }
+
+  // Updated timestamp
+  const upd = document.getElementById('updated');
+  if (upd) upd.textContent = relativeTime(data.updatedAt);
+
+  renderStatus(data);
+  renderSvg(data.slots);
+  renderModeBar(data.slots);
+}
+
+function showEmpty() {
+  document.getElementById('status-row').innerHTML = '<div class="empty" style="padding:0">Geen data</div>';
+  const wrap = document.getElementById('chart-wrap');
+  wrap.innerHTML = '<div class="empty">Wacht op eerstvolgende beleidsrun…</div>';
+  document.getElementById('mode-bar').innerHTML = '';
+}
+
+function onHomeyReady(Homey) {
+  Homey.ready();
+
+  function fetchAndRender() {
+    const btn = document.getElementById('refresh-btn');
+    if (btn) btn.style.opacity = '0.2';
+    Homey.api('GET', '/', {})
+      .then(data => { if (data) renderChart(data); })
+      .catch(() => {})
+      .finally(() => { if (btn) btn.style.opacity = ''; });
+  }
+
+  // Initial fetch
+  fetchAndRender();
+
+  // Refresh button
+  const btn = document.getElementById('refresh-btn');
+  if (btn) btn.addEventListener('click', fetchAndRender);
+
+  // Real-time updates from backend
+  Homey.on('planning-update', data => {
+    if (data) renderChart(data);
+  });
+}
+</script>
+</body>
+</html>
