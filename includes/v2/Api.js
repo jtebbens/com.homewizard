@@ -83,10 +83,11 @@ module.exports = (function () {
       headers: { Authorization: `Bearer ${token}` }
     });
 
+    if (data.mode === 'to_full') return 'to_full';
+    if (data.mode === 'predictive') return 'predictive';
+
     if (Array.isArray(data.permissions)) {
       const perms = [...data.permissions].sort().join(',');
-
-      if (data.mode === 'to_full') return 'to_full';
 
       switch (perms) {
         case '':
@@ -98,7 +99,9 @@ module.exports = (function () {
         case 'discharge_allowed':
           return 'zero_discharge_only';
         default:
-          throw new Error(`Unknown permissions combination: ${JSON.stringify(data.permissions)}`);
+          // Unknown firmware mode — treat as standby to avoid a crash
+          console.log(`[API] Unknown permissions combination: ${JSON.stringify(data.permissions)}, treating as standby`);
+          return 'standby';
       }
     }
 

@@ -799,6 +799,7 @@ if (debug) this.log(
         this._recomputeOptimizer(inputs);
       }
       inputs.optimizer = this.optimizationEngine;
+      inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
 
       const result = this.policyEngine.calculatePolicy(inputs);
 
@@ -1082,9 +1083,10 @@ if (debug) this.log(
         // not now + h * slotMs which drifts when prices don't start exactly at 'now'.
         const futureTime = new Date(prices[h].timestamp);
         const learned = this.learningEngine.getPredictedConsumption(futureTime) ?? 0;
-        // Use baseload only when learning has no data yet for this slot (learned = 0).
-        // Learned values already include baseload (recorded from grid import).
-        consumptionWPerSlot.push(learned > 0 ? learned : baseloadW);
+        // Floor by baseload: a learned value below the measured baseload is an
+        // artefact of averaging quiet evenings — the house always consumes at least
+        // baseload, so the optimizer should never plan slower discharge than that.
+        consumptionWPerSlot.push(Math.max(learned, baseloadW));
       }
     }
 
@@ -1609,6 +1611,12 @@ if (debug) this.log(
       const actualMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
 
       this.log(`🔍 Actual HW mode: ${actualMode}, desired: ${targetMode}`);
+
+      // ⭐ HW Slim laden actief → policy engine niet overrulen
+      if (actualMode === 'predictive') {
+        this.log('⏸️ HW Slim laden (predictive) actief — policy engine gepauzeerd, geen mode-wijziging');
+        return true;
+      }
 
       // ⭐ Als al correct → niets doen
       if (actualMode === targetMode) {
