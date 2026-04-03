@@ -6159,6 +6159,24 @@
       "id": "windmeter"
     }
   ],
+  "widgets": {
+    "battery-planning": {
+      "name": {
+        "en": "Battery Planning",
+        "nl": "Batterij Planning"
+      },
+      "height": 300,
+      "transparent": false,
+      "api": {
+        "getPlanningData": {
+          "method": "GET",
+          "path": "/"
+        }
+      },
+      "id": "battery-planning",
+      "settings": []
+    }
+  },
   "capabilities": {
     "active_mode": {
       "type": "string",

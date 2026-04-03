@@ -590,7 +590,7 @@ if (debug) this.log(
     // Adaptive interval: 15 min during price-release window (14:00–16:00 CET),
     // 30 min otherwise. kwhprice.eu publishes tomorrow's prices at ~13:15 CET.
     const getRefreshInterval = () => {
-      const hour = new Date().getHours();
+      const hour = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
       return (hour >= 14 && hour <= 16) ? 15 * 60 * 1000 : 30 * 60 * 1000;
     };
 
@@ -605,7 +605,8 @@ if (debug) this.log(
 
           if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
             const now = new Date();
-            this.log(`🔄 Refreshing prices... (${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')})`);
+            const nowAms = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+            this.log(`🔄 Refreshing prices... (${nowAms} Amsterdam)`);
 
             try {
               // Force-refresh the merged provider (fetches Xadi + KwhPrice concurrently)
@@ -1003,6 +1004,9 @@ if (debug) this.log(
         }
       }
 
+      // Push compact data to the dashboard widget
+      try { this._saveWidgetData(); } catch (e) { this.error('Widget data save failed:', e); }
+
     } catch (error) {
       this.error('Policy check failed:', error);
       await this.setCapabilityValue('explanation_summary',
@@ -1011,6 +1015,100 @@ if (debug) this.log(
     } finally {
       this._policyCheckRunning = false;
     }
+  }
+
+  _saveWidgetData() {
+    const schedule  = this.homey.settings.get('policy_optimizer_schedule') || [];
+    const state     = this.homey.settings.get('battery_policy_state')      || {};
+    const prices15m = this.homey.settings.get('policy_all_prices_15min')   || [];
+    const now       = Date.now();
+
+    // Midnight of today in Amsterdam time (used to include past hours of today)
+    const todayStart = (() => {
+      const d = new Date(now);
+      const local = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
+      d.setTime(d.getTime() - (local - d)); // shift to Amsterdam midnight
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    })();
+
+    // Helper: Amsterdam hour from timestamp
+    const amhour = ts => parseInt(
+      new Date(ts).toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hour12: false }),
+      10
+    );
+
+    // Future slots from the optimizer schedule (include current slot via -15min buffer)
+    const futureSlots = schedule
+      .filter(s => new Date(s.timestamp).getTime() >= now - 15 * 60 * 1000)
+      .slice(0, 192)
+      .map(s => {
+        const ts = new Date(s.timestamp).getTime();
+        return {
+          ts,
+          hour:  amhour(ts),
+          price: s.price        != null ? Math.round(s.price        * 10000) / 10000 : null,
+          mode:  s.hwMode       || 'standby',
+          soc:   s.socProjected != null ? Math.round(s.socProjected) : null,
+          pvW:   Math.round(s.pvW ?? 0)
+        };
+      });
+
+    // Past slots from mode history (has real soc + mode) — keyed by rounded 15-min ts
+    const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+    const historyMap  = new Map();
+    for (const h of modeHistory) {
+      const ts15 = Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+      if (!historyMap.has(ts15)) historyMap.set(ts15, h);
+    }
+
+    // Build price lookup from 15min cache
+    const priceMap = new Map();
+    for (const p of prices15m) {
+      const ts = new Date(p.timestamp).getTime();
+      priceMap.set(ts, p.price);
+    }
+
+    // Actual PV per hour today (index = Amsterdam hour)
+    const pvActual = this.homey.settings.get('policy_pv_actual_today');
+    const pvHourly = Array.isArray(pvActual?.hourly) ? pvActual.hourly : [];
+
+    const futureTs  = new Set(futureSlots.map(s => s.ts));
+    const pastSlots = [];
+    for (let ts = todayStart; ts < now - 15 * 60 * 1000; ts += 15 * 60 * 1000) {
+      if (futureTs.has(ts)) continue;
+      const h   = historyMap.get(ts);
+      const hr  = amhour(ts);
+      const pvW = pvHourly[hr] != null ? Math.round(pvHourly[hr]) : 0;
+      pastSlots.push({
+        ts,
+        hour:  hr,
+        price: priceMap.has(ts) ? Math.round(priceMap.get(ts) * 10000) / 10000 : (h?.price ?? null),
+        mode:  h?.hwMode || 'past',
+        soc:   h?.soc    != null ? Math.round(h.soc) : null,
+        pvW
+      });
+    }
+
+    const slots = [...pastSlots, ...futureSlots]
+      .sort((a, b) => a.ts - b.ts)
+      .slice(0, 192); // max 48h worth of 15-min slots
+
+    const compact = {
+      currentSoc:   state.batterySOC   ?? null,
+      currentMode:  state.currentMode  ?? 'standby',
+      currentPrice: slots[0]?.price    ?? null,
+      pvCapacityW:  this.getSetting('pv_capacity_w') || 0,
+      updatedAt:    new Date().toISOString(),
+      slots
+    };
+
+    this.homey.settings.set('policy_widget_data', compact);
+    this.homey.api.realtime('planning-update', compact);
+    this.log(`[Widget] Data saved: ${slots.length} slots`);
+
+    // Camera image in device UI (fire-and-forget)
+    this._updatePlanningChart(compact).catch(e => this.error('Camera image update failed:', e));
   }
 
   /**
@@ -1839,6 +1937,7 @@ if (debug) this.log(
       'policy_weather_hourly',
       'policy_mode_history',
       'policy_optimizer_schedule',
+      'policy_widget_data',
       'device_settings',
     ];
     for (const key of settingsToClean) {
@@ -1852,102 +1951,322 @@ if (debug) this.log(
   }
 
   /**
-   * Update planning chart camera image
-   * @param {Object} inputs - Policy inputs (battery, tariff, weather)
-   * @param {Object} result - Policy result with recommendation
+   * Update two planning chart camera images (today + tomorrow) via quickchart.io.
+   * Called from _saveWidgetData() after every policy run.
    */
-  async _updatePlanningChart(inputs, result) {
+  async _updatePlanningChart(compact) {
     try {
-      const currentHour = parseInt(
-        new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' })
-      , 10);
-      const language = this.homey.i18n.getLanguage();
+      const slots = compact?.slots || [];
 
-      // Get hourly prices for next 24 hours
-      const prices = [];
-      if (inputs.tariff?.top3Low && inputs.tariff?.top3High) {
-        // Generate price array from available data
-        const allPrices = this.tariffManager.dynamicProvider?.cache || [];
-        for (let h = 0; h < 24; h++) {
-          const priceData = allPrices.find(p => new Date(p.time).getHours() === h);
-          prices.push({
-            hour: h,
-            price: priceData?.price || inputs.tariff.currentPrice || 0.25
+      // Split slots by Amsterdam calendar day
+      const dayKey = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }); // YYYY-MM-DD
+      const today    = dayKey(Date.now());
+      const tomorrow = dayKey(Date.now() + 86400000);
+
+      const todaySlots    = slots.filter(s => dayKey(s.ts) === today);
+      const tomorrowSlots = slots.filter(s => dayKey(s.ts) === tomorrow);
+
+      this._chartToday    = { ...compact, slots: todaySlots };
+      this._chartTomorrow = { ...compact, slots: tomorrowSlots };
+
+      // Today image
+      if (!this.planningImageToday) {
+        this.planningImageToday = await this.homey.images.createImage();
+        this.planningImageToday.setStream(async (stream) => {
+          if (!this._chartToday) { stream.end(); return; }
+          await this._streamQuickChart(stream, this._chartToday);
+        });
+        await this.setCameraImage('planning_today', 'Batterij Vandaag', this.planningImageToday);
+      }
+      await this.planningImageToday.update();
+
+      // Tomorrow image (only when slots available)
+      if (tomorrowSlots.length > 0) {
+        if (!this.planningImageTomorrow) {
+          this.planningImageTomorrow = await this.homey.images.createImage();
+          this.planningImageTomorrow.setStream(async (stream) => {
+            if (!this._chartTomorrow) { stream.end(); return; }
+            await this._streamQuickChart(stream, this._chartTomorrow);
           });
+          await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
         }
-      } else {
-        // Fallback: flat rate
-        for (let h = 0; h < 24; h++) {
-          prices.push({ hour: h, price: 0.25 });
-        }
+        await this.planningImageTomorrow.update();
       }
 
-      // Generate mode forecast for next 24 hours
-      // Simplified: current mode for all hours (can be enhanced with actual planning)
-      const modes = [];
-      const currentMode = result.hwMode || result.policyMode || 'standby';
-      for (let h = 0; h < 24; h++) {
-        modes.push({ hour: h, mode: currentMode });
-      }
-
-      // PV forecast (simplified, could use weather hourly data)
-      const pvForecast = [];
-      const sun4h = inputs.weather?.sun4h || 0;
-      // Simple bell curve for daylight hours
-      for (let h = 0; h < 24; h++) {
-        let kw = 0;
-        if (h >= 8 && h <= 17 && sun4h > 0) {
-          // Peak at noon
-          const distance = Math.abs(h - 12.5);
-          kw = Math.max(0, sun4h * (1 - distance / 5));
-        }
-        pvForecast.push({ hour: h, kw });
-      }
-
-      // SoC projection (simple linear discharge/charge based on current mode)
-      const socProjection = [];
-      let projectedSoC = inputs.battery?.stateOfCharge || 50;
-      for (let h = 0; h < 24; h++) {
-        socProjection.push({ hour: h, soc: Math.max(20, Math.min(100, projectedSoC)) });
-        
-        // Simple projection: discharge 2%/h at night, charge 5%/h during PV
-        if (h >= 18 || h <= 6) {
-          projectedSoC -= 2; // Discharge
-        } else if (pvForecast[h].kw > 1) {
-          projectedSoC += 5; // Charge from PV
-        }
-      }
-
-      // Generate chart
-      const chartData = {
-        prices,
-        modes,
-        pvForecast,
-        socProjection,
-        currentHour,
-        language
-      };
-
-      if (!this.chartGenerator) {
-        this.chartGenerator = new (require('../../lib/battery-chart-generator'))(this.homey);
-      }
-      const imageBuffer = this.chartGenerator.generateChart(chartData);
-      
-      if (!imageBuffer) {
-        // Chart generation disabled (canvas not installed)
-        return;
-      }
-
-      // Update camera image
-      const image = await this.homey.images.createImage();
-      await image.setBuffer(imageBuffer);
-      await this.setCameraImage('planning', this.homey.__('camera.planning_title'), image);
-
-      this.log('📊 Planning chart updated successfully');
-
+      this.log('📊 Planning chart camera images updated (today + tomorrow)');
     } catch (err) {
       this.error('Failed to update planning chart:', err);
     }
+  }
+
+  // Serialize a chart config object to a JavaScript expression string so that
+  // function callbacks (e.g. legend filter) survive the round-trip to quickchart.io.
+  _configToJs(val) {
+    if (val === null || val === undefined) return 'null';
+    if (typeof val === 'function') return val.toString();
+    if (typeof val === 'boolean' || typeof val === 'number') return String(val);
+    if (typeof val === 'string') return JSON.stringify(val);
+    if (Array.isArray(val)) return '[' + val.map(v => this._configToJs(v)).join(',') + ']';
+    const entries = Object.entries(val)
+      .map(([k, v]) => `${JSON.stringify(k)}:${this._configToJs(v)}`)
+      .join(',');
+    return '{' + entries + '}';
+  }
+
+  async _streamQuickChart(stream, compact) {
+    // eslint-disable-next-line global-require
+    const https = require('https');
+    const chartCfg = this._buildQuickChartConfig(compact);
+    if (!chartCfg) { stream.end(); return; }
+    // Pass chart as JS expression string so quickchart.io evaluates function callbacks
+    const body = JSON.stringify({
+      version: '4',
+      backgroundColor: '#1c1c1e',
+      width: 800,
+      height: 360,
+      chart: this._configToJs(chartCfg),
+    });
+
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'quickchart.io',
+        path: '/chart',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }, (res) => {
+        if (res.statusCode !== 200) {
+          let body = '';
+          res.on('data', chunk => { body += chunk; });
+          res.on('end', () => {
+            const err = new Error(`quickchart.io ${res.statusCode}: ${body.slice(0, 200)}`);
+            stream.destroy(err);
+            reject(err);
+          });
+          return;
+        }
+        res.pipe(stream);
+        res.on('end', resolve);
+        res.on('error', (e) => { stream.destroy(e); reject(e); });
+      });
+      req.on('error', (e) => { stream.destroy(e); reject(e); });
+      req.write(body);
+      req.end();
+    });
+  }
+
+  _buildQuickChartConfig(compact) {
+    const slots = compact?.slots || [];
+    const now   = Date.now();
+
+    const shown = slots.slice(0, 96); // max one day (96 × 15min)
+    if (shown.length === 0) return null;
+
+    const MODE_COLORS = {
+      to_full:             '#5f6fff',
+      zero_charge_only:    '#8b9fff',
+      zero_discharge_only: '#20F29B',
+      zero:                '#FB923C',
+      standby:             '#808080',
+      predictive:          '#02DACE',
+      past:                '#aaaaaa',
+    };
+
+    const fmt2 = n => String(n).padStart(2, '0');
+
+    // Labels: show HH:00 on whole hours; midnight gets a short date prefix
+    const labels  = shown.map(s => {
+      const min = Math.floor((s.ts % 3600000) / 60000);
+      if (min !== 0) return '';
+      if (s.hour === 0) {
+        const d = new Date(s.ts);
+        const day = d.toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', weekday: 'short', day: 'numeric', month: 'numeric' });
+        return day;
+      }
+      return fmt2(s.hour) + ':00';
+    });
+    const prices  = shown.map(s => s.price != null ? Math.round(s.price * 1000) / 1000 : null);
+    const socs    = shown.map(s => s.soc != null ? s.soc : null);
+    // Split PV into actual (past) and forecast (future) — null outside own range
+    const pvActual   = shown.map(s => s.ts < now ? Math.round((s.pvW || 0) / 10) * 10 : null);
+    // Include the last past slot in pvForecast so the dashed line connects to the solid line
+    const pvForecast = shown.map((s, i) => {
+      if (s.ts >= now) return Math.round((s.pvW || 0) / 10) * 10;
+      if (i + 1 < shown.length && shown[i + 1].ts >= now) return Math.round((s.pvW || 0) / 10) * 10;
+      return null;
+    });
+    const pvMax      = Math.max(...shown.map(s => Math.round((s.pvW || 0) / 10) * 10), 1);
+
+    const barColors = shown.map(s => {
+      const base = MODE_COLORS[s.mode] || '#808080';
+      return base + (s.ts < now ? '77' : 'CC');
+    });
+
+    // One phantom dataset per mode present — for legend only (exclude 'past')
+    const modesPresent = [...new Set(shown.map(s => s.mode))].filter(m => m !== 'past');
+
+    const MODE_LABELS = {
+      to_full: 'Laden', zero_charge_only: 'PV laden', zero_discharge_only: 'Ontladen',
+      zero: 'Nul', standby: 'Standby', predictive: 'Slim laden',
+    };
+
+    const socLine  = compact?.currentSoc  != null ? `${Math.round(compact.currentSoc)}%` : '-';
+    const modeLine = MODE_LABELS[compact?.currentMode] || compact?.currentMode || 'standby';
+
+    // Determine chart day label from first slot
+    const firstTs   = shown.find(s => s.mode !== 'past')?.ts ?? shown[0]?.ts;
+    const today     = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const slotDay   = firstTs
+      ? new Date(firstTs).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' })
+      : today;
+    const dayLabel  = slotDay === today
+      ? 'Vandaag'
+      : new Date(firstTs).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam', weekday: 'long', day: 'numeric', month: 'long' });
+    const updLine   = compact?.updatedAt
+      ? new Date(compact.updatedAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })
+      : '';
+
+    const modeDatasets = modesPresent.map(mode => ({
+      type: 'bar',
+      label: MODE_LABELS[mode] || mode,
+      data: [],
+      backgroundColor: (MODE_COLORS[mode] || '#808080') + 'CC',
+      yAxisID: 'yPrice',
+      order: 99,
+    }));
+
+    return {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: '_prijs',
+            data: prices,
+            backgroundColor: barColors,
+            borderColor: barColors,
+            borderWidth: 0,
+            yAxisID: 'yPrice',
+            order: 3,
+          },
+          {
+            type: 'line',
+            label: 'SoC (%)',
+            data: socs,
+            borderColor: 'rgba(255,255,255,0.85)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [5, 4],
+            pointRadius: 0,
+            pointStyle: 'line',
+            yAxisID: 'ySoc',
+            order: 1,
+            spanGaps: true,
+          },
+          {
+            type: 'line',
+            label: 'PV',
+            data: pvActual,
+            borderColor: '#FCD34D',
+            backgroundColor: 'rgba(252,211,77,0.15)',
+            fill: true,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointStyle: 'line',
+            tension: 0.4,
+            spanGaps: false,
+            yAxisID: 'yPv',
+            order: 2,
+          },
+          {
+            type: 'line',
+            label: '_pv_forecast',
+            data: pvForecast,
+            borderColor: '#FCD34D',
+            backgroundColor: 'rgba(252,211,77,0.08)',
+            fill: true,
+            borderWidth: 1.5,
+            borderDash: [4, 3],
+            pointRadius: 0,
+            pointStyle: 'line',
+            tension: 0.4,
+            spanGaps: false,
+            yAxisID: 'yPv',
+            order: 2,
+          },
+          ...modeDatasets,
+        ],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: '#9a9a9a',
+              font: { size: 10 },
+              padding: 10,
+              usePointStyle: true,
+              filter: function(item) { return !item.text.startsWith('_'); },
+            },
+          },
+          title: {
+            display: true,
+            text: [
+              `Batterij ${dayLabel}  |  SoC: ${socLine}  |  Nu: ${modeLine}  |  ${updLine}`,
+            ],
+            color: '#cccccc',
+            font: { size: 11 },
+            padding: { bottom: 4 },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#9a9a9a', font: { size: 10 }, maxRotation: 0, autoSkip: false },
+            grid: { color: '#2a2a2a' },
+          },
+          yPrice: {
+            position: 'left',
+            ticks: {
+              color: '#9a9a9a',
+              font: { size: 10 },
+              callback: (v) => v.toFixed(2),
+            },
+            grid: { color: '#2a2a2a' },
+            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 9 } },
+          },
+          ySoc: {
+            position: 'right',
+            min: 0,
+            max: 100,
+            ticks: {
+              color: 'rgba(255,255,255,0.6)',
+              font: { size: 10 },
+              callback: (v) => `${v}%`,
+            },
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 9 } },
+          },
+          yPv: {
+            display: true,
+            position: 'right',
+            min: 0,
+            max: compact?.pvCapacityW > 0 ? compact.pvCapacityW : pvMax * 1.2,
+            ticks: {
+              color: '#FCD34D',
+              font: { size: 10 },
+              maxTicksLimit: 4,
+              callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}kW` : `${v}W`,
+            },
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'PV', color: '#FCD34D', font: { size: 9 } },
+          },
+        },
+      },
+    };
   }
 
 
