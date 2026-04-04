@@ -470,13 +470,14 @@ if (debug) this.log(
         const sunScore = this.getCapabilityValue('sun_score') ?? 0;
         const hasSunlight = sunScore >= PV_SUN_THRESHOLD;
 
-        // Calculate "virtual export" = what grid would be if battery was in standby
-        // If battery is charging (+800W), that PV energy would export to grid instead
-        // So subtract charging power: grid=-1100W, batt=+800W → virtual=-1900W
-        // If battery is discharging (-800W), that's already reflected in grid reading
-        const virtualGridPower = batteryPower > 0 
-          ? gridPower - batteryPower  // Charging: subtract to show true export potential
-          : gridPower;                 // Discharging/idle: grid reading is accurate
+        // Calculate "virtual export" = what grid would be if battery was in standby.
+        // Always subtract battery power (positive=charging, negative=discharging):
+        //   Charging  (+800W): grid=-1100W → virtual=-1900W (true export potential)
+        //   Discharging(-337W): grid=-220W → virtual=-220-(-337)=+117W (no real export)
+        //   Idle         (0W): grid=-500W → virtual=-500W (direct PV export)
+        // Without this correction, battery discharging more than house load creates
+        // apparent grid export that falsely triggers PV detection.
+        const virtualGridPower = gridPower - batteryPower;
 
         // ✅ HYSTERESIS LOGIC: Use different thresholds based on current state
         let hasExport, hasActivePVConsumption;
@@ -547,26 +548,43 @@ if (debug) this.log(
     // Clear any existing timers
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
+      this.policyCheckInterval = null;
+    }
+    if (this._slotAlignTimeout) {
+      this.homey.clearTimeout(this._slotAlignTimeout);
+      this._slotAlignTimeout = null;
     }
     if (this._hourBoundaryTimeout) {
       this.homey.clearTimeout(this._hourBoundaryTimeout);
     }
 
-    // 1) Regular interval as fallback between hour boundaries
-    this.policyCheckInterval = this.homey.setInterval(
-      async () => {
+    // Align to 15-min EPEX slot boundaries (:00, :15, :30, :45 UTC).
+    // Price slots are keyed to UTC multiples of 15 min; running right at the
+    // boundary ensures the full slot duration is covered by the correct action.
+    // Without alignment the setInterval drifts to ~11 min into each slot,
+    // leaving only ~4 min of discharge per slot.
+    const now = Date.now();
+    const msUntilNextSlot = intervalMs - (now % intervalMs) + 200; // 200ms grace
+
+    this.log(`Policy check aligning to next slot boundary in ${Math.round(msUntilNextSlot / 1000)}s, then every ${intervalMinutes} min`);
+
+    this._slotAlignTimeout = this.homey.setTimeout(() => {
+      this._slotAlignTimeout = null;
+      if (this.getCapabilityValue('policy_enabled')) {
+        this._runPolicyCheck().catch(err => this.error('Slot-aligned policy check failed:', err));
+      }
+      this.policyCheckInterval = this.homey.setInterval(async () => {
         if (this.getCapabilityValue('policy_enabled')) {
           await this._runPolicyCheck();
         }
-      },
-      intervalMs
-    );
+      }, intervalMs);
+    }, msUntilNextSlot);
 
-    // 2) Align to hour boundaries — prices change on the hour.
-    //    Schedule a run ~5s after each full hour to catch new prices immediately.
+    // Hour-boundary run fires ~5s after each full hour as a belt-and-suspenders
+    // safety net (e.g. when hourly prices change and no price refresh is pending).
     this._scheduleHourBoundary();
 
-    this.log(`Policy check scheduled every ${intervalMinutes} minutes + aligned to hour boundaries`);
+    this.log(`Policy check scheduled every ${intervalMinutes} minutes, aligned to slot boundaries`);
   }
 
   _scheduleHourBoundary() {
@@ -1913,6 +1931,11 @@ if (debug) this.log(
     if (this.policyCheckInterval) {
       this.homey.clearInterval(this.policyCheckInterval);
       this.policyCheckInterval = null;
+    }
+
+    if (this._slotAlignTimeout) {
+      this.homey.clearTimeout(this._slotAlignTimeout);
+      this._slotAlignTimeout = null;
     }
 
     if (this._hourBoundaryTimeout) {
