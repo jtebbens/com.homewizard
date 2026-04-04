@@ -1219,5 +1219,8 @@
   },
   "3.14.29": {
     "en": "Energy-socket http agent adjustments, battery-policy explainability reasoning improvements"
+  },
+  "3.14.30": {
+    "en": "Slot boundary alignment, virtual grid power fix, peaktiming PV free-cycle bypass, DP discharge allowed during PV hours"
   }
 }
