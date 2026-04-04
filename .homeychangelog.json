@@ -1222,5 +1222,8 @@
   },
   "3.14.30": {
     "en": "Slot boundary alignment, virtual grid power fix, peaktiming PV free-cycle bypass, DP discharge allowed during PV hours"
+  },
+  "3.14.31": {
+    "en": "Webcam fix tomorrow battery policy, image might not update till afternoon prices are available"
   }
 }
