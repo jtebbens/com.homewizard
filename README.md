@@ -51,7 +51,21 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.14.24+)
+## 📝 Latest Updates (v3.14.29+)
+
+### Battery Policy — Optimizer & Scheduling
+
+* **DP discharge allowed during PV hours** - Removed the `pvCoverage > 0.5` discharge block from the optimizer's backward induction. During delay-charge hours the battery correctly discharges to cover house load while PV exports to the grid; the old block suppressed this and left ~1 kWh/day of discharge revenue uncollected (battery entered the solar morning at 30–40% SoC instead of min_soc). The `minDischargePrice` floor already prevents irrational low-price PV-hour discharge
+* **Slot-boundary alignment** - Policy check interval now aligns to the next UTC 15-minute boundary (`:00`, `:15`, `:30`, `:45`) on startup instead of running at an arbitrary offset. Without alignment the interval drifted ~11 min into each EPEX slot, leaving only ~4 min of discharge per slot
+
+### Battery Policy — PV Detection
+
+* **Virtual grid power fix** - `virtualGridPower = gridPower − batteryPower` is now always applied (both when charging and discharging). The old code used raw `gridPower` when discharging, causing battery over-discharge (e.g. −337 W) to create apparent grid export (−220 W) and falsely trigger PV-ON at 06:51 before sunrise
+* **PeakTiming PV free-cycle bypass** - PeakTiming discharge suppression is now skipped when `pvKwhRemaining ≥ storedKwh`. When remaining PV today can cover what's currently stored, recharging is free and the RTE cost threshold is irrelevant. Re-engages in the evening when PV is nearly exhausted. Prevents the battery from staying half-full all morning because PeakTiming assumed grid recharge cost
+
+---
+
+## Previous Updates (v3.14.24+)
 
 ### Battery Policy — Planning & Optimizer
 
