@@ -1225,5 +1225,8 @@
   },
   "3.14.31": {
     "en": "Webcam fix tomorrow battery policy, image might not update till afternoon prices are available"
+  },
+  "3.14.32": {
+    "en": "Cheapest hour fix diring night while 12 hours later are cheaper"
   }
 }
