@@ -480,6 +480,7 @@
     <div id="planning-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
     <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
     <div id="planning-grid"></div>
+    <div id="planning-daily-profit"></div>
     <!-- Modal for 15-min detail -->
     <div id="hourDetailModal" class="hour-detail-modal" onclick="closeHourDetail(event)"></div>
   </div>
@@ -591,7 +592,7 @@
     /* ══════════════════════════════════════════════════════════
        PV CURVE HELPER
     ══════════════════════════════════════════════════════════ */
-    function renderPvCurve(day, radiationMap, pvCapW, PR = 0.75, pvActualHourly = null, pvForecastMap = null) {
+    function renderPvCurve(day, radiationMap, pvCapW, PR = 0.75, pvActualHourly = null, pvForecastMap = null, consumptionByHour = null) {
       const W = 480, H = 220;
       const pad = { l: 40, r: 12, t: 16, b: 28 };
       const iW = W - pad.l - pad.r;
@@ -696,7 +697,11 @@
       const peakX = pts[peakH][0];
       const peakY = pts[peakH][1];
       const peakKw = (peakW / 1000).toFixed(2);
-      const totalKwh = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
+      const nowHour = day === 0
+        ? parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)
+        : 0;
+      const allKwh       = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
+      const totalKwh     = (pvWatts.slice(nowHour).reduce((a, b) => a + b, 0) / 1000).toFixed(1);
       const labelX = Math.min(peakX + 6, W - 44);
       const labelY = Math.max(peakY - 6, pad.t + 11);
 
@@ -710,7 +715,7 @@
       const clipId = `pvClip${day}`;
 
       return `<div class="pv-curve-row">
-        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ~${totalKwh} kWh verwacht${pvForecastMap ? ' (geleerd)' : ' (schatting)'}</div>
+        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ${day === 0 ? `~${totalKwh} kWh resterend · ~${allKwh} kWh totaal` : `~${allKwh} kWh verwacht`}${pvForecastMap ? ' (geleerd)' : ' (schatting)'}</div>
         <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block;">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
@@ -738,6 +743,40 @@
           ${actualKwhSvg}
           <circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="5" fill="#FFD700"/>
           <text x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" fill="#FFD700" font-size="13" font-weight="bold">${peakKw} kW</text>
+          ${(() => {
+            if (!consumptionByHour) return '';
+            const cWatts = Array.from({length: 24}, (_, h) => consumptionByHour[h] ?? null);
+            // Only render when we have enough data points
+            const nonNull = cWatts.filter(v => v != null);
+            if (nonNull.length < 12) return '';
+            // Fill gaps with linear interpolation between known values
+            const filled = cWatts.map((v, h) => {
+              if (v != null) return v;
+              let prev = null, next = null;
+              for (let i = h - 1; i >= 0; i--) { if (cWatts[i] != null) { prev = {h: i, w: cWatts[i]}; break; } }
+              for (let i = h + 1; i < 24; i++) { if (cWatts[i] != null) { next = {h: i, w: cWatts[i]}; break; } }
+              if (prev && next) return prev.w + (next.w - prev.w) * (h - prev.h) / (next.h - prev.h);
+              if (prev) return prev.w;
+              if (next) return next.w;
+              return 0;
+            });
+            const cPts = filled.map((w, h) => [toX(h), toY(w)]);
+            let cPath = `M ${cPts[0][0].toFixed(1)},${cPts[0][1].toFixed(1)}`;
+            for (let i = 1; i < cPts.length; i++) {
+              const p0 = cPts[i - 2] || cPts[0];
+              const p1 = cPts[i - 1];
+              const p2 = cPts[i];
+              const p3 = cPts[i + 1] || p2;
+              const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+              const cp1y = Math.min(pad.t + iH, Math.max(pad.t, p1[1] + (p2[1] - p0[1]) / 6));
+              const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+              const cp2y = Math.min(pad.t + iH, Math.max(pad.t, p2[1] - (p3[1] - p1[1]) / 6));
+              cPath += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+            }
+            const totalKwhC = (nonNull.reduce((s, v) => s + v, 0) / 1000).toFixed(1);
+            return `<path d="${cPath}" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-dasharray="4 3" clip-path="url(#${clipId})"/>
+                    <text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 26}" text-anchor="end" fill="rgba(255,255,255,0.65)" font-size="11">🏠 ${totalKwhC} kWh geschat huisverbruik</text>`;
+          })()}
           ${hourLabels}
         </svg>
       </div>`;
@@ -767,6 +806,14 @@
             hasVariation: priceVariation > 0.02, dominantMode,
             avgSoc: hourIntervals.reduce((sum, i) => sum + i.soc, 0) / hourIntervals.length,
             avgPvW: hourIntervals.reduce((sum, i) => sum + (i.pvW ?? 0), 0) / hourIntervals.length,
+            avgConsumptionW: (() => {
+              const vals = hourIntervals.map(i => i.consumptionW).filter(v => v != null);
+              return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+            })(),
+            minSampleCount: (() => {
+              const vals = hourIntervals.map(i => i.sampleCount).filter(v => v != null);
+              return vals.length ? Math.min(...vals) : null;
+            })(),
           });
         }
       }
@@ -1755,9 +1802,9 @@
           const interval = intervals[i];
 
           if (interval.isCurrent && policyState?.currentMode) {
-            interval.hwMode    = policyState.currentMode;
+            interval.hwMode     = policyState.currentMode;
             interval.policyMode = policyState.policyMode || 'preserve';
-            interval.soc       = currentSOC;
+            interval.soc        = currentSOC;
             continue;
           }
 
@@ -1767,7 +1814,9 @@
             interval.hwMode     = slot.hwMode;
             interval.policyMode = slot.action;   // 'charge' | 'discharge' | 'preserve'
             interval.soc        = slot.socProjected ?? currentSOC;
-            interval.pvW        = slot.pvW ?? 0;
+            interval.pvW         = slot.pvW ?? 0;
+            interval.consumptionW = slot.consumptionW ?? null;
+            interval.sampleCount  = slot.sampleCount  ?? null;
           }
         }
       }
@@ -1828,7 +1877,7 @@
 
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
-        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, day } = hourGroup;
+        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgConsumptionW, minSampleCount, day } = hourGroup;
         // Use same radiation-based formula as the chart so tooltip and curve always match.
         const displayPvW = pvEnabled
           ? Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR)
@@ -1867,7 +1916,25 @@
           const dynChgLabel = effectiveChgPrice > maxChgPrice + 0.005
             ? ` · ⚡ max €${effectiveChgPrice.toFixed(2)} (dyn)` : '';
 
-          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR, pvActualHourly, pvForecastByDay[day]) : '';
+          // Netto dagwinst: discharge revenue minus grid charge cost
+          const dayDischargeRevenue = hourlyGroups
+            .filter(g => g.day === day && g.dominantMode === 'zero_discharge_only' && g.avgPrice !== null && g.avgConsumptionW != null)
+            .reduce((sum, g) => sum + g.avgPrice * Math.min(maxDischW, g.avgConsumptionW) / 1000, 0);
+          const avgCostPerKwh = policyState?.avgCost > 0 ? policyState.avgCost : null;
+          const dayChargeCost = hourlyGroups
+            .filter(g => g.day === day && g.dominantMode === 'to_full')
+            .reduce((sum, g) => sum + (avgCostPerKwh ?? g.avgPrice ?? 0) * maxChgW / 1000, 0);
+          const dayNet = dayDischargeRevenue - dayChargeCost;
+          const revenueLabel = dayNet >= 0.01
+            ? ` · 💰 ~€${dayNet.toFixed(2)}${dayChargeCost >= 0.01 ? ' netto' : ''}`
+            : '';
+
+          const consumptionByHour = {};
+          for (const g of hourlyGroups.filter(g => g.day === day)) {
+            if (g.avgConsumptionW != null) consumptionByHour[g.hour] = g.avgConsumptionW;
+          }
+          const consumptionArg = Object.keys(consumptionByHour).length >= 12 ? consumptionByHour : null;
+          const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR, pvActualHourly, pvForecastByDay[day], consumptionArg) : '';
           let weatherTs = '';
           if (day === 0 && pvEnabled) {
             const fetchedAt = settings['policy_weather_fetched_at'];
@@ -1879,7 +1946,7 @@
               weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}<br>📈 ${pvLearnedSlots}/96 PV-slots geleerd${learnNote}</div>`;
             }
           }
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}</div>${weatherTs}${pvCurve}`;
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}</div>${weatherTs}${pvCurve}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);
@@ -1907,6 +1974,7 @@
         const wCode = weatherCodeByDay[day]?.[hour] ?? -1;
         const weatherBadge = wCode >= 0 ? `<span class="weather-badge">${wmoIcon(wCode, radiationByDay[day]?.[hour])}</span>` : '';
 
+
         return `
           ${dayMarker}
           <div class="planning-hour-card ${isCurrent ? 'current' : ''} hw-${dominantMode}"
@@ -1921,14 +1989,90 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%${displayPvW > 50 ? ` · PV ☀️ ${(displayPvW/1000).toFixed(1)}kW` : ''}<br>
-              ${avgPrice !== null ? `<span style="color:${avgPrice <= maxChgPrice ? '#8b9fff' : avgPrice >= minDchPrice ? '#20F29B' : '#808080'};">be: €${(avgPrice / battEff).toFixed(3)}</span>` : ''}
+              SoC: ${avgSoc.toFixed(0)}%${displayPvW > 50 ? ` · PV ☀️ ${(displayPvW/1000).toFixed(1)}kW` : ''}${avgConsumptionW != null ? ` · 🏠 ${(avgConsumptionW/1000).toFixed(1)}kW` : ''}
+              ${minSampleCount != null && minSampleCount < 4
+                ? `<br><span style="font-size:10px;color:${minSampleCount === 0 ? '#f87171' : '#f0c040'};">${minSampleCount === 0 ? '🔴 geen verbruiksdata' : `🟡 ${minSampleCount} samples`}</span>`
+                : ''}
             </div>
             <div class="expand-indicator">+</div>
           </div>`;
       }).join('');
 
       console.log(`✅ Planning rendered: ${hourlyGroups.length} hours (${intervals.length} intervals)`);
+
+      /* ── Dagwinst: reconstruct actual profit from mode history ── */
+      try {
+        const history     = settings['policy_mode_history'] || [];
+        const capKwhLocal = capKwh || 2.688;
+        const dailyProfit = settings['policy_daily_profit'] || [];
+
+        // Group history by Amsterdam calendar date
+        const byDate = {};
+        for (let i = 0; i < history.length - 1; i++) {
+          const e = history[i];
+          if (!e.ts || e.price == null || e.soc == null) continue;
+          const date = new Date(e.ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          if (!byDate[date]) byDate[date] = [];
+          byDate[date].push({ ...e, nextSoc: history[i + 1]?.soc });
+        }
+
+        const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        let changed = false;
+
+        for (const [date, entries] of Object.entries(byDate)) {
+          if (date >= todayDate) continue; // only completed days
+          if (dailyProfit.some(d => d.date === date)) continue; // already computed
+
+          let dischargeRevenue = 0, chargeCost = 0;
+          for (const e of entries) {
+            if (e.nextSoc == null) continue;
+            const socDelta = e.soc - e.nextSoc;
+            const kwhDelta = Math.abs(socDelta) / 100 * capKwhLocal;
+            if (e.hwMode === 'zero_discharge_only' && socDelta > 0.5) {
+              dischargeRevenue += kwhDelta * e.price;
+            } else if (e.hwMode === 'to_full' && socDelta < -0.5) {
+              chargeCost += kwhDelta * (policyState?.avgCost || e.price);
+            }
+          }
+          const net = dischargeRevenue - chargeCost;
+          if (dischargeRevenue > 0 || chargeCost > 0) {
+            dailyProfit.push({ date, discharge: +dischargeRevenue.toFixed(3), charge: +chargeCost.toFixed(3), net: +net.toFixed(3) });
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          dailyProfit.sort((a, b) => a.date.localeCompare(b.date));
+          while (dailyProfit.length > 30) dailyProfit.shift();
+          Homey.set('policy_daily_profit', dailyProfit).catch(() => {});
+        }
+
+        const el = document.getElementById('planning-daily-profit');
+        if (el && dailyProfit.length >= 1) {
+          const rows = [...dailyProfit].reverse().slice(0, 14).map(d => {
+            const netColor = d.net >= 0 ? '#20F29B' : '#f87171';
+            return `<tr>
+              <td>${d.date}</td>
+              <td style="color:#20F29B;">€${d.discharge.toFixed(2)}</td>
+              <td style="color:#f87171;">-€${d.charge.toFixed(2)}</td>
+              <td style="color:${netColor};font-weight:bold;">€${d.net.toFixed(2)}</td>
+            </tr>`;
+          }).join('');
+          el.innerHTML = `
+            <div style="margin-top:24px;padding:12px 0;">
+              <div style="font-size:13px;font-weight:bold;color:var(--text);margin-bottom:8px;">📊 Dagwinst (werkelijk geschat)</div>
+              <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:monospace;">
+                <thead><tr style="color:var(--dim);border-bottom:1px solid #333;">
+                  <th style="text-align:left;padding:4px 0;">Datum</th>
+                  <th style="text-align:right;">Ontladen</th>
+                  <th style="text-align:right;">Laden</th>
+                  <th style="text-align:right;">Netto</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+        }
+      } catch (e) { console.warn('Daily profit error:', e); }
     }
   </script>
 
