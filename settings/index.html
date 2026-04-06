@@ -386,6 +386,7 @@
   <div class="tabs" id="tabs-bar">
     <div class="tab active" data-tab="baseload"  id="tab-baseload"></div>
     <div class="tab"        data-tab="planning"  id="tab-planning"></div>
+    <div class="tab"        data-tab="expansion">Uitbreiding</div>
     <div class="tab"        data-tab="explain">Policy</div>
     <div class="tab"        data-tab="fetch">Fetch</div>
     <div class="tab"        data-tab="discovery">Discovery</div>
@@ -481,8 +482,51 @@
     <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
     <div id="planning-grid"></div>
     <div id="planning-daily-profit"></div>
+
+    <!-- Consumption profile chart -->
+    <div id="consumption-profile-section" style="display:none;margin-top:30px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:14px;">Verbruiksprofiel (geleerd)</h3>
+        <div style="display:flex;gap:4px;">
+          <button class="cons-day-btn" data-day="1" style="padding:3px 8px;font-size:11px;">Ma</button>
+          <button class="cons-day-btn" data-day="2" style="padding:3px 8px;font-size:11px;">Di</button>
+          <button class="cons-day-btn" data-day="3" style="padding:3px 8px;font-size:11px;">Wo</button>
+          <button class="cons-day-btn" data-day="4" style="padding:3px 8px;font-size:11px;">Do</button>
+          <button class="cons-day-btn" data-day="5" style="padding:3px 8px;font-size:11px;">Vr</button>
+          <button class="cons-day-btn" data-day="6" style="padding:3px 8px;font-size:11px;">Za</button>
+          <button class="cons-day-btn" data-day="0" style="padding:3px 8px;font-size:11px;">Zo</button>
+        </div>
+        <span id="consumption-peak-info" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
+      </div>
+      <div style="position:relative;height:130px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;">
+        <canvas id="consumptionProfileChart"></canvas>
+      </div>
+    </div>
+
     <!-- Modal for 15-min detail -->
     <div id="hourDetailModal" class="hour-detail-modal" onclick="closeHourDetail(event)"></div>
+  </div>
+
+  <!-- TAB: EXPANSION ANALYSIS -->
+  <div id="expansion" class="tab-content">
+    <h2>Capaciteitsuitbreiding</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
+      Vergelijking van 1–4 batterijen op basis van de huidige prijsverwachting.
+      Wordt bijgewerkt bij elke planningsrun (~15 min).
+    </p>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <label style="font-size:12px;color:var(--muted);white-space:nowrap;">Aanschafprijs per extra batterij (€)</label>
+      <input id="expansion-investment" type="number" step="50" min="0" max="10000" value="1200"
+             style="width:120px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;">
+      <button id="expansion-save-btn">Opslaan</button>
+    </div>
+
+    <div id="expansion-no-data" style="color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;">
+      Nog geen analyse beschikbaar. Wacht op de volgende planningsrun (~15 min).
+    </div>
+    <div id="expansion-grid" style="display:none;"></div>
+    <div id="expansion-timestamp" style="font-size:11px;color:var(--dim);margin-top:12px;"></div>
   </div>
 
   <!-- TAB: EXPLAINABILITY -->
@@ -548,6 +592,12 @@
         if (tab.dataset.tab === 'planning' && homeyInstance) {
           homeyInstance.get((e, s) => {
             if (!e) renderBatteryPlanning(s, homeyInstance);
+          });
+        }
+        // Refresh expansion analysis when switching to that tab
+        if (tab.dataset.tab === 'expansion' && homeyInstance) {
+          homeyInstance.get((e, s) => {
+            if (!e) renderExpansionAnalysis(s);
           });
         }
         // Refresh legacy fetch debug when switching to legacy tab
@@ -1035,10 +1085,20 @@
           if (changedKey === 'debug_logs' || changedKey === 'fetch_device_stats') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
+          if (changedKey === 'policy_consumption_profile' && document.getElementById('planning').classList.contains('active')) {
+            Homey.get((e, s) => { if (!e) renderConsumptionProfile(s); });
+          }
           if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule' || changedKey === 'policy_pv_actual_today') {
             Homey.get((e, s) => {
               if (!e && document.getElementById('planning').classList.contains('active')) {
                 renderBatteryPlanning(s, Homey);
+              }
+            });
+          }
+          if (changedKey === 'battery_expansion_analysis') {
+            Homey.get((e, s) => {
+              if (!e && document.getElementById('expansion').classList.contains('active')) {
+                renderExpansionAnalysis(s);
               }
             });
           }
@@ -1498,6 +1558,14 @@
 
         /* ── BATTERY PLANNING ── */
         await renderBatteryPlanning(settings, Homey);
+        renderExpansionAnalysis(settings);
+
+        document.getElementById('expansion-save-btn')?.addEventListener('click', () => {
+          const inv = parseFloat(document.getElementById('expansion-investment').value);
+          if (inv >= 0) Homey.set('expansion_investment', inv);
+          // Re-render immediately with new investment value
+          Homey.get((e, s) => { if (!e) renderExpansionAnalysis(s); });
+        });
 
         setInterval(() => {
           Homey.get((e, s) => { if (!e) renderBatteryPlanning(s, Homey); });
@@ -2073,7 +2141,202 @@
             </div>`;
         }
       } catch (e) { console.warn('Daily profit error:', e); }
+
+      // ── Consumption profile chart ──────────────────────────────────────────
+      renderConsumptionProfile(settings);
     }
+
+    /* ══════════════════════════════════════════════════════════
+       CONSUMPTION PROFILE CHART
+    ══════════════════════════════════════════════════════════ */
+    let _consumptionChart = null;
+    let _consumptionProfileData = null;
+
+    function renderConsumptionProfile(settings, dayOverride) {
+      const profile = settings['policy_consumption_profile'];
+      const section = document.getElementById('consumption-profile-section');
+      if (!profile?.days || !section) return;
+
+      _consumptionProfileData = profile.days;
+      section.style.display = '';
+
+      // Determine which day to show: override, or today in Amsterdam time
+      const todayDay = new Date().toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Europe/Amsterdam' });
+      const todayIdx = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(todayDay);
+      const day = dayOverride != null ? dayOverride : todayIdx;
+
+      // Highlight active day button
+      document.querySelectorAll('.cons-day-btn').forEach(btn => {
+        btn.style.background = parseInt(btn.dataset.day) === day ? 'var(--accent, #5f6fff)' : 'var(--surface2)';
+        btn.style.color      = parseInt(btn.dataset.day) === day ? '#fff' : 'var(--muted)';
+        btn.style.border     = '1px solid var(--border)';
+        btn.style.borderRadius = '4px';
+        btn.style.cursor     = 'pointer';
+      });
+
+      const values = _consumptionProfileData[day] || new Array(96).fill(0);
+      const max = Math.max(...values, 1);
+
+      // Find top-3 peak slots
+      const indexed = values.map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v);
+      const peakSlots = indexed.slice(0, 3).map(({ v, i }) => {
+        const h = Math.floor(i / 4);
+        const q = i % 4;
+        return `${String(h).padStart(2,'0')}:${String(q*15).padStart(2,'0')} (${Math.round(v)}W)`;
+      });
+      const peakEl = document.getElementById('consumption-peak-info');
+      if (peakEl) peakEl.textContent = `Pieken: ${peakSlots.join('  ·  ')}`;
+
+      // Current quarter marker
+      const nowAms = new Date();
+      const nowH   = parseInt(nowAms.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10) % 24;
+      const nowM   = parseInt(nowAms.toLocaleString('en-US', { minute: 'numeric', timeZone: 'Europe/Amsterdam' }), 10);
+      const nowSlot = nowH * 4 + Math.floor(nowM / 15);
+
+      // Bar colors: green→yellow→red by relative height; current slot highlighted
+      const colors = values.map((v, i) => {
+        if (i === nowSlot && day === todayIdx) return 'rgba(255,255,255,0.9)';
+        const ratio = v / max;
+        if (ratio < 0.4) return 'rgba(32,242,155,0.7)';
+        if (ratio < 0.7) return 'rgba(229,192,123,0.7)';
+        return 'rgba(224,108,117,0.7)';
+      });
+
+      // X-axis labels: show every 4 slots (= every hour)
+      const labels = values.map((_, i) => i % 4 === 0 ? `${String(Math.floor(i/4)).padStart(2,'0')}:00` : '');
+
+      const ctx = document.getElementById('consumptionProfileChart');
+      if (!ctx) return;
+
+      if (_consumptionChart) { _consumptionChart.destroy(); _consumptionChart = null; }
+
+      _consumptionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderWidth: 0,
+            borderRadius: 1,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: {
+            callbacks: {
+              title: items => {
+                const i = items[0].dataIndex;
+                const h = Math.floor(i/4), q = i%4;
+                return `${String(h).padStart(2,'0')}:${String(q*15).padStart(2,'0')}`;
+              },
+              label: item => `${Math.round(item.raw)} W`,
+            },
+          }},
+          scales: {
+            x: { ticks: { color: 'var(--dim)', font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+            y: { ticks: { color: 'var(--dim)', font: { size: 9 }, callback: v => `${v}W` }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+          },
+        },
+      });
+    }
+
+    // Wire day-selector buttons (after DOM ready, inside Homey init block)
+    document.querySelectorAll('.cons-day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (_consumptionProfileData) {
+          const fakeSettings = { policy_consumption_profile: { days: _consumptionProfileData } };
+          renderConsumptionProfile(fakeSettings, parseInt(btn.dataset.day));
+        }
+      });
+    });
+
+    /* ══════════════════════════════════════════════════════════
+       EXPANSION ANALYSIS RENDERER
+    ══════════════════════════════════════════════════════════ */
+    function renderExpansionAnalysis(settings) {
+      const analysis  = settings['battery_expansion_analysis'];
+      const savedInv  = settings['expansion_investment'];
+
+      const invInput = document.getElementById('expansion-investment');
+      if (invInput && savedInv != null) invInput.value = savedInv;
+
+      const noData = document.getElementById('expansion-no-data');
+      const grid   = document.getElementById('expansion-grid');
+      const ts     = document.getElementById('expansion-timestamp');
+
+      if (!analysis?.scenarios?.length) {
+        if (noData) noData.style.display = '';
+        if (grid)   grid.style.display   = 'none';
+        return;
+      }
+
+      if (noData) noData.style.display = 'none';
+      if (grid)   grid.style.display   = '';
+
+      const { currentUnits, scenarios, timestamp } = analysis;
+      const investment = parseFloat(invInput?.value) || 1200;
+      const fmt  = v => `\u20ac${Number(v).toFixed(2)}`;
+      const fmtD = v => (v >= 0 ? '+' : '') + fmt(v);
+
+      // Build grid: one card per scenario
+      const currentProfit = scenarios.find(s => s.units === currentUnits)?.profit ?? 0;
+
+      grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">` +
+        scenarios.map(s => {
+          const isCurrent = s.units === currentUnits;
+          const delta     = s.profit - currentProfit;
+          const yearly    = delta * 365;
+          const extraBatt = s.units - currentUnits;
+          const payback   = extraBatt > 0 && yearly > 0.001
+            ? (extraBatt * investment / yearly).toFixed(1) + ' jaar'
+            : null;
+
+          const border = isCurrent
+            ? 'border:2px solid #7ecb7e;'
+            : 'border:1px solid var(--border);';
+          const labelColor = isCurrent ? '#7ecb7e' : 'var(--muted)';
+
+          return `<div style="background:var(--surface2);border-radius:8px;padding:14px;${border}">
+            <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
+              ${s.units} ${s.units === 1 ? 'batterij' : 'batterijen'}${isCurrent ? ' ★' : ''}
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">
+              ${s.kwh} kWh · ${s.powerW}W
+            </div>
+            <div style="font-size:18px;font-weight:bold;color:var(--text);margin-bottom:6px;">
+              ${fmt(s.profit)}<span style="font-size:11px;font-weight:normal;color:var(--dim);">/dag</span>
+            </div>
+            ${isCurrent
+              ? `<div style="font-size:11px;color:var(--muted);">Huidige setup</div>`
+              : extraBatt > 0
+                ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">${fmtD(delta)}/dag</div>
+                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar</div>
+                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd: ${payback}</div>` : ''}`
+                : `<div style="font-size:11px;color:var(--dim);">${fmtD(delta)}/dag vs huidig</div>`
+            }
+            ${(() => {
+              // Power bottleneck: show residual grid import during discharge
+              if (s.shortfallKwh == null) return '';
+              if (s.shortfallSlots === 0) {
+                return `<div style="font-size:11px;color:#7ecb7e;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+                  Vermogen dekt alle discharge slots
+                </div>`;
+              }
+              return `<div style="font-size:11px;color:#e5c07b;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
+                ${s.shortfallSlots} slot${s.shortfallSlots > 1 ? 's' : ''}: nog
+                ${(s.shortfallKwh * 1000).toFixed(0)} Wh van net tijdens ontladen
+              </div>`;
+            })()}
+          </div>`;
+        }).join('') +
+        `</div>`;
+
+      if (ts) ts.textContent = `Bijgewerkt: ${timestamp ? new Date(timestamp).toLocaleString('nl-NL') : '—'}`;
+    }
+
   </script>
 
 </body>

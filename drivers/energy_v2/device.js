@@ -1906,12 +1906,21 @@ async _handleBatteries(data) {
 
     // --- Update battery power capabilities ---
     // ✅ CPU FIX: Run in parallel instead of 4 sequential awaits
-    await Promise.allSettled([
+    // ✅ FIX: Only update max_consumption/max_production when field is present in WS payload.
+    // Some WS messages omit these fields; writing 0 causes the policy-engine fallback
+    // to incorrectly assume unitCount × 800 W discharge (e.g. 2400 W for 3 batteries)
+    // while the real firmware limit is 800 W.
+    const powerUpdates = [
       this._setCapabilityValue('measure_power.battery_group_power_w', payload.power_w ?? 0),
       this._setCapabilityValue('measure_power.battery_group_target_power_w', payload.target_power_w ?? 0),
-      this._setCapabilityValue('measure_power.battery_group_max_consumption_w', payload.max_consumption_w ?? 0),
-      this._setCapabilityValue('measure_power.battery_group_max_production_w', payload.max_production_w ?? 0),
-    ]);
+    ];
+    if (typeof payload.max_consumption_w === 'number') {
+      powerUpdates.push(this._setCapabilityValue('measure_power.battery_group_max_consumption_w', payload.max_consumption_w));
+    }
+    if (typeof payload.max_production_w === 'number') {
+      powerUpdates.push(this._setCapabilityValue('measure_power.battery_group_max_production_w', payload.max_production_w));
+    }
+    await Promise.allSettled(powerUpdates);
 
     // --- Store raw WS battery state for condition cards ---
     const prev = this._cacheGet('last_battery_state') || {};

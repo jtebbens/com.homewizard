@@ -51,7 +51,37 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.14.29+)
+## 📝 Latest Updates (v3.15.0)
+
+### Battery Policy — Multi-Battery Discharge Fix
+
+* **Discharge power capped at 800 W** - HW firmware limits discharge (`max_production_w`) to 800 W regardless of battery count (charge scales linearly, discharge does not). The fallback calculation incorrectly assumed `unitCount × 800 W`, causing 3-battery setups to report "capaciteit: 2400W" in explainability text while actual discharge was locked at 800 W. Fixed in policy-engine, explainability-engine, and device `_getBatteryState()` fallback
+* **WebSocket capability guard** - `max_consumption_w` and `max_production_w` are now only updated when actually present in the WS payload (`typeof === 'number'`). Previously, missing fields were written as `0`, which caused the `??` fallback to pass through `0` instead of triggering the corrected 800 W fallback
+* **Confidence rounding** - Learning-adjusted confidence now uses `Math.round()` after adjustment, preventing 14-decimal-place values (e.g. `99.33326922747905`) in timeline entries and flow tokens
+
+### Battery Policy — Learning Engine
+
+* **15-minute consumption resolution** - Consumption patterns upgraded from hourly (7 × 24 = 168 slots) to 15-minute (7 × 24 × 4 = 672 slots). Includes automatic migration from old hourly format, spreading existing averages evenly across quarter slots
+* **Amsterdam timezone fix** - All consumption recording now uses `_getAmsterdamTime()` (via `toLocaleString` with `Europe/Amsterdam` timezone) instead of `getHours()` which returns UTC on Homey. One-time reset migration clears old UTC-indexed data; re-learning takes ~24–48h
+* **Daily profile export** - New `getDailyProfile(dayOfWeek)` method returns 96 slots with predicted wattage, enabling per-day consumption charts in the settings UI
+
+### Battery Policy — Expansion Analysis (new)
+
+* **What-if battery comparison** - New `computeExpectedProfit()` method on OptimizationEngine runs the DP for 1–4 battery scenarios without modifying the live schedule. Shows marginal daily/yearly profit per additional battery, power bottleneck slots where house consumption exceeds discharge capacity, and payback period based on configurable investment cost
+* **Settings tab "Uitbreiding"** - New tab visualises expansion scenarios with per-unit profit cards, shortfall indicators, and user-adjustable battery price input
+
+### Battery Policy — Consumption Profile Chart (new)
+
+* **Learned consumption chart** - New chart in the planning tab renders the learned 15-min consumption profile per day-of-week. Features day selector (Ma–Zo), peak detection with top-3 labels, colour-coded bars (green → yellow → red), and current-slot highlight. Updates hourly via `policy_consumption_profile` setting
+
+### Optimizer Engine — Refactoring
+
+* **Pure DP kernel** - Backward induction extracted into `_runBackwardDP()` — a fully side-effect-free method returning `{dp, policy, ...}`. Forward pass remains in `compute()`. Enables `computeExpectedProfit()` to reuse the same DP logic without touching `_schedule`
+* **Projected profit tracking** - `_schedule` now includes `projectedProfit` (€) from the DP value function at current SoC, used by expansion analysis
+
+---
+
+## Previous Updates (v3.14.29+)
 
 ### Battery Policy — Optimizer & Scheduling
 
