@@ -835,7 +835,7 @@ if (debug) this.log(
       
       if (confidenceAdjustment !== 0) {
         const originalConfidence = result.confidence;
-        result.confidence = Math.max(0, Math.min(100, result.confidence + confidenceAdjustment));
+        result.confidence = Math.round(Math.max(0, Math.min(100, result.confidence + confidenceAdjustment)));
         this.log(`📊 Learning adjusted confidence: ${originalConfidence} → ${result.confidence} (${confidenceAdjustment > 0 ? '+' : ''}${confidenceAdjustment})`);
       }
 
@@ -1252,6 +1252,83 @@ if (debug) this.log(
         }
       }
       this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
+
+      // ── Battery expansion analysis (non-critical) ──────────────────────────
+      // Runs DP for 1–4 battery scenarios to show the marginal value of each
+      // additional unit. _schedule is NOT touched by computeExpectedProfit().
+      try {
+        const KWH_PER_UNIT = 2.688; // HomeWizard Energy Battery per unit
+        const W_PER_UNIT   = 800;
+
+        const dischargeSlots = this.optimizationEngine._schedule?.slots ?? [];
+        const slotH = prices.length >= 2
+          ? (new Date(prices[1].timestamp) - new Date(prices[0].timestamp)) / 3_600_000
+          : 1;
+
+        const scenarios = [];
+        for (let n = 1; n <= 4; n++) {
+          const kwh    = +(n * KWH_PER_UNIT).toFixed(3);
+          const powerW = n * W_PER_UNIT;
+
+          const profit = +this.optimizationEngine.computeExpectedProfit(
+            prices, soc, kwh, powerW, powerW,
+            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice
+          ).toFixed(4);
+
+          // Power bottleneck: slots where house consumption exceeds battery discharge power,
+          // so the battery is at full output but grid still imports the remainder.
+          // Uses the current schedule's discharge slots as a proxy (good enough for diagnostics).
+          let shortfallSlots = 0;
+          let shortfallKwh   = 0;
+          if (Array.isArray(consumptionWPerSlot)) {
+            for (let t = 0; t < dischargeSlots.length; t++) {
+              if (dischargeSlots[t]?.action !== 'discharge') continue;
+              const consumption = consumptionWPerSlot[t];
+              if (consumption == null) continue;
+              const shortfall = Math.max(0, consumption - powerW);
+              if (shortfall > 0) {
+                shortfallSlots++;
+                shortfallKwh += shortfall * slotH / 1000;
+              }
+            }
+          }
+
+          scenarios.push({ units: n, kwh, powerW, profit,
+            shortfallSlots, shortfallKwh: +shortfallKwh.toFixed(3) });
+        }
+
+        const currentUnits = Math.max(1, Math.min(4, Math.round(capacityKwh / KWH_PER_UNIT)));
+
+        this.homey.settings.set('battery_expansion_analysis', {
+          timestamp:    new Date().toISOString(),
+          currentUnits,
+          currentKwh:   capacityKwh,
+          currentPowerW: maxChargePowerW,
+          scenarios,
+        });
+      } catch (e) {
+        this.error('Battery expansion analysis failed (non-critical):', e);
+      }
+
+      // ── Consumption profile (for settings chart) ───────────────────────────
+      // Written at most once per hour — data changes slowly, no need to
+      // serialize 672 integers to settings on every 15-min optimizer run.
+      try {
+        const lastProfile = this.homey.settings.get('policy_consumption_profile');
+        const ageMs = lastProfile?.timestamp ? Date.now() - new Date(lastProfile.timestamp).getTime() : Infinity;
+        if (ageMs > 60 * 60 * 1000) {
+          const days = {};
+          for (let d = 0; d < 7; d++) {
+            days[d] = this.learningEngine.getDailyProfile(d).map(s => s.avgW);
+          }
+          this.homey.settings.set('policy_consumption_profile', {
+            timestamp: new Date().toISOString(),
+            days,
+          });
+        }
+      } catch (e) {
+        this.error('Consumption profile save failed (non-critical):', e);
+      }
     }
 
     // Persist hourly PV forecast so the settings chart uses the same values as the optimizer.
@@ -1687,16 +1764,21 @@ if (debug) this.log(
 
       // Estimate number of units from total capacity (each unit = 2.688 kWh @ 800 W)
       const unitCount = totalCapacity ? Math.max(1, Math.round(totalCapacity / 2.688)) : 1;
-      const unitFallbackW = unitCount * 800;
 
-      // ✅ NEW: Get max production and consumption power
+      // ✅ FIX: HW firmware caps discharge at 800 W regardless of battery count
+      // (e.g. 2 batteries: max_consumption_w=1600, max_production_w=800)
+      // Charge scales linearly, discharge does not.
+      const chargeFallbackW = unitCount * 800;
+      const dischargeFallbackW = 800;
+
+      // Use || instead of ?? so that 0 (from missing WS field) also triggers fallback
       const maxProduction =
-        this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ??
-        unitFallbackW;
+        this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ||
+        dischargeFallbackW;
 
       const maxConsumption =
-        this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ??
-        unitFallbackW;
+        this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ||
+        chargeFallbackW;
 
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
       await this.setCapabilityValue('grid_power_mirror', gridPower).catch(this.error);
@@ -1993,6 +2075,9 @@ if (debug) this.log(
       'policy_optimizer_schedule',
       'policy_widget_data',
       'device_settings',
+      'battery_expansion_analysis',
+      'expansion_investment',
+      'policy_consumption_profile',
     ];
     for (const key of settingsToClean) {
       try { this.homey.settings.unset(key); } catch (_) {}
