@@ -1231,5 +1231,8 @@
   },
   "3.15.0": {
     "en": "Refractor 15min timeslots for learning household usage, solar and forecasting."
+  },
+  "3.15.1": {
+    "en": "Household usage fix"
   }
 }
