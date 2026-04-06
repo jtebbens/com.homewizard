@@ -86,7 +86,7 @@ class BatteryPolicyDevice extends Homey.Device {
       min_discharge_price: s.min_discharge_price || 0.22,
       min_soc:             s.min_soc             || 10,
       max_soc:             s.max_soc             || 95,
-      battery_efficiency:  s.battery_efficiency  || 0.78,
+      battery_efficiency:  s.battery_efficiency  || 0.75,
       min_profit_margin:   s.min_profit_margin   || 0.01,
       tariff_type:         s.tariff_type         || 'dynamic',
       policy_interval:     s.policy_interval     || 15,
@@ -116,7 +116,7 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_debug_learning: '-',
       battery_soc_mirror: 50,
       grid_power_mirror: 0,
-      battery_rte: 0.78,
+      battery_rte: 0.75,
       last_update: new Date().toISOString(),
       active_mode: 'unknown',
       override_until: null,
@@ -860,16 +860,19 @@ if (debug) this.log(
       // Push planning data to app settings for the settings page
       const batterySOC = inputs.battery?.stateOfCharge ?? 50;
       const policyMode = this.getCapabilityValue('policy_mode') || 'balanced';
+      const dpAction = this.optimizationEngine?.getSlot(new Date()) ?? null;
       const planningData = {
         batterySOC,
         policyMode,
         recommendedMode: recommended,
         currentMode: recommended, // will be overwritten below with actual HW mode
+        dpAction,                 // DP-planned action for current slot ('charge'|'discharge'|'preserve')
         maxDischargePowerW: inputs.battery?.maxDischargePowerW || 800,
         maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
         totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
         batteryCount: Math.max(1, Math.round((inputs.battery?.totalCapacityKwh ?? 2.688) / 2.688)),
         pvLearnedSlots: this.learningEngine?.getSolarLearnedSlotCount() ?? 0,
+        avgCost: inputs.batteryCost?.avgCost ?? 0,
         lastUpdate: new Date().toISOString()
       };
       this.homey.settings.set('battery_policy_state', planningData);
@@ -881,7 +884,7 @@ if (debug) this.log(
         min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
         min_soc:             this.getSetting('min_soc')             || 10,
         max_soc:             this.getSetting('max_soc')             || 95,
-        battery_efficiency:  this.getSetting('battery_efficiency') || 0.78,
+        battery_efficiency:  this.getSetting('battery_efficiency') || 0.75,
         min_profit_margin:   this.getSetting('min_profit_margin')   || 0.01,
         tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
         policy_interval:     this.getSetting('policy_interval')     || 15,
@@ -897,7 +900,7 @@ if (debug) this.log(
       
       // Safety: Cap at realistic range for LFP batteries (AC-AC typically 70-97%)
       // If learned value is unrealistic, fall back to configured value
-      const configuredRte = this.getSetting('battery_efficiency') || 0.78;
+      const configuredRte = this.getSetting('battery_efficiency') || 0.75;
       if (currentRte < 0.50 || currentRte > 0.97) {
         this.log(`⚠️ Learned RTE ${(currentRte * 100).toFixed(1)}% outside realistic range for LFP, using configured ${(configuredRte * 100).toFixed(1)}%`);
         currentRte = configuredRte;
@@ -974,24 +977,11 @@ if (debug) this.log(
         if (applied) {
           this.log(`✅ Successfully applied: ${applyMode}`);
 
-          // Append to mode history for planning UI
-          try {
-            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
-            const currentPrice = result.tariff?.currentPrice ?? null;
-            const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
-            modeHistory.push({
-              ts:     new Date().toISOString(),
-              hwMode: applyMode,
-              price:  currentPrice,
-              soc:    currentSoc,
-              maxChargePrice: this.getSetting('max_charge_price'),      
-              minDischargePrice: this.getSetting('min_discharge_price') 
-            });
-            // Keep last 96 entries (24h at 15min intervals)
-            if (modeHistory.length > 96) modeHistory.splice(0, modeHistory.length - 96);
-            this.homey.settings.set('policy_mode_history', modeHistory);
-          } catch (e) {
-            this.error('Failed to save mode history:', e);
+          // Warn when real-time policy deviates from the DP's planned action
+          // Compare on policyMode level — hwMode is just the implementation (e.g. preserve+PV → zero_charge_only is correct)
+          const _dpAction = this.optimizationEngine?.getSlot(new Date()) ?? null;
+          if (_dpAction && _dpAction !== result.policyMode) {
+            this.log(`⚠️ PLAN AFWIJKING: DP gepland ${_dpAction} maar policy koos ${result.policyMode} → hwMode ${applyMode}`);
           }
         } else {
           if (result.confidence < minConfidence) {
@@ -999,6 +989,28 @@ if (debug) this.log(
           } else {
             this.log(`⚠️ Failed to apply recommendation — check P1 connection`);
           }
+        }
+
+        // Always track SOC + mode history for the planning chart, regardless of whether
+        // the mode was successfully applied. This ensures the SOC line starts from
+        // the beginning of the day even when the battery isn't responding yet.
+        try {
+          const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+          const currentPrice = result.tariff?.currentPrice ?? null;
+          const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
+          modeHistory.push({
+            ts:     new Date().toISOString(),
+            hwMode: applyMode,
+            price:  currentPrice,
+            soc:    currentSoc,
+            maxChargePrice: this.getSetting('max_charge_price'),
+            minDischargePrice: this.getSetting('min_discharge_price')
+          });
+          // Keep last 96 entries (24h at 15min intervals)
+          if (modeHistory.length > 96) modeHistory.splice(0, modeHistory.length - 96);
+          this.homey.settings.set('policy_mode_history', modeHistory);
+        } catch (e) {
+          this.error('Failed to save mode history:', e);
         }
       } else {
         this.log('Auto-apply disabled — recommendation not applied');
@@ -1233,6 +1245,12 @@ if (debug) this.log(
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {
       const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null);
+      // Enrich with consumption sample count for confidence display in the UI
+      if (this.learningEngine) {
+        for (const slot of planningSchedule) {
+          slot.sampleCount = this.learningEngine.getConsumptionSampleCount(new Date(slot.timestamp));
+        }
+      }
       this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
     }
 
@@ -1560,7 +1578,7 @@ if (debug) this.log(
     const batteryAvgCost = this._costAvg ?? (await this.getStoreValue('battery_avg_cost') || 0);
     const batteryEnergyKwh = this._costEnergy ?? (await this.getStoreValue('battery_energy_kwh') || 0);
 
-    const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.78, 0.5), 1.0);
+    const batteryEfficiency = Math.min(Math.max(this.efficiencyEstimator.getEfficiency() || 0.75, 0.5), 1.0);
 
     // Break-even prijs (€/kWh)
     const breakEven = batteryAvgCost > 0
@@ -1585,7 +1603,8 @@ if (debug) this.log(
         energyKwh: batteryEnergyKwh,
         breakEven
       },
-      previousHwMode: this.lastRecommendation?.hwMode ?? null
+      previousHwMode: this.lastRecommendation?.hwMode ?? null,
+      consumptionW: this.learningEngine?.getPredictedConsumption(new Date()) ?? null,
     };
 
   }
@@ -1832,7 +1851,7 @@ if (debug) this.log(
       min_discharge_price: newSettings.min_discharge_price || 0.22,
       min_soc:             newSettings.min_soc             || 10,
       max_soc:             newSettings.max_soc             || 95,
-      battery_efficiency:  newSettings.battery_efficiency  || 0.78,
+      battery_efficiency:  newSettings.battery_efficiency  || 0.75,
       min_profit_margin:   newSettings.min_profit_margin   || 0.01,
       tariff_type:         newSettings.tariff_type         || 'dynamic',
       policy_interval:     newSettings.policy_interval     || 15,
@@ -1897,7 +1916,7 @@ if (debug) this.log(
         min_discharge_price: newSettings.min_discharge_price || 0.22,
         min_soc:             newSettings.min_soc             || 10,
         max_soc:             newSettings.max_soc             || 95,
-        battery_efficiency:  newSettings.battery_efficiency || 0.78,
+        battery_efficiency:  newSettings.battery_efficiency || 0.75,
         min_profit_margin:   newSettings.min_profit_margin   || 0.01,
         tariff_type:         newSettings.tariff_type         || 'dynamic',
         policy_interval:     newSettings.policy_interval     || 15,
@@ -2008,23 +2027,24 @@ if (debug) this.log(
       if (!this.planningImageToday) {
         this.planningImageToday = await this.homey.images.createImage();
         this.planningImageToday.setStream(async (stream) => {
-          if (!this._chartToday) { stream.end(); return; }
+          if (!this._chartToday || !this._chartToday.slots?.length) { stream.end(); return; }
           await this._streamQuickChart(stream, this._chartToday);
         });
         await this.setCameraImage('planning_today', 'Batterij Vandaag', this.planningImageToday);
       }
       await this.planningImageToday.update();
 
-      // Tomorrow image (only when slots available)
+      // Tomorrow image — always registered so the webcam shows up in Homey even before
+      // tomorrow's prices arrive (before ~14:00). Stream returns empty when no slots yet.
+      if (!this.planningImageTomorrow) {
+        this.planningImageTomorrow = await this.homey.images.createImage();
+        this.planningImageTomorrow.setStream(async (stream) => {
+          if (!this._chartTomorrow || !this._chartTomorrow.slots?.length) { stream.end(); return; }
+          await this._streamQuickChart(stream, this._chartTomorrow);
+        });
+        await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
+      }
       if (tomorrowSlots.length > 0) {
-        if (!this.planningImageTomorrow) {
-          this.planningImageTomorrow = await this.homey.images.createImage();
-          this.planningImageTomorrow.setStream(async (stream) => {
-            if (!this._chartTomorrow) { stream.end(); return; }
-            await this._streamQuickChart(stream, this._chartTomorrow);
-          });
-          await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
-        }
         await this.planningImageTomorrow.update();
       }
 
