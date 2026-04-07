@@ -1240,5 +1240,8 @@
   },
   "3.15.3": {
     "en": "Widget light and dark added"
+  },
+  "3.15.4": {
+    "en": "Improved webcam image for battery-policy, it was hard to see on a iPhone"
   }
 }
