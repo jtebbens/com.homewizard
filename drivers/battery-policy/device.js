@@ -433,9 +433,15 @@ if (debug) this.log(
         // ------------------------------------------------------
         // 📊 LEARNING: Record consumption patterns
         // ------------------------------------------------------
-        if (gridPower > 0) {
-          // Only record import (consumption), not export
-          await this.learningEngine.recordConsumption(gridPower).catch(err =>
+        // Calculate TRUE house consumption: what the house actually uses,
+        // regardless of where the power comes from (grid, PV, or battery).
+        // gridPower: + = import, − = export
+        // batteryPower: + = charging (consuming PV/grid), − = discharging (supplying house)
+        // pvProductionW: always >= 0 (PV output)
+        const pvW = this._pvProductionW ?? 0;
+        const houseConsumptionW = gridPower - batteryPower + pvW;
+        if (houseConsumptionW > 0) {
+          await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
             this.error('Learning consumption recording failed:', err)
           );
         }
@@ -1270,10 +1276,12 @@ if (debug) this.log(
           const kwh    = +(n * KWH_PER_UNIT).toFixed(3);
           const powerW = n * W_PER_UNIT;
 
-          const profit = +this.optimizationEngine.computeExpectedProfit(
+          const result = this.optimizationEngine.computeExpectedProfit(
             prices, soc, kwh, powerW, powerW,
             pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice
-          ).toFixed(4);
+          );
+          const profit = +result.profit.toFixed(4);
+          const selfSufficiencyPct = result.selfSufficiencyPct;
 
           // Power bottleneck: slots where house consumption exceeds battery discharge power,
           // so the battery is at full output but grid still imports the remainder.
@@ -1293,7 +1301,7 @@ if (debug) this.log(
             }
           }
 
-          scenarios.push({ units: n, kwh, powerW, profit,
+          scenarios.push({ units: n, kwh, powerW, profit, selfSufficiencyPct,
             shortfallSlots, shortfallKwh: +shortfallKwh.toFixed(3) });
         }
 
@@ -1632,8 +1640,15 @@ if (debug) this.log(
     }
 
     // Estimate PV production using grid analysis + sun model
-    // Use next-4h sunshine only — tomorrow's forecast must not inflate the current PV estimate
-    const sunScore = weatherData
+    // Use next-4h sunshine only — tomorrow's forecast must not inflate the current PV estimate.
+    // Guard: before sunrise, sunshineNext4Hours already covers post-sunrise slots and would
+    // produce a large fake estimate (e.g. 993W at 06:13 CEST before sunrise at ~07:10).
+    // Zero out sunScore until the sun has actually risen.
+    const _nowMs = Date.now();
+    const _sunrise = weatherData?.todaySunrise;
+    const _beforeSunrise = _sunrise instanceof Date && _nowMs < _sunrise.getTime();
+    if (_beforeSunrise) this._lastPvEstimateW = 0; // reset EMA — sun not up yet
+    const sunScore = (weatherData && !_beforeSunrise)
       ? Math.min(100, Math.round((weatherData.sunshineNext4Hours / 4) * 100))
       : 0;
     const sun = { gfs: sunScore, harmonie: sunScore };
