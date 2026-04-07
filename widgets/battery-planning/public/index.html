@@ -32,6 +32,8 @@
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      gap: 4px;
+      min-width: 0;
     }
     .title {
       font-size: 11px;
@@ -39,12 +41,19 @@
       opacity: 0.5;
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
     }
     .updated {
       font-size: 10px;
       opacity: 0.4;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .refresh-btn {
+      flex-shrink: 0;
       background: rgba(128,128,128,0.15);
       border: none;
       border-radius: 5px;

@@ -2123,6 +2123,13 @@ if (debug) this.log(
       this._chartToday    = { ...compact, slots: todaySlots };
       this._chartTomorrow = { ...compact, slots: tomorrowSlots };
 
+      // Only call image.update() when chart data has materially changed.
+      // Each update() fires a Homey realtime event that can override another app's
+      // camera view on the mobile client — avoid spurious updates.
+      const hashSlots = slots => JSON.stringify(slots.map(s => `${s.ts}:${s.mode}:${s.price}`));
+      const hashToday    = hashSlots(todaySlots);
+      const hashTomorrow = hashSlots(tomorrowSlots);
+
       // Today image
       if (!this.planningImageToday) {
         this.planningImageToday = await this.homey.images.createImage();
@@ -2131,8 +2138,12 @@ if (debug) this.log(
           await this._streamQuickChart(stream, this._chartToday);
         });
         await this.setCameraImage('planning_today', 'Batterij Vandaag', this.planningImageToday);
+        this._chartHashToday = null; // force first update
       }
-      await this.planningImageToday.update();
+      if (hashToday !== this._chartHashToday) {
+        await this.planningImageToday.update();
+        this._chartHashToday = hashToday;
+      }
 
       // Tomorrow image — always registered so the webcam shows up in Homey even before
       // tomorrow's prices arrive (before ~14:00). Stream returns empty when no slots yet.
@@ -2143,9 +2154,11 @@ if (debug) this.log(
           await this._streamQuickChart(stream, this._chartTomorrow);
         });
         await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
+        this._chartHashTomorrow = null; // force first update
       }
-      if (tomorrowSlots.length > 0) {
+      if (tomorrowSlots.length > 0 && hashTomorrow !== this._chartHashTomorrow) {
         await this.planningImageTomorrow.update();
+        this._chartHashTomorrow = hashTomorrow;
       }
 
       this.log('📊 Planning chart camera images updated (today + tomorrow)');
@@ -2177,8 +2190,8 @@ if (debug) this.log(
     const body = JSON.stringify({
       version: '4',
       backgroundColor: '#1c1c1e',
-      width: 800,
-      height: 360,
+      width: 900,
+      height: 900,
       chart: this._configToJs(chartCfg),
     });
 
@@ -2362,62 +2375,61 @@ if (debug) this.log(
             display: true,
             labels: {
               color: '#9a9a9a',
-              font: { size: 13 },
-              padding: 12,
+              font: { size: 15 },
+              padding: 14,
               usePointStyle: true,
               filter: function(item) { return !item.text.startsWith('_'); },
             },
           },
           title: {
             display: true,
-            text: [
-              `Batterij ${dayLabel}  |  SoC: ${socLine}  |  Nu: ${modeLine}  |  ${updLine}`,
-            ],
+            text: `Batterij ${dayLabel}  |  SoC: ${socLine}  |  Nu: ${modeLine}  |  ${updLine}`,
             color: '#cccccc',
-            font: { size: 13 },
-            padding: { bottom: 4 },
+            font: { size: 15 },
+            padding: { bottom: 2 },
+          },
+          subtitle: {
+            display: true,
+            text: `☀ PV max: ${pvMax >= 1000 ? `${(pvMax/1000).toFixed(1)}kW` : `${pvMax}W`}`,
+            color: '#FCD34D',
+            font: { size: 13, weight: 'bold' },
+            padding: { bottom: 6 },
           },
         },
         scales: {
           x: {
-            ticks: { color: '#9a9a9a', font: { size: 13 }, maxRotation: 0, autoSkip: false },
+            ticks: { color: '#9a9a9a', font: { size: 14 }, maxRotation: 0, autoSkip: false },
             grid: { color: '#2a2a2a' },
           },
           yPrice: {
             position: 'left',
             ticks: {
-              color: '#9a9a9a',
-              font: { size: 12 },
+              color: '#cccccc',
+              font: { size: 15, weight: 'bold' },
               callback: (v) => v.toFixed(2),
             },
             grid: { color: '#2a2a2a' },
-            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 11 } },
+            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 13 } },
           },
           ySoc: {
             position: 'right',
             min: 0,
             max: 100,
             ticks: {
-              color: 'rgba(255,255,255,0.6)',
-              font: { size: 12 },
+              color: 'rgba(255,255,255,0.85)',
+              font: { size: 15, weight: 'bold' },
               callback: (v) => `${v}%`,
             },
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 11 } },
+            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 13 } },
           },
           yPv: {
-            display: true,
+            display: false,
             position: 'right',
             min: 0,
             max: compact?.pvCapacityW > 0 ? compact.pvCapacityW : pvMax * 1.2,
-            ticks: {
-              color: '#FCD34D',
-              font: { size: 12 },
-              maxTicksLimit: 4,
-              callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}kW` : `${v}W`,
-            },
+            ticks: { display: false },
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'PV', color: '#FCD34D', font: { size: 11 } },
           },
         },
       },
