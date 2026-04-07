@@ -2236,8 +2236,8 @@
             },
           }},
           scales: {
-            x: { ticks: { color: 'var(--dim)', font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
-            y: { ticks: { color: 'var(--dim)', font: { size: 9 }, callback: v => `${v}W` }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+            x: { ticks: { color: '#808080', font: { size: 9 }, maxRotation: 0 }, grid: { display: false } },
+            y: { ticks: { color: '#808080', font: { size: 9 }, callback: v => `${v}W` }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
           },
         },
       });
@@ -2317,6 +2317,21 @@
                    ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd: ${payback}</div>` : ''}`
                 : `<div style="font-size:11px;color:var(--dim);">${fmtD(delta)}/dag vs huidig</div>`
             }
+            ${(() => {
+              // Self-sufficiency bar
+              const pct = s.selfSufficiencyPct ?? null;
+              if (pct == null) return '';
+              const barColor = pct >= 80 ? '#7ecb7e' : pct >= 50 ? '#e5c07b' : '#e06c75';
+              return `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
+                <div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Zelfvoorzienend</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                    <div style="width:${Math.min(pct, 100)}%;height:100%;background:${barColor};border-radius:3px;"></div>
+                  </div>
+                  <span style="font-size:13px;font-weight:600;color:${barColor};min-width:36px;text-align:right;">${pct}%</span>
+                </div>
+              </div>`;
+            })()}
             ${(() => {
               // Power bottleneck: show residual grid import during discharge
               if (s.shortfallKwh == null) return '';
