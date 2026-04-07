@@ -1237,5 +1237,8 @@
   },
   "3.15.2": {
     "en": "Ignore open-meteo pv estimate outside sunrise-sunset, fallback open-meteo bad gateway, use cached data when more than 24 hours."
+  },
+  "3.15.3": {
+    "en": "Widget light and dark added"
   }
 }
