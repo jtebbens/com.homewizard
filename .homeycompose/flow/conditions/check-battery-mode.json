@@ -51,6 +51,13 @@
             "en": "Zero mode, Discharge Only",
             "nl": "Nul op de Meter, Alleen ontladen"
           }
+        },
+        {
+          "id": "predictive",
+          "label": {
+            "en": "Predictive (HW Smart Charging)",
+            "nl": "Slim laden (HomeWizard)"
+          }
         }
       ]
     }

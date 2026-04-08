@@ -152,6 +152,7 @@
     .planning-hour-card.hw-zero_discharge_only{ border-color: var(--green); }
     .planning-hour-card.hw-zero             { border-color: var(--orange); }
     .planning-hour-card.hw-standby          { border-color: var(--border); }
+    .planning-hour-card.hw-predictive        { border-color: #02DACE; }
 
     .planning-hour-time  { font-size:16px; font-weight:bold; margin-bottom:8px; color: var(--text); }
     .planning-hour-price { font-size:14px; margin-bottom:8px; color: var(--muted); font-weight:600; }
@@ -202,6 +203,7 @@
     .hw-badge-zero_discharge_only { background: var(--green); color:#000; }
     .hw-badge-zero              { background: var(--orange); color:#000; }
     .hw-badge-standby           { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .hw-badge-predictive         { background: #02DACE; color: #000; }
 
     /* Weather condition badge — top-right corner of hourly card */
     .weather-badge {
@@ -617,7 +619,8 @@
       zero_charge_only: { icon: '☀️', nl: 'Laden (PV)', en: 'Charge (PV)', cls: 'hw-zero_charge_only', badge: 'hw-badge-zero_charge_only' },
       zero_discharge_only: { icon: '🔋', nl: 'Ontladen', en: 'Discharge', cls: 'hw-zero_discharge_only', badge: 'hw-badge-zero_discharge_only' },
       zero: { icon: '🛡️', nl: 'Peak Shaving', en: 'Peak Shaving', cls: 'hw-zero', badge: 'hw-badge-zero' },
-      standby: { icon: '⏸️', nl: 'Standby', en: 'Standby', cls: 'hw-standby', badge: 'hw-badge-standby' }
+      standby: { icon: '⏸️', nl: 'Standby', en: 'Standby', cls: 'hw-standby', badge: 'hw-badge-standby' },
+      predictive: { icon: '🤖', nl: 'Slim laden', en: 'Smart Charging', cls: 'hw-predictive', badge: 'hw-badge-predictive' }
     };
 
     /* ══════════════════════════════════════════════════════════
@@ -2276,23 +2279,32 @@
       if (noData) noData.style.display = 'none';
       if (grid)   grid.style.display   = '';
 
-      const { currentUnits, scenarios, timestamp } = analysis;
+      const { currentUnits, scenarios, timestamp, historyDays } = analysis;
       const investment = parseFloat(invInput?.value) || 1200;
       const fmt  = v => `\u20ac${Number(v).toFixed(2)}`;
       const fmtD = v => (v >= 0 ? '+' : '') + fmt(v);
 
       // Build grid: one card per scenario
-      const currentProfit = scenarios.find(s => s.units === currentUnits)?.profit ?? 0;
+      const currentProfit          = scenarios.find(s => s.units === currentUnits)?.profit ?? 0;
+      const currentAvgProfit       = scenarios.find(s => s.units === currentUnits)?.avgProfit ?? currentProfit;
+      const currentSeasonalProfit  = scenarios.find(s => s.units === currentUnits)?.seasonalAvgProfit ?? null;
 
-      grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">` +
+      grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">` +
         scenarios.map(s => {
-          const isCurrent = s.units === currentUnits;
-          const delta     = s.profit - currentProfit;
-          const yearly    = delta * 365;
-          const extraBatt = s.units - currentUnits;
-          const payback   = extraBatt > 0 && yearly > 0.001
+          const isCurrent  = s.units === currentUnits;
+          const delta      = s.profit - currentProfit;
+          const extraBatt  = s.units - currentUnits;
+
+          // Prefer seasonally-corrected profit for payback; fall back to raw avg
+          const useSeasonalBase = currentSeasonalProfit != null && s.seasonalAvgProfit != null;
+          const seasonalDelta = useSeasonalBase
+            ? s.seasonalAvgProfit - currentSeasonalProfit
+            : (s.avgProfit ?? s.profit) - currentAvgProfit;
+          const yearly     = seasonalDelta * 365;
+          const payback    = extraBatt > 0 && yearly > 0.001
             ? (extraBatt * investment / yearly).toFixed(1) + ' jaar'
             : null;
+          const paybackLabel = useSeasonalBase ? 'Terugverdientijd (gecorrigeerd):' : 'Terugverdientijd:';
 
           const border = isCurrent
             ? 'border:2px solid #7ecb7e;'
@@ -2313,8 +2325,9 @@
               ? `<div style="font-size:11px;color:var(--muted);">Huidige setup</div>`
               : extraBatt > 0
                 ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">${fmtD(delta)}/dag</div>
-                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar</div>
-                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd: ${payback}</div>` : ''}`
+                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar (jaargemiddelde)</div>
+                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">${paybackLabel} ${payback}</div>
+                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''} seizoensgecorrigeerd</div>` : ''}`
                 : `<div style="font-size:11px;color:var(--dim);">${fmtD(delta)}/dag vs huidig</div>`
             }
             ${(() => {

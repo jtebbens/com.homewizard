@@ -799,6 +799,9 @@ class WebSocketManager {
       case 'to_full':
         payloadData = { mode: 'to_full' };
         break;
+      case 'predictive':
+        payloadData = { mode: 'predictive' };
+        break;
       default:
         this.error(`❌ Unknown battery mode: "${mode}"`);
         throw new Error(`Unknown battery mode: "${mode}"`);

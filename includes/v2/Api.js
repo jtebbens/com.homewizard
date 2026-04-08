@@ -130,6 +130,9 @@ module.exports = (function () {
       case 'to_full':
         body = { mode: 'to_full' };
         break;
+      case 'predictive':
+        body = { mode: 'predictive' };
+        break;
       default:
         body = { mode: selectedMode };
     }

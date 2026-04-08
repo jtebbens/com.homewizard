@@ -329,6 +329,7 @@ function normalizeBatteryMode(data) {
   // Direct modes
   if (mode === 'standby') return 'standby';
   if (mode === 'to_full') return 'to_full';
+  if (mode === 'predictive') return 'predictive';
 
   // Vendor sometimes sends these directly
   if (mode === 'zero_charge_only') return 'zero_charge_only';
@@ -909,11 +910,72 @@ this.homey.flow
     }
   });
 
+// ============================================================================
+// ACTION CARD 6: Set Battery to Predictive (HW Smart Charging) Mode
+// ============================================================================
 
+this.homey.flow
+  .getActionCard('set-battery-to-predictive-mode')
+  .registerRunListener(async ({ device }) => {
+    if (!device) return false;
 
+    // ✅ RATE LIMITING: Prevent rapid successive calls
+    const now = Date.now();
+    if (now - device._lastBatteryModeChange < device._batteryModeChangeCooldown) {
+      device.log('⏸️ Battery mode change throttled - cooldown active');
+      return 'predictive';
+    }
+    device._lastBatteryModeChange = now;
+    device._cacheSet('last_commanded_mode', 'predictive');
 
+    device.log('ActionCard: Set Battery to Predictive (HW Smart Charging) Mode');
 
+    try {
+      const { wsManager, url, token } = device;
 
+      // Prefer WebSocket
+      if (wsManager?.isConnected()) {
+        wsManager.setBatteryMode('predictive');
+        device.log('Set mode to predictive via WebSocket');
+        return 'predictive';
+      }
+
+      // HTTP fallback
+      const response = await api.setMode(url, token, 'predictive');
+      if (!response) return false;
+
+      // Fetch real battery state
+      const modeResponse = await api.getMode(url, token);
+      if (!modeResponse || typeof modeResponse !== 'object') return false;
+
+      // Update cache
+      device._cacheSet('last_battery_state', {
+        mode: modeResponse.mode,
+        permissions: modeResponse.permissions,
+        battery_count: modeResponse.battery_count ?? 1
+      });
+
+      // Normalize
+      const normalized = normalizeBatteryMode(modeResponse);
+
+      // Update capability
+      await updateCapability(device, 'battery_group_charge_mode', normalized);
+
+      // ✅ FIXED: Only trigger flow on actual change
+      const prev = device._cacheGet('last_battery_mode');
+      if (normalized !== prev) {
+        device.flowTriggerBatteryMode(device, { mode: normalized });
+        device._cacheSet('last_battery_mode', normalized);
+      }
+
+      device.log('Set mode to predictive via HTTP');
+      return 'predictive';
+
+    } catch (error) {
+      device.error('Error set mode to predictive:', error);
+      return false;
+    }
+  });
 
     } // End of _flowListenersRegistered guard
 

@@ -59,6 +59,18 @@
         "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
       },
       "args": []
+    },
+    {
+      "id": "set-battery-to-predictive-mode",
+      "title": {
+        "en": "Set battery to Predictive (Smart Charging) mode",
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Predictive (Smart Charging) mode",
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+      },
+      "args": []
     }
   ],
   "triggers": [
