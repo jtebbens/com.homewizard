@@ -813,6 +813,15 @@ if (debug) this.log(
         return;
       }
 
+      // ⭐ HW Slim laden (predictive) actief → volledige policy check overslaan
+      if (this.p1Device) {
+        const currentHwMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+        if (currentHwMode === 'predictive') {
+          this.log('🤖 HW Slim laden (predictive) actief — policy engine volledig gepauzeerd, cloud stuurt batterij aan');
+          return;
+        }
+      }
+
       const inputs = await this._gatherInputs();
       if (!inputs.battery || inputs.battery.stateOfCharge === undefined) {
         this.log('Skipping policy check — battery state not ready');
@@ -1004,16 +1013,28 @@ if (debug) this.log(
           const modeHistory = this.homey.settings.get('policy_mode_history') || [];
           const currentPrice = result.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
-          modeHistory.push({
-            ts:     new Date().toISOString(),
+          const nowTs   = new Date();
+          const bucket  = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+          const existing = modeHistory.findIndex(
+            h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
+          );
+          const entry = {
+            ts:     nowTs.toISOString(),
             hwMode: applyMode,
             price:  currentPrice,
             soc:    currentSoc,
             maxChargePrice: this.getSetting('max_charge_price'),
             minDischargePrice: this.getSetting('min_discharge_price')
-          });
-          // Keep last 96 entries (24h at 15min intervals)
-          if (modeHistory.length > 96) modeHistory.splice(0, modeHistory.length - 96);
+          };
+          if (existing >= 0) {
+            // Update existing bucket — keep best SoC (non-null wins)
+            if (entry.soc == null) entry.soc = modeHistory[existing].soc;
+            modeHistory[existing] = entry;
+          } else {
+            modeHistory.push(entry);
+          }
+          // Keep last 192 entries (48h headroom — extra triggers won't push out early-morning data)
+          if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
           this.homey.settings.set('policy_mode_history', modeHistory);
         } catch (e) {
           this.error('Failed to save mode history:', e);
@@ -1115,7 +1136,12 @@ if (debug) this.log(
       if (futureTs.has(ts)) continue;
       const h   = historyMap.get(ts);
       const hr  = amhour(ts);
-      const pvW = pvHourly[hr] != null ? Math.round(pvHourly[hr]) : 0;
+      // Interpolate between adjacent hourly actual PV values for smooth bell curve
+      const minInHour = Math.floor((ts % 3600000) / 60000);
+      const frac = minInHour / 60;
+      const v0 = pvHourly[hr]     ?? 0;
+      const v1 = pvHourly[hr + 1] ?? 0;
+      const pvW = Math.round(v0 + (v1 - v0) * frac);
       pastSlots.push({
         ts,
         hour:  hr,
@@ -1305,6 +1331,51 @@ if (debug) this.log(
             shortfallSlots, shortfallKwh: +shortfallKwh.toFixed(3) });
         }
 
+        // Rolling daily profit history — one entry per day, max 30 days.
+        // Used by the frontend to compute a seasonally-averaged payback period.
+        const today = new Date().toISOString().slice(0, 10);
+        let hist = this.homey.settings.get('expansion_profit_history') || { entries: [] };
+        if (!Array.isArray(hist.entries)) hist.entries = [];
+        const lastEntry = hist.entries[hist.entries.length - 1];
+        if (!lastEntry || lastEntry.date !== today) {
+          const entry = { date: today };
+          for (const s of scenarios) entry[`p${s.units}`] = s.profit;
+          hist.entries.push(entry);
+          if (hist.entries.length > 30) hist.entries = hist.entries.slice(-30);
+          this.homey.settings.set('expansion_profit_history', hist);
+        }
+
+        // Augment scenarios with avgProfit + seasonally-corrected avgProfit.
+        // Seasonal correction: normalize each day's profit by its monthly irradiance
+        // factor (NL average, PVGIS kWh/m²/day) so that summer days don't inflate
+        // the annual estimate. Result is a year-round daily average.
+        const NL_IRRADIANCE = [0.62, 1.16, 2.28, 3.62, 4.71, 5.02, 4.92, 4.23, 2.84, 1.56, 0.67, 0.44];
+        const NL_ANNUAL_AVG = NL_IRRADIANCE.reduce((a, b) => a + b, 0) / 12; // ~2.67
+
+        const historyDays = hist.entries.length;
+        for (const s of scenarios) {
+          const vals = hist.entries.map(e => e[`p${s.units}`]).filter(v => v != null);
+          s.avgProfit = vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(4) : null;
+
+          // Seasonal correction: weight each day's profit by (annual_avg / month_irradiance)
+          // so high-irradiance months are scaled down to the annual baseline.
+          if (hist.entries.length >= 3) {
+            let weightedSum = 0, weightSum = 0;
+            for (const e of hist.entries) {
+              const profit = e[`p${s.units}`];
+              if (profit == null) continue;
+              const month = new Date(e.date).getMonth(); // 0-based
+              const irr   = NL_IRRADIANCE[month] || NL_ANNUAL_AVG;
+              const weight = NL_ANNUAL_AVG / irr; // <1 in summer, >1 in winter
+              weightedSum += profit * weight;
+              weightSum   += weight;
+            }
+            s.seasonalAvgProfit = weightSum > 0 ? +(weightedSum / weightSum).toFixed(4) : null;
+          } else {
+            s.seasonalAvgProfit = null; // too few days for meaningful correction
+          }
+        }
+
         const currentUnits = Math.max(1, Math.min(4, Math.round(capacityKwh / KWH_PER_UNIT)));
 
         this.homey.settings.set('battery_expansion_analysis', {
@@ -1312,6 +1383,7 @@ if (debug) this.log(
           currentUnits,
           currentKwh:   capacityKwh,
           currentPowerW: maxChargePowerW,
+          historyDays,
           scenarios,
         });
       } catch (e) {
@@ -1845,6 +1917,8 @@ if (debug) this.log(
         targetMode = 'standby';
       } else if (mode === 'zero') {
         targetMode = 'zero';
+      } else if (mode === 'predictive') {
+        targetMode = 'predictive';
       } else {
         // Fallback: nooit niet‑bestaande modes sturen
         this.log(`⚠️ Unknown logical mode "${mode}", falling back to standby`);
@@ -2256,7 +2330,24 @@ if (debug) this.log(
       return String(s.hour);
     });
     const prices  = shown.map(s => s.price != null ? Math.round(s.price * 1000) / 1000 : null);
-    const socs    = shown.map(s => s.soc != null ? s.soc : null);
+    // Interpolate missing SoC for past slots (gaps in modeHistory = app wasn't running)
+    const rawSocs = shown.map(s => s.soc != null ? s.soc : null);
+    const socs = rawSocs.slice();
+    for (let i = 0; i < socs.length; i++) {
+      if (socs[i] != null) continue;
+      if (shown[i].ts >= now) continue; // leave future nulls as-is
+      // find nearest non-null on each side
+      let left = -1, right = -1;
+      for (let l = i - 1; l >= 0; l--) { if (socs[l] != null) { left = l; break; } }
+      for (let r = i + 1; r < socs.length; r++) { if (socs[r] != null) { right = r; break; } }
+      if (left >= 0 && right >= 0) {
+        socs[i] = Math.round(socs[left] + (socs[right] - socs[left]) * (i - left) / (right - left));
+      } else if (left >= 0) {
+        socs[i] = socs[left];
+      } else if (right >= 0) {
+        socs[i] = socs[right];
+      }
+    }
     // Split PV into actual (past) and forecast (future) — null outside own range
     const pvActual   = shown.map(s => s.ts < now ? Math.round((s.pvW || 0) / 10) * 10 : null);
     // Include the last past slot in pvForecast so the dashed line connects to the solid line

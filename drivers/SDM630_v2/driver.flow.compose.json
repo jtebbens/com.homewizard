@@ -67,6 +67,18 @@
         "nl": "Zet batterij in Alleen Ontladen modus"
       },
       "args": []
+    },
+    {
+      "id": "sdm630-set-battery-to-predictive-mode",
+      "title": {
+        "en": "Set battery to Predictive (Smart Charging) mode",
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+      },
+      "titleFormatted": {
+        "en": "Set battery to Predictive (Smart Charging) mode",
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+      },
+      "args": []
     }
   ]
 }

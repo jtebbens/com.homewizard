@@ -186,6 +186,24 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         }
       });
 
+    // Predictive (HW Smart Charging)
+    this.homey.flow.getActionCard('sdm230-set-battery-to-predictive-mode')
+      .registerRunListener(async () => {
+        this.log('ActionCard: Set Battery to Predictive (HW Smart Charging) Mode');
+
+        try {
+          const response = await api.setMode(this.url, this.token, 'predictive');
+          if (!response) return false;
+
+          const normalized = normalizeBatteryMode(response);
+          return normalized;
+
+        } catch (error) {
+          this.error('Error set mode to predictive:', error);
+          return false;
+        }
+      });
+
     } // End of _flowListenersRegistered_SDM230 guard
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);

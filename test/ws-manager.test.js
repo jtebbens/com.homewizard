@@ -247,7 +247,7 @@ async function runTests() {
 
   // ═══════ TEST 5: setBatteryMode all modes ═══════
   console.log('\n── Test 5: All battery modes ──');
-  const modes = ['standby', 'zero', 'zero_charge_only', 'zero_discharge_only', 'to_full'];
+  const modes = ['standby', 'zero', 'zero_charge_only', 'zero_discharge_only', 'to_full', 'predictive'];
   for (const mode of modes) {
     try {
       mgr.setBatteryMode(mode);
