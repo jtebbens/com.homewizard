@@ -11,6 +11,7 @@
   "platforms": [
     "local"
   ],
+  "connectivity": ["lan"],
   "capabilities": [],
   "pair": [
     {
