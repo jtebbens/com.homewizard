@@ -49,7 +49,8 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
-    this._debugLogs = []; 
+    this._debugLogs = [];
+    this._pollFailCount = 0;
 
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
@@ -287,15 +288,41 @@ _flushDebugLogs() {
       await updateCapability(this, 'measure_current', data.active_current_a);
 
       await this.setAvailable();
+      if (this._pollFailCount > 0) {
+        this._pollFailCount = 0;
+        this._restoreNormalPollInterval();
+      }
 
     } catch (err) {
+      this._pollFailCount = (this._pollFailCount || 0) + 1;
       this._debugLog(`❌ ${err.code || ''} ${err.message || err}`);
       this.error('Polling failed:', err);
       //this.setUnavailable(err.message || 'Polling error').catch(this.error);
       await updateCapability(this, 'alarm_connectivity', true);
-          
+      if (this._pollFailCount === 3) {
+        this._switchToBackoffInterval();
+      }
     }
 
+  }
+
+  _switchToBackoffInterval() {
+    const settings = this.getSettings();
+    this._normalInterval = Math.max(settings.polling_interval || 10, 2);
+    this.log(`⚠️ 3 consecutive poll failures — slowing to 60s backoff`);
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+    this.onPollInterval = setInterval(() => {
+      this.onPoll().catch(this.error);
+    }, 60 * 1000);
+  }
+
+  _restoreNormalPollInterval() {
+    const interval = this._normalInterval || Math.max((this.getSettings().polling_interval || 10), 2);
+    this.log(`✅ Poll succeeded — restoring ${interval}s interval`);
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+    this.onPollInterval = setInterval(() => {
+      this.onPoll().catch(this.error);
+    }, interval * 1000);
   }
 
   onSettings(event) {

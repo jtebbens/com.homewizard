@@ -204,7 +204,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // SELECT DATA SOURCE
     // -----------------------------------------------------
     if (settings.use_polling) {
-      const intervalSec = settings.polling_interval || 10;
+      const intervalSec = Math.max(settings.polling_interval || 10, 5);
       // ✅ CPU FIX: Stagger startup across devices (spread over 0-30s)
       // Prevents thundering herd: all 3 batteries firing first TLS poll simultaneously
       const startupDelay = Math.floor(Math.random() * 30000);
@@ -1043,7 +1043,7 @@ async _registerCapabilityListeners() {
         }
 
         // Start polling
-        const intervalSec = newInterval || newSettings.polling_interval || 10;
+        const intervalSec = Math.max(newInterval || newSettings.polling_interval || 10, 5);
         if (this.onPollInterval) clearInterval(this.onPollInterval);
         this.onPollInterval = setInterval(this.onPoll.bind(this), intervalSec * 1000);
 
@@ -1092,7 +1092,7 @@ async _registerCapabilityListeners() {
     // 2. Polling interval changed → restart polling if active
     // ---------------------------------------------------------
     if (changedKeys.includes('polling_interval')) {
-      const intervalSec = newInterval || newSettings.polling_interval || 10;
+      const intervalSec = Math.max(newInterval || newSettings.polling_interval || 10, 5);
 
       if (newSettings.use_polling) {
         if (this.onPollInterval) clearInterval(this.onPollInterval);

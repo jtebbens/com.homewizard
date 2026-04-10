@@ -326,7 +326,7 @@ function renderSvg(slots) {
   // Current time marker
   if (shown[0] && shown[shown.length - 1]) {
     const firstTs = shown[0].ts;
-    const lastTs  = shown[shown.length - 1].ts + 3600000;
+    const lastTs  = shown[shown.length - 1].ts + 900000; // 15-min slot width
     const span = lastTs - firstTs;
     if (span > 0 && now >= firstTs && now <= lastTs) {
       const nowX = PAD_L + ((now - firstTs) / span) * chartW;

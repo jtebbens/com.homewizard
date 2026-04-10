@@ -377,6 +377,46 @@
 
   {
     "type": "group",
+    "label": { "en": "Solcast PV Forecast (optional)", "nl": "Solcast PV-voorspelling (optioneel)" },
+    "visible": { "when": "pv_estimation_enabled", "is": true },
+    "children": [
+      {
+        "id": "solcast_enabled",
+        "type": "checkbox",
+        "label": { "en": "Use Solcast for PV forecast", "nl": "Solcast gebruiken voor PV-voorspelling" },
+        "hint": {
+          "en": "When enabled, Solcast satellite-based forecasts replace the Open-Meteo radiation model. Requires a free Solcast account with a rooftop site configured. Max 10 API calls/day — the app caches results for 6 hours.",
+          "nl": "Indien ingeschakeld vervangen Solcast satellietgebaseerde voorspellingen het Open-Meteo stralingsmodel. Vereist een gratis Solcast-account met een geconfigureerde dakinstallatie. Max 10 API-aanroepen/dag — de app cachet resultaten 6 uur."
+        },
+        "value": false
+      },
+      {
+        "id": "solcast_resource_id",
+        "type": "text",
+        "label": { "en": "Solcast Resource ID", "nl": "Solcast Resource ID" },
+        "hint": {
+          "en": "The resource_id of your rooftop site in the Solcast dashboard (e.g. aaaa-bbbb-cccc-dddd).",
+          "nl": "Het resource_id van uw dakinstallatie in het Solcast-dashboard (bijv. aaaa-bbbb-cccc-dddd)."
+        },
+        "value": "",
+        "visible": { "when": "solcast_enabled", "is": true }
+      },
+      {
+        "id": "solcast_api_key",
+        "type": "text",
+        "label": { "en": "Solcast API Key", "nl": "Solcast API-sleutel" },
+        "hint": {
+          "en": "Your Solcast API key. Find it in the Solcast dashboard under Account → API Key.",
+          "nl": "Uw Solcast API-sleutel. Te vinden in het Solcast-dashboard onder Account → API-sleutel."
+        },
+        "value": "",
+        "visible": { "when": "solcast_enabled", "is": true }
+      }
+    ]
+  },
+
+  {
+    "type": "group",
     "label": { "en": "Advanced", "nl": "Geavanceerd" },
     "children": [
       {

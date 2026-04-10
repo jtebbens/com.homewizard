@@ -801,7 +801,7 @@
             const cWatts = Array.from({length: 24}, (_, h) => consumptionByHour[h] ?? null);
             // Only render when we have enough data points
             const nonNull = cWatts.filter(v => v != null);
-            if (nonNull.length < 12) return '';
+            if (nonNull.length < 4) return '';
             // Fill gaps with linear interpolation between known values
             const filled = cWatts.map((v, h) => {
               if (v != null) return v;
@@ -838,7 +838,7 @@
     /* ══════════════════════════════════════════════════════════
        15-MINUTE HELPERS
     ══════════════════════════════════════════════════════════ */
-    function groupIntervalsByHour(intervals) {
+    function groupIntervalsByHour(intervals, socPlan = {}) {
       const hourly = [];
       for (let day = 0; day < 2; day++) {
         for (let h = 0; h < 24; h++) {
@@ -854,9 +854,23 @@
           const modes = hourIntervals.map(i => i.hwMode);
           const dominantMode = modes.sort((a, b) => modes.filter(m => m === a).length - modes.filter(m => m === b).length).pop();
 
+          const plannedSocs = hourIntervals.map(i => {
+            const p = socPlan[i.timestamp];
+            if (p == null) return null;
+            const soc = typeof p === 'object' ? p.soc : p; // handle old (number) and new (object) format
+            return soc != null ? soc * 100 : null;
+          }).filter(v => v != null);
+          const avgPlannedSoc = plannedSocs.length ? plannedSocs.reduce((s, v) => s + v, 0) / plannedSocs.length : null;
+          const plannedConsumptions = hourIntervals.map(i => {
+            const p = socPlan[i.timestamp];
+            return (p != null && typeof p === 'object') ? p.consumptionW : null;
+          }).filter(v => v != null);
+          const avgPlannedConsumptionW = plannedConsumptions.length
+            ? plannedConsumptions.reduce((s, v) => s + v, 0) / plannedConsumptions.length : null;
+
           hourly.push({
             day, hour: h, intervals: hourIntervals, avgPrice, minPrice, maxPrice, priceVariation,
-            hasVariation: priceVariation > 0.02, dominantMode,
+            hasVariation: priceVariation > 0.02, dominantMode, avgPlannedSoc, avgPlannedConsumptionW,
             avgSoc: hourIntervals.reduce((sum, i) => sum + i.soc, 0) / hourIntervals.length,
             avgPvW: hourIntervals.reduce((sum, i) => sum + (i.pvW ?? 0), 0) / hourIntervals.length,
             avgConsumptionW: (() => {
@@ -1091,14 +1105,14 @@
           if (changedKey === 'policy_consumption_profile' && document.getElementById('planning').classList.contains('active')) {
             Homey.get((e, s) => { if (!e) renderConsumptionProfile(s); });
           }
-          if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule' || changedKey === 'policy_pv_actual_today') {
+          if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule' || changedKey === 'policy_pv_actual_today' || changedKey === 'today_self_sufficiency') {
             Homey.get((e, s) => {
               if (!e && document.getElementById('planning').classList.contains('active')) {
                 renderBatteryPlanning(s, Homey);
               }
             });
           }
-          if (changedKey === 'battery_expansion_analysis') {
+          if (changedKey === 'battery_expansion_analysis' || changedKey === 'today_self_sufficiency') {
             Homey.get((e, s) => {
               if (!e && document.getElementById('expansion').classList.contains('active')) {
                 renderExpansionAnalysis(s);
@@ -1586,6 +1600,7 @@
       const lang = await Homey.getLanguage();
       const policyState = settings['battery_policy_state'];
       const currentSOC = policyState?.batterySOC ?? 50;
+      const socPlan = settings['policy_soc_plan'] || {};
 
       /* ── Engine settings ── */
       const deviceSettings = settings['device_settings'] || {};
@@ -1893,7 +1908,7 @@
       }
 
       /* ── Group intervals by hour for mobile display ── */
-      const hourlyGroups = groupIntervalsByHour(intervals);
+      const hourlyGroups = groupIntervalsByHour(intervals, socPlan);
       window.cachedHourlyGroups = hourlyGroups;
       window.cachedLanguage = lang;
 
@@ -1948,7 +1963,7 @@
 
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
-        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgConsumptionW, minSampleCount, day } = hourGroup;
+        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgPlannedSoc, avgPlannedConsumptionW, avgConsumptionW, minSampleCount, day } = hourGroup;
         // Use same radiation-based formula as the chart so tooltip and curve always match.
         const displayPvW = pvEnabled
           ? Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR)
@@ -2000,11 +2015,31 @@
             ? ` · 💰 ~€${dayNet.toFixed(2)}${dayChargeCost >= 0.01 ? ' netto' : ''}`
             : '';
 
+          let selfSuffLabel = '';
+          if (day === 0) {
+            const ss = settings['today_self_sufficiency'];
+            if (ss?.pct != null) selfSuffLabel = ` · 🏠 ${ss.pct}% zelfvoorzienend`;
+          }
+
           const consumptionByHour = {};
           for (const g of hourlyGroups.filter(g => g.day === day)) {
             if (g.avgConsumptionW != null) consumptionByHour[g.hour] = g.avgConsumptionW;
           }
-          const consumptionArg = Object.keys(consumptionByHour).length >= 12 ? consumptionByHour : null;
+          // Fallback: learned weekly profile for hours without schedule data (e.g. past hours)
+          const consProfile = settings['policy_consumption_profile'];
+          if (consProfile?.days) {
+            const dow = (todayStart.getDay() + day) % 7;
+            const profileDay = consProfile.days[dow];
+            if (Array.isArray(profileDay)) {
+              for (let h = 0; h < 24; h++) {
+                if (consumptionByHour[h] == null) {
+                  const slots = profileDay.slice(h * 4, h * 4 + 4).filter(v => v != null && v > 0);
+                  if (slots.length > 0) consumptionByHour[h] = slots.reduce((s, v) => s + v, 0) / slots.length;
+                }
+              }
+            }
+          }
+          const consumptionArg = Object.keys(consumptionByHour).length >= 4 ? consumptionByHour : null;
           const pvCurve = pvEnabled ? renderPvCurve(day, radiationByDay[day], pvCapW, pvPR, pvActualHourly, pvForecastByDay[day], consumptionArg) : '';
           let weatherTs = '';
           if (day === 0 && pvEnabled) {
@@ -2017,7 +2052,7 @@
               weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}<br>📈 ${pvLearnedSlots}/96 PV-slots geleerd${learnNote}</div>`;
             }
           }
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}</div>${weatherTs}${pvCurve}`;
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${weatherTs}${pvCurve}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);
@@ -2060,7 +2095,18 @@
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <span class="hw-badge ${hwDef.badge}">${dominantMode}</span>
             <div class="planning-hour-details">
-              SoC: ${avgSoc.toFixed(0)}%${displayPvW > 50 ? ` · PV ☀️ ${(displayPvW/1000).toFixed(1)}kW` : ''}${avgConsumptionW != null ? ` · 🏠 ${(avgConsumptionW/1000).toFixed(1)}kW` : ''}
+              SoC: ${avgSoc.toFixed(0)}%${(() => {
+                if (!isPast || avgPlannedSoc == null) return '';
+                const diff = Math.round(avgSoc - avgPlannedSoc);
+                if (Math.abs(diff) < 3) return '';
+                const color = diff < 0 ? '#e06c75' : '#7ecb7e';
+                const arrow = diff < 0 ? '↓' : '↑';
+                return ` <span style="font-size:10px;color:${color};">${arrow}plan ${avgPlannedSoc.toFixed(0)}%</span>`;
+              })()}${displayPvW > 50 ? ` · PV ☀️ ${(displayPvW/1000).toFixed(1)}kW` : ''}${
+                avgConsumptionW != null
+                  ? ` · 🏠 ${(avgConsumptionW/1000).toFixed(1)}kW`
+                  : (isPast && avgPlannedConsumptionW != null ? ` · 🏠 ${(avgPlannedConsumptionW/1000).toFixed(1)}kW<span style="font-size:9px;color:var(--dim);"> plan</span>` : '')
+              }
               ${minSampleCount != null && minSampleCount < 4
                 ? `<br><span style="font-size:10px;color:${minSampleCount === 0 ? '#f87171' : '#f0c040'};">${minSampleCount === 0 ? '🔴 geen verbruiksdata' : `🟡 ${minSampleCount} samples`}</span>`
                 : ''}
@@ -2280,9 +2326,34 @@
       if (grid)   grid.style.display   = '';
 
       const { currentUnits, scenarios, timestamp, historyDays } = analysis;
+      // Prefer the live today_self_sufficiency key (updated every 5 min) over the expansion snapshot
+      const todaySS = settings['today_self_sufficiency'];
+      const todayActualSelfSufficiencyPct = todaySS?.pct ?? analysis.todayActualSelfSufficiencyPct ?? null;
+      const todayGridImportKwh  = todaySS?.gridImportKwh  ?? analysis.todayGridImportKwh  ?? null;
+      const todayConsumptionKwh = todaySS?.consumptionKwh ?? analysis.todayConsumptionKwh ?? null;
       const investment = parseFloat(invInput?.value) || 1200;
       const fmt  = v => `\u20ac${Number(v).toFixed(2)}`;
       const fmtD = v => (v >= 0 ? '+' : '') + fmt(v);
+
+      // Today's actual self-sufficiency banner (re-render in place)
+      document.getElementById('today-selfsuff')?.remove();
+      if (todayActualSelfSufficiencyPct != null) {
+        const pct = todayActualSelfSufficiencyPct;
+        const barColor = pct >= 80 ? '#7ecb7e' : pct >= 50 ? '#e5c07b' : '#e06c75';
+        const pvKwh = todayConsumptionKwh != null && todayGridImportKwh != null
+          ? +(todayConsumptionKwh - todayGridImportKwh).toFixed(2)
+          : null;
+        grid.insertAdjacentHTML('beforebegin', `<div id="today-selfsuff" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Vandaag — werkelijk zelfvoorzienend</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+              <div style="width:${Math.min(pct,100)}%;height:100%;background:${barColor};border-radius:4px;"></div>
+            </div>
+            <span style="font-size:20px;font-weight:bold;color:${barColor};min-width:44px;text-align:right;">${pct}%</span>
+          </div>
+          ${pvKwh != null ? `<div style="font-size:11px;color:var(--dim);margin-top:6px;">${pvKwh != null ? pvKwh.toFixed(2) : '?'} kWh eigen · ${todayGridImportKwh.toFixed(2)} kWh net · ${todayConsumptionKwh.toFixed(2)} kWh totaal</div>` : ''}
+        </div>`);
+      }
 
       // Build grid: one card per scenario
       const currentProfit          = scenarios.find(s => s.units === currentUnits)?.profit ?? 0;
