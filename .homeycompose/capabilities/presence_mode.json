@@ -1,0 +1,15 @@
+{
+  "type": "string",
+  "title": {
+    "en": "Presence",
+    "nl": "Aanwezigheid"
+  },
+  "desc": {
+    "en": "Indicates whether someone is home. Away mode pauses consumption learning so vacation patterns do not corrupt learned profiles.",
+    "nl": "Geeft aan of iemand thuis is. Afwezigheidsmodus pauzeert het verbruikspatroon zodat vakantiegedrag de geleerde profielen niet verstoort."
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "assets/icon.svg"
+}

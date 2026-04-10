@@ -63,6 +63,12 @@ NEW in v3.13.14: Intelligent battery management system that:
 * **Consumption margin** - Optimizer assumes 20% higher consumption than learned average while evening patterns are still building up
 * **`_recomputeOptimizer` made async** - Required for Solcast API calls inside the optimizer path
 
+### Polling & Connectivity
+
+* **Plugin battery polling floor** - Polling interval now enforced to minimum 5 seconds (`Math.max(..., 5)`) in all three code paths (startup, settings change, interval restart); settings UI also enforces `min: 5`
+* **SDM230 backoff on failure** - After 3 consecutive poll failures the SDM230 slows to a 60 s backoff interval. Automatically restores normal interval on next successful poll
+* **Cloud WebSocket race condition fix** - `mainWs` was assigned before the socket was ready; a concurrent reconnect could replace it mid-handshake, leaving stale event listeners firing on the wrong socket. Fixed by using a local `ws` variable for all event listeners, with a guard (`if (this.mainWs !== ws) return`) that silently drops events from superseded sockets. Also removed the redundant double-open guard that was papering over the root cause
+
 ### Battery Policy — Previous (v3.15.3)
 
 ### Battery Policy — Multi-Battery Discharge Fix

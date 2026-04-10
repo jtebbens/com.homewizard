@@ -6,7 +6,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}",
 			"runtimeExecutable": "homey",
-			"args": ["app", "run"],
+			"args": ["app", "run", "--remote"],
 			"outputCapture": "std",
 			"serverReadyAction": {
 				"pattern": "Debugger listening on",
