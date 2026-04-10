@@ -16,6 +16,14 @@ class BatteryPolicyDriver extends Homey.Driver {
    * @private
    */
   _registerFlowCards() {
+    // Trigger: Favorable consumption window
+    this.homey.flow.getDeviceTriggerCard('favorable_consumption_window')
+      .registerRunListener(async () => true);
+
+    // Trigger: Favorable consumption window ended
+    this.homey.flow.getDeviceTriggerCard('favorable_consumption_window_ended')
+      .registerRunListener(async () => true);
+
     // Trigger: Recommendation changed
     this.homey.flow.getDeviceTriggerCard('policy_recommendation_changed')
       .registerRunListener(async (args, state) => {
@@ -32,6 +40,12 @@ class BatteryPolicyDriver extends Homey.Driver {
     this.homey.flow.getDeviceTriggerCard('policy_override_set')
       .registerRunListener(async (args, state) => {
         return true;
+      });
+
+    // Condition: Favorable consumption window
+    this.homey.flow.getConditionCard('consumption_now_favorable')
+      .registerRunListener(async (args) => {
+        return args.device._favorableWindowActive === true;
       });
 
     // Condition: Policy enabled
@@ -79,18 +93,6 @@ class BatteryPolicyDriver extends Homey.Driver {
         await args.device.setCapabilityValue('policy_mode', args.mode);
       });
 
-    // Action: Enable auto-apply
-    this.homey.flow.getActionCard('enable_auto_apply')
-      .registerRunListener(async (args) => {
-        await args.device.setCapabilityValue('auto_apply', true);
-      });
-
-    // Action: Disable auto-apply
-    this.homey.flow.getActionCard('disable_auto_apply')
-      .registerRunListener(async (args) => {
-        await args.device.setCapabilityValue('auto_apply', false);
-      });
-
     // Action: Set manual override
     this.homey.flow.getActionCard('set_override')
       .registerRunListener(async (args) => {
@@ -128,6 +130,28 @@ class BatteryPolicyDriver extends Homey.Driver {
         const power = Math.max(0, Math.round(args.power || 0));
         args.device._updatePvProduction(power);
         args.device.log(`PV production updated via flow: ${power}W`);
+      });
+
+    // Action: Set away mode — pause learning, disable auto-apply, force battery mode
+    this.homey.flow.getActionCard('set_away_mode')
+      .registerRunListener(async (args) => {
+        const { device, battery_mode } = args;
+        await device.learningEngine.pause();
+        await device.setCapabilityValue('auto_apply', false);
+        await device.setCapabilityValue('presence_mode', '🏖️ Away');
+        await device._applyRecommendation(battery_mode, 100);
+        device.log(`Away mode activated: learning paused, battery → ${battery_mode}`);
+      });
+
+    // Action: Set home mode — resume learning, re-enable auto-apply, run policy
+    this.homey.flow.getActionCard('set_home_mode')
+      .registerRunListener(async (args) => {
+        const { device } = args;
+        await device.learningEngine.resume();
+        await device.setCapabilityValue('auto_apply', true);
+        await device.setCapabilityValue('presence_mode', '🏠 Home');
+        await device._runPolicyCheck();
+        device.log('Home mode activated: learning resumed, policy running');
       });
 
     // Action: Reset learning data

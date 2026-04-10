@@ -47,6 +47,44 @@
       ]
     },
     {
+      "id": "favorable_consumption_window",
+      "title": { "en": "Good time to run appliances", "nl": "Gunstig moment om apparaten aan te zetten" },
+      "titleFormatted": { "en": "Good time to run appliances", "nl": "Gunstig moment om apparaten aan te zetten" },
+      "hint": {
+        "en": "Triggers when electricity becomes cheap (top-3 of the day) or solar panels start producing significantly. Use this to send a notification or switch on a smart plug.",
+        "nl": "Vuurt als stroom goedkoop wordt (top-3 van de dag) of zonnepanelen significant gaan produceren. Gebruik dit voor een melding of om een slimme stekker in te schakelen."
+      },
+      "tokens": [
+        {
+          "name": "reason",
+          "type": "string",
+          "title": { "en": "Reason", "nl": "Reden" },
+          "example": { "en": "Cheap electricity", "nl": "Goedkope stroom" }
+        },
+        {
+          "name": "duration_minutes",
+          "type": "number",
+          "title": { "en": "Duration (minutes)", "nl": "Duur (minuten)" },
+          "example": 60
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "title": { "en": "Current price (€/kWh)", "nl": "Huidige prijs (€/kWh)" },
+          "example": 0.08
+        }
+      ]
+    },
+    {
+      "id": "favorable_consumption_window_ended",
+      "title": { "en": "Good time to run appliances has ended", "nl": "Gunstig moment om apparaten aan te zetten is voorbij" },
+      "titleFormatted": { "en": "Good time to run appliances has ended", "nl": "Gunstig moment om apparaten aan te zetten is voorbij" },
+      "hint": {
+        "en": "Triggers when electricity is no longer cheap and solar production has dropped below threshold.",
+        "nl": "Vuurt als stroom niet meer goedkoop is en zonnepanelen onder de drempel produceren."
+      }
+    },
+    {
       "id": "policy_override_set",
       "title": { "en": "Manual override activated" },
       "titleFormatted": { "en": "Manual override activated" },
@@ -63,6 +101,15 @@
   ],
 
   "conditions": [
+    {
+      "id": "consumption_now_favorable",
+      "title": { "en": "Now is !{{a good|not a good}} time to run appliances", "nl": "Het is !{{nu gunstig|nu niet gunstig}} om apparaten aan te zetten" },
+      "titleFormatted": { "en": "Now is !{{a good|not a good}} time to run appliances", "nl": "Het is !{{nu gunstig|nu niet gunstig}} om apparaten aan te zetten" },
+      "hint": {
+        "en": "True when electricity is currently cheap (top-3 price of the day) or solar panels are producing significantly (>500W).",
+        "nl": "Waar als stroom nu goedkoop is (top-3 goedkoopste van vandaag) of zonnepanelen significant produceren (>500W)."
+      }
+    },
     {
       "id": "policy_is_enabled",
       "title": { "en": "Policy is !{{enabled|disabled}}" },
@@ -133,32 +180,23 @@
     },
     {
       "id": "set_policy_mode",
-      "title": { "en": "Set policy mode to" },
-      "titleFormatted": { "en": "Set policy mode to [[mode]]" },
-      "hint": { "en": "Change the policy optimization mode" },
+      "title": { "en": "Set trading style", "nl": "Stel handelsstijl in" },
+      "titleFormatted": { "en": "Set trading style to [[mode]]", "nl": "Stel handelsstijl in op [[mode]]" },
+      "hint": {
+        "en": "Controls how actively the battery trades on price differences. Eco = fewer cycles, prioritise battery health. Balanced = default, normal arbitrage. Aggressive = more cycles, maximise savings.",
+        "nl": "Bepaalt hoe actief de batterij handelt op prijsverschillen. Eco = minder cycli, batterij ontzien. Balanced = standaard, normaal arbitrage. Agressief = meer cycli, maximale besparing."
+      },
       "args": [
         {
           "name": "mode",
           "type": "dropdown",
           "values": [
-            { "id": "eco", "label": { "en": "Eco" } },
-            { "id": "balanced", "label": { "en": "Balanced" } },
-            { "id": "aggressive", "label": { "en": "Aggressive" } }
+            { "id": "eco",        "label": { "en": "Eco — fewer cycles, spare the battery",     "nl": "Eco — minder cycli, batterij ontzien" } },
+            { "id": "balanced",   "label": { "en": "Balanced — default",                         "nl": "Balanced — standaard" } },
+            { "id": "aggressive", "label": { "en": "Aggressive — more cycles, maximise savings", "nl": "Agressief — meer cycli, maximale besparing" } }
           ]
         }
       ]
-    },
-    {
-      "id": "enable_auto_apply",
-      "title": { "en": "Enable auto-apply" },
-      "titleFormatted": { "en": "Enable auto-apply" },
-      "hint": { "en": "Automatically apply policy recommendations" }
-    },
-    {
-      "id": "disable_auto_apply",
-      "title": { "en": "Disable auto-apply" },
-      "titleFormatted": { "en": "Disable auto-apply" },
-      "hint": { "en": "Stop automatically applying recommendations" }
     },
     {
       "id": "set_override",
@@ -232,6 +270,35 @@
           "units": { "en": "W", "nl": "W" }
         }
       ]
+    },
+    {
+      "id": "set_away_mode",
+      "title": { "en": "Set away mode", "nl": "Zet afwezigheidsmodus" },
+      "titleFormatted": { "en": "Set away mode (battery: [[battery_mode]])", "nl": "Zet afwezigheidsmodus (batterij: [[battery_mode]])" },
+      "hint": {
+        "en": "Pause learning and disable automatic policy. Use when leaving for vacation or an extended absence.",
+        "nl": "Pauzeert het leren en schakelt automatische beleid uit. Gebruik bij vakantie of langdurige afwezigheid."
+      },
+      "args": [
+        {
+          "name": "battery_mode",
+          "type": "dropdown",
+          "title": { "en": "Battery behaviour", "nl": "Batterijgedrag" },
+          "values": [
+            { "id": "standby", "label": { "en": "Standby (do nothing)", "nl": "Standby (niets doen)" } },
+            { "id": "zero",    "label": { "en": "Zero (cover own consumption)", "nl": "Nul op de meter" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "set_home_mode",
+      "title": { "en": "Set home mode", "nl": "Zet thuismodus" },
+      "titleFormatted": { "en": "Set home mode (resume normal operation)", "nl": "Zet thuismodus (hervatten normale werking)" },
+      "hint": {
+        "en": "Resume learning and re-enable automatic policy after an absence.",
+        "nl": "Hervat het leren en schakelt automatische beleid weer in na afwezigheid."
+      }
     },
     {
       "id": "reset_learning_data",

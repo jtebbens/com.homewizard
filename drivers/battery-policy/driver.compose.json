@@ -24,7 +24,8 @@
     "battery_rte",
     "last_update",
     "override_until",
-    "weather_override"
+    "weather_override",
+    "presence_mode"
   ],
   "pair": [
     {
@@ -71,6 +72,35 @@
             "nl": "Open de 24-uurs batterij planning om prijzen, modi en projecties per uur te zien"
           },
           "value": "📊"
+        },
+        {
+          "id": "price_resolution",
+          "type": "dropdown",
+          "label": {
+            "en": "Price Resolution",
+            "nl": "Prijsresolutie"
+          },
+          "hint": {
+            "en": "Set to 15 minutes for providers with quarter-hour prices (e.g. Xadi). Set to 1 hour for providers with hourly prices (e.g. Zonneplan).",
+            "nl": "Zet op 15 minuten voor providers met kwartierprijzen (bijv. Xadi). Zet op 1 uur voor providers met uurprijzen (bijv. Zonneplan)."
+          },
+          "value": "15min",
+          "values": [
+            {
+              "id": "15min",
+              "label": {
+                "en": "15 minutes",
+                "nl": "15 minuten"
+              }
+            },
+            {
+              "id": "1h",
+              "label": {
+                "en": "1 hour",
+                "nl": "1 uur"
+              }
+            }
+          ]
         }
       ]
     }
