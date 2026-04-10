@@ -1622,9 +1622,10 @@
       const allPrices15min = settings['policy_all_prices_15min'] || [];
       const allPricesHourly = settings['policy_all_prices'] || [];
       
-      const use15Min = allPrices15min.length > 0;
-      
-      console.log(`📊 Planning mode: ${use15Min ? '15-MINUTE' : 'HOURLY'} (${use15Min ? allPrices15min.length : allPricesHourly.length} intervals)`);
+      const priceResolution = deviceSettings['price_resolution'] || '15min';
+      const use15Min = priceResolution === '15min' && allPrices15min.length > 0;
+
+      console.log(`📊 Planning mode: ${use15Min ? '15-MINUTE' : 'HOURLY'} (resolution=${priceResolution}, ${use15Min ? allPrices15min.length : allPricesHourly.length} intervals)`);
 
       /* ── Helper to create consistent price keys ── */
       const makePriceKey = (date) => {

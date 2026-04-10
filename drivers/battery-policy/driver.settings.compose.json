@@ -432,5 +432,25 @@
         "value": false
       }
     ]
+  },
+  {
+    "type": "group",
+    "label": { "en": "24-Hour Planning", "nl": "24-Uurs Planning" },
+    "children": [
+      {
+        "id": "price_resolution",
+        "type": "dropdown",
+        "label": { "en": "Price Resolution", "nl": "Prijsresolutie" },
+        "hint": {
+          "en": "Set to 15 minutes for providers with quarter-hour prices (e.g. Xadi). Set to 1 hour for providers with hourly prices (e.g. Zonneplan).",
+          "nl": "Zet op 15 minuten voor providers met kwartierprijzen (bijv. Xadi). Zet op 1 uur voor providers met uurprijzen (bijv. Zonneplan)."
+        },
+        "value": "15min",
+        "values": [
+          { "id": "15min", "label": { "en": "15 minutes", "nl": "15 minuten" } },
+          { "id": "1h",    "label": { "en": "1 hour",     "nl": "1 uur"      } }
+        ]
+      }
+    ]
   }
 ]

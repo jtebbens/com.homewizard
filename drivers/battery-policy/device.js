@@ -52,6 +52,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._pvActualHourly = null; // Accumulator for chart: {date, hourly[], sums[], counts[]}
     this._pvState = false; // Track PV state with hysteresis
     this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
+    this._favorableWindowActive = false; // Tracks edge for favorable_consumption_window trigger
     this._todayDate = null;           // YYYY-MM-DD (Amsterdam) for daily reset
     this._todayGridImportKwh = 0;     // accumulated grid import today (kWh)
     this._todayConsumptionKwh = 0;    // accumulated house consumption today (kWh)
@@ -81,6 +82,17 @@ class BatteryPolicyDevice extends Homey.Device {
     // Schedule periodic checks
     this._schedulePolicyCheck();
 
+    // Restore widget + camera from cached settings immediately after restart
+    // (first scheduled policy check may be up to 15 min away)
+    this.homey.setTimeout(() => {
+      try { this._saveWidgetData(); } catch (e) { this.error('Startup widget restore failed:', e); }
+    }, 3000);
+
+    // Set default for price_resolution if not yet saved (existing paired devices)
+    if (!this.getSetting('price_resolution')) {
+      await this.setSettings({ price_resolution: '15min' });
+    }
+
     // Migrate legacy weather_location (city name) to weather_latitude/weather_longitude
     await this._migrateWeatherLocation();
 
@@ -108,6 +120,7 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_interval:     s.policy_interval     || 15,
       pv_capacity_w:       s.pv_capacity_w       || 0,
       pv_estimation_enabled: s.pv_estimation_enabled || false,
+      price_resolution:    s.price_resolution    || '15min',
     });
 
     this.log('BatteryPolicyDevice ready');
@@ -136,7 +149,8 @@ class BatteryPolicyDevice extends Homey.Device {
       last_update: new Date().toISOString(),
       active_mode: 'unknown',
       override_until: null,
-      weather_override: 'auto'
+      weather_override: 'auto',
+      presence_mode: this.learningEngine.isPaused() ? '🏖️ Away' : '🏠 Home'
     };
 
     for (const [capability, defaultValue] of Object.entries(defaults)) {
@@ -950,6 +964,7 @@ if (debug) this.log(
         pv_capacity_w:          this.getSetting('pv_capacity_w')          || 0,
         pv_estimation_enabled:  this.getSetting('pv_estimation_enabled')  || false,
         pv_performance_ratio:   this.getSetting('pv_performance_ratio')   || 0.75,
+        price_resolution:    this.getSetting('price_resolution')    || '15min',
       });
       // debug_top3 writes moved to _gatherInputs (single write)
 
@@ -1019,7 +1034,9 @@ if (debug) this.log(
 
       // Chart generation disabled — skip to save memory
 
+      this._lastTariffInfo = inputs.tariff ?? null;
       await this._triggerRecommendationChanged(result, explanation);
+      this._checkFavorableWindow(inputs.tariff);
 
       const autoApplyEnabled = this.getCapabilityValue('auto_apply');
       this.log(`Auto-apply status: ${autoApplyEnabled ? 'ENABLED' : 'DISABLED'}`);
@@ -1036,10 +1053,12 @@ if (debug) this.log(
         if (applied) {
           this.log(`✅ Successfully applied: ${applyMode}`);
 
-          // Warn when real-time policy deviates from the DP's planned action
-          // Compare on policyMode level — hwMode is just the implementation (e.g. preserve+PV → zero_charge_only is correct)
+          // Warn when real-time policy deviates from the DP's planned action.
+          // Suppress when DP=preserve + PV active → zero_charge_only: not a real deviation,
+          // DP prices the slot as neutral and PV charging happens automatically.
           const _dpAction = this.optimizationEngine?.getSlot(new Date()) ?? null;
-          if (_dpAction && _dpAction !== result.policyMode) {
+          const _isPvCharge = applyMode === 'zero_charge_only' && this._pvState;
+          if (_dpAction && _dpAction !== result.policyMode && !_isPvCharge) {
             this.log(`⚠️ PLAN AFWIJKING: DP gepland ${_dpAction} maar policy koos ${result.policyMode} → hwMode ${applyMode}`);
           }
         } else {
@@ -1121,16 +1140,24 @@ if (debug) this.log(
   _saveWidgetData() {
     const schedule  = this.homey.settings.get('policy_optimizer_schedule') || [];
     const state     = this.homey.settings.get('battery_policy_state')      || {};
-    const prices15m = this.homey.settings.get('policy_all_prices_15min')   || [];
+    const use1h     = this.getSetting('price_resolution') === '1h';
+    const priceData = use1h
+      ? (this.homey.settings.get('policy_all_prices') || [])
+      : (this.homey.settings.get('policy_all_prices_15min') || []);
+    const step      = use1h ? 3600 * 1000 : 15 * 60 * 1000;
     const now       = Date.now();
 
     // Midnight of today in Amsterdam time (used to include past hours of today)
+    // Subtract Amsterdam time-of-day from now — avoids parsing locale strings (unreliable on Node.js)
     const todayStart = (() => {
-      const d = new Date(now);
-      const local = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Amsterdam' }));
-      d.setTime(d.getTime() - (local - d)); // shift to Amsterdam midnight
-      d.setHours(0, 0, 0, 0);
-      return d.getTime();
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Amsterdam',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      }).formatToParts(new Date(now));
+      const amH = +parts.find(p => p.type === 'hour').value % 24;
+      const amM = +parts.find(p => p.type === 'minute').value;
+      const amS = +parts.find(p => p.type === 'second').value;
+      return now - ((amH * 3600 + amM * 60 + amS) * 1000 + (now % 1000));
     })();
 
     // Helper: Amsterdam hour from timestamp
@@ -1140,8 +1167,10 @@ if (debug) this.log(
     );
 
     // Future slots from the optimizer schedule (include current slot via -15min buffer)
+    // Use step as grace period so the current slot is never lost in the gap
+    // between past-loop cutoff (now - step) and future filter (now - 15min)
     const futureSlots = schedule
-      .filter(s => new Date(s.timestamp).getTime() >= now - 15 * 60 * 1000)
+      .filter(s => new Date(s.timestamp).getTime() >= now - step)
       .slice(0, 192)
       .map(s => {
         const ts = new Date(s.timestamp).getTime();
@@ -1163,11 +1192,16 @@ if (debug) this.log(
       if (!historyMap.has(ts15)) historyMap.set(ts15, h);
     }
 
-    // Build price lookup from 15min cache
+    // Build price lookup from price cache (15min or hourly depending on resolution)
     const priceMap = new Map();
-    for (const p of prices15m) {
+    for (const p of priceData) {
       const ts = new Date(p.timestamp).getTime();
-      priceMap.set(ts, p.price);
+      if (use1h) {
+        // Hourly prices: cover the full hour (4 × 15min slots for backward compat)
+        for (let q = 0; q < 4; q++) priceMap.set(ts + q * 15 * 60 * 1000, p.price);
+      } else {
+        priceMap.set(ts, p.price);
+      }
     }
 
     // Actual PV per hour today (index = Amsterdam hour)
@@ -1176,7 +1210,7 @@ if (debug) this.log(
 
     const futureTs  = new Set(futureSlots.map(s => s.ts));
     const pastSlots = [];
-    for (let ts = todayStart; ts < now - 15 * 60 * 1000; ts += 15 * 60 * 1000) {
+    for (let ts = todayStart; ts < now - step; ts += step) {
       if (futureTs.has(ts)) continue;
       const h   = historyMap.get(ts);
       const hr  = amhour(ts);
@@ -1222,9 +1256,10 @@ if (debug) this.log(
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
   async _recomputeOptimizer(inputs) {
-    // Prefer 15-min prices for finer-grained optimization; fall back to hourly
+    // Use 15-min prices unless price_resolution is set to '1h'
     const now = new Date();
-    const raw15min = inputs.tariff?.allPrices15min;
+    const use15min = inputs.settings?.price_resolution !== '1h';
+    const raw15min = use15min ? inputs.tariff?.allPrices15min : null;
     const rawPrices = (raw15min?.length > 0)
       ? raw15min.filter(p => new Date(p.timestamp) >= now)
       : (inputs.tariff?.allPrices || inputs.tariff?.next24Hours);
@@ -1603,6 +1638,12 @@ if (debug) this.log(
     this._pvProductionW = powerW;
     this._pvProductionTimestamp = Date.now();
 
+    // Check favorable window on PV update so the trigger fires immediately
+    // when production crosses the threshold, without waiting for next policy cycle.
+    if (this._lastTariffInfo) {
+      this._checkFavorableWindow(this._lastTariffInfo);
+    }
+
     // Feed live measurement into the solar yield-factor learner.
     // Requires radiation data from the latest weather fetch.
     const radiation = this._getInterpolatedRadiation(Date.now());
@@ -1792,7 +1833,7 @@ if (debug) this.log(
     const batteryState = await this._getBatteryState();
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
 
-    const debugPrice = tariffInfo?.currentPrice ?? 'n/a';
+    const debugPrice = tariffInfo?.currentPrice != null ? tariffInfo.currentPrice.toFixed(3) : 'n/a';
     const debugTopLow = Array.isArray(tariffInfo?.top3Lowest)
       ? tariffInfo.top3Lowest.map(p => `${String(p.hour).padStart(2, '0')}:00€${p.price.toFixed(2)}`).join(', ')
       : 'n/a';
@@ -2135,6 +2176,89 @@ if (debug) this.log(
     }
   }
 
+  /**
+   * Check if the current moment is favorable for running appliances (cheap price or PV surplus).
+   * Fires the favorable_consumption_window trigger on a false→true edge only.
+   * @param {Object} tariff - tariff info from _gatherInputs()
+   */
+  _checkFavorableWindow(tariff) {
+    if (!tariff) return;
+
+    const currentPrice = tariff.currentPrice ?? null;
+    const top3Lowest   = tariff.top3Lowest || [];
+
+    // Cheap: current price is within the top-3 cheapest remaining slots of today
+    const cheapThreshold = top3Lowest.length > 0
+      ? Math.max(...top3Lowest.map(p => p.price)) + 0.001
+      : null;
+    const isCheap = cheapThreshold !== null && currentPrice !== null && currentPrice <= cheapThreshold;
+
+    // PV surplus: significant solar production (>500W means PV is covering meaningful load)
+    const isPvSurplus = (this._pvProductionW ?? 0) > 500;
+
+    const isFavorable = isCheap || isPvSurplus;
+
+    if (isFavorable && !this._favorableWindowActive) {
+      this._favorableWindowActive = true;
+
+      // Calculate how many minutes remain in this favorable window
+      let durationMinutes = 60;
+      if (isCheap && Array.isArray(tariff.effectivePrices)) {
+        const futureSlots = tariff.effectivePrices
+          .filter(p => p.index >= 0)
+          .sort((a, b) => a.index - b.index);
+        let count = 0;
+        for (const slot of futureSlots) {
+          if (slot.price <= cheapThreshold) count++;
+          else break;
+        }
+        durationMinutes = Math.max(15, count * 15);
+      } else if (isPvSurplus && Array.isArray(this.weatherData?.hourlyForecast)) {
+        const now = Date.now();
+        const futureHours = this.weatherData.hourlyForecast
+          .filter(h => {
+            const t = h.time instanceof Date ? h.time : new Date(h.time);
+            return t.getTime() >= now;
+          })
+          .sort((a, b) => {
+            const ta = a.time instanceof Date ? a.time : new Date(a.time);
+            const tb = b.time instanceof Date ? b.time : new Date(b.time);
+            return ta - tb;
+          });
+        let hours = 0;
+        for (const h of futureHours) {
+          if (h.radiationWm2 > 50) hours++;
+          else break;
+        }
+        durationMinutes = Math.max(60, hours * 60);
+      }
+
+      const reason = isCheap && isPvSurplus
+        ? (this.homey.i18n?.getLanguage?.() === 'nl' ? 'Goedkope stroom + zonnepanelen' : 'Cheap electricity + solar')
+        : isCheap
+          ? (this.homey.i18n?.getLanguage?.() === 'nl' ? 'Goedkope stroom' : 'Cheap electricity')
+          : (this.homey.i18n?.getLanguage?.() === 'nl' ? 'Zonnepanelen produceren' : 'Solar production');
+
+      const trigger = this.homey.flow.getDeviceTriggerCard('favorable_consumption_window');
+      if (trigger) {
+        trigger.trigger(this, {
+          reason,
+          duration_minutes: durationMinutes,
+          price: Math.round((currentPrice ?? 0) * 10000) / 10000
+        }).catch(err => this.error('favorable_consumption_window trigger failed:', err));
+      }
+
+      this.log(`⚡ Favorable consumption window started: ${reason}, ~${durationMinutes} min, €${currentPrice}`);
+    } else if (!isFavorable && this._favorableWindowActive) {
+      this._favorableWindowActive = false;
+      this.log('⚡ Favorable consumption window ended');
+      const endTrigger = this.homey.flow.getDeviceTriggerCard('favorable_consumption_window_ended');
+      if (endTrigger) {
+        endTrigger.trigger(this, {}).catch(err => this.error('favorable_consumption_window_ended trigger failed:', err));
+      }
+    }
+  }
+
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log('Settings changed:', changedKeys);
 
@@ -2177,11 +2301,20 @@ if (debug) this.log(
       policy_interval:     newSettings.policy_interval     || 15,
       pv_capacity_w:       newSettings.pv_capacity_w       || 0,
       pv_estimation_enabled: newSettings.pv_estimation_enabled || false,
+      price_resolution:    newSettings.price_resolution    || '15min',
     });
 
     // Handle interval change
     if (changedKeys.includes('policy_interval')) {
       this._schedulePolicyCheck();
+    }
+
+    // Rebuild schedule + refresh chart/widget immediately when resolution changes
+    // Use setTimeout so the new setting is persisted before the policy check reads it
+    if (changedKeys.includes('price_resolution')) {
+      this.homey.setTimeout(() => {
+        this._runPolicyCheck().catch(e => this.error('Policy recheck after resolution change failed:', e));
+      }, 200);
     }
 
     // Weather update
@@ -2410,11 +2543,13 @@ if (debug) this.log(
     const chartCfg = this._buildQuickChartConfig(compact);
     if (!chartCfg) { stream.end(); return; }
     // Pass chart as JS expression string so quickchart.io evaluates function callbacks
+    const slots = compact?.slots || [];
+    const slotMs = slots.length >= 2 ? (slots[1].ts - slots[0].ts) : 900000;
     const body = JSON.stringify({
       version: '4',
       backgroundColor: '#1c1c1e',
       width: 900,
-      height: 900,
+      height: 500,
       chart: this._configToJs(chartCfg),
     });
 
@@ -2452,8 +2587,12 @@ if (debug) this.log(
     const slots = compact?.slots || [];
     const now   = Date.now();
 
-    const shown = slots.slice(0, 96); // max one day (96 × 15min)
+    const shown = slots.slice(0, 96); // max one day (96 × 15min or 24 × 1h — both fit)
     if (shown.length === 0) return null;
+
+    const fLg = 20;
+    const fMd = 18;
+    const fSm = 16;
 
     const MODE_COLORS = {
       to_full:             '#5f6fff',
@@ -2610,12 +2749,15 @@ if (debug) this.log(
       options: {
         responsive: false,
         animation: false,
+        layout: {
+          padding: { top: 12, bottom: 16, left: 4, right: 4 },
+        },
         plugins: {
           legend: {
             display: true,
             labels: {
               color: '#9a9a9a',
-              font: { size: 15 },
+              font: { size: fLg },
               padding: 14,
               usePointStyle: true,
               filter: function(item) { return !item.text.startsWith('_'); },
@@ -2625,31 +2767,31 @@ if (debug) this.log(
             display: true,
             text: `Batterij ${dayLabel}  |  SoC: ${socLine}  |  Nu: ${modeLine}  |  ${updLine}`,
             color: '#cccccc',
-            font: { size: 15 },
+            font: { size: fLg },
             padding: { bottom: 2 },
           },
           subtitle: {
             display: true,
             text: `☀ PV max: ${pvMax >= 1000 ? `${(pvMax/1000).toFixed(1)}kW` : `${pvMax}W`}`,
             color: '#FCD34D',
-            font: { size: 13, weight: 'bold' },
+            font: { size: fSm, weight: 'bold' },
             padding: { bottom: 6 },
           },
         },
         scales: {
           x: {
-            ticks: { color: '#9a9a9a', font: { size: 14 }, maxRotation: 0, autoSkip: false },
+            ticks: { color: '#9a9a9a', font: { size: fMd }, maxRotation: 0, autoSkip: false },
             grid: { color: '#2a2a2a' },
           },
           yPrice: {
             position: 'left',
             ticks: {
               color: '#cccccc',
-              font: { size: 15, weight: 'bold' },
+              font: { size: fLg, weight: 'bold' },
               callback: (v) => v.toFixed(2),
             },
             grid: { color: '#2a2a2a' },
-            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: 13 } },
+            title: { display: true, text: 'EUR/kWh', color: '#9a9a9a', font: { size: fSm } },
           },
           ySoc: {
             position: 'right',
@@ -2657,11 +2799,11 @@ if (debug) this.log(
             max: 100,
             ticks: {
               color: 'rgba(255,255,255,0.85)',
-              font: { size: 15, weight: 'bold' },
+              font: { size: fLg, weight: 'bold' },
               callback: (v) => `${v}%`,
             },
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: 13 } },
+            title: { display: true, text: 'SoC', color: 'rgba(255,255,255,0.6)', font: { size: fSm } },
           },
           yPv: {
             display: false,
