@@ -260,7 +260,9 @@ function renderSvg(slots) {
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
 
-  const shown = slots.slice(0, 96);
+  const slotMs  = slots.length >= 2 ? (slots[1].ts - slots[0].ts) : 900000;
+  const maxSlots = Math.round(24 * 3600000 / slotMs); // 96 for 15min, 24 for 1h
+  const shown   = slots.slice(0, maxSlots);
   const prices = shown.map(s => s.price).filter(p => p != null && !isNaN(p));
   const pvs    = shown.map(s => s.pvW || 0);
 
@@ -326,7 +328,7 @@ function renderSvg(slots) {
   // Current time marker
   if (shown[0] && shown[shown.length - 1]) {
     const firstTs = shown[0].ts;
-    const lastTs  = shown[shown.length - 1].ts + 900000; // 15-min slot width
+    const lastTs  = shown[shown.length - 1].ts + slotMs;
     const span = lastTs - firstTs;
     if (span > 0 && now >= firstTs && now <= lastTs) {
       const nowX = PAD_L + ((now - firstTs) / span) * chartW;
