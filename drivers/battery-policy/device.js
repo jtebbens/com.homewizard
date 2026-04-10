@@ -52,6 +52,22 @@ class BatteryPolicyDevice extends Homey.Device {
     this._pvActualHourly = null; // Accumulator for chart: {date, hourly[], sums[], counts[]}
     this._pvState = false; // Track PV state with hysteresis
     this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
+    this._todayDate = null;           // YYYY-MM-DD (Amsterdam) for daily reset
+    this._todayGridImportKwh = 0;     // accumulated grid import today (kWh)
+    this._todayConsumptionKwh = 0;    // accumulated house consumption today (kWh)
+    this._lastSelfSuffWrite = 0;      // throttle: last settings write for today_self_sufficiency
+
+    // Restore accumulators from last save so a restart doesn't reset to 0 mid-day
+    try {
+      const saved = this.homey.settings.get('today_self_sufficiency');
+      const todayNL = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+      if (saved?.date === todayNL && saved.consumptionKwh > 0) {
+        this._todayDate = todayNL;
+        this._todayGridImportKwh = saved.gridImportKwh ?? 0;
+        this._todayConsumptionKwh = saved.consumptionKwh ?? 0;
+        this.log(`[SelfSuff] Restored from settings: ${saved.pct}% (${saved.consumptionKwh} kWh consumed)`);
+      }
+    } catch (e) { /* ignore */ }
 
     await this._initializeCapabilities();
     _memMB('after-initializeCapabilities');
@@ -447,6 +463,34 @@ if (debug) this.log(
         }
 
         // ------------------------------------------------------
+        // 📊 SELF-SUFFICIENCY: Accumulate actual daily energy
+        // ------------------------------------------------------
+        const POLL_H = 15 / 3600; // poll interval (15s) expressed in hours
+        const todayNL = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+        if (this._todayDate !== todayNL) {
+          this._todayDate = todayNL;
+          this._todayGridImportKwh = 0;
+          this._todayConsumptionKwh = 0;
+        }
+        if (gridPower > 0) this._todayGridImportKwh += (gridPower * POLL_H) / 1000;
+        if (houseConsumptionW > 0) this._todayConsumptionKwh += (houseConsumptionW * POLL_H) / 1000;
+
+        // Write today_self_sufficiency to settings at most every 5 minutes
+        const now = Date.now();
+        if (this._todayConsumptionKwh > 0.01 && now - this._lastSelfSuffWrite > 5 * 60 * 1000) {
+          this._lastSelfSuffWrite = now;
+          const pct = Math.max(0, Math.min(100, Math.round(
+            (1 - this._todayGridImportKwh / this._todayConsumptionKwh) * 100
+          )));
+          this.homey.settings.set('today_self_sufficiency', {
+            pct,
+            gridImportKwh:  +this._todayGridImportKwh.toFixed(3),
+            consumptionKwh: +this._todayConsumptionKwh.toFixed(3),
+            date: this._todayDate,
+          });
+        }
+
+        // ------------------------------------------------------
         // ⭐ REALTIME PV STATE DETECTION (dual-mode)
         // ------------------------------------------------------
         // Detects PV in two scenarios:
@@ -830,7 +874,7 @@ if (debug) this.log(
 
       // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update)
       if (this.optimizationEngine.isStale() && inputs.tariff) {
-        this._recomputeOptimizer(inputs);
+        await this._recomputeOptimizer(inputs);
       }
       inputs.optimizer = this.optimizationEngine;
       inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
@@ -1159,7 +1203,7 @@ if (debug) this.log(
     const compact = {
       currentSoc:   state.batterySOC   ?? null,
       currentMode:  state.currentMode  ?? 'standby',
-      currentPrice: slots[0]?.price    ?? null,
+      currentPrice: futureSlots[0]?.price ?? null,
       pvCapacityW:  this.getSetting('pv_capacity_w') || 0,
       updatedAt:    new Date().toISOString(),
       slots
@@ -1177,7 +1221,7 @@ if (debug) this.log(
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
-  _recomputeOptimizer(inputs) {
+  async _recomputeOptimizer(inputs) {
     // Prefer 15-min prices for finer-grained optimization; fall back to hourly
     const now = new Date();
     const raw15min = inputs.tariff?.allPrices15min;
@@ -1239,6 +1283,72 @@ if (debug) this.log(
       }
     }
 
+    // Blend external PV forecasts into Open-Meteo pvForecast.
+    // Sources: Solcast (satellite, 30-min, optional) + Forecast.Solar (weather model, hourly, always-on).
+    // Each slot is averaged equally across available sources — more sources = more robust estimate.
+    // Lazy-loaded; caches in homey.settings survive app restarts.
+    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
+      const blendSettings = inputs.settings;
+
+      // ── Solcast (optional, 30-min → grouped to hourly) ──────────────────────
+      let solcastByHourMs = null;
+      if (blendSettings?.solcast_enabled && blendSettings.solcast_api_key && blendSettings.solcast_resource_id) {
+        if (!this._solcastProvider) {
+          const SolcastProvider = require('../../lib/solcast-provider');
+          this._solcastProvider = new SolcastProvider(this.homey);
+        }
+        try {
+          const solcastForecast = await this._solcastProvider.getForecast(
+            blendSettings.solcast_api_key,
+            blendSettings.solcast_resource_id,
+          );
+          if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
+            solcastByHourMs = new Map();
+            for (const s of solcastForecast) {
+              const t = new Date(s.timestamp);
+              const hourMs = t.getTime() - (t.getUTCMinutes() * 60_000) - (t.getUTCSeconds() * 1_000) - t.getUTCMilliseconds();
+              if (!solcastByHourMs.has(hourMs)) solcastByHourMs.set(hourMs, []);
+              solcastByHourMs.get(hourMs).push(s.pvPowerW);
+            }
+          }
+        } catch (err) {
+          this.log(`[Solcast] Error: ${err.message}`);
+        }
+      }
+
+      // ── Blend all available sources per hourly slot ──────────────────────────
+      if (solcastByHourMs) {
+        const todayNLDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const tomorrowNLDate = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const byDay = { [todayNLDate]: { om: 0, sc: 0, bl: 0 }, [tomorrowNLDate]: { om: 0, sc: 0, bl: 0 } };
+
+        pvForecast = pvForecast.map(slot => {
+          const slotMs = new Date(slot.timestamp).getTime();
+          const sources = [slot.pvPowerW];
+          const dayKey = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+
+          const scSlots = solcastByHourMs.get(slotMs);
+          if (scSlots?.length > 0) {
+            const avg = Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length);
+            sources.push(avg);
+            if (byDay[dayKey]) byDay[dayKey].sc += avg;
+          }
+
+          const blendedW = Math.round(sources.reduce((a, b) => a + b, 0) / sources.length);
+          if (byDay[dayKey]) { byDay[dayKey].om += slot.pvPowerW; byDay[dayKey].bl += blendedW; }
+          return { ...slot, pvPowerW: blendedW };
+        });
+
+        const fmt = wh => (wh / 1000).toFixed(1);
+        const pct = (v, base) => (base > 0 ? `${v >= base ? '+' : ''}${((v - base) / base * 100).toFixed(0)}%` : '—');
+        const td = byDay[todayNLDate], tm = byDay[tomorrowNLDate];
+        const scToday    = td.sc > 0 ? ` SC=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})` : '';
+        const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})` : '';
+        this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh`);
+        this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh`);
+      }
+    }
+
     // Learned round-trip efficiency from efficiencyEstimator
     let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
     if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.97)) learnedRte = null;
@@ -1270,7 +1380,10 @@ if (debug) this.log(
     const minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
       : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice);
+    // Internal margin: planning assumes 20% higher consumption than learned average
+    // while the learning engine is still building up per-weekday evening patterns.
+    const consumptionMargin = 1.20;
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin);
 
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
@@ -1284,6 +1397,26 @@ if (debug) this.log(
         }
       }
       this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
+
+      // ── SoC plan snapshot: first planned SoC per slot, never overwritten ──
+      // Allows the frontend to show "planned XX%" alongside actual SoC for past slots.
+      try {
+        const nowTs = Date.now();
+        let socPlan = this.homey.settings.get('policy_soc_plan') || {};
+        // Prune entries older than 48h
+        for (const ts of Object.keys(socPlan)) {
+          if (nowTs - new Date(ts).getTime() > 48 * 3600 * 1000) delete socPlan[ts];
+        }
+        // Add new timestamps only — never overwrite (first plan wins for past slots)
+        let changed = false;
+        for (const slot of planningSchedule) {
+          if (slot.socProjected != null && !(slot.timestamp in socPlan)) {
+            socPlan[slot.timestamp] = { soc: slot.socProjected, consumptionW: slot.consumptionW ?? null };
+            changed = true;
+          }
+        }
+        if (changed) this.homey.settings.set('policy_soc_plan', socPlan);
+      } catch (e) { /* non-critical */ }
 
       // ── Battery expansion analysis (non-critical) ──────────────────────────
       // Runs DP for 1–4 battery scenarios to show the marginal value of each
@@ -1304,7 +1437,7 @@ if (debug) this.log(
 
           const result = this.optimizationEngine.computeExpectedProfit(
             prices, soc, kwh, powerW, powerW,
-            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice
+            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin
           );
           const profit = +result.profit.toFixed(4);
           const selfSufficiencyPct = result.selfSufficiencyPct;
@@ -1333,17 +1466,25 @@ if (debug) this.log(
 
         // Rolling daily profit history — one entry per day, max 30 days.
         // Used by the frontend to compute a seasonally-averaged payback period.
+        // Also stores actual self-sufficiency, updated on every policy run.
         const today = new Date().toISOString().slice(0, 10);
         let hist = this.homey.settings.get('expansion_profit_history') || { entries: [] };
         if (!Array.isArray(hist.entries)) hist.entries = [];
         const lastEntry = hist.entries[hist.entries.length - 1];
+        let todayEntry;
         if (!lastEntry || lastEntry.date !== today) {
-          const entry = { date: today };
-          for (const s of scenarios) entry[`p${s.units}`] = s.profit;
-          hist.entries.push(entry);
+          todayEntry = { date: today };
+          hist.entries.push(todayEntry);
           if (hist.entries.length > 30) hist.entries = hist.entries.slice(-30);
-          this.homey.settings.set('expansion_profit_history', hist);
+        } else {
+          todayEntry = lastEntry;
         }
+        for (const s of scenarios) todayEntry[`p${s.units}`] = s.profit;
+        const todayActualSelfSufficiencyPct = this._todayConsumptionKwh > 0.01
+          ? Math.max(0, Math.min(100, Math.round((1 - this._todayGridImportKwh / this._todayConsumptionKwh) * 100)))
+          : null;
+        if (todayActualSelfSufficiencyPct !== null) todayEntry.actualSelfSufficiencyPct = todayActualSelfSufficiencyPct;
+        this.homey.settings.set('expansion_profit_history', hist);
 
         // Augment scenarios with avgProfit + seasonally-corrected avgProfit.
         // Seasonal correction: normalize each day's profit by its monthly irradiance
@@ -1385,6 +1526,9 @@ if (debug) this.log(
           currentPowerW: maxChargePowerW,
           historyDays,
           scenarios,
+          todayActualSelfSufficiencyPct,
+          todayGridImportKwh:    +this._todayGridImportKwh.toFixed(3),
+          todayConsumptionKwh:   +this._todayConsumptionKwh.toFixed(3),
         });
       } catch (e) {
         this.error('Battery expansion analysis failed (non-critical):', e);
@@ -2009,6 +2153,11 @@ if (debug) this.log(
       await this.homey.notifications.createNotification({
         excerpt: `Battery thresholds updated: charge ≤€${newSettings.max_charge_price}, discharge ≥€${newSettings.min_discharge_price}`
       });
+    }
+
+    // Invalidate Solcast cache when API key or resource ID changes
+    if (changedKeys.includes('solcast_api_key') || changedKeys.includes('solcast_resource_id')) {
+      this._solcastProvider?.invalidateCache();
     }
 
     // Update internal modules

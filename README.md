@@ -51,7 +51,19 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.0)
+## 📝 Latest Updates (v3.15.5)
+
+### Battery Policy — PV Forecast & Planning
+
+* **Solcast integration** - Satellite-based PV forecast (30-min resolution) blended with Open-Meteo weather model. Optional, requires Solcast API key and resource ID in settings. Lazy-loaded; cached across restarts
+* **Blend log split by day** - `[PV blend]` log now shows today and tomorrow separately, making it easy to verify forecast accuracy per day
+* **Self-sufficiency tracking** - Daily grid import vs. house consumption accumulated in real time (15 s poll). Persisted to settings across restarts; visible in battery expansion analysis
+* **SoC plan snapshot** - Planned SoC per slot stored on first computation, never overwritten. Enables frontend to show "planned vs. actual" SoC for past slots
+* **currentPrice fix** - Widget/settings were showing the first slot (which could be in the past); now correctly uses the first future slot
+* **Consumption margin** - Optimizer assumes 20% higher consumption than learned average while evening patterns are still building up
+* **`_recomputeOptimizer` made async** - Required for Solcast API calls inside the optimizer path
+
+### Battery Policy — Previous (v3.15.3)
 
 ### Battery Policy — Multi-Battery Discharge Fix
 
