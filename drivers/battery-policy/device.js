@@ -1520,15 +1520,20 @@ if (debug) this.log(
     // Break-even = cycleCostPerKwh / effectiveRte (typically ~€0.10).
     // Only active when PV tomorrow ≥ 90% of battery capacity (near-certain full recharge).
     const pvKwhTomorrow = inputs.weather?.pvKwhTomorrow ?? 0;
-    if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0) {
+    if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0 && pvForecast) {
       const effectiveRte = learnedRte ?? 0.75;
       const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;
       const actualBreakEven = Math.round(cycleCostKwh / effectiveRte * 1000) / 1000;
-      const pvHeadroomFloor = Math.max(actualBreakEven + 0.07, 0.18); // ~€0.18 floor: above break-even, below typical overnight prices
-      if (pvHeadroomFloor < minDischargePrice) {
-        this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → minDischargePrice ${minDischargePrice} → ${pvHeadroomFloor} (break-even €${actualBreakEven})`);
-        minDischargePrice = pvHeadroomFloor;
-      }
+      // Night floor (~€0.115): just above break-even, allows overnight discharge at low wind prices.
+      // Day floor: keep original — do NOT discharge during PV hours (PV does the work).
+      const nightFloor = Math.max(actualBreakEven + 0.015, 0.115);
+      const originalMinDischarge = minDischargePrice;
+      const perSlotFloors = prices.map(p => {
+        const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
+        return pvW >= 50 ? originalMinDischarge : nightFloor;
+      });
+      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor} (break-even €${actualBreakEven}), day slots keep €${originalMinDischarge}`);
+      minDischargePrice = perSlotFloors;
     }
     // Per-slot consumption margin: scales with each slot's coefficient of variation.
     // Stable slots (CV~0, e.g. night) → tight margin 1.10.
@@ -1581,7 +1586,7 @@ if (debug) this.log(
 
     if (pvKwhTomorrow > 0) {
       const pvRefill = Math.min(1, pvKwhTomorrow / capacityKwh);
-      const terminalFactor = 1 - pvRefill * 0.75;
+      const terminalFactor = 1 - pvRefill * 0.90;
       this.log(`☀️ Terminal value discount: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh → factor=${terminalFactor.toFixed(2)} (${((1-terminalFactor)*100).toFixed(0)}% discount)`);
     }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow);
