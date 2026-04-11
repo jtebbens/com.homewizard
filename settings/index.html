@@ -485,6 +485,14 @@
     <div id="planning-grid"></div>
     <div id="planning-daily-profit"></div>
 
+    <!-- PV surplus forecast is now injected inside the planning-grid after today's PV curve -->
+
+    <!-- Learning engine status -->
+    <div id="learning-status-block" style="display:none;margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Leermotor status</div>
+      <div id="learning-status-inner" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;"></div>
+    </div>
+
     <!-- Consumption profile chart -->
     <div id="consumption-profile-section" style="display:none;margin-top:30px;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
@@ -529,8 +537,12 @@
     </div>
     <div id="expansion-grid" style="display:none;"></div>
     <div id="expansion-timestamp" style="font-size:11px;color:var(--dim);margin-top:12px;"></div>
+
+    <!-- Werkelijk gemeten rendement (gevuld door renderExpansionAnalysis) -->
+    <div id="expansion-actual-roi"></div>
   </div>
 
+  <!-- TAB: ROI / RENDEMENT -->
   <!-- TAB: EXPLAINABILITY -->
   <div id="explain" class="tab-content">
     <h2>Battery Policy Explainability</h2>
@@ -666,10 +678,13 @@
       const peakW = Math.max(...pvWatts);
       if (peakW < 50) return '';
 
-      // Round maxY up to a nice grid step — include actual values so they never clip
+      // Round maxY up to a nice grid step — include actual and consumption values so they never clip
       const peakActual = actualWatts ? Math.max(0, ...actualWatts.map(v => v ?? 0)) : 0;
+      const peakConsumption = consumptionByHour
+        ? Math.max(0, ...Object.values(consumptionByHour).filter(v => v != null && v > 0))
+        : 0;
       const gridStep = pvCapW <= 2000 ? 500 : pvCapW <= 5000 ? 1000 : 2000;
-      const maxY = Math.ceil(Math.max(peakW, peakActual) / gridStep) * gridStep;
+      const maxY = Math.ceil(Math.max(peakW, peakActual, peakConsumption) / gridStep) * gridStep;
       const peakH = pvWatts.indexOf(peakW);
 
       const toX = h => pad.l + ((h + 0.5) / 24) * iW;
@@ -1580,7 +1595,6 @@
         document.getElementById('expansion-save-btn')?.addEventListener('click', () => {
           const inv = parseFloat(document.getElementById('expansion-investment').value);
           if (inv >= 0) Homey.set('expansion_investment', inv);
-          // Re-render immediately with new investment value
           Homey.get((e, s) => { if (!e) renderExpansionAnalysis(s); });
         });
 
@@ -2053,7 +2067,8 @@
               weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}<br>📈 ${pvLearnedSlots}/96 PV-slots geleerd${learnNote}</div>`;
             }
           }
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${weatherTs}${pvCurve}`;
+          const pvSurplusPlaceholder = day === 0 ? '<div id="pv-surplus-block" style="display:none;grid-column:1/-1;font-size:13px;color:var(--muted);padding:2px 0 4px 4px;"></div>' : '';
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${weatherTs}${pvCurve}${pvSurplusPlaceholder}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);
@@ -2192,8 +2207,98 @@
         }
       } catch (e) { console.warn('Daily profit error:', e); }
 
+      // ── PV surplus forecast ────────────────────────────────────────────────
+      renderPvSurplus(settings);
+
+      // ── Learning engine status ─────────────────────────────────────────────
+      renderLearningStatus(settings);
+
       // ── Consumption profile chart ──────────────────────────────────────────
       renderConsumptionProfile(settings);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       PV SURPLUS FORECAST
+    ══════════════════════════════════════════════════════════ */
+    function renderPvSurplus(settings) {
+      const block = document.getElementById('pv-surplus-block');
+      const data  = settings['pv_surplus_forecast'];
+      if (!block || !data) return;
+
+      const { netPvKwh, remainingKwh, fillFraction, soc } = data;
+      if (netPvKwh == null || remainingKwh == null || fillFraction == null) return;
+
+      const pct = Math.round(fillFraction * 100);
+      let icon, color, msg;
+
+      if (remainingKwh < 0.5) {
+        // Battery already (nearly) full
+        icon = '🔋'; color = '#20F29B';
+        msg = `Batterij vrijwel vol (${soc}% SoC) — geen aanvulling nodig.`;
+      } else if (pct >= 95) {
+        icon = '☀️'; color = '#20F29B';
+        msg = `Batterij wordt volledig vol van zonne-energie (verwacht netto ${netPvKwh.toFixed(1)} kWh surplus).`;
+      } else if (pct >= 60) {
+        icon = '🌤️'; color = '#FCD34D';
+        msg = `Batterij wordt ~${pct}% vol van zon (${netPvKwh.toFixed(1)} kWh netto, ruimte ${remainingKwh.toFixed(1)} kWh). Aanvulling via net bij lage prijs kan lonen.`;
+      } else {
+        icon = '⚡'; color = '#F87171';
+        msg = `PV-surplus beperkt: ${netPvKwh.toFixed(1)} kWh verwacht, slechts ~${pct}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh). Laden via net bij lage prijzen aanbevolen.`;
+      }
+
+      block.style.display = 'block';
+      block.innerHTML = `<span style="color:${color};">${icon} <strong>Zonne-energie vandaag:</strong></span> ${msg}`;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       LEARNING ENGINE STATUS BLOCK
+    ══════════════════════════════════════════════════════════ */
+    function renderLearningStatus(settings) {
+      const st    = settings['learning_status'];
+      const block = document.getElementById('learning-status-block');
+      const inner = document.getElementById('learning-status-inner');
+      if (!block || !inner || !st) return;
+
+      block.style.display = '';
+
+      const { days, coverage, pvAccuracy, rte, cycles } = st;
+
+      // Helper: pill with colour based on value vs thresholds
+      const pill = (label, value, unit, lo, hi) => {
+        const color = value == null ? 'var(--dim)'
+          : value >= hi ? '#20F29B'
+          : value >= lo ? '#FCD34D'
+          : '#F87171';
+        const display = value != null ? `${value}${unit}` : '—';
+        return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
+          <span style="font-size:16px;font-weight:bold;color:${color};">${display}</span>
+        </div>`;
+      };
+
+      // Days maturity: separator at 7d (basic) and 14d (mature)
+      const daysColor = days >= 14 ? '#20F29B' : days >= 7 ? '#FCD34D' : '#F87171';
+      const daysLabel = days >= 14 ? 'rijp' : days >= 7 ? 'groeiend' : 'opstartend';
+
+      inner.innerHTML =
+        `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Leerdagen</span>
+          <span style="font-size:16px;font-weight:bold;color:${daysColor};">${days ?? '—'}</span>
+          <span style="font-size:10px;color:${daysColor};">${daysLabel}</span>
+        </div>` +
+        pill('Patroon', coverage, '%', 50, 80) +
+        pill('PV-nauwkeurigheid', pvAccuracy, '%', 70, 85) +
+        pill('RTE', rte, '%', 70, 80) +
+        `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">RTE-cycli</span>
+          <span style="font-size:16px;font-weight:bold;color:${cycles >= 5 ? '#20F29B' : '#FCD34D'};">${cycles ?? '—'}</span>
+          <span style="font-size:10px;color:var(--dim);">${cycles >= 5 ? 'betrouwbaar' : '< 5 nodig'}</span>
+        </div>` +
+        (coverage < 50 || days < 7
+          ? `<div style="font-size:11px;color:#FCD34D;align-self:center;max-width:220px;">
+               ⚠ Leermotor heeft nog onvoldoende data — planning minder nauwkeurig.
+             </div>`
+          : '');
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -2310,6 +2415,23 @@
       const analysis  = settings['battery_expansion_analysis'];
       const savedInv  = settings['expansion_investment'];
 
+      // Cycle history for measured ROI
+      const cycleHistory  = settings['battery_cycle_history'] || [];
+      const hasCycleData  = cycleHistory.length > 0;
+      let measuredDailyProfit = null;
+      let measuredYearlyProfit = null;
+      let measuredPaybackYears = null;
+      let measuredTotalProfit = 0;
+      let measuredDaysDiff = 1;
+      if (hasCycleData) {
+        measuredTotalProfit = cycleHistory.reduce((s, c) => s + (c.profitEur || 0), 0);
+        const firstDate = new Date(cycleHistory[0].date);
+        const lastDate  = new Date(cycleHistory[cycleHistory.length - 1].date);
+        measuredDaysDiff    = Math.max(1, Math.round((lastDate - firstDate) / 86400000) + 1);
+        measuredDailyProfit  = measuredTotalProfit / measuredDaysDiff;
+        measuredYearlyProfit = measuredDailyProfit * 365;
+      }
+
       const invInput = document.getElementById('expansion-investment');
       if (invInput && savedInv != null) invInput.value = savedInv;
 
@@ -2394,7 +2516,17 @@
               ${fmt(s.profit)}<span style="font-size:11px;font-weight:normal;color:var(--dim);">/dag</span>
             </div>
             ${isCurrent
-              ? `<div style="font-size:11px;color:var(--muted);">Huidige setup</div>`
+              ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Huidige setup</div>
+                 <div style="font-size:11px;color:var(--dim);">
+                   Schatting (DP): <span style="color:var(--text);">${fmt(s.profit)}/dag</span>
+                 </div>
+                 ${hasCycleData
+                   ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;">
+                        Werkelijk: <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}/dag</span>
+                        <span style="color:var(--dim);"> (${cycleHistory.length} cycli)</span>
+                      </div>`
+                   : `<div style="font-size:11px;color:var(--dim);margin-top:2px;">Werkelijk: nog geen cycli</div>`
+                 }`
               : extraBatt > 0
                 ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">${fmtD(delta)}/dag</div>
                    <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar (jaargemiddelde)</div>
@@ -2435,6 +2567,98 @@
         `</div>`;
 
       if (ts) ts.textContent = `Bijgewerkt: ${timestamp ? new Date(timestamp).toLocaleString('nl-NL') : '—'}`;
+
+      // ── Werkelijk gemeten rendement ──────────────────────────────
+      const roiEl = document.getElementById('expansion-actual-roi');
+      if (!roiEl) return;
+
+      if (!hasCycleData) {
+        roiEl.innerHTML = `<div style="margin-top:24px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:13px;">
+          <strong style="color:var(--muted);">Werkelijk rendement</strong> — nog geen cycli gemeten.
+          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (SoC = 0%).
+        </div>`;
+        return;
+      }
+
+      const invest = parseFloat(invInput?.value) || 1200;
+      measuredPaybackYears = measuredYearlyProfit > 0.01 ? invest / measuredYearlyProfit : null;
+      const paybackPct  = measuredPaybackYears ? Math.min(100, 100 / measuredPaybackYears) : 0;
+      const barColor    = paybackPct >= 100 ? '#20F29B' : paybackPct >= 50 ? '#FCD34D' : '#60A5FA';
+      const avgPerCycle = measuredTotalProfit / cycleHistory.length;
+      const roiPct      = (measuredTotalProfit / invest * 100).toFixed(1);
+
+      let paybackLabel = 'Onvoldoende data.';
+      if (measuredPaybackYears) {
+        const yr = Math.floor(measuredPaybackYears);
+        const mo = Math.round((measuredPaybackYears - yr) * 12);
+        paybackLabel = `~${yr > 0 ? yr + ' jaar' : ''}${mo > 0 ? ' ' + mo + ' mnd' : ''} (o.b.v. ${measuredDaysDiff} dagen data)`;
+      }
+
+      // Cycle table rows (newest first, max 20)
+      const rows = [...cycleHistory].reverse().slice(0, 20).map(c => {
+        const p = c.profitEur || 0;
+        const color = p >= 0 ? '#20F29B' : '#F87171';
+        return `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:5px 8px;color:var(--muted);">${c.date}</td>
+          <td style="padding:5px 8px;text-align:right;">${(c.kwhDischarged||0).toFixed(2)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(c.avgChargePrice||0).toFixed(3)}</td>
+          <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(c.avgDischargePrice||0).toFixed(3)}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:bold;color:${color};">€${p.toFixed(3)}</td>
+        </tr>`;
+      }).join('');
+
+      roiEl.innerHTML = `
+        <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
+          <h3 style="margin:0 0 4px;">Werkelijk gemeten rendement</h3>
+          <p style="font-size:12px;color:var(--dim);margin:0 0 16px;">
+            Gebaseerd op ${cycleHistory.length} voltooide cycli. Wordt bijgewerkt bij elke volledige ontlaadcyclus.
+            De DP-schatting hierboven is theoretisch; dit zijn de gemeten resultaten.
+          </p>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
+            ${[
+              ['Totaal verdiend', `€${measuredTotalProfit.toFixed(2)}`, '#20F29B'],
+              ['Cycli', cycleHistory.length, 'var(--text)'],
+              ['Gem./cyclus', `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
+              ['Prognose', `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
+              ['ROI tot nu toe', `${roiPct}%`, 'var(--purple-lt)'],
+            ].map(([label, val, color]) =>
+              `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+                <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${label}</div>
+                <div style="font-size:18px;font-weight:bold;color:${color};">${val}</div>
+              </div>`
+            ).join('')}
+          </div>
+
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd batterij (€${invest})</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+                <div style="width:${paybackPct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
+              </div>
+              <span style="font-size:13px;font-weight:bold;color:${barColor};min-width:44px;text-align:right;">${paybackPct.toFixed(1)}%</span>
+            </div>
+            <div style="font-size:12px;color:var(--dim);">${paybackLabel}</div>
+          </div>
+
+          <details>
+            <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">Cyclushistorie (laatste 20)</summary>
+            <div style="overflow-x:auto;">
+              <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                  <tr style="color:var(--muted);border-bottom:1px solid var(--border);">
+                    <th style="text-align:left;padding:5px 8px;">Datum</th>
+                    <th style="text-align:right;padding:5px 8px;">kWh</th>
+                    <th style="text-align:right;padding:5px 8px;">Laadprijs</th>
+                    <th style="text-align:right;padding:5px 8px;">Ontlaadprijs</th>
+                    <th style="text-align:right;padding:5px 8px;">Winst</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </details>
+        </div>`;
     }
 
   </script>

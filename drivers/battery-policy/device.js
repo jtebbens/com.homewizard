@@ -1169,6 +1169,7 @@ if (debug) this.log(
     // Future slots from the optimizer schedule (include current slot via -15min buffer)
     // Use step as grace period so the current slot is never lost in the gap
     // between past-loop cutoff (now - step) and future filter (now - 15min)
+    const currentSoc = state.batterySOC ?? null;
     const futureSlots = schedule
       .filter(s => new Date(s.timestamp).getTime() >= now - step)
       .slice(0, 192)
@@ -1183,6 +1184,45 @@ if (debug) this.log(
           pvW:   Math.round(s.pvW ?? 0)
         };
       });
+
+    // Re-simulate future SoC trajectory from the real current SoC.
+    // The optimizer schedule may have been computed hours ago with a different starting SoC,
+    // leading to a stale projection (e.g. showing 100% while battery is actually at 37%).
+    // Instead of a simple delta-shift (breaks when all projected values are equal),
+    // walk forward from the real SoC and simulate charge/discharge per slot using
+    // the planned mode and PV power already stored in each slot.
+    if (currentSoc != null && futureSlots.length > 0) {
+      const capacityKwh  = state.totalCapacityKwh || this.getSetting('pv_capacity_w') ? null : 2.688;
+      const capKwh       = state.totalCapacityKwh || 2.688;
+      const maxChargeW   = state.maxChargePowerW  || 800;
+      const maxDischargeW = state.maxDischargePowerW || 800;
+      const rte          = this.efficiencyEstimator?.getEfficiency() ?? 0.75;
+      const slotH        = step / 3_600_000; // 1 for hourly, 0.25 for 15-min
+      const maxSoc       = this.getSetting('max_soc') ?? 95;
+      const minSoc       = this.getSetting('min_soc') ?? 0;
+
+      let simSoc = currentSoc;
+      for (const slot of futureSlots) {
+        slot.soc = Math.round(simSoc);
+        const pvW = slot.pvW || 0;
+        if (slot.mode === 'to_full') {
+          // Charge at max rate from grid
+          const deltaKwh = (maxChargeW / 1000) * slotH * rte;
+          simSoc += (deltaKwh / capKwh) * 100;
+        } else if (slot.mode === 'zero_charge_only') {
+          // Charge from PV only — effective rate is min(pvW, maxChargeW)
+          const chargeW = Math.min(pvW, maxChargeW);
+          const deltaKwh = (chargeW / 1000) * slotH * rte;
+          simSoc += (deltaKwh / capKwh) * 100;
+        } else if (slot.mode === 'zero_discharge_only') {
+          // Discharge at max rate
+          const deltaKwh = (maxDischargeW / 1000) * slotH;
+          simSoc -= (deltaKwh / capKwh) * 100;
+        }
+        // standby / zero: no SoC change
+        simSoc = Math.max(minSoc, Math.min(maxSoc, simSoc));
+      }
+    }
 
     // Past slots from mode history (has real soc + mode) — keyed by rounded 15-min ts
     const modeHistory = this.homey.settings.get('policy_mode_history') || [];
@@ -1230,7 +1270,41 @@ if (debug) this.log(
       });
     }
 
-    const slots = [...pastSlots, ...futureSlots]
+    // If the optimizer ran hourly but the display step is 15-min, expand future slots
+    // to 15-min resolution by interpolating between hourly entries. Without this the
+    // future part of the chart is 4× coarser than the past, making a 4-hour SoC rise
+    // look like it happens in 1 slot (visual distortion).
+    const SLOT_15 = 15 * 60 * 1000;
+    let expandedFuture = futureSlots;
+    if (!use1h && futureSlots.length >= 2) {
+      const slotGap = futureSlots[1].ts - futureSlots[0].ts;
+      if (slotGap > SLOT_15) {
+        expandedFuture = [];
+        for (let i = 0; i < futureSlots.length; i++) {
+          const cur  = futureSlots[i];
+          const next = futureSlots[i + 1];
+          expandedFuture.push(cur);
+          if (next) {
+            const steps = Math.round((next.ts - cur.ts) / SLOT_15);
+            for (let q = 1; q < steps; q++) {
+              const ts = cur.ts + q * SLOT_15;
+              expandedFuture.push({
+                ts,
+                hour:  amhour(ts),
+                price: cur.price,
+                mode:  cur.mode,
+                soc:   (cur.soc != null && next.soc != null)
+                  ? Math.round(cur.soc + (next.soc - cur.soc) * q / steps)
+                  : cur.soc,
+                pvW:   cur.pvW,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const slots = [...pastSlots, ...expandedFuture]
       .sort((a, b) => a.ts - b.ts)
       .slice(0, 192); // max 48h worth of 15-min slots
 
@@ -1384,6 +1458,17 @@ if (debug) this.log(
       }
     }
 
+    // PV conservatism: if accuracy score is low, discount pvForecast to avoid over-optimistic planning.
+    // Discount kicks in below 0.80 accuracy, linear from 1.0 (at 0.80) to 0.80 (at 0).
+    if (pvForecast && this.learningEngine) {
+      const pvAcc = this.learningEngine.data?.pv_accuracy_score ?? 1.0;
+      if (pvAcc < 0.80) {
+        const factor = Math.max(0.80, 0.80 + 0.20 * (pvAcc / 0.80));
+        pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * factor) }));
+        this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism factor=${factor.toFixed(2)} applied`);
+      }
+    }
+
     // Learned round-trip efficiency from efficiencyEstimator
     let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
     if (learnedRte != null && (learnedRte < 0.50 || learnedRte > 0.97)) learnedRte = null;
@@ -1415,9 +1500,48 @@ if (debug) this.log(
     const minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
       : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
-    // Internal margin: planning assumes 20% higher consumption than learned average
-    // while the learning engine is still building up per-weekday evening patterns.
-    const consumptionMargin = 1.20;
+    // Dynamic consumption margin: scales with average slot variance.
+    // CV=0 (stable) → 1.10, CV=0.4 → 1.20, CV≥1.0 → 1.35.
+    // Falls back to 1.20 when learning engine has no variance data yet.
+    let consumptionMargin = 1.20;
+    if (this.learningEngine && consumptionWPerSlot) {
+      let cvSum = 0, cvCount = 0;
+      for (let h = 0; h < prices.length; h++) {
+        const cv = this.learningEngine.getConsumptionCV(new Date(prices[h].timestamp));
+        if (cv !== null) { cvSum += cv; cvCount++; }
+      }
+      if (cvCount > 0) {
+        const avgCV = cvSum / cvCount;
+        consumptionMargin = Math.min(1.35, 1.10 + avgCV * 0.25);
+        this.log(`📐 consumptionMargin=${consumptionMargin.toFixed(2)} (avgCV=${avgCV.toFixed(2)}, ${cvCount} slots)`);
+      }
+    }
+    // ── PV surplus forecast ────────────────────────────────────────────────────
+    // How much of the remaining battery capacity will be filled by net PV surplus today?
+    // Uses the same per-slot interpolation as the DP so both agree on expected PV.
+    if (pvForecast && consumptionWPerSlot) {
+      const slotH = slotMs / 3_600_000;
+      let netPvKwh = 0;
+      for (let h = 0; h < prices.length; h++) {
+        const pvW  = this.optimizationEngine._getPvForSlot(pvForecast, prices[h].timestamp);
+        const consW = consumptionWPerSlot[h] ?? 0;
+        netPvKwh += Math.max(0, pvW - consW) * slotH / 1000;
+      }
+      const remainingKwh  = Math.max(0, (1 - soc / 100) * capacityKwh);
+      const rteForSurplus = learnedRte ?? 0.75;
+      const fillFraction  = remainingKwh > 0.1
+        ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
+        : 1;
+      this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
+      this.homey.settings.set('pv_surplus_forecast', {
+        netPvKwh:      Math.round(netPvKwh * 100) / 100,
+        remainingKwh:  Math.round(remainingKwh * 100) / 100,
+        fillFraction:  Math.round(fillFraction * 100) / 100,
+        soc,
+        updatedAt:     new Date().toISOString(),
+      });
+    }
+
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin);
 
     // Persist planning schedule for the settings UI (single source of truth).
@@ -1869,6 +1993,19 @@ if (debug) this.log(
     // Push debug data to app settings for planning view
     this.homey.settings.set('policy_debug_top3low', debugTopLowText);
     this.homey.settings.set('policy_debug_top3high', debugTopHighText);
+
+    // Push structured learning stats for the UI status block
+    const rte = this.efficiencyEstimator.getEfficiency();
+    const rteInsightsObj = this.efficiencyEstimator.getEfficiencyInsights();
+    this.homey.settings.set('learning_status', {
+      days:       learningStats.days_tracking,
+      samples:    learningStats.total_samples,
+      coverage:   learningStats.pattern_coverage,
+      pvAccuracy: learningStats.pv_accuracy,
+      rte:        rte != null ? +(rte * 100).toFixed(1) : null,
+      cycles:     rteInsightsObj?.cycleCount ?? 0,
+      updatedAt:  new Date().toISOString(),
+    });
     
     // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
     // — no need to duplicate here
@@ -2449,6 +2586,11 @@ if (debug) this.log(
       'battery_expansion_analysis',
       'expansion_investment',
       'policy_consumption_profile',
+      'battery_cycle_history',
+      'learning_status',
+      'pv_surplus_forecast',
+      'policy_pv_forecast_hourly',
+      'policy_pv_actual_today',
     ];
     for (const key of settingsToClean) {
       try { this.homey.settings.unset(key); } catch (_) {}
@@ -2517,7 +2659,29 @@ if (debug) this.log(
         this._chartHashTomorrow = hashTomorrow;
       }
 
-      this.log('📊 Planning chart camera images updated (today + tomorrow)');
+      // PV forecast vs actual image
+      const pvActual   = this.homey.settings.get('policy_pv_actual_today');
+      const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+      const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+
+      this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
+
+      if (!this.planningImagePv) {
+        this.planningImagePv = await this.homey.images.createImage();
+        this.planningImagePv.setStream(async (stream) => {
+          if (!this._pvChartData) { stream.end(); return; }
+          await this._streamPvChart(stream, this._pvChartData);
+        });
+        await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
+        this._pvChartHash = null;
+      }
+      const pvHash = JSON.stringify(pvActual?.hourly) + JSON.stringify(pvForecast);
+      if (pvHash !== this._pvChartHash) {
+        await this.planningImagePv.update();
+        this._pvChartHash = pvHash;
+      }
+
+      this.log('📊 Planning chart camera images updated (today + tomorrow + PV)');
     } catch (err) {
       this.error('Failed to update planning chart:', err);
     }
@@ -2581,6 +2745,203 @@ if (debug) this.log(
       req.write(body);
       req.end();
     });
+  }
+
+  async _streamPvChart(stream, pvData) {
+    // eslint-disable-next-line global-require
+    const https = require('https');
+    const chartCfg = this._buildPvChartConfig(pvData);
+    if (!chartCfg) { stream.end(); return; }
+    const body = JSON.stringify({
+      version: '4',
+      backgroundColor: '#1c1c1e',
+      width: 900,
+      height: 900,
+      chart: this._configToJs(chartCfg),
+    });
+
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'quickchart.io',
+        path: '/chart',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }, (res) => {
+        if (res.statusCode !== 200) {
+          let errBody = '';
+          res.on('data', chunk => { errBody += chunk; });
+          res.on('end', () => {
+            const err = new Error(`quickchart.io PV ${res.statusCode}: ${errBody.slice(0, 200)}`);
+            stream.destroy(err);
+            reject(err);
+          });
+          return;
+        }
+        res.pipe(stream);
+        res.on('end', resolve);
+        res.on('error', (e) => { stream.destroy(e); reject(e); });
+      });
+      req.on('error', (e) => { stream.destroy(e); reject(e); });
+      req.write(body);
+      req.end();
+    });
+  }
+
+  _buildPvChartConfig(pvData) {
+    const { pvActual, pvForecast, pvCapacityW } = pvData || {};
+    const pvHourly   = Array.isArray(pvActual?.hourly) ? pvActual.hourly : [];
+    const forecastToday    = pvForecast?.[0] || {};
+    const forecastTomorrow = pvForecast?.[1] || {};
+
+    const fLg = 28;
+    const fMd = 24;
+    const fSm = 22;
+
+    // Current Amsterdam hour
+    const nowAmsHour = parseInt(
+      new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10
+    );
+
+    // Determine if we have tomorrow data
+    const hasTomorrow = Object.keys(forecastTomorrow).length > 0;
+
+    // Build labels: 0-23 for today, optionally 0-23 for tomorrow
+    const hours = [];
+    for (let h = 0; h < 24; h++) hours.push(h);
+    if (hasTomorrow) for (let h = 0; h < 24; h++) hours.push(24 + h);
+
+    const labels = hours.map((h, i) => {
+      const displayH = h % 24;
+      if (displayH === 0 && i > 0) return 'Morgen';
+      if (displayH % 2 === 0) return String(displayH);
+      return '';
+    });
+
+    // Actual PV data (only past hours of today)
+    const actualData = hours.map(h => {
+      if (h >= 24) return null; // no actual for tomorrow
+      if (h > nowAmsHour) return null; // future hours of today
+      return pvHourly[h] ?? null;
+    });
+
+    // Forecast PV data (full today + tomorrow)
+    const forecastData = hours.map(h => {
+      if (h < 24) return forecastToday[h] ?? null;
+      return forecastTomorrow[h - 24] ?? null;
+    });
+
+    // Compute daily totals (kWh)
+    const actualTodayKwh = pvHourly.reduce((sum, w) => sum + (w || 0), 0) / 1000;
+    const forecastTodayKwh = Object.values(forecastToday).reduce((sum, w) => sum + (w || 0), 0) / 1000;
+    const forecastTomorrowKwh = Object.values(forecastTomorrow).reduce((sum, w) => sum + (w || 0), 0) / 1000;
+
+    const pvMax = Math.max(
+      ...pvHourly.filter(v => v != null).map(v => v),
+      ...Object.values(forecastToday).map(v => v || 0),
+      ...Object.values(forecastTomorrow).map(v => v || 0),
+      1
+    );
+    const yMax = pvCapacityW > 0 ? Math.max(pvCapacityW, pvMax * 1.1) : pvMax * 1.2;
+
+    const todayDate = new Date().toLocaleDateString('nl-NL', {
+      timeZone: 'Europe/Amsterdam', weekday: 'short', day: 'numeric', month: 'long'
+    });
+
+    const updTime = new Date().toLocaleTimeString('nl-NL', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam'
+    });
+
+    const titleParts = [`☀ PV Opwek ${todayDate}`];
+    titleParts.push(`Werkelijk: ${actualTodayKwh.toFixed(1)} kWh`);
+    titleParts.push(`Verwacht: ${forecastTodayKwh.toFixed(1)} kWh`);
+    if (hasTomorrow) titleParts.push(`Morgen: ${forecastTomorrowKwh.toFixed(1)} kWh`);
+
+    return {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'PV Werkelijk',
+            data: actualData,
+            borderColor: '#FCD34D',
+            backgroundColor: 'rgba(252,211,77,0.25)',
+            fill: true,
+            borderWidth: 4,
+            pointRadius: 0,
+            tension: 0.4,
+            spanGaps: false,
+            yAxisID: 'yPv',
+          },
+          {
+            label: 'PV Verwachting',
+            data: forecastData,
+            borderColor: '#F97316',
+            backgroundColor: 'rgba(249,115,22,0.10)',
+            fill: true,
+            borderWidth: 3,
+            borderDash: [6, 3],
+            pointRadius: 0,
+            tension: 0.4,
+            spanGaps: false,
+            yAxisID: 'yPv',
+          },
+        ],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        layout: {
+          padding: { top: 12, bottom: 16, left: 4, right: 4 },
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: '#9a9a9a',
+              font: { size: fLg },
+              padding: 18,
+              usePointStyle: true,
+            },
+          },
+          title: {
+            display: true,
+            text: titleParts[0] + '  |  ' + updTime,
+            color: '#FCD34D',
+            font: { size: fLg, weight: 'bold' },
+            padding: { bottom: 4 },
+          },
+          subtitle: {
+            display: true,
+            text: titleParts.slice(1).join('  |  '),
+            color: '#cccccc',
+            font: { size: fLg },
+            padding: { bottom: 8 },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#9a9a9a', font: { size: fMd }, maxRotation: 0, autoSkip: false },
+            grid: { color: '#2a2a2a' },
+          },
+          yPv: {
+            position: 'left',
+            min: 0,
+            max: yMax,
+            ticks: {
+              color: '#FCD34D',
+              font: { size: fLg, weight: 'bold' },
+              callback: function(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 'kW' : v + 'W'; },
+            },
+            grid: { color: '#2a2a2a' },
+            title: { display: true, text: 'Vermogen', color: '#FCD34D', font: { size: fMd } },
+          },
+        },
+      },
+    };
   }
 
   _buildQuickChartConfig(compact) {
@@ -2823,9 +3184,29 @@ if (debug) this.log(
     const intervalSeconds = 15; // polling interval is 15s (every 20th call = 5 min log)
     const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
 
-    // If battery is physically empty, wipe stale cost tracking in persistent store
+    // If battery is physically empty, record completed cycle then wipe stale cost tracking
     const minSoc = this.getSetting('min_soc') ?? 0;
     if (soc !== null && soc <= Math.max(minSoc, 1)) {
+      // Save cycle profit if we discharged a meaningful amount
+      if ((this._cycleKwhDischarged || 0) > 0.05) {
+        const profit = (this._cycleRevenue || 0) - (this._cycleCost || 0);
+        const avgDischargePrice = this._cycleRevenue / this._cycleKwhDischarged;
+        let cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
+        cycleHistory.push({
+          date: new Date().toISOString().slice(0, 10),
+          kwhDischarged: +this._cycleKwhDischarged.toFixed(3),
+          avgChargePrice: +(this._costAvg || 0).toFixed(4),
+          avgDischargePrice: +avgDischargePrice.toFixed(4),
+          profitEur: +profit.toFixed(4),
+        });
+        if (cycleHistory.length > 60) cycleHistory = cycleHistory.slice(-60);
+        this.homey.settings.set('battery_cycle_history', cycleHistory);
+        this.log(`💰 Cycle recorded: ${this._cycleKwhDischarged.toFixed(2)}kWh discharged @ avg €${avgDischargePrice.toFixed(3)}, cost €${this._cycleCost.toFixed(3)}, profit €${profit.toFixed(3)}`);
+      }
+      this._cycleRevenue = 0;
+      this._cycleCost = 0;
+      this._cycleKwhDischarged = 0;
+
       if ((this._costEnergy || 0) > 0 || (this._costAvg || 0) > 0) {
         this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 1)}% → clearing stale energy`);
         this._costEnergy = 0;
@@ -2876,11 +3257,17 @@ if (debug) this.log(
       if (debug) this.log(`💰 CostModel charge: +${deltaKwh.toFixed(5)}kWh @ €${costNew?.toFixed(4)}, avgCost now €${avgNew.toFixed(4)}, total ${Enew.toFixed(3)}kWh`);
 
     } else if (batteryPower < -10) {
-      // Discharging
+      // Discharging — accumulate revenue for cycle profit tracking
+      const dischargeKwh = Math.abs(deltaKwh);
+      const dischargePrice = this.tariffManager.getCurrentTariff(gridPower).currentPrice;
+      this._cycleRevenue       = (this._cycleRevenue       || 0) + dischargeKwh * dischargePrice;
+      this._cycleCost          = (this._cycleCost          || 0) + dischargeKwh * (this._costAvg || 0);
+      this._cycleKwhDischarged = (this._cycleKwhDischarged || 0) + dischargeKwh;
+
       this._costEnergy = Math.max(0, this._costEnergy + deltaKwh);
 
       if (this._costModelCallCount % 12 === 0) {
-        if (debug) this.log(`💰 CostModel discharge: ${deltaKwh.toFixed(5)}kWh, total ${this._costEnergy.toFixed(3)}kWh`);
+        if (debug) this.log(`💰 CostModel discharge: ${deltaKwh.toFixed(5)}kWh @ €${dischargePrice.toFixed(4)}, total ${this._costEnergy.toFixed(3)}kWh`);
       }
     }
 
