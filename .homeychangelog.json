@@ -1249,5 +1249,11 @@
   },
   "3.15.6": {
     "en": "PV headroom optimization: battery discharges overnight when strong PV expected tomorrow, maximizing free solar storage"
+  },
+  "3.15.7": {
+    "en": "Per-slot PV headroom floor: overnight discharge at low wind-night prices"
+  },
+  "3.15.8": {
+    "en": "Oppertunity charge and discharge adjustments. Removed floor value"
   }
 }
