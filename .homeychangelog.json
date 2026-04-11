@@ -1255,5 +1255,8 @@
   },
   "3.15.8": {
     "en": "Oppertunity charge and discharge adjustments. Removed floor value"
+  },
+  "3.15.9": {
+    "en": "Bugfix planning sticked to standby mode while PV is expected later and battery should be empty before that time"
   }
 }
