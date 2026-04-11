@@ -1500,20 +1500,27 @@ if (debug) this.log(
     const minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
       : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
-    // Dynamic consumption margin: scales with average slot variance.
-    // CV=0 (stable) → 1.10, CV=0.4 → 1.20, CV≥1.0 → 1.35.
-    // Falls back to 1.20 when learning engine has no variance data yet.
+    // Per-slot consumption margin: scales with each slot's coefficient of variation.
+    // Stable slots (CV~0, e.g. night) → tight margin 1.10.
+    // Volatile slots (CV~1, e.g. cooking peak) → wide margin 1.35.
+    // Falls back to uniform 1.20 when learning engine has no variance data yet.
     let consumptionMargin = 1.20;
     if (this.learningEngine && consumptionWPerSlot) {
+      const perSlotMargins = [];
       let cvSum = 0, cvCount = 0;
       for (let h = 0; h < prices.length; h++) {
         const cv = this.learningEngine.getConsumptionCV(new Date(prices[h].timestamp));
-        if (cv !== null) { cvSum += cv; cvCount++; }
+        if (cv !== null) {
+          perSlotMargins.push(Math.min(1.35, 1.10 + cv * 0.25));
+          cvSum += cv; cvCount++;
+        } else {
+          perSlotMargins.push(1.20); // default for slots without enough data
+        }
       }
       if (cvCount > 0) {
         const avgCV = cvSum / cvCount;
-        consumptionMargin = Math.min(1.35, 1.10 + avgCV * 0.25);
-        this.log(`📐 consumptionMargin=${consumptionMargin.toFixed(2)} (avgCV=${avgCV.toFixed(2)}, ${cvCount} slots)`);
+        consumptionMargin = perSlotMargins; // pass per-slot array to optimizer
+        this.log(`📐 consumptionMargin=per-slot (avgCV=${avgCV.toFixed(2)}, ${cvCount}/${prices.length} slots with CV data)`);
       }
     }
     // ── PV surplus forecast ────────────────────────────────────────────────────
@@ -1643,6 +1650,25 @@ if (debug) this.log(
           ? Math.max(0, Math.min(100, Math.round((1 - this._todayGridImportKwh / this._todayConsumptionKwh) * 100)))
           : null;
         if (todayActualSelfSufficiencyPct !== null) todayEntry.actualSelfSufficiencyPct = todayActualSelfSufficiencyPct;
+
+        // ── Actual vs. projected profit tracking ─────────────────────────────
+        // Compare realized cycle profits with the DP's projected optimum.
+        // Stored per day in the history entry; used to identify tracking error
+        // (how well the policy engine follows the DP's optimal schedule).
+        const projectedProfit = this.optimizationEngine._schedule?.projectedProfit ?? 0;
+        todayEntry.projectedProfit = +projectedProfit.toFixed(4);
+
+        // Sum actual cycle profits for today from battery_cycle_history
+        const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
+        const todayCycles = cycleHistory.filter(c => c.date === today);
+        const actualProfit = todayCycles.reduce((sum, c) => sum + (c.profitEur || 0), 0);
+        todayEntry.actualProfit = +actualProfit.toFixed(4);
+
+        // Tracking error: positive = actual beat projection, negative = underperformed
+        if (projectedProfit > 0.001) {
+          todayEntry.trackingError = +((actualProfit - projectedProfit) / projectedProfit * 100).toFixed(1);
+        }
+
         this.homey.settings.set('expansion_profit_history', hist);
 
         // Augment scenarios with avgProfit + seasonally-corrected avgProfit.

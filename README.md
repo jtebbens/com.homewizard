@@ -63,6 +63,12 @@ NEW in v3.13.14: Intelligent battery management system that:
 * **Consumption margin** - Optimizer assumes 20% higher consumption than learned average while evening patterns are still building up
 * **`_recomputeOptimizer` made async** - Required for Solcast API calls inside the optimizer path
 
+### Battery Policy — PV Camera Image & Planning UI
+
+* **PV Opwek camera image** - New third camera image (`planning_pv` / "PV Opwek") on the battery-policy device shows PV actual vs forecast as a webcam-style chart. Visible in the Homey app without needing the settings page — ideal for quick access from phone or tablet. Uses quickchart.io with Chart.js 4, 900×900 resolution, dark theme
+* **SoC forward simulation** - Fixed stale SoC projection on the planning chart. Previously the optimizer's `socProjected` was computed hours ago with a different starting SoC, causing the dashed SoC line to jump unrealistically. Now simulates forward from the real current SoC using mode + pvW per slot, producing a realistic trajectory
+* **PV surplus text repositioned** - "Zonne-energie vandaag" forecast text (e.g. "Batterij wordt volledig vol van zonne-energie") moved from a separate block below the daily profit table to an inline caption between today's PV chart and the planning hour cards
+
 ### Polling & Connectivity
 
 * **Plugin battery polling floor** - Polling interval now enforced to minimum 5 seconds (`Math.max(..., 5)`) in all three code paths (startup, settings change, interval restart); settings UI also enforces `min: 5`
