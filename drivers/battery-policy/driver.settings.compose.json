@@ -82,10 +82,10 @@
           "nl": "Min/max prijzen strikt respecteren" 
         },
         "hint": {
-          "en": "When enabled (default), battery only charges/discharges within configured price limits. When disabled, the system can make opportunistic decisions outside these limits when profitable (e.g., charging at €0.17 when future price is €0.30). Recommended: ENABLED for 2026 (with net metering), DISABLED for 2027+ (without net metering).",
-          "nl": "Indien ingeschakeld (standaard) laadt/ontlaadt de batterij alleen binnen geconfigureerde prijslimieten. Indien uitgeschakeld kan het systeem opportunistische beslissingen nemen buiten deze limieten wanneer winstgevend (bijv. laden op €0,17 wanneer toekomstige prijs €0,30 is). Aanbevolen: INGESCHAKELD voor 2026 (met salderen), UITGESCHAKELD voor 2027+ (zonder salderen)."
+          "en": "When enabled, battery only charges/discharges within configured price limits. When disabled (default), the system uses the economic break-even as the only floor — the optimizer decides timing based on actual prices and RTE. Recommended: DISABLED for most users.",
+          "nl": "Indien ingeschakeld laadt/ontlaadt de batterij alleen binnen geconfigureerde prijslimieten. Indien uitgeschakeld (standaard) gebruikt het systeem de economische break-even als enige ondergrens — de optimizer bepaalt timing op basis van actuele prijzen en RTE. Aanbevolen: UITGESCHAKELD voor de meeste gebruikers."
         },
-        "value": true,
+        "value": false,
         "visible": { "when": "tariff_type", "is": "dynamic" }
       },
 
@@ -105,25 +105,6 @@
         "max": 5.0,
         "step": 0.5,
         "units": "×",
-        "visible": { "when": "respect_minmax", "is": false }
-      },
-
-      {
-        "id": "opportunistic_discharge_floor",
-        "type": "number",
-        "label": {
-          "en": "Opportunistic discharge price floor",
-          "nl": "Opportunistisch ontladen prijsbodem"
-        },
-        "hint": {
-          "en": "Minimum price required for opportunistic discharge when current price is below min_discharge_price. Lower values = discharge at lower prices (more aggressive). Examples: €0.10 (very aggressive), €0.20 (balanced), €0.30 (conservative). Only active when 'Strictly respect min/max prices' is DISABLED.",
-          "nl": "Minimale prijs vereist voor opportunistisch ontladen wanneer huidige prijs onder min_discharge_price ligt. Lagere waarden = ontladen bij lagere prijzen (agressiever). Voorbeelden: €0,10 (zeer agressief), €0,20 (gebalanceerd), €0,30 (conservatief). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
-        },
-        "value": 0.20,
-        "min": 0.10,
-        "max": 0.35,
-        "step": 0.01,
-        "units": "€/kWh",
         "visible": { "when": "respect_minmax", "is": false }
       },
 
@@ -150,7 +131,7 @@
         "id": "max_charge_price",
         "type": "number",
         "label": { "en": "Max Charge Price (€/kWh)", "nl": "Maximale laadprijs (€/kWh)" },
-        "value": 0.15,
+        "value": 0.12,
         "min": 0,
         "max": 1,
         "step": 0.01,

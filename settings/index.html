@@ -1769,7 +1769,6 @@
           `Max laadprijs:  ${fmtE(ds.max_charge_price)}    Min ontlaadprijs: ${fmtE(ds.min_discharge_price)}`,
           `Min SoC:        ${fmt(ds.min_soc ?? 0)}%    Max SoC: ${fmt(ds.max_soc ?? 95)}%`,
           `Efficiëntie:    ${fmt(ds.battery_efficiency ?? 0.75)}    Cycluskosten: ${fmtE(ds.cycle_cost_per_kwh ?? 0.075)}/kWh`,
-          `Opp. ontlaad:   ${fmtE(ds.opportunistic_discharge_floor ?? 0.20)}`,
         ];
 
         if (dbg) {

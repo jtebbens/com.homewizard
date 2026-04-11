@@ -1348,9 +1348,13 @@ if (debug) this.log(
     const now = new Date();
     const use15min = inputs.settings?.price_resolution !== '1h';
     const raw15min = use15min ? inputs.tariff?.allPrices15min : null;
+    // Only keep future prices: DP forward pass starts at currentSoc, so including
+    // past hours causes simulated SoC to diverge from reality by the current slot.
+    const hourBoundary = new Date(now);
+    hourBoundary.setMinutes(0, 0, 0);
     const rawPrices = (raw15min?.length > 0)
       ? raw15min.filter(p => new Date(p.timestamp) >= now)
-      : (inputs.tariff?.allPrices || inputs.tariff?.next24Hours);
+      : (inputs.tariff?.allPrices || inputs.tariff?.next24Hours)?.filter(p => new Date(p.timestamp) >= hourBoundary);
     const prices = rawPrices;
     if (!prices || prices.length === 0) return;
 
@@ -1513,7 +1517,7 @@ if (debug) this.log(
       : inputs.settings?.respect_minmax !== false;
     let minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
-      : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
+      : (inputs.settings?.cycle_cost_per_kwh ?? 0.075) / (inputs.settings?.battery_efficiency || 0.75);
 
     // PV headroom override: when tomorrow's PV will fill the battery regardless of tonight's SoC,
     // lower the discharge floor to the actual break-even so the DP can create headroom overnight.
@@ -1524,15 +1528,19 @@ if (debug) this.log(
       const effectiveRte = learnedRte ?? 0.75;
       const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;
       const actualBreakEven = Math.round(cycleCostKwh / effectiveRte * 1000) / 1000;
-      // Night floor (~€0.115): just above break-even, allows overnight discharge at low wind prices.
-      // Day floor: keep original — do NOT discharge during PV hours (PV does the work).
-      const nightFloor = Math.max(actualBreakEven + 0.015, 0.115);
-      const originalMinDischarge = minDischargePrice;
+      // Night floor: when PV tomorrow comfortably exceeds capacity (≥150%), any overnight
+      // discharge avoids clipping free PV tomorrow → floor = €0.00 (any positive price is profit).
+      // When PV is 90-150% of capacity, use break-even + small margin as floor.
+      // Day floor: always use min_discharge_price (strict setting) regardless of respect_minmax —
+      // the optimizer needs a clear signal "don't discharge during PV hours, PV does it for free."
+      const pvRatio = pvKwhTomorrow / capacityKwh;
+      const nightFloor = pvRatio >= 1.5 ? 0.00 : Math.max(actualBreakEven + 0.015, 0.115);
+      const dayFloor = inputs.settings?.min_discharge_price || 0.22;
       const perSlotFloors = prices.map(p => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
-        return pvW >= 50 ? originalMinDischarge : nightFloor;
+        return pvW >= 50 ? dayFloor : nightFloor;
       });
-      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor} (break-even €${actualBreakEven}), day slots keep €${originalMinDischarge}`);
+      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor} (break-even €${actualBreakEven}), day slots keep €${dayFloor}`);
       minDischargePrice = perSlotFloors;
     }
     // Per-slot consumption margin: scales with each slot's coefficient of variation.
@@ -1586,8 +1594,8 @@ if (debug) this.log(
 
     if (pvKwhTomorrow > 0) {
       const pvRefill = Math.min(1, pvKwhTomorrow / capacityKwh);
-      const terminalFactor = 1 - pvRefill * 0.90;
-      this.log(`☀️ Terminal value discount: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh → factor=${terminalFactor.toFixed(2)} (${((1-terminalFactor)*100).toFixed(0)}% discount)`);
+      const terminalFactor = pvRefill >= 0.8 ? 0 : Math.max(0, 1 - pvRefill / 0.8);
+      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}`);
     }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow);
 
