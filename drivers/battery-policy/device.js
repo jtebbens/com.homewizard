@@ -1304,6 +1304,20 @@ if (debug) this.log(
       }
     }
 
+    // For future slots that have already started (ts < now), use actual pvHourly data
+    // so the chart doesn't drop to 0 when the optimizer reruns with stale/missing PV.
+    if (pvHourly.length > 0) {
+      for (const slot of expandedFuture) {
+        if (slot.ts < now) {
+          const hr = amhour(slot.ts);
+          const minInHour = Math.floor((slot.ts % 3600000) / 60000);
+          const v0 = pvHourly[hr]     ?? 0;
+          const v1 = pvHourly[hr + 1] ?? 0;
+          slot.pvW = Math.round(v0 + (v1 - v0) * (minInHour / 60));
+        }
+      }
+    }
+
     const slots = [...pastSlots, ...expandedFuture]
       .sort((a, b) => a.ts - b.ts)
       .slice(0, 192); // max 48h worth of 15-min slots
@@ -1497,9 +1511,25 @@ if (debug) this.log(
     const respectMinMax = (inputs.settings?.policy_mode === 'balanced-dynamic')
       ? false
       : inputs.settings?.respect_minmax !== false;
-    const minDischargePrice = respectMinMax
+    let minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
       : (inputs.settings?.opportunistic_discharge_floor ?? 0.20);
+
+    // PV headroom override: when tomorrow's PV will fill the battery regardless of tonight's SoC,
+    // lower the discharge floor to the actual break-even so the DP can create headroom overnight.
+    // Break-even = cycleCostPerKwh / effectiveRte (typically ~€0.10).
+    // Only active when PV tomorrow ≥ 90% of battery capacity (near-certain full recharge).
+    const pvKwhTomorrow = inputs.weather?.pvKwhTomorrow ?? 0;
+    if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0) {
+      const effectiveRte = learnedRte ?? 0.75;
+      const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;
+      const actualBreakEven = Math.round(cycleCostKwh / effectiveRte * 1000) / 1000;
+      const pvHeadroomFloor = Math.max(actualBreakEven + 0.07, 0.18); // ~€0.18 floor: above break-even, below typical overnight prices
+      if (pvHeadroomFloor < minDischargePrice) {
+        this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → minDischargePrice ${minDischargePrice} → ${pvHeadroomFloor} (break-even €${actualBreakEven})`);
+        minDischargePrice = pvHeadroomFloor;
+      }
+    }
     // Per-slot consumption margin: scales with each slot's coefficient of variation.
     // Stable slots (CV~0, e.g. night) → tight margin 1.10.
     // Volatile slots (CV~1, e.g. cooking peak) → wide margin 1.35.
@@ -1549,13 +1579,18 @@ if (debug) this.log(
       });
     }
 
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin);
+    if (pvKwhTomorrow > 0) {
+      const pvRefill = Math.min(1, pvKwhTomorrow / capacityKwh);
+      const terminalFactor = 1 - pvRefill * 0.75;
+      this.log(`☀️ Terminal value discount: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh → factor=${terminalFactor.toFixed(2)} (${((1-terminalFactor)*100).toFixed(0)}% discount)`);
+    }
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow);
 
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {
-      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null);
+      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null, minDischargePrice);
       // Enrich with consumption sample count for confidence display in the UI
       if (this.learningEngine) {
         for (const slot of planningSchedule) {
@@ -1563,6 +1598,7 @@ if (debug) this.log(
         }
       }
       this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
+
 
       // ── SoC plan snapshot: first planned SoC per slot, never overwritten ──
       // Allows the frontend to show "planned XX%" alongside actual SoC for past slots.
@@ -1603,7 +1639,7 @@ if (debug) this.log(
 
           const result = this.optimizationEngine.computeExpectedProfit(
             prices, soc, kwh, powerW, powerW,
-            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin
+            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow
           );
           const profit = +result.profit.toFixed(4);
           const selfSufficiencyPct = result.selfSufficiencyPct;
@@ -1769,7 +1805,7 @@ if (debug) this.log(
           const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
           if (hDate !== nowAmsDate) continue;
           const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-          if (hHour >= nowAmsHour) continue;            // only truly past hours
+          if (hHour > nowAmsHour) continue;             // include current hour in forecast line
           if (pvForecastByDay[0][hHour] != null) continue; // don't overwrite future slots
           const rawPvW = Math.round(h.radiationWm2 * (yfs[d.getUTCHours() * 4] ?? 0));
           pvForecastByDay[0][hHour] = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
@@ -3023,6 +3059,15 @@ if (debug) this.log(
         socs[i] = socs[right];
       }
     }
+    // Split SoC into actual (solid, past) and forecast (dashed, future)
+    // Include last past slot in socForecast so the two lines connect visually
+    const socActual   = socs.map((v, i) => shown[i].ts < now ? v : null);
+    const socForecast = socs.map((v, i) => {
+      if (shown[i].ts >= now) return v;
+      if (i + 1 < shown.length && shown[i + 1].ts >= now) return v;
+      return null;
+    });
+
     // Split PV into actual (past) and forecast (future) — null outside own range
     const pvActual   = shown.map(s => s.ts < now ? Math.round((s.pvW || 0) / 10) * 10 : null);
     // Include the last past slot in pvForecast so the dashed line connects to the solid line
@@ -3088,7 +3133,20 @@ if (debug) this.log(
           {
             type: 'line',
             label: 'SoC (%)',
-            data: socs,
+            data: socActual,
+            borderColor: 'rgba(255,255,255,0.85)',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointStyle: 'line',
+            yAxisID: 'ySoc',
+            order: 1,
+            spanGaps: true,
+          },
+          {
+            type: 'line',
+            label: '_soc_forecast',
+            data: socForecast,
             borderColor: 'rgba(255,255,255,0.85)',
             backgroundColor: 'transparent',
             borderWidth: 2,
