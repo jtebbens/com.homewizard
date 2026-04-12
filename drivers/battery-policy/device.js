@@ -1397,16 +1397,24 @@ if (debug) this.log(
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
-      // Expose tomorrow's PV kWh to the policy engine so it can make better
-      // preserve/discharge decisions without relying solely on Open-Meteo sunshine_duration.
+      // Expose tomorrow's net PV kWh (after house consumption) to the policy engine.
+      // Net = sum of max(0, pvW - consW) per hour — only surplus goes into the battery.
+      // Using gross PV was too optimistic: on a 6 kWh PV day with 3.5 kWh daytime
+      // consumption, only ~2.5 kWh actually reaches the battery, not 6 kWh.
       if (pvForecast && inputs.weather) {
         const tomorrowDateStr = new Date(now.getTime() + 86_400_000)
           .toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const pvWhTomorrow = pvForecast
-          .filter(({ timestamp }) =>
-            new Date(timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === tomorrowDateStr)
-          .reduce((sum, { pvPowerW }) => sum + pvPowerW, 0); // W × 1h each = Wh
-        inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrow / 100) / 10; // 1 decimal
+        let pvWhTomorrowNet = 0;
+        for (const { timestamp, pvPowerW } of pvForecast) {
+          if (new Date(timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) !== tomorrowDateStr) continue;
+          const consW = this.learningEngine
+            ? (this.learningEngine.getPredictedConsumption(new Date(timestamp)) ?? 0)
+            : 0;
+          // Surplus after house consumption, capped by battery group max charge rate.
+          // Excess PV above the charge rate goes to the grid, not the battery.
+          pvWhTomorrowNet += Math.min(maxChargePowerW, Math.max(0, pvPowerW - consW)); // W × 1h = Wh
+        }
+        inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrowNet / 100) / 10; // 1 decimal
       }
     }
 
@@ -1531,16 +1539,23 @@ if (debug) this.log(
       // Night floor: when PV tomorrow comfortably exceeds capacity (≥150%), any overnight
       // discharge avoids clipping free PV tomorrow → floor = €0.00 (any positive price is profit).
       // When PV is 90-150% of capacity, use break-even + small margin as floor.
-      // Day floor: always use min_discharge_price (strict setting) regardless of respect_minmax —
-      // the optimizer needs a clear signal "don't discharge during PV hours, PV does it for free."
+      // Day floor (pvW >= pvStrongW, zero_charge_only mode): PV opportunity cost applies —
+      // discharging means PV recharges at the same price → round-trip loss → use min_discharge_price.
+      // Weak PV floor (50W ≤ pvW < pvStrongW, standby mode): battery is NOT in zero_charge_only,
+      // no real opportunity cost — use break-even + small margin so the DP can still discharge
+      // at profitable transition-hour prices (e.g. 17:30 at €0.21 with 300W PV).
       const pvRatio = pvKwhTomorrow / capacityKwh;
-      const nightFloor = pvRatio >= 1.5 ? 0.00 : Math.max(actualBreakEven + 0.015, 0.115);
-      const dayFloor = inputs.settings?.min_discharge_price || 0.22;
+      const nightFloor   = pvRatio >= 1.5 ? 0.00 : Math.max(actualBreakEven + 0.015, 0.115);
+      const dayFloor     = inputs.settings?.min_discharge_price || 0.22;
+      const weakPvFloor  = Math.max(actualBreakEven + 0.02, 0.115);
+      const pvStrongW    = (inputs.battery?.maxChargePowerW || 800) * 0.5; // mirrors pvStrongCoverage=400/800
       const perSlotFloors = prices.map(p => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
-        return pvW >= 50 ? dayFloor : nightFloor;
+        if (pvW >= pvStrongW) return dayFloor;
+        if (pvW >= 50)        return weakPvFloor;
+        return nightFloor;
       });
-      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor} (break-even €${actualBreakEven}), day slots keep €${dayFloor}`);
+      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor €${weakPvFloor}, day floor €${dayFloor} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = perSlotFloors;
     }
     // Per-slot consumption margin: scales with each slot's coefficient of variation.
@@ -3281,9 +3296,11 @@ if (debug) this.log(
     const intervalSeconds = 15; // polling interval is 15s (every 20th call = 5 min log)
     const deltaKwh = (batteryPower / 1000) * (intervalSeconds / 3600);
 
-    // If battery is physically empty, record completed cycle then wipe stale cost tracking
+    // If battery is physically empty, record completed cycle then wipe stale cost tracking.
+    // Use max(minSoc, 3) so the cycle is recorded when the firmware stops discharging
+    // (typically 1-3% reported SoC), not only at exactly 0-1%.
     const minSoc = this.getSetting('min_soc') ?? 0;
-    if (soc !== null && soc <= Math.max(minSoc, 1)) {
+    if (soc !== null && soc <= Math.max(minSoc, 3)) {
       // Save cycle profit if we discharged a meaningful amount
       if ((this._cycleKwhDischarged || 0) > 0.05) {
         const profit = (this._cycleRevenue || 0) - (this._cycleCost || 0);
@@ -3305,7 +3322,7 @@ if (debug) this.log(
       this._cycleKwhDischarged = 0;
 
       if ((this._costEnergy || 0) > 0 || (this._costAvg || 0) > 0) {
-        this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 1)}% → clearing stale energy`);
+        this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 3)}% → clearing stale energy`);
         this._costEnergy = 0;
         this._costAvg = 0;
         await this.setStoreValue('battery_energy_kwh', 0);
@@ -3333,12 +3350,10 @@ if (debug) this.log(
     if (batteryPower > 10) {
       // Charging
       if (pvState) {
-        const pvMode = await this.getStoreValue('pv_cost_mode') || 'hybrid';
-        const feedIn = await this.getStoreValue('feed_in_tariff') || 0.10;
+        const pvMode = this.getSetting('pv_cost_mode') || 'free';
+        const feedIn = this.getSetting('feed_in_tariff') ?? 0.08;
 
-        if (pvMode === 'free') costNew = 0;
-        else if (pvMode === 'feedin') costNew = feedIn;
-        else costNew = feedIn < 0.08 ? 0 : feedIn;
+        costNew = (pvMode === 'feedin') ? feedIn : 0;
       } else {
         // Grid charging
         const tariff = this.tariffManager.getCurrentTariff(gridPower);
