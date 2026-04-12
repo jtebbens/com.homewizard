@@ -1258,5 +1258,8 @@
   },
   "3.15.9": {
     "en": "Bugfix planning sticked to standby mode while PV is expected later and battery should be empty before that time"
+  },
+  "3.15.10": {
+    "en": "Optimizer and planning now use net PV surplus (after house load) for all SoC and discharge floor decisions."
   }
 }
