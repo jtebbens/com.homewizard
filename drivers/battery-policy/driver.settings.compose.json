@@ -275,6 +275,36 @@
         "step": 0.005,
         "units": "€/kWh",
         "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
+        "id": "pv_cost_mode",
+        "type": "dropdown",
+        "label": { "en": "PV Charging Cost", "nl": "PV laadkosten" },
+        "hint": {
+          "en": "What does it cost to store solar energy? 'Free' (€0): recommended for dynamic tariffs with net metering active (NL until 2027) — storing and exporting are equivalent. 'Export value': use when your fixed contract charges an export penalty, or post-2027 without net metering — enter the net value per kWh you receive for exporting (export compensation minus any export penalty).",
+          "nl": "Wat kost het om zonne-energie op te slaan? 'Gratis' (€0): aanbevolen bij dynamisch tarief met saldering actief (NL tot 2027) — opslaan en terugleveren zijn equivalent. 'Terugleverwaarde': gebruik bij vast contract met terugleverboete, of post-2027 zonder saldering — vul de netto terugleverwaarde in per kWh (terugleververgoeding minus eventuele boete)."
+        },
+        "values": [
+          { "id": "free",   "label": { "en": "Free (€0) — dynamic tariff + net metering", "nl": "Gratis (€0) — dynamisch tarief + saldering" } },
+          { "id": "feedin", "label": { "en": "Export value (€/kWh) — fixed contract or post-2027", "nl": "Terugleverwaarde (€/kWh) — vast contract of post-2027" } }
+        ],
+        "value": "free",
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
+        "id": "feed_in_tariff",
+        "type": "number",
+        "label": { "en": "Net Export Value (€/kWh)", "nl": "Netto terugleverwaarde (€/kWh)" },
+        "hint": {
+          "en": "Net value per kWh you receive for exporting: export compensation minus export penalty. Example: €0.12 compensation − €0.14 penalty = −€0.02 → enter 0. Post-2027 without net metering: typically €0.06–0.10 (commodity price only, no energy tax).",
+          "nl": "Netto bedrag per kWh dat u ontvangt bij teruglevering: terugleververgoeding minus terugleverboete. Voorbeeld: €0,12 vergoeding − €0,14 boete = −€0,02 → vul 0 in. Post-2027 zonder saldering: doorgaans €0,06–0,10 (alleen commodity-prijs, geen energiebelasting)."
+        },
+        "value": 0.08,
+        "min": 0.00,
+        "max": 0.30,
+        "step": 0.01,
+        "units": "€/kWh",
+        "visible": { "when": "pv_cost_mode", "is": "feedin" }
       }
     ]
   },

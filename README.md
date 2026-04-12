@@ -51,7 +51,18 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.5)
+## 📝 Latest Updates (v3.15.10)
+
+### Battery Policy — Optimizer & PV Modelling
+
+* **pvCoverage uses net PV surplus** — PV coverage fraction in the DP now subtracts house consumption before dividing by max charge power: `max(0, pvW − consW) / maxChargeW`. Previously raw pvW was used, causing the DP to overstate free SoC gain during zero_charge_only slots, underestimate effective charge cost, and overcount cumulative pvKwhFromT. All downstream calculations (pvStrongCoverage threshold, dp.fill guard, terminal value discount) now reflect what the battery can actually absorb
+* **pvKwhTomorrow is net-absorbable** — Tomorrow's PV estimate passed to the optimizer changed from raw forecast watts to net surplus after learned house consumption, further capped by battery group max charge rate. Fixes over-optimistic terminal value discounting and headroom floor decisions on days where house load consumes most of the PV output
+* **dp.fill guard restricted to non-PV slots** — The dp-flattening step (when PV tomorrow can fully refill the battery) is now skipped during slots with strong PV coverage. Previously flattening during PV hours caused the DP to lose sight of the evening peak value; the DP then relied on the discharge floor as a crutch and could miss profitable peaks
+
+### Battery Policy — Planning
+
+* **Three-tier per-slot discharge floor** — Each price slot now gets its own floor based on expected PV output: strong PV (surplus ≥ 50% of max charge power) → `min_discharge_price` (default €0.22, prevents round-trip loss during solar peak); weak PV (50–400W surplus) → break-even + €0.02; night → €0 or break-even depending on PV day. Previously a single flat floor was applied to all slots
+* **Linear interpolation for policy-engine PV lookup** — `_getPvWForTimestamp` now uses linear interpolation between forecast points (consistent with the optimizer's `_getPvForSlot`). The old nearest-neighbour (35-min threshold) produced different pvStrong decisions for :15/:30/:45-offset slots, causing planning and optimizer to disagree on zero_charge_only transitions
 
 ### Battery Policy — PV Forecast & Planning
 
@@ -75,7 +86,9 @@ NEW in v3.13.14: Intelligent battery management system that:
 * **SDM230 backoff on failure** - After 3 consecutive poll failures the SDM230 slows to a 60 s backoff interval. Automatically restores normal interval on next successful poll
 * **Cloud WebSocket race condition fix** - `mainWs` was assigned before the socket was ready; a concurrent reconnect could replace it mid-handshake, leaving stale event listeners firing on the wrong socket. Fixed by using a local `ws` variable for all event listeners, with a guard (`if (this.mainWs !== ws) return`) that silently drops events from superseded sockets. Also removed the redundant double-open guard that was papering over the root cause
 
-### Battery Policy — Previous (v3.15.3)
+---
+
+## Previous Updates (v3.15.3)
 
 ### Battery Policy — Multi-Battery Discharge Fix
 

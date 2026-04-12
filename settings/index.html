@@ -2574,7 +2574,7 @@
       if (!hasCycleData) {
         roiEl.innerHTML = `<div style="margin-top:24px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:13px;">
           <strong style="color:var(--muted);">Werkelijk rendement</strong> — nog geen cycli gemeten.
-          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (SoC = 0%).
+          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (SoC ≤ 3%).
         </div>`;
         return;
       }
