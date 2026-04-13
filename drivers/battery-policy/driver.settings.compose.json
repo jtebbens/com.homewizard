@@ -277,6 +277,21 @@
         "visible": { "when": "tariff_type", "is": "dynamic" }
       },
       {
+        "id": "peak_shaving_threshold",
+        "type": "number",
+        "label": { "en": "Peak Shaving Threshold (W)", "nl": "Piekbeveiliging drempelwaarde (W)" },
+        "hint": {
+          "en": "When the instantaneous house load exceeds this value and the optimizer says 'preserve', the battery will discharge to cover the peak. Set to 0 to disable. Typical value: 2500W (e.g. oven + lighting).",
+          "nl": "Als het momentane huisverbruik deze waarde overschrijdt en de optimizer 'bewaren' adviseert, ontlaadt de batterij om de piek te dekken. Stel 0 in om uit te schakelen. Typische waarde: 2500W (bijv. oven + verlichting)."
+        },
+        "value": 0,
+        "min": 0,
+        "max": 10000,
+        "step": 100,
+        "units": "W",
+        "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
         "id": "pv_cost_mode",
         "type": "dropdown",
         "label": { "en": "PV Charging Cost", "nl": "PV laadkosten" },
