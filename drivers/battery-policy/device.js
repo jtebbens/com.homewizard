@@ -470,7 +470,7 @@ if (debug) this.log(
         // pvProductionW: always >= 0 (PV output)
         const pvW = this._pvProductionW ?? 0;
         const houseConsumptionW = gridPower - batteryPower + pvW;
-        if (houseConsumptionW > 0) {
+        if (houseConsumptionW >= 0) {
           await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
             this.error('Learning consumption recording failed:', err)
           );
@@ -1124,6 +1124,10 @@ if (debug) this.log(
         }
       }
 
+      // Release ExplainabilityEngine after use — module stays compiled in V8 cache,
+      // re-instantiation next run is free. Frees ~10–15 MB on memory-constrained devices.
+      this.explainabilityEngine = null;
+
       // Push compact data to the dashboard widget
       try { this._saveWidgetData(); } catch (e) { this.error('Widget data save failed:', e); }
 
@@ -1397,16 +1401,18 @@ if (debug) this.log(
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
-      // Expose tomorrow's net PV kWh (after house consumption) to the policy engine.
-      // Net = sum of max(0, pvW - consW) per hour — only surplus goes into the battery.
-      // Using gross PV was too optimistic: on a 6 kWh PV day with 3.5 kWh daytime
-      // consumption, only ~2.5 kWh actually reaches the battery, not 6 kWh.
+      // Expose upcoming net PV kWh (after house consumption) to the policy engine.
+      // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
+      // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
+      // Net = sum of max(0, pvW - consW) per slot — only surplus goes into the battery.
       if (pvForecast && inputs.weather) {
-        const tomorrowDateStr = new Date(now.getTime() + 86_400_000)
-          .toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const nowMs = now.getTime();
+        const windowEndMs = nowMs + 24 * 3600_000;
         let pvWhTomorrowNet = 0;
         for (const { timestamp, pvPowerW } of pvForecast) {
-          if (new Date(timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) !== tomorrowDateStr) continue;
+          const slotMs = new Date(timestamp).getTime();
+          if (slotMs <= nowMs) continue;       // skip current and past slots
+          if (slotMs > windowEndMs) continue;  // only next 24h
           const consW = this.learningEngine
             ? (this.learningEngine.getPredictedConsumption(new Date(timestamp)) ?? 0)
             : 0;
@@ -1484,6 +1490,22 @@ if (debug) this.log(
       }
     }
 
+    // PV accuracy tracking: compare forecast for now vs actual from flow card.
+    // Only when flow card provides fresh inverter data (< 20 min old) and at least one
+    // side shows meaningful PV (> 50W) to avoid noisy night comparisons.
+    if (pvForecast && this.learningEngine && this._pvProductionW != null && this._pvProductionTimestamp) {
+      const ageMs = Date.now() - this._pvProductionTimestamp;
+      if (ageMs < 20 * 60 * 1000) {
+        const predictedW = this.optimizationEngine._getPvForSlot(pvForecast, now.toISOString());
+        const actualW    = this._pvProductionW;
+        if (predictedW > 50 && actualW > 50) {
+          this.learningEngine.recordPvAccuracy(predictedW, actualW).catch(e =>
+            this.error('PV accuracy recording failed:', e)
+          );
+        }
+      }
+    }
+
     // PV conservatism: if accuracy score is low, discount pvForecast to avoid over-optimistic planning.
     // Discount kicks in below 0.80 accuracy, linear from 1.0 (at 0.80) to 0.80 (at 0).
     if (pvForecast && this.learningEngine) {
@@ -1492,6 +1514,39 @@ if (debug) this.log(
         const factor = Math.max(0.80, 0.80 + 0.20 * (pvAcc / 0.80));
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * factor) }));
         this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism factor=${factor.toFixed(2)} applied`);
+      }
+    }
+
+    // Intraday PV scaling: correct today's remaining forecast from actual production.
+    // Uses pv_predictions already tracked by learning engine — no new API calls.
+    // Only scales today's future slots; tomorrow's forecast is unchanged.
+    if (pvForecast && this.learningEngine && Array.isArray(this.learningEngine.data?.pv_predictions)) {
+      const nowMs       = Date.now();
+      const cutoffMs    = nowMs - 6 * 3600_000;
+      const todayNLDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const todayPreds  = this.learningEngine.data.pv_predictions.filter(p =>
+        p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
+        p.predicted > 50 && p.actual > 50
+      );
+      const avgActual = todayPreds.length
+        ? todayPreds.reduce((s, p) => s + p.actual, 0) / todayPreds.length : 0;
+      if (todayPreds.length >= 4 && avgActual >= 200) {
+        const sumForecast = todayPreds.reduce((s, p) => s + p.predicted, 0);
+        const sumActual   = todayPreds.reduce((s, p) => s + p.actual,    0);
+        const rawRatio    = sumActual / sumForecast;
+        const ratio       = Math.min(2.5, Math.max(0.4, rawRatio));
+        if (Math.abs(ratio - 1.0) > 0.15) {
+          const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
+          pvForecast = pvForecast.map(slot => {
+            if (new Date(slot.timestamp) <= now) return slot;
+            const slotDate = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            if (slotDate !== todayNLDate) return slot; // don't scale tomorrow
+            return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
+          });
+          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} (clamped=${ratio.toFixed(2)}) → scaled ${futureSlotsCount} future slots today`);
+        } else {
+          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} → within 15% threshold, no scaling`);
+        }
       }
     }
 
@@ -1531,7 +1586,21 @@ if (debug) this.log(
     // lower the discharge floor to the actual break-even so the DP can create headroom overnight.
     // Break-even = cycleCostPerKwh / effectiveRte (typically ~€0.10).
     // Only active when PV tomorrow ≥ 90% of battery capacity (near-certain full recharge).
-    const pvKwhTomorrow = inputs.weather?.pvKwhTomorrow ?? 0;
+    // Smooth pvKwhTomorrow over last 3 values to prevent a single weather-API update
+    // from toggling the DP flattening strategy. Uses rolling minimum (conservative):
+    // the DP only switches to "discharge freely" when PV availability is consistently high.
+    const pvKwhTomorrowRaw = inputs.weather?.pvKwhTomorrow ?? 0;
+    if (!this._pvKwhTomorrowHistory) this._pvKwhTomorrowHistory = [];
+    if (pvKwhTomorrowRaw > 0) {
+      this._pvKwhTomorrowHistory.push(pvKwhTomorrowRaw);
+      if (this._pvKwhTomorrowHistory.length > 3) this._pvKwhTomorrowHistory.shift();
+    }
+    const pvKwhTomorrow = this._pvKwhTomorrowHistory.length > 0
+      ? Math.min(...this._pvKwhTomorrowHistory)
+      : pvKwhTomorrowRaw;
+    if (pvKwhTomorrowRaw > 0 && pvKwhTomorrow !== pvKwhTomorrowRaw) {
+      this.log(`☀️ pvKwhTomorrow smoothed: raw=${pvKwhTomorrowRaw}kWh → min3=${pvKwhTomorrow}kWh (history=[${this._pvKwhTomorrowHistory.map(v=>v.toFixed(2)).join(',')}])`);
+    }
     if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0 && pvForecast) {
       const effectiveRte = learnedRte ?? 0.75;
       const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;

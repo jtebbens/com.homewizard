@@ -569,12 +569,7 @@
     <ul id="explain-reasons" style="padding-left:20px;"></ul>
     <h3>Waarschuwingen</h3>
     <ul id="explain-warnings" style="padding-left:20px;"></ul>
-    <h3>ML Decision Scores</h3>
-    <div id="explain-scores-visual" style="margin-bottom:20px;"></div>
-    <details style="margin-bottom:20px;">
-      <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Toon raw scores (debug)</summary>
-      <pre id="explain-scores" class="debug-box" style="margin-top:10px;"></pre>
-    </details>
+    <pre id="explain-scores" style="display:none;"></pre>
     <details style="margin-bottom:20px;">
       <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Diagnose — kopieer dit bij een supportvraag</summary>
       <pre id="policy-debug-box" class="debug-box" style="margin-top:10px;font-size:11px;user-select:all;">—</pre>
@@ -1525,32 +1520,6 @@
             li.textContent = `⚠️ ${w}`;
             warningsList.appendChild(li);
           });
-
-          const scoresVisual = document.getElementById('explain-scores-visual');
-          if (data.scores) {
-            const s = data.scores;
-            const maxScore = Math.max(s.charge || 0, s.discharge || 0, s.preserve || 0);
-            const winner = maxScore === s.charge ? 'charge' : maxScore === s.discharge ? 'discharge' : 'preserve';
-            const labels = { charge: '🔌 Laden', discharge: '⚡ Ontladen', preserve: '🛡️ Beschermen' };
-            const colors = { charge: '#5f6fff', discharge: '#20F29B', preserve: '#FB923C' };
-            scoresVisual.innerHTML = ['charge', 'discharge', 'preserve'].map(mode => {
-              const score = s[mode] || 0;
-              const pct = maxScore > 0 ? (score / maxScore * 100) : 0;
-              const isW = mode === winner;
-              return `
-                <div style="margin-bottom:15px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-                    <span style="font-weight:${isW ? 'bold' : 'normal'};font-size:14px;">${labels[mode]}${isW ? ' ✓' : ''}</span>
-                    <span style="font-family:monospace;font-size:13px;color:#A0A0A0;">${score.toFixed(1)}</span>
-                  </div>
-                  <div style="background:#2d2d2d;border-radius:4px;height:24px;overflow:hidden;">
-                    <div style="background:${colors[mode]};width:${pct}%;height:100%;transition:width .3s ease;${isW ? 'box-shadow:0 0 8px rgba(0,0,0,.3);' : ''}"></div>
-                  </div>
-                </div>`;
-            }).join('');
-          } else {
-            scoresVisual.innerHTML = '<p style="color:#808080;">Geen scores beschikbaar</p>';
-          }
 
           document.getElementById('explain-scores').textContent = JSON.stringify(data.scores, null, 2);
           document.getElementById('explain-timestamp').innerText = `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
