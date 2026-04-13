@@ -1264,5 +1264,8 @@
   },
   "3.15.11": {
     "en": "Refractor battery policy and ExplainabilityEngine (memory fix)"
+  },
+  "3.15.12": {
+    "en": "Memory crash fixes (widget, policy, computeExpected)"
   }
 }
