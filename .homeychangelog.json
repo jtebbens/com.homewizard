@@ -1267,5 +1267,8 @@
   },
   "3.15.12": {
     "en": "Memory crash fixes (widget, policy, computeExpected)"
+  },
+  "3.15.13": {
+    "en": "Memory crash (user report)"
   }
 }
