@@ -1276,5 +1276,8 @@
   },
   "3.15.15": {
     "en": "Memory crashes (user)"
+  },
+  "3.15.16": {
+    "en": "Heap guard fixes added"
   }
 }
