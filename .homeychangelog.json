@@ -1279,5 +1279,8 @@
   },
   "3.15.16": {
     "en": "Heap guard fixes added"
+  },
+  "3.15.17": {
+    "en": "Memory crash (user) - energy_v2 and SDM630v2 extra checks"
   }
 }
