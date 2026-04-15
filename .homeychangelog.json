@@ -1297,5 +1297,8 @@
   },
   "3.15.22": {
     "en": "Another memory heap delay fix"
+  },
+  "3.15.23": {
+    "en": "Bug: explanation.summary at line 2573 crashed when explanation was null (skipped due to heap > 35 MB guard)."
   }
 }
