@@ -1291,5 +1291,8 @@
   },
   "3.15.20": {
     "en": "Heap check before updateChart"
+  },
+  "3.15.21": {
+    "en": "Battery-policy fix for non dynamic contract"
   }
 }
