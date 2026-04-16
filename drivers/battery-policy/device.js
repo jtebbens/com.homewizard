@@ -985,20 +985,24 @@ if (debug) this.log(
         }
       }
 
+      _memMB('[DIAG] before-gatherInputs');
       const inputs = await this._gatherInputs();
       if (!inputs.battery || inputs.battery.stateOfCharge === undefined) {
         this.log('Skipping policy check — battery state not ready');
         return;
       }
+      _memMB('[DIAG] after-gatherInputs');
 
       // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update)
       if (this.optimizationEngine.isStale() && inputs.tariff) {
         await this._recomputeOptimizer(inputs);
+        _memMB('[DIAG] after-recomputeOptimizer');
       }
       inputs.optimizer = this.optimizationEngine;
       inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
 
       const result = this.policyEngine.calculatePolicy(inputs);
+      _memMB('[DIAG] after-calculatePolicy');
 
       // Free large price arrays before loading the explainability engine.
       // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
@@ -1010,6 +1014,7 @@ if (debug) this.log(
         inputs.tariff.allPrices = null;
         inputs.tariff.next24Hours = null;
       }
+      _memMB('[DIAG] after-free-priceArrays');
 
       // ------------------------------------------------------
       // 📊 LEARNING: Apply confidence adjustment based on history
@@ -1045,6 +1050,7 @@ if (debug) this.log(
           inputs,
           result.scores
         );
+        _memMB('[DIAG] after-generateExplanation');
         this.homey.api.realtime('explainability_update', explanation);
         this.homey.settings.set('policy_explainability', explanation);
         this.log('Saving explainability length:', JSON.stringify(explanation).length);
@@ -1253,9 +1259,11 @@ if (debug) this.log(
       // Release ExplainabilityEngine after use — module stays compiled in V8 cache,
       // re-instantiation next run is free. Frees ~10–15 MB on memory-constrained devices.
       this.explainabilityEngine = null;
+      _memMB('[DIAG] after-explainability-freed');
 
       // Push compact data to the dashboard widget
       try { this._saveWidgetData(); } catch (e) { this.error('Widget data save failed:', e); }
+      _memMB('[DIAG] after-saveWidgetData');
 
     } catch (error) {
       this.error('Policy check failed:', error);
@@ -1268,12 +1276,15 @@ if (debug) this.log(
   }
 
   _saveWidgetData({ skipChart = false } = {}) {
+    _memMB('[DIAG] saveWidgetData-start');
     const schedule  = this.homey.settings.get('policy_optimizer_schedule') || [];
+    _memMB('[DIAG] after-get-schedule');
     const state     = this.homey.settings.get('battery_policy_state')      || {};
     const use1h     = this.getSetting('price_resolution') === '1h';
     const priceData = use1h
       ? (this.homey.settings.get('policy_all_prices') || [])
       : (this.homey.settings.get('policy_all_prices_15min') || []);
+    _memMB('[DIAG] after-get-priceData');
     const step      = use1h ? 3600 * 1000 : 15 * 60 * 1000;
     const now       = Date.now();
 
@@ -1466,9 +1477,14 @@ if (debug) this.log(
     this.log(`[Widget] Data saved: ${slots.length} slots`);
 
     // Camera image in device UI (fire-and-forget)
-    // skipChart=true at startup to avoid 3 concurrent HTTP requests during memory-critical boot
+    // skipChart=true at startup to avoid 3 concurrent HTTP requests during memory-critical boot.
+    // Deferred 8s: policy runs push heap to ~60 MB; GC settles back to ~29 MB within 5s.
+    // Calling immediately would always trip the 35 MB heap guard and never update the chart.
     if (!skipChart) {
-      this._updatePlanningChart(compact).catch(e => this.error('Camera image update failed:', e));
+      this.homey.setTimeout(
+        () => this._updatePlanningChart(compact).catch(e => this.error('Camera image update failed:', e)),
+        8000,
+      );
     }
   }
 
@@ -2924,6 +2940,13 @@ if (debug) this.log(
       this.log('[MEM] Chart update skipped — previous still in progress');
       return;
     }
+    // Guard: quickchart HTTP + image buffer adds ~30 MB; skip when heap is already elevated.
+    let _heapChart = 0;
+    try { _heapChart = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+    if (_heapChart > 35) {
+      this.log(`[MEM] Planning chart update skipped — heap ${_heapChart.toFixed(1)} MB > 35 MB guard`);
+      return;
+    }
     this._planningChartUpdating = true;
     try {
       const slots = compact?.slots || [];
@@ -2952,6 +2975,8 @@ if (debug) this.log(
         this.planningImageToday.setStream(async (stream) => {
           if (this._isPredictiveMode) { stream.end(); return; }
           if (!this._chartToday || !this._chartToday.slots?.length) { stream.end(); return; }
+          let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+          if (_h > 38) { this.log(`[MEM] Today chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
           await this._streamQuickChart(stream, this._chartToday);
         });
         await this.setCameraImage('planning_today', 'Batterij Vandaag', this.planningImageToday);
@@ -2969,6 +2994,8 @@ if (debug) this.log(
         this.planningImageTomorrow.setStream(async (stream) => {
           if (this._isPredictiveMode) { stream.end(); return; }
           if (!this._chartTomorrow || !this._chartTomorrow.slots?.length) { stream.end(); return; }
+          let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+          if (_h > 38) { this.log(`[MEM] Tomorrow chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
           await this._streamQuickChart(stream, this._chartTomorrow);
         });
         await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
@@ -2996,7 +3023,7 @@ if (debug) this.log(
         this._pvChartHash = pvHash;
       }
 
-      this.log('📊 Planning chart camera images updated (today + tomorrow + PV + modi)');
+      this.log('📊 Planning chart camera images updated (today + tomorrow + PV)');
     } catch (err) {
       this.error('Failed to update planning chart:', err);
     } finally {
@@ -3149,6 +3176,8 @@ if (debug) this.log(
       const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
       const pvCapW     = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
+      let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       await this._streamPvChart(stream, { pvActual, pvForecast, pvCapacityW: pvCapW });
     });
     await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
