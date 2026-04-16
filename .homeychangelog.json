@@ -1309,5 +1309,8 @@
   },
   "3.15.26": {
     "en": "More memory guards"
+  },
+  "3.15.27": {
+    "en": "Policy guard mem checks"
   }
 }
