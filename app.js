@@ -45,17 +45,22 @@ class HomeWizardApp extends Homey.App {
     // 🔍 CRASH DIAGNOSTICS: Global error handlers
     this._setupGlobalErrorHandlers();
 
-    // 🔍 MEMORY DIAGNOSTICS: Log heap every 5s for first 3 minutes
-    // This helps identify which device/engine causes memory ceiling on startup
+    // 🔍 MEMORY DIAGNOSTICS: Log heap every 5s for first 3 minutes (startup cascade),
+    // then every 60s indefinitely (runtime tracking — needed because reported crashes
+    // happen 5–20 minutes into runtime, well after the original 3-min monitor stopped).
     let _memCount = 0;
     logMem('app-start');
     this._memInterval = setInterval(() => {
       _memCount++;
       logMem(`T+${_memCount * 5}s`);
-      if (_memCount >= 36) { // 3 minutes
+      if (_memCount >= 36) { // 3 minutes — switch to low-frequency runtime monitor
         clearInterval(this._memInterval);
-        this._memInterval = null;
-        console.log('[MEM] Memory monitor stopped after 3 minutes');
+        console.log('[MEM] Startup monitor stopped — switching to 60s runtime monitor');
+        let _runtimeCount = 0;
+        this._memInterval = setInterval(() => {
+          _runtimeCount++;
+          logMem(`run+${_runtimeCount}min`);
+        }, 60_000);
       }
     }, 5000);
 

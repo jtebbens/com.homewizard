@@ -139,13 +139,20 @@ class BatteryPolicyDevice extends Homey.Device {
     // Migrate legacy weather_location (city name) to weather_latitude/weather_longitude
     await this._migrateWeatherLocation();
 
-    // Weather fetch only in dynamic
+    // Weather fetch only in dynamic.
+    // Deferred 30s past onInit: Open-Meteo ensemble fetch + parsing allocates ~30 MB
+    // and pushed peak heap to 71 MB on a user's setup with 15 devices, tripping the
+    // Homey "Memory Warning Limit Reached" ceiling. After T+30s the parallel device
+    // onInits + WS auth + first polls have settled, leaving headroom for the spike.
+    // Cached weatherData (≤6 min old) is restored from settings, so the gap is invisible.
     if (this.getSettings().tariff_type === 'dynamic') {
-      this._updateWeather()
-        .then(() => _memMB('after-weather-fetch'))
-        .catch(err => this.error('Initial weather fetch failed:', err));
-      
-      // Schedule periodic price refresh (every 30 minutes)
+      this.homey.setTimeout(() => {
+        this._updateWeather()
+          .then(() => _memMB('after-weather-fetch'))
+          .catch(err => this.error('Initial weather fetch failed:', err));
+      }, 30 * 1000);
+
+      // Schedule periodic price refresh (every 30 minutes) — lightweight, keep immediate
       this._schedulePriceRefresh();
     }
 
@@ -373,7 +380,18 @@ class BatteryPolicyDevice extends Homey.Device {
         this.log('Could not restore last mode on startup:', e.message);
       }
 
-      await this._runPolicyCheck();
+      // Defer the initial policy check past the startup cascade (T+45s).
+      // Reason: at this point the device cascade is still settling — 8 socket polls,
+      // WS authorizations (energy_v2 + 2× plugin_battery on some setups), price/weather
+      // fetches and the new device-settings push are all happening in parallel. Running
+      // _runPolicyCheck() here pushed heap to ~70 MB on a user with 15 devices and a
+      // fragile network, hitting the Homey "Memory Warning Limit Reached" ceiling.
+      // Also: prices may still be loading, causing the policy run to see price=undefined.
+      // Mode is already restored above, so the battery is in the correct state during
+      // this gap. The next scheduled check at the slot boundary (≤15 min) takes over.
+      this.homey.setTimeout(() => {
+        this._runPolicyCheck().catch(err => this.error('Initial policy check failed:', err));
+      }, 45 * 1000);
 
     } catch (error) {
       this.error('Failed to connect to P1 device:', error);
@@ -1462,6 +1480,7 @@ if (debug) this.log(
     const slots = [...pastSlots, ...expandedFuture]
       .sort((a, b) => a.ts - b.ts)
       .slice(0, 192); // max 48h worth of 15-min slots
+    _memMB('[DIAG] saveWidget:after-slots-build');
 
     const compact = {
       currentSoc:   state.batterySOC   ?? null,
@@ -1471,9 +1490,12 @@ if (debug) this.log(
       updatedAt:    new Date().toISOString(),
       slots
     };
+    _memMB('[DIAG] saveWidget:after-compact-build');
 
     this.homey.settings.set('policy_widget_data', compact);
+    _memMB('[DIAG] saveWidget:after-settings.set');
     this.homey.api.realtime('planning-update', compact);
+    _memMB('[DIAG] saveWidget:after-api.realtime');
     this.log(`[Widget] Data saved: ${slots.length} slots`);
 
     // Camera image in device UI (fire-and-forget)
@@ -2273,9 +2295,12 @@ if (debug) this.log(
         weatherData = this._applyWeatherOverride(weatherData, weatherOverride);
       }
     }
+    _memMB('[DIAG] gatherInputs:after-weather');
 
     const batteryState = await this._getBatteryState();
+    _memMB('[DIAG] gatherInputs:after-batteryState');
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
+    _memMB('[DIAG] gatherInputs:after-getCurrentTariff');
 
     const debugPrice = tariffInfo?.currentPrice != null ? tariffInfo.currentPrice.toFixed(3) : 'n/a';
     const debugTopLow = Array.isArray(tariffInfo?.top3Lowest)
@@ -2304,11 +2329,13 @@ if (debug) this.log(
       : `rte=${(this.efficiencyEstimator.getEfficiency() * 100).toFixed(1)}% (<5 cycli)`;
     const debugLearningText = `days=${learningStats.days_tracking} samples=${learningStats.total_samples} coverage=${learningStats.pattern_coverage}% pv_acc=${learningStats.pv_accuracy}% | rte: ${rteModeSummary} @${now}`;
 
+    _memMB('[DIAG] gatherInputs:after-learningStats');
     await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
     await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
     await this.setCapabilityValue('policy_debug_learning', debugLearningText).catch(this.error);
+    _memMB('[DIAG] gatherInputs:after-setCapabilities');
     
     // Push debug data to app settings for planning view
     this.homey.settings.set('policy_debug_top3low', debugTopLowText);
@@ -2348,6 +2375,7 @@ if (debug) this.log(
         };
       });
       this.homey.settings.set('policy_weather_hourly', hourlyWeather);
+      _memMB('[DIAG] gatherInputs:after-weatherSettings');
       if (weatherData.fetchedAt) {
         this.homey.settings.set('policy_weather_fetched_at', new Date(weatherData.fetchedAt).toISOString());
       }
