@@ -1303,5 +1303,8 @@
   },
   "3.15.24": {
     "en": "Max sockets missed, pool keeps growing"
+  },
+  "3.15.25": {
+    "en": "Update planning chart (memory guard)"
   }
 }
