@@ -1306,5 +1306,8 @@
   },
   "3.15.25": {
     "en": "Update planning chart (memory guard)"
+  },
+  "3.15.26": {
+    "en": "More memory guards"
   }
 }
