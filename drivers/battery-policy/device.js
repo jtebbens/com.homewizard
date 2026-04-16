@@ -57,6 +57,11 @@ class BatteryPolicyDevice extends Homey.Device {
     this._todayGridImportKwh = 0;     // accumulated grid import today (kWh)
     this._todayConsumptionKwh = 0;    // accumulated house consumption today (kWh)
     this._lastSelfSuffWrite = 0;      // throttle: last settings write for today_self_sufficiency
+    this._modeHistory = this.homey.settings.get(`batt_mode_hist_${this.getData().id}`) || [];
+    this._isPredictiveMode = false;
+    this._policyEnabledBeforePredictive = null; // saved state for auto-restore when predictive ends
+    this._modeChartBody = null;
+    this._modeChartImage = null;
 
     // Restore accumulators from last save so a restart doesn't reset to 0 mid-day
     try {
@@ -82,11 +87,49 @@ class BatteryPolicyDevice extends Homey.Device {
     // Schedule periodic checks
     this._schedulePolicyCheck();
 
-    // Restore widget + camera from cached settings immediately after restart
-    // (first scheduled policy check may be up to 15 min away)
+    // Mode history flush interval (15 min, offset 7.5 min from slot boundaries).
+    // Slot boundaries (:00, :15, :30, :45) are when _saveWidgetData and price refresh
+    // run — offsetting by 7.5 min avoids concurrent large allocations that together
+    // push V8 into a major GC cycle peaking at ~60 MB.
+    const _modeFlushFn = () => {
+      if (this.p1Device) {
+        const mode = this.p1Device._currentDetailedMode
+          || this.p1Device.getCapabilityValue('battery_group_charge_mode')
+          || 'unknown';
+        const soc = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
+        this._recordModeHistory(mode);
+        this._recordSoCHistory(soc);
+      }
+      if (!this._modeHistory?.length) return;
+      this.homey.settings.set(`batt_mode_hist_${this.getData().id}`, this._modeHistory);
+      // Guard: skip chart update when heap is elevated — quickchart HTTP + image data adds ~30 MB
+      let _heapFlush = 99;
+      try { _heapFlush = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      if (_heapFlush > 35) {
+        this.log(`[MEM] Skipping mode chart update — heap ${_heapFlush.toFixed(1)} MB > 35 MB guard`);
+      } else {
+        this._updateModeChart().catch(e => this.error('Mode chart update failed:', e));
+      }
+    };
     this.homey.setTimeout(() => {
-      try { this._saveWidgetData(); } catch (e) { this.error('Startup widget restore failed:', e); }
-    }, 3000);
+      _modeFlushFn();
+      this._modeHistoryFlushInterval = this.homey.setInterval(_modeFlushFn, 15 * 60 * 1000);
+    }, 7.5 * 60 * 1000);
+
+    // Register cameras — deferred to 60s so the startup memory spike has settled.
+    this.homey.setTimeout(() => {
+      this._initModeHistoryCamera().catch(e => this.error('Mode camera init failed:', e));
+      this._initPvCamera().catch(e => this.error('PV camera init failed:', e));
+    }, 60 * 1000);
+
+    // Restore widget data from cached settings after startup peak has settled.
+    // Delayed to 90s: _saveWidgetData loads large settings keys (optimizer schedule,
+    // 15-min prices, mode history) which add ~18 MB to heap. energy_v2 alone peaks
+    // at 41 MB; loading at T+3s pushed total to 71 MB → Memory Warning crash.
+    // After T+10s the heap settles at ~29 MB, so 90s is safely past the danger window.
+    this.homey.setTimeout(() => {
+      try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Startup widget restore failed:', e); }
+    }, 90 * 1000);
 
     // Set default for price_resolution if not yet saved (existing paired devices)
     if (!this.getSetting('price_resolution')) {
@@ -197,7 +240,8 @@ class BatteryPolicyDevice extends Homey.Device {
       this.log(`Policy ${value ? 'enabled' : 'disabled'}`);
 
       if (value) {
-        await this._runPolicyCheck();
+        // skipEnabledCheck: capability not yet persisted when listener fires (Homey SDK quirk)
+        await this._runPolicyCheck({ skipEnabledCheck: true });
       }
 
       return value;
@@ -529,7 +573,7 @@ if (debug) this.log(
         const PV_DAYLIGHT_END = 18;           // 6 PM
 
         // Get current sun score and time
-        const currentHour = new Date().getHours();
+        const currentHour = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
         const isDaylight = currentHour >= PV_DAYLIGHT_START && currentHour < PV_DAYLIGHT_END;
         const sunScore = this.getCapabilityValue('sun_score') ?? 0;
         const hasSunlight = sunScore >= PV_SUN_THRESHOLD;
@@ -595,6 +639,33 @@ if (debug) this.log(
           }
         }
         // Otherwise: no state change, no spam
+
+        // Detect predictive mode transitions — uses live HW capability, not in-memory flag.
+        // _isPredictiveMode can be false after an app restart even if predictive was already
+        // active (in-memory state lost), so we check battery_group_charge_mode directly to
+        // avoid explanation_summary and policy_enabled getting permanently stuck.
+        {
+          const hwModeNow = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+          if (hwModeNow === 'predictive') {
+            if (!this._isPredictiveMode) {
+              // Recover from restart: re-enter predictive state without touching policy_enabled
+              // (it was already disabled before the restart; we don't know what the pre-predictive
+              // value was, so we leave it as-is rather than guess).
+              this._isPredictiveMode = true;
+              this.log('[Policy] Predictive mode gedetecteerd (P1 poll) — explanation_summary live bijhouden');
+            }
+            // Keep explanation_summary in sync with live SoC while predictive mode is active
+            await this.setCapabilityValue('explanation_summary', `Slim laden: actief - SoC ${soc}%`).catch(this.error);
+          } else if (this._isPredictiveMode) {
+            // Predictive mode just ended
+            this._isPredictiveMode = false;
+            this.log('[Policy] Predictive mode beëindigd — battery-policy hersteld');
+            if (this._policyEnabledBeforePredictive !== null) {
+              await this.setCapabilityValue('policy_enabled', this._policyEnabledBeforePredictive).catch(this.error);
+              this._policyEnabledBeforePredictive = null;
+            }
+          }
+        }
 
       } catch (err) {
         this.error('Error polling P1 capabilities:', err);
@@ -683,6 +754,12 @@ if (debug) this.log(
 
       this.priceRefreshTimeout = this.homey.setTimeout(
         async () => {
+          if (this._isPredictiveMode) {
+            this.log('🔄 Price refresh skipped — predictive mode active');
+            scheduleNext();
+            return;
+          }
+
           const settings = this.getSettings();
 
           if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
@@ -798,6 +875,16 @@ if (debug) this.log(
         sunScore
       });
 
+      if (this._isPredictiveMode) {
+        // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
+        const pvActual   = this.homey.settings.get('policy_pv_actual_today');
+        const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+        const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+        this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
+        this.planningImagePv?.update().catch(() => {});
+        return;
+      }
+
       // Invalidate optimizer — new PV forecast may change the optimal charge schedule.
       this.optimizationEngine.updateSettings({});
 
@@ -853,14 +940,14 @@ if (debug) this.log(
     return { latitude: lat, longitude: lon };
   }
 
-  async _runPolicyCheck() {
+  async _runPolicyCheck({ skipEnabledCheck = false } = {}) {
     if (this._policyCheckRunning) {
       this.log('Policy check already in progress, skipping concurrent call');
       return;
     }
     this._policyCheckRunning = true;
     try {
-      if (!this.getCapabilityValue('policy_enabled')) {
+      if (!skipEnabledCheck && !this.getCapabilityValue('policy_enabled')) {
         this.log('Policy disabled, skipping check');
         return;
       }
@@ -871,11 +958,29 @@ if (debug) this.log(
         return;
       }
 
-      // ⭐ HW Slim laden (predictive) actief → volledige policy check overslaan
+      // Record mode history + detect predictive mode (altijd, ook bij overrides)
       if (this.p1Device) {
         const currentHwMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+        const currentSoC = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
+        // Use detailed mode from energy_v2 when available (predictive sub-types)
+        const detailedMode = this.p1Device._currentDetailedMode || currentHwMode || 'unknown';
+        this._recordModeHistory(detailedMode);
+        this._recordSoCHistory(currentSoC);
+
+        // ⭐ HW Slim laden (predictive) actief → policy uitschakelen
         if (currentHwMode === 'predictive') {
-          this.log('🤖 HW Slim laden (predictive) actief — policy engine volledig gepauzeerd, cloud stuurt batterij aan');
+          if (!this._isPredictiveMode) {
+            this._isPredictiveMode = true;
+            // Save current policy_enabled state and disable — the P1 poll restores it when predictive ends
+            this._policyEnabledBeforePredictive = this.getCapabilityValue('policy_enabled') ?? false;
+            await this.setCapabilityValue('policy_enabled', false).catch(this.error);
+            this.log('🤖 HW Slim laden (predictive) actief — battery-policy uitgeschakeld');
+            // Planning-webcams invalideren zodat ze leeg tonen
+            this.planningImageToday?.update().catch(() => {});
+            this.planningImageTomorrow?.update().catch(() => {});
+            this.planningImagePv?.update().catch(() => {});
+          }
+          await this.setCapabilityValue('explanation_summary', `Slim laden: actief - SoC ${currentSoC}%`).catch(this.error);
           return;
         }
       }
@@ -895,6 +1000,17 @@ if (debug) this.log(
 
       const result = this.policyEngine.calculatePolicy(inputs);
 
+      // Free large price arrays before loading the explainability engine.
+      // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
+      // (a single number) — it never touches allPrices15min / effectivePrices / allPrices.
+      // Nulling these here frees ~300–500 KB of V8 heap before the 10–15 MB engine load.
+      if (inputs.tariff) {
+        inputs.tariff.allPrices15min = null;
+        inputs.tariff.effectivePrices = null;
+        inputs.tariff.allPrices = null;
+        inputs.tariff.next24Hours = null;
+      }
+
       // ------------------------------------------------------
       // 📊 LEARNING: Apply confidence adjustment based on history
       // ------------------------------------------------------
@@ -912,21 +1028,27 @@ if (debug) this.log(
         this.log(`📊 Learning adjusted confidence: ${originalConfidence} → ${result.confidence} (${confidenceAdjustment > 0 ? '+' : ''}${confidenceAdjustment})`);
       }
 
-      if (!this.explainabilityEngine) {
-        this.explainabilityEngine = new (require('../../lib/explainability-engine'))(this.homey);
-        _memMB('after-lazy-load-explainability');
+      // Guard: skip explainability when heap is already high — the engine adds ~25 MB
+      // which pushes total above the Homey memory ceiling (~65 MB heap).
+      let _heapBeforeExplain = 50; // conservative default: skip
+      try { _heapBeforeExplain = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      let explanation = null;
+      if (_heapBeforeExplain > 35) {
+        this.log(`[MEM] Skipping explainability — heap ${_heapBeforeExplain.toFixed(1)} MB > 35 MB guard`);
+      } else {
+        if (!this.explainabilityEngine) {
+          this.explainabilityEngine = new (require('../../lib/explainability-engine'))(this.homey);
+          _memMB('after-lazy-load-explainability');
+        }
+        explanation = this.explainabilityEngine.generateExplanation(
+          result,
+          inputs,
+          result.scores
+        );
+        this.homey.api.realtime('explainability_update', explanation);
+        this.homey.settings.set('policy_explainability', explanation);
+        this.log('Saving explainability length:', JSON.stringify(explanation).length);
       }
-      const explanation = this.explainabilityEngine.generateExplanation(
-        result,
-        inputs,
-        result.scores
-      );
-
-      this.homey.api.realtime('explainability_update', explanation);
-
-      this.homey.settings.set('policy_explainability', explanation);
-
-      this.log('Saving explainability length:', JSON.stringify(explanation).length);
       
       const recommended = result.hwMode || result.policyMode || 'standby';
       
@@ -990,7 +1112,9 @@ if (debug) this.log(
       await this.setCapabilityValue('confidence_score', result.confidence);
       // explanation_summary shows the ACTIVE mode, not the recommended mode
       const currentActiveMode = this.getCapabilityValue('active_mode') || recommended;
-      const activeSummary = this.explainabilityEngine._generateShortSummary({ hwMode: currentActiveMode }, inputs);
+      const activeSummary = this.explainabilityEngine
+        ? this.explainabilityEngine._generateShortSummary({ hwMode: currentActiveMode }, inputs)
+        : currentActiveMode;
       await this.setCapabilityValue('explanation_summary', activeSummary);
       await this.setCapabilityValue('last_update', new Date().toISOString());
 
@@ -1001,7 +1125,7 @@ if (debug) this.log(
       if (modeChanged && this.getSetting('enable_policy_notifications')) {
         try {
           await this.homey.notifications.createNotification({
-            excerpt: explanation.summary
+            excerpt: explanation?.summary || currentMode
           });
         } catch (err) {
           this.error('Failed to send policy notification:', err);
@@ -1013,7 +1137,7 @@ if (debug) this.log(
       this.log('Policy check complete:', {
         mode: currentMode,
         confidence: result.confidence,
-        summary: explanation.summary
+        summary: explanation?.summary
       });
 
       // Store compact diagnostic for user-facing troubleshooting (settings page).
@@ -1116,11 +1240,13 @@ if (debug) this.log(
           this.homey.settings.set('battery_policy_state', planningData);
 
           // Always sync explanation_summary to the actual hardware mode
-          const hwActiveSummary = this.explainabilityEngine._generateShortSummary(
-            { hwMode: actualHwMode },
-            inputs
-          );
-          await this.setCapabilityValue('explanation_summary', hwActiveSummary).catch(this.error);
+          if (this.explainabilityEngine) {
+            const hwActiveSummary = this.explainabilityEngine._generateShortSummary(
+              { hwMode: actualHwMode },
+              inputs
+            );
+            await this.setCapabilityValue('explanation_summary', hwActiveSummary).catch(this.error);
+          }
         }
       }
 
@@ -1141,7 +1267,7 @@ if (debug) this.log(
     }
   }
 
-  _saveWidgetData() {
+  _saveWidgetData({ skipChart = false } = {}) {
     const schedule  = this.homey.settings.get('policy_optimizer_schedule') || [];
     const state     = this.homey.settings.get('battery_policy_state')      || {};
     const use1h     = this.getSetting('price_resolution') === '1h';
@@ -1340,7 +1466,10 @@ if (debug) this.log(
     this.log(`[Widget] Data saved: ${slots.length} slots`);
 
     // Camera image in device UI (fire-and-forget)
-    this._updatePlanningChart(compact).catch(e => this.error('Camera image update failed:', e));
+    // skipChart=true at startup to avoid 3 concurrent HTTP requests during memory-critical boot
+    if (!skipChart) {
+      this._updatePlanningChart(compact).catch(e => this.error('Camera image update failed:', e));
+    }
   }
 
   /**
@@ -1720,7 +1849,13 @@ if (debug) this.log(
       // ── Battery expansion analysis (non-critical) ──────────────────────────
       // Runs DP for 1–4 battery scenarios to show the marginal value of each
       // additional unit. _schedule is NOT touched by computeExpectedProfit().
-      try {
+      // Skip if heap is already under pressure (4× DP runs = significant allocation).
+      let heapUsedMB = 50; // conservative default: skip expansion if heap unreadable
+      try { heapUsedMB = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      if (heapUsedMB > 45) {
+        this.log(`[MEM] Skipping expansion analysis — heap ${heapUsedMB.toFixed(1)} MB > 45 MB guard`);
+      }
+      if (heapUsedMB <= 45) try {
         const KWH_PER_UNIT = 2.688; // HomeWizard Energy Battery per unit
         const W_PER_UNIT   = 800;
 
@@ -1970,6 +2105,16 @@ if (debug) this.log(
       sums:   this._pvActualHourly.sums,
       counts: this._pvActualHourly.counts,
     });
+
+    // Refresh PV camera image when policy is disabled (otherwise _updatePlanningChart handles it).
+    // Throttled: at most once per 15 minutes to avoid flooding quickchart.io.
+    if (!this.getCapabilityValue('policy_enabled') && this.planningImagePv) {
+      const now = Date.now();
+      if (!this._pvCameraLastUpdate || now - this._pvCameraLastUpdate > 15 * 60 * 1000) {
+        this._pvCameraLastUpdate = now;
+        this.planningImagePv.update().catch(() => {});
+      }
+    }
   }
 
   /**
@@ -2448,7 +2593,7 @@ if (debug) this.log(
       await trigger.trigger(this, {
         mode: result.hwMode || result.policyMode,
         confidence: result.confidence,
-        reason: explanation.summary
+        reason: explanation?.summary ?? ''
       }).catch(this.error);
     }
   }
@@ -2720,6 +2865,12 @@ if (debug) this.log(
       this.homey.clearInterval(this._p1PollInterval);
       this._p1PollInterval = null;
     }
+
+    if (this._modeHistoryFlushInterval) {
+      this.homey.clearInterval(this._modeHistoryFlushInterval);
+      this._modeHistoryFlushInterval = null;
+    }
+    this._modeChartImage = null;
   }
 
   async onDeleted() {
@@ -2766,6 +2917,14 @@ if (debug) this.log(
    * Called from _saveWidgetData() after every policy run.
    */
   async _updatePlanningChart(compact) {
+    // Guard: prevent concurrent calls (each call makes 3 HTTPS requests; a second concurrent
+    // call while the first is mid-stream doubles memory pressure during an already-elevated
+    // heap period and is the primary cause of nightly Memory Warning crashes).
+    if (this._planningChartUpdating) {
+      this.log('[MEM] Chart update skipped — previous still in progress');
+      return;
+    }
+    this._planningChartUpdating = true;
     try {
       const slots = compact?.slots || [];
 
@@ -2791,6 +2950,7 @@ if (debug) this.log(
       if (!this.planningImageToday) {
         this.planningImageToday = await this.homey.images.createImage();
         this.planningImageToday.setStream(async (stream) => {
+          if (this._isPredictiveMode) { stream.end(); return; }
           if (!this._chartToday || !this._chartToday.slots?.length) { stream.end(); return; }
           await this._streamQuickChart(stream, this._chartToday);
         });
@@ -2807,6 +2967,7 @@ if (debug) this.log(
       if (!this.planningImageTomorrow) {
         this.planningImageTomorrow = await this.homey.images.createImage();
         this.planningImageTomorrow.setStream(async (stream) => {
+          if (this._isPredictiveMode) { stream.end(); return; }
           if (!this._chartTomorrow || !this._chartTomorrow.slots?.length) { stream.end(); return; }
           await this._streamQuickChart(stream, this._chartTomorrow);
         });
@@ -2826,23 +2987,20 @@ if (debug) this.log(
       this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
-        this.planningImagePv = await this.homey.images.createImage();
-        this.planningImagePv.setStream(async (stream) => {
-          if (!this._pvChartData) { stream.end(); return; }
-          await this._streamPvChart(stream, this._pvChartData);
-        });
-        await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
-        this._pvChartHash = null;
+        await this._initPvCamera();
       }
-      const pvHash = JSON.stringify(pvActual?.hourly) + JSON.stringify(pvForecast);
+
+      const pvHash = JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
       if (pvHash !== this._pvChartHash) {
         await this.planningImagePv.update();
         this._pvChartHash = pvHash;
       }
 
-      this.log('📊 Planning chart camera images updated (today + tomorrow + PV)');
+      this.log('📊 Planning chart camera images updated (today + tomorrow + PV + modi)');
     } catch (err) {
       this.error('Failed to update planning chart:', err);
+    } finally {
+      this._planningChartUpdating = false;
     }
   }
 
@@ -2947,6 +3105,270 @@ if (debug) this.log(
       req.write(body);
       req.end();
     });
+  }
+
+  async _streamModeChart(stream) {
+    // eslint-disable-next-line global-require
+    const https = require('https');
+    if (!this._modeChartBody) { stream.end(); return; }
+    return new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'quickchart.io',
+        path: '/chart',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(this._modeChartBody),
+        },
+      }, (res) => {
+        if (res.statusCode !== 200) {
+          let errBody = '';
+          res.on('data', chunk => { errBody += chunk; });
+          res.on('end', () => {
+            const err = new Error(`quickchart.io mode ${res.statusCode}: ${errBody.slice(0, 200)}`);
+            stream.destroy(err);
+            reject(err);
+          });
+          return;
+        }
+        res.pipe(stream);
+        res.on('end', resolve);
+        res.on('error', (e) => { stream.destroy(e); reject(e); });
+      });
+      req.on('error', (e) => { stream.destroy(e); reject(e); });
+      req.write(this._modeChartBody);
+      req.end();
+    });
+  }
+
+  async _initPvCamera() {
+    if (this.planningImagePv) return;
+    this.planningImagePv = await this.homey.images.createImage();
+    this.planningImagePv.setStream(async (stream) => {
+      const pvActual   = this.homey.settings.get('policy_pv_actual_today');
+      const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+      const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+      if (!pvActual && !pvForecast) { stream.end(); return; }
+      await this._streamPvChart(stream, { pvActual, pvForecast, pvCapacityW: pvCapW });
+    });
+    await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
+    this.log('📷 PV Opwek camera geregistreerd');
+
+    // Load initial data from settings so the camera has content immediately
+    const pvActual   = this.homey.settings.get('policy_pv_actual_today');
+    const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+    const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+    if (pvForecast || pvActual) {
+      this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
+      await this.planningImagePv.update();
+    }
+  }
+
+  async _initModeHistoryCamera() {
+    if (this._modeChartImage) return;
+    this._modeChartImage = await this.homey.images.createImage();
+    this._modeChartImage.setStream(async (stream) => {
+      if (!this._modeChartBody) { stream.end(); return; }
+      // Guard: Homey fetches the stream asynchronously — the HTTP request to quickchart
+      // adds ~30 MB of heap. Skip if heap is already elevated to avoid a crash.
+      let _heapStream = 99;
+      try { _heapStream = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      if (_heapStream > 38) {
+        this.log(`[MEM] Mode chart stream skipped — heap ${_heapStream.toFixed(1)} MB > 38 MB`);
+        stream.end();
+        return;
+      }
+      await this._streamModeChart(stream);
+    });
+    await this.setCameraImage('battery_mode_history', 'Batterij Modi', this._modeChartImage);
+    this.log('📷 Batterij Modi camera geregistreerd');
+
+    // Seed first recording so chart has data immediately
+    if (this.p1Device) {
+      const mode = this.p1Device._currentDetailedMode
+        || this.p1Device.getCapabilityValue('battery_group_charge_mode')
+        || 'unknown';
+      const soc = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
+      this._recordModeHistory(mode);
+      this._recordSoCHistory(soc);
+    }
+    if (this._modeHistory?.length) {
+      // Guard: skip initial chart generation if heap is still elevated after startup
+      let heap = 0;
+      try { heap = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      if (heap > 40) {
+        this.log(`[MEM] Skipping initial mode chart — heap ${heap.toFixed(1)} MB > 40 MB guard`);
+      } else {
+        await this._updateModeChart();
+      }
+    }
+  }
+
+  async _updateModeChart() {
+    if (!this._modeChartImage) return;
+    if (!this._modeHistory?.length) return;
+    if (this._modeChartUpdating) {
+      this.log('[MEM] Mode chart update skipped — previous still in progress');
+      return;
+    }
+    this._modeChartUpdating = true;
+
+    // Build 24h of 15-min slots (96 total), oldest first
+    const currentSlotMs = Math.floor(Date.now() / (15 * 60000)) * (15 * 60000);
+    const slots = [];
+    for (let i = 95; i >= 0; i--) {
+      slots.push(new Date(currentSlotMs - i * 15 * 60000).toISOString().slice(0, 16)); // 'YYYY-MM-DDTHH:MM'
+    }
+
+    const bySlot = {};
+    for (const b of this._modeHistory) bySlot[b.h] = b;
+
+    const MODE_ORDER = [
+      'to_full', 'zero_charge_only', 'zero_discharge_only', 'zero', 'standby',
+      'predictive_zero', 'predictive_charge', 'predictive_discharge', 'predictive_standby',
+    ];
+    const MODE_COLORS = {
+      to_full:              '#5f6fff',
+      zero_charge_only:     '#8b9fff',
+      zero_discharge_only:  '#20F29B',
+      zero:                 '#FB923C',
+      standby:              '#808080',
+      predictive_zero:      'rgba(251,146,60,0.55)',
+      predictive_charge:    'rgba(139,159,255,0.55)',
+      predictive_discharge: 'rgba(32,242,155,0.55)',
+      predictive_standby:   'rgba(128,128,128,0.55)',
+    };
+    const MODE_LABELS = {
+      to_full: 'Laden', zero_charge_only: 'Laden PV', zero_discharge_only: 'Ontladen',
+      zero: 'Nul', standby: 'Standby',
+      predictive_zero: 'HW Nul', predictive_charge: 'HW Laden',
+      predictive_discharge: 'HW Ontladen', predictive_standby: 'HW Standby',
+    };
+
+    // Labels: uur tonen alleen op :00-slots (elke 4 balkjes), rest leeg
+    const labels = slots.map(s => {
+      if (!s.endsWith(':00')) return '';
+      const h = new Date(s + ':00Z').toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' });
+      return h.padStart(2, '0') + 'u';
+    });
+
+    const modeDatasets = MODE_ORDER.map(mode => {
+      const data = slots.map(slot => {
+        const m = bySlot[slot]?.m || {};
+        const total = Object.values(m).reduce((s, v) => s + v, 0);
+        if (total === 0) return 0;
+        return Math.round((m[mode] || 0) / total * 100);
+      });
+      if (!data.some(v => v > 0)) return null;
+      return {
+        label: MODE_LABELS[mode] || mode,
+        data,
+        backgroundColor: MODE_COLORS[mode] || '#888',
+        stack: 'modes',
+        borderWidth: 0,
+      };
+    }).filter(Boolean);
+
+    const socData = slots.map(slot => bySlot[slot]?.soc ?? null);
+    const hasSoC = socData.some(v => v !== null);
+
+    const datasets = [
+      ...modeDatasets,
+      ...(hasSoC ? [{
+        label: 'SoC %',
+        data: socData,
+        type: 'line',
+        yAxisID: 'ySoC',
+        borderColor: '#ffffff',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+        spanGaps: true,
+      }] : []),
+    ];
+
+    const chartCfg = {
+      type: 'bar',
+      data: { labels, datasets },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: { labels: { color: '#ccc', font: { size: 13 }, boxWidth: 12 } },
+          title: {
+            display: true,
+            text: 'Batterij modi — afgelopen 24 uur',
+            color: '#e0e0e0',
+            font: { size: 15 },
+          },
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: { color: '#aaa', font: { size: 12 }, maxRotation: 0 },
+            grid: { color: '#333' },
+            barPercentage: 0.8,
+            categoryPercentage: 1.0,
+          },
+          y: {
+            stacked: true, min: 0, max: 100,
+            ticks: { color: '#aaa', font: { size: 12 }, callback: (v) => v + '%' },
+            grid: { color: '#333' },
+          },
+          ...(hasSoC ? {
+            ySoC: {
+              min: 0, max: 100, position: 'right',
+              ticks: { color: '#fff', font: { size: 12 }, callback: (v) => v + '%' },
+              grid: { drawOnChartArea: false },
+            },
+          } : {}),
+        },
+      },
+    };
+
+    this._modeChartBody = JSON.stringify({
+      version: '4',
+      backgroundColor: '#1c1c1e',
+      width: 900,
+      height: 500,
+      chart: chartCfg,
+    });
+
+    try {
+      await this._modeChartImage.update();
+      this.log('📊 Battery mode chart updated (15-min slots)');
+    } finally {
+      this._modeChartUpdating = false;
+    }
+  }
+
+  _recordModeHistory(mode) {
+    const currentSlotMs = Math.floor(Date.now() / (15 * 60000)) * (15 * 60000);
+    const slotKey = new Date(currentSlotMs).toISOString().slice(0, 16); // 'YYYY-MM-DDTHH:MM'
+    if (!this._modeHistory) this._modeHistory = [];
+
+    let bucket = this._modeHistory.find(b => b.h === slotKey);
+    if (!bucket) {
+      bucket = { h: slotKey, m: {} };
+      this._modeHistory.push(bucket);
+      // Keep only last 25h (100 slots)
+      const cutoff = Date.now() - 25 * 3600 * 1000;
+      this._modeHistory = this._modeHistory.filter(
+        b => new Date(b.h + ':00Z').getTime() > cutoff
+      );
+    }
+
+    bucket.m[mode] = (bucket.m[mode] || 0) + 1;
+  }
+
+  _recordSoCHistory(soc) {
+    if (typeof soc !== 'number') return;
+    const currentSlotMs = Math.floor(Date.now() / (15 * 60000)) * (15 * 60000);
+    const slotKey = new Date(currentSlotMs).toISOString().slice(0, 16);
+    if (!this._modeHistory) this._modeHistory = [];
+    const bucket = this._modeHistory.find(b => b.h === slotKey);
+    if (bucket) bucket.soc = soc;
   }
 
   _buildPvChartConfig(pvData) {

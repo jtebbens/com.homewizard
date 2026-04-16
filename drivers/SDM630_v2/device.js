@@ -40,6 +40,8 @@ function normalizeBatteryMode(data) {
 module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
   async onInit() {
+    const _memS = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][SDM630] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
+    _memS('onInit-start');
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
@@ -47,7 +49,9 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     //this.log('Token:', this.token);
 
     await this._updateCapabilities();
+    _memS('after-updateCapabilities');
     await this._registerCapabilityListeners();
+    _memS('after-registerCapabilityListeners');
 
     const settings = this.getSettings();
     this.log('Settings for SDM630 apiv2: ', settings.polling_interval);
@@ -240,6 +244,7 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 
     } // End of _flowListenersRegistered_SDM630 guard
 
+    _memS('after-flowCards');
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
 
     this._triggerFlowPrevious = {};
@@ -418,9 +423,12 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
   }
 
 async onPoll() {
+  // Circuit breaker: skip poll during backoff window (after repeated timeouts)
+  if (this._backoffUntil && Date.now() < this._backoffUntil) return;
+
   try {
     const settings = this.getSettings();
-    
+
     // 1. Restore URL if runtime is empty
     if (!this.url) {
       if (settings.url) {
@@ -505,11 +513,25 @@ async onPoll() {
     }
 
     // If everything succeeded
+    this._consecutiveErrors = 0;
+    this._backoffUntil = null;
     await this.setAvailable();
 
   } catch (err) {
     this.error('Polling failed:', err);
     await this.setUnavailable(err).catch(this.error);
+
+    // Circuit breaker: after 3 consecutive timeouts, back off for 60s to prevent socket storms
+    if (err.message === 'TIMEOUT') {
+      this._consecutiveErrors = (this._consecutiveErrors || 0) + 1;
+      if (this._consecutiveErrors >= 3) {
+        this._backoffUntil = Date.now() + 60000;
+        this._consecutiveErrors = 0;
+        this.log(`⏸️ SDM630 circuit breaker: 3 timeouts, backing off 60s`);
+      }
+    } else {
+      this._consecutiveErrors = 0;
+    }
   }
 }
 

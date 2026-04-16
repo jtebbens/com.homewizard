@@ -67,6 +67,8 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
+    const _memSock = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][socket] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
+    _memSock('onInit-start');
 
     this._lastStatePoll = 0;
     this._debugLogs = [];
@@ -180,6 +182,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.registerCapabilityListener('locked', async (value) => {
       await this._putState({ switch_lock: value });
     });
+
+    _memSock(`onInit-done (device ${safeIndex + 1}/${allDevices.length})`);
   }
 
   onUninit() {

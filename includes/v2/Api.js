@@ -10,6 +10,8 @@ module.exports = (function () {
     keepAlive: true,
     keepAliveMsecs: 11000,
     rejectUnauthorized: false,
+    maxSockets: 6,
+    maxFreeSockets: 2,
   });
 
 
