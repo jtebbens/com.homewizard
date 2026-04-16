@@ -309,9 +309,10 @@ async function applyMeasurementCapabilities(device, m) {
  * @returns {string} normalized mode string
  */
 function normalizeBatteryMode(data) {
-  // If already normalized (string), return as-is
+  // If already a string, return as-is — but collapse predictive sub-types back to 'predictive'
   if (typeof data === 'string') {
-    return data.trim();
+    const s = data.trim();
+    return s.startsWith('predictive_') ? 'predictive' : s;
   }
 
   // Extract mode
@@ -329,6 +330,7 @@ function normalizeBatteryMode(data) {
   // Direct modes
   if (mode === 'standby') return 'standby';
   if (mode === 'to_full') return 'to_full';
+
   if (mode === 'predictive') return 'predictive';
 
   // Vendor sometimes sends these directly
@@ -358,7 +360,24 @@ function normalizeBatteryMode(data) {
   return 'standby';
 }
 
-
+// Returns detailed mode for history tracking — predictive sub-typed by permissions.
+// Only used internally; never passed to capabilities (enum would reject it).
+function detailedBatteryMode(data) {
+  if (typeof data !== 'object' || data === null) return normalizeBatteryMode(data);
+  const mode = typeof data.mode === 'string' ? data.mode.trim().toLowerCase() : null;
+  if (mode === 'predictive') {
+    const perms = Array.isArray(data.permissions)
+      ? [...data.permissions].map(p => p.toLowerCase()).sort().join(',')
+      : '';
+    switch (perms) {
+      case 'charge_allowed,discharge_allowed': return 'predictive_zero';
+      case 'charge_allowed':                  return 'predictive_charge';
+      case 'discharge_allowed':               return 'predictive_discharge';
+      default:                                return 'predictive_standby';
+    }
+  }
+  return normalizeBatteryMode(data);
+}
 
 
 
@@ -424,6 +443,8 @@ async reconnectWithManualIP(ip) {
 
 
  async onInit() {
+    const _memE = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][energy_v2] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
+    _memE('onInit-start');
     wsDebug.init(this.homey);
     this.onPollInterval = null;
     this.gridReturnStart = null;
@@ -467,14 +488,18 @@ async reconnectWithManualIP(ip) {
     //console.log('P1 Token:', this.token);
 
     await this._updateCapabilities();
+    _memE('after-updateCapabilities');
     await this._registerCapabilityListeners();
+    _memE('after-registerCapabilityListeners');
     await this._ensureBatteryCapabilities();
+    _memE('after-ensureBatteryCapabilities');
 
     // Register with baseload monitor
     const app = this.homey.app;
     if (!app.baseloadMonitor) {
       app.baseloadMonitor = new BaseloadMonitor(this.homey);
     }
+    _memE('after-baseloadMonitor');
     app.baseloadMonitor.registerP1Device(this);
     app.baseloadMonitor.trySetMaster(this);
     this._baseloadNotificationsEnabled = this.getSetting('baseload_notifications') ?? true;
@@ -1049,7 +1074,8 @@ this.homey.flow
 
       this.wsManager.start();
     }
-    
+    _memE('onInit-done');
+
     if (debug) this._debugInterval = setInterval(() => {
       this.log(
         'CPU diag:',
@@ -1917,7 +1943,11 @@ async _handleBatteries(data) {
     const normalizedMode = normalizeBatteryMode(payload);
     const lastBatteryMode = this._cacheGet('last_battery_mode');
 
+    // --- Expose detailed mode for battery-policy mode history ---
+    this._currentDetailedMode = detailedBatteryMode(payload);
+
     // --- Firmware fallback: to_full but power_w = 0 ---
+    if (normalizedMode === 'to_full') this.log(`[to_full] power_w=${payload.power_w ?? 'null'}`);
     if (normalizedMode === 'to_full' && (payload.power_w == null || payload.power_w === 0)) {
       const prev = this._cacheGet('last_battery_state') || {};
 
@@ -1928,13 +1958,7 @@ async _handleBatteries(data) {
             ? prev.battery_count
             : 1;
 
-      const fallbackPower = batteryCount * 800;
-
-      this.log(
-        `⚠️ Firmware bug detected: power_w=0 in to_full. Applying fallback ${fallbackPower}W (battery_count=${batteryCount})`
-      );
-
-      payload.power_w = fallbackPower;
+      payload.power_w = batteryCount * 800;
     }
 
     // --- Update capability battery_group_charge_mode ---
