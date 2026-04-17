@@ -954,6 +954,40 @@
     /* ── HOMEY READY ── */
     function onHomeyReady(Homey) {
       homeyInstance = Homey;
+
+      // Wrap Homey.get to transparently merge in-memory live-state from api.js.
+      // Rebuildable policy data (explainability, schedule, weather, debug, …) is
+      // no longer written to homey.settings (each set() cost ~30 MB on Homey);
+      // it lives in device._liveState and is served via getLiveState. Merging
+      // here keeps all downstream render code unchanged.
+      const _origHomeyGet = Homey.get.bind(Homey);
+      Homey.get = (cb) => {
+        _origHomeyGet((err, settings) => {
+          if (err) return cb(err);
+          settings = settings || {};
+          try {
+            Homey.api('GET', '/getLiveState', (apiErr, live) => {
+              if (!apiErr && live && typeof live === 'object') Object.assign(settings, live);
+              cb(null, settings);
+            });
+          } catch (e) {
+            cb(null, settings);
+          }
+        });
+      };
+
+      // Any handler registered for 'settings.set' also gets 'live-state-update'
+      // so existing per-key re-render logic keeps working for in-memory keys.
+      const _origHomeyOn = Homey.on.bind(Homey);
+      Homey.on = (event, handler) => {
+        if (event === 'settings.set' && typeof handler === 'function') {
+          _origHomeyOn('live-state-update', (payload) => {
+            handler(payload && payload.key);
+          });
+        }
+        return _origHomeyOn(event, handler);
+      };
+
       document.getElementById('title').innerText = Homey.__('settings.title');
       document.getElementById('changelog').innerText = Homey.__('settings.changelog.label');
       document.getElementById('support').innerText = Homey.__('settings.support_label');
