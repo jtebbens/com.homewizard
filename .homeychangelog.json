@@ -1324,5 +1324,8 @@
   },
   "3.15.31": {
     "en": "Weather and price data also adjust to new settings.set"
+  },
+  "3.15.32": {
+    "en": "Refractor policy-run"
   }
 }
