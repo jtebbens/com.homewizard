@@ -1318,5 +1318,8 @@
   },
   "3.15.29": {
     "en": "Added diagnostics for battery policy memory issue"
+  },
+  "3.15.30": {
+    "en": "HomeWizard Homey app crashes caused by `homey.settings.set` allocating ~30 MB heap per call."
   }
 }
