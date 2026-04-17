@@ -1312,5 +1312,11 @@
   },
   "3.15.27": {
     "en": "Policy guard mem checks"
+  },
+  "3.15.28": {
+    "en": "patch"
+  },
+  "3.15.29": {
+    "en": "Added diagnostics for battery policy memory issue"
   }
 }
