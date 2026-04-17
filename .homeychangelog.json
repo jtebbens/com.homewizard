@@ -1321,5 +1321,8 @@
   },
   "3.15.30": {
     "en": "HomeWizard Homey app crashes caused by `homey.settings.set` allocating ~30 MB heap per call."
+  },
+  "3.15.31": {
+    "en": "Weather and price data also adjust to new settings.set"
   }
 }
