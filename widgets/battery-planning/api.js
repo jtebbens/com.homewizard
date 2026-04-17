@@ -2,6 +2,12 @@
 
 module.exports = {
   async getPlanningData({ homey }) {
-    return homey.settings.get('policy_widget_data') || null;
+    try {
+      const devices = homey.drivers.getDriver('battery-policy').getDevices();
+      const device = devices && devices[0];
+      return device?._widgetData || null;
+    } catch (e) {
+      return null;
+    }
   }
 };
