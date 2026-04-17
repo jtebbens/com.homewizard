@@ -1492,8 +1492,11 @@ if (debug) this.log(
     };
     _memMB('[DIAG] saveWidget:after-compact-build');
 
-    this.homey.settings.set('policy_widget_data', compact);
-    _memMB('[DIAG] saveWidget:after-settings.set');
+    // In-memory cache — widget api.js reads via driver.getDevices()[0]._widgetData.
+    // Avoids the ~30 MB heap spike that homey.settings.set allocates per call
+    // (measured: 8 KB payload triggered 30 MB framework-internal allocation).
+    this._widgetData = compact;
+    _memMB('[DIAG] saveWidget:after-memcache');
     this.homey.api.realtime('planning-update', compact);
     _memMB('[DIAG] saveWidget:after-api.realtime');
     this.log(`[Widget] Data saved: ${slots.length} slots`);
