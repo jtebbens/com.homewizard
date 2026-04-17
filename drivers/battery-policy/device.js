@@ -46,6 +46,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.p1Device = null;
     this.weatherData = null;
     this.lastRecommendation = null;
+    this._liveState = {}; // in-memory store for rebuildable UI state (served via api.js)
     this._lastPvEstimateW = 0; // For EMA smoothing
     this._pvProductionW = null; // User-provided PV production via flow card
     this._pvProductionTimestamp = null; // When the PV data was last updated
@@ -101,7 +102,7 @@ class BatteryPolicyDevice extends Homey.Device {
         this._recordSoCHistory(soc);
       }
       if (!this._modeHistory?.length) return;
-      this.homey.settings.set(`batt_mode_hist_${this.getData().id}`, this._modeHistory);
+      this._queueSettingsPersist(`batt_mode_hist_${this.getData().id}`, this._modeHistory);
       // Guard: skip chart update when heap is elevated — quickchart HTTP + image data adds ~30 MB
       let _heapFlush = 99;
       try { _heapFlush = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
@@ -156,10 +157,12 @@ class BatteryPolicyDevice extends Homey.Device {
       this._schedulePriceRefresh();
     }
 
-    // Push device settings immediately so planning page has correct values after restart
-    // (normally pushed on every _runPolicyCheck, but that runs with a delay)
+    // Push device settings so planning page has correct values after restart
+    // (normally pushed on every _runPolicyCheck, but that runs with a delay).
+    // Queued via the batcher to avoid stacking a 30 MB settings.set spike
+    // on top of the startup cascade.
     const s = this.getSettings();
-    this.homey.settings.set('device_settings', {
+    this._setLive('device_settings', {
       max_charge_price:    s.max_charge_price    || 0.19,
       min_discharge_price: s.min_discharge_price || 0.22,
       min_soc:             s.min_soc             || 10,
@@ -175,6 +178,51 @@ class BatteryPolicyDevice extends Homey.Device {
 
     this.log('BatteryPolicyDevice ready');
     _memMB('onInit-done');
+  }
+
+  // Queue a settings.set call for deferred, serialized execution.
+  // Rationale: homey.settings.set allocates ~30 MB V8 heap per call (framework
+  // internal, independent of payload size — measured with 8 KB payload). A single
+  // policy run used to make 14+ such calls, cumulatively driving RSS over the
+  // Homey ceiling. Most rebuildable UI state now lives in this._liveState (served
+  // via api.js) so only genuinely persistent keys pass through this queue.
+  // Spacing: 8s between writes so V8 can fully GC the previous 30 MB spike
+  // before the next allocation — a single 60 MB peak alone trips the warning.
+  _queueSettingsPersist(key, value) {
+    if (!this._settingsQueue) this._settingsQueue = new Map();
+    this._settingsQueue.set(key, value); // coalesces duplicates
+    if (this._settingsFlushTimer) return;
+    this._settingsFlushTimer = this.homey.setTimeout(() => {
+      this._settingsFlushTimer = null;
+      this._flushSettingsQueue();
+    }, 8000);
+  }
+
+  _flushSettingsQueue() {
+    if (!this._settingsQueue || this._settingsQueue.size === 0) return;
+    const [key, value] = this._settingsQueue.entries().next().value;
+    this._settingsQueue.delete(key);
+    try {
+      this.homey.settings.set(key, value);
+    } catch (e) {
+      this.error(`Failed to persist ${key}:`, e.message);
+    }
+    if (this._settingsQueue.size > 0) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+    }
+  }
+
+  // Store rebuildable UI state in-memory (served to settings page via api.js).
+  // Emits a realtime 'live-state-update' event so the settings page can re-render
+  // the affected section without polling.
+  _setLive(key, value) {
+    this._liveState[key] = value;
+    try {
+      this.homey.api.realtime('live-state-update', { key });
+    } catch (_) { /* noop */ }
   }
 
   async _initializeCapabilities() {
@@ -558,7 +606,7 @@ if (debug) this.log(
           const pct = Math.max(0, Math.min(100, Math.round(
             (1 - this._todayGridImportKwh / this._todayConsumptionKwh) * 100
           )));
-          this.homey.settings.set('today_self_sufficiency', {
+          this._queueSettingsPersist('today_self_sufficiency', {
             pct,
             gridImportKwh:  +this._todayGridImportKwh.toFixed(3),
             consumptionKwh: +this._todayConsumptionKwh.toFixed(3),
@@ -896,7 +944,7 @@ if (debug) this.log(
       if (this._isPredictiveMode) {
         // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
         const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-        const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+        const pvForecast = this._liveState.policy_pv_forecast_hourly;
         const pvCapW     = this.getSetting('pv_capacity_w') || 0;
         this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
         this.planningImagePv?.update().catch(() => {});
@@ -1070,7 +1118,7 @@ if (debug) this.log(
         );
         _memMB('[DIAG] after-generateExplanation');
         this.homey.api.realtime('explainability_update', explanation);
-        this.homey.settings.set('policy_explainability', explanation);
+        this._setLive('policy_explainability', explanation);
         this.log('Saving explainability length:', JSON.stringify(explanation).length);
       }
       
@@ -1094,11 +1142,11 @@ if (debug) this.log(
         avgCost: inputs.batteryCost?.avgCost ?? 0,
         lastUpdate: new Date().toISOString()
       };
-      this.homey.settings.set('battery_policy_state', planningData);
+      this._setLive('battery_policy_state', planningData);
 
       // Push device settings to app settings so planning page can read them
       // (device settings are not accessible via Homey.get() in the settings page)
-      this.homey.settings.set('device_settings', {
+      this._setLive('device_settings', {
         max_charge_price:    this.getSetting('max_charge_price')    || 0.19,
         min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
         min_soc:             this.getSetting('min_soc')             || 10,
@@ -1129,7 +1177,7 @@ if (debug) this.log(
       }
       
       await this.setCapabilityValue('battery_rte', parseFloat((currentRte * 100).toFixed(1))).catch(this.error);
-      this.homey.settings.set('battery_efficiency_effective', currentRte);
+      this._queueSettingsPersist('battery_efficiency_effective', currentRte);
 
       await this.setCapabilityValue('recommended_mode', recommended);
 
@@ -1167,7 +1215,7 @@ if (debug) this.log(
       // Store compact diagnostic for user-facing troubleshooting (settings page).
       if (result.debug) {
         result.debug.appVersion = require('../../app.json').version;
-        this.homey.settings.set('policy_last_run_debug', result.debug);
+        this._setLive('policy_last_run_debug', result.debug);
       }
 
       // ------------------------------------------------------
@@ -1246,7 +1294,7 @@ if (debug) this.log(
           }
           // Keep last 192 entries (48h headroom — extra triggers won't push out early-morning data)
           if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
-          this.homey.settings.set('policy_mode_history', modeHistory);
+          this._queueSettingsPersist('policy_mode_history', modeHistory);
         } catch (e) {
           this.error('Failed to save mode history:', e);
         }
@@ -1259,9 +1307,9 @@ if (debug) this.log(
         const actualHwMode = this.p1Device.getCapabilityValue('battery_group_charge_mode');
         if (actualHwMode) {
           await this.setCapabilityValue('active_mode', actualHwMode).catch(this.error);
-          // Patch currentMode in already-saved planningData (avoid 2nd settings.set)
+          // Patch currentMode in already-saved planningData
           planningData.currentMode = actualHwMode;
-          this.homey.settings.set('battery_policy_state', planningData);
+          this._setLive('battery_policy_state', planningData);
 
           // Always sync explanation_summary to the actual hardware mode
           if (this.explainabilityEngine) {
@@ -1295,9 +1343,9 @@ if (debug) this.log(
 
   _saveWidgetData({ skipChart = false } = {}) {
     _memMB('[DIAG] saveWidgetData-start');
-    const schedule  = this.homey.settings.get('policy_optimizer_schedule') || [];
+    const schedule  = this._liveState.policy_optimizer_schedule || [];
     _memMB('[DIAG] after-get-schedule');
-    const state     = this.homey.settings.get('battery_policy_state')      || {};
+    const state     = this._liveState.battery_policy_state      || {};
     const use1h     = this.getSetting('price_resolution') === '1h';
     const priceData = use1h
       ? (this.homey.settings.get('policy_all_prices') || [])
@@ -1837,7 +1885,7 @@ if (debug) this.log(
         ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
         : 1;
       this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
-      this.homey.settings.set('pv_surplus_forecast', {
+      this._setLive('pv_surplus_forecast', {
         netPvKwh:      Math.round(netPvKwh * 100) / 100,
         remainingKwh:  Math.round(remainingKwh * 100) / 100,
         fillFraction:  Math.round(fillFraction * 100) / 100,
@@ -1864,14 +1912,14 @@ if (debug) this.log(
           slot.sampleCount = this.learningEngine.getConsumptionSampleCount(new Date(slot.timestamp));
         }
       }
-      this.homey.settings.set('policy_optimizer_schedule', planningSchedule);
+      this._setLive('policy_optimizer_schedule', planningSchedule);
 
 
       // ── SoC plan snapshot: first planned SoC per slot, never overwritten ──
       // Allows the frontend to show "planned XX%" alongside actual SoC for past slots.
       try {
         const nowTs = Date.now();
-        let socPlan = this.homey.settings.get('policy_soc_plan') || {};
+        let socPlan = this._liveState.policy_soc_plan || this.homey.settings.get('policy_soc_plan') || {};
         // Prune entries older than 48h
         for (const ts of Object.keys(socPlan)) {
           if (nowTs - new Date(ts).getTime() > 48 * 3600 * 1000) delete socPlan[ts];
@@ -1884,7 +1932,7 @@ if (debug) this.log(
             changed = true;
           }
         }
-        if (changed) this.homey.settings.set('policy_soc_plan', socPlan);
+        if (changed) this._setLive('policy_soc_plan', socPlan);
       } catch (e) { /* non-critical */ }
 
       // ── Battery expansion analysis (non-critical) ──────────────────────────
@@ -1978,7 +2026,7 @@ if (debug) this.log(
           todayEntry.trackingError = +((actualProfit - projectedProfit) / projectedProfit * 100).toFixed(1);
         }
 
-        this.homey.settings.set('expansion_profit_history', hist);
+        this._queueSettingsPersist('expansion_profit_history', hist);
 
         // Augment scenarios with avgProfit + seasonally-corrected avgProfit.
         // Seasonal correction: normalize each day's profit by its monthly irradiance
@@ -2013,7 +2061,7 @@ if (debug) this.log(
 
         const currentUnits = Math.max(1, Math.min(4, Math.round(capacityKwh / KWH_PER_UNIT)));
 
-        this.homey.settings.set('battery_expansion_analysis', {
+        this._setLive('battery_expansion_analysis', {
           timestamp:    new Date().toISOString(),
           currentUnits,
           currentKwh:   capacityKwh,
@@ -2039,7 +2087,7 @@ if (debug) this.log(
           for (let d = 0; d < 7; d++) {
             days[d] = this.learningEngine.getDailyProfile(d).map(s => s.avgW);
           }
-          this.homey.settings.set('policy_consumption_profile', {
+          this._queueSettingsPersist('policy_consumption_profile', {
             timestamp: new Date().toISOString(),
             days,
           });
@@ -2085,7 +2133,7 @@ if (debug) this.log(
         }
       }
 
-      this.homey.settings.set('policy_pv_forecast_hourly', pvForecastByDay);
+      this._setLive('policy_pv_forecast_hourly', pvForecastByDay);
     }
   }
 
@@ -2140,7 +2188,7 @@ if (debug) this.log(
       this._pvActualHourly.sums[amsHour] / this._pvActualHourly.counts[amsHour]
     );
 
-    this.homey.settings.set('policy_pv_actual_today', {
+    this._queueSettingsPersist('policy_pv_actual_today', {
       date:   this._pvActualHourly.date,
       hourly: this._pvActualHourly.hourly,
       sums:   this._pvActualHourly.sums,
@@ -2341,13 +2389,13 @@ if (debug) this.log(
     _memMB('[DIAG] gatherInputs:after-setCapabilities');
     
     // Push debug data to app settings for planning view
-    this.homey.settings.set('policy_debug_top3low', debugTopLowText);
-    this.homey.settings.set('policy_debug_top3high', debugTopHighText);
+    this._setLive('policy_debug_top3low', debugTopLowText);
+    this._setLive('policy_debug_top3high', debugTopHighText);
 
     // Push structured learning stats for the UI status block
     const rte = this.efficiencyEstimator.getEfficiency();
     const rteInsightsObj = this.efficiencyEstimator.getEfficiencyInsights();
-    this.homey.settings.set('learning_status', {
+    this._setLive('learning_status', {
       days:       learningStats.days_tracking,
       samples:    learningStats.total_samples,
       coverage:   learningStats.pattern_coverage,
@@ -2377,10 +2425,10 @@ if (debug) this.log(
           weatherCode: h.weatherCode ?? 0
         };
       });
-      this.homey.settings.set('policy_weather_hourly', hourlyWeather);
+      this._setLive('policy_weather_hourly', hourlyWeather);
       _memMB('[DIAG] gatherInputs:after-weatherSettings');
       if (weatherData.fetchedAt) {
-        this.homey.settings.set('policy_weather_fetched_at', new Date(weatherData.fetchedAt).toISOString());
+        this._setLive('policy_weather_fetched_at', new Date(weatherData.fetchedAt).toISOString());
       }
     }
 
@@ -2917,6 +2965,20 @@ if (debug) this.log(
       this.homey.clearInterval(this._modeHistoryFlushInterval);
       this._modeHistoryFlushInterval = null;
     }
+
+    if (this._settingsFlushTimer) {
+      this.homey.clearTimeout(this._settingsFlushTimer);
+      this._settingsFlushTimer = null;
+    }
+    // Final flush — write pending queued settings synchronously on shutdown
+    // so the last policy run's state is not lost on restart.
+    if (this._settingsQueue && this._settingsQueue.size > 0) {
+      for (const [key, value] of this._settingsQueue) {
+        try { this.homey.settings.set(key, value); } catch (_) {}
+      }
+      this._settingsQueue.clear();
+    }
+
     this._modeChartImage = null;
   }
 
@@ -3039,7 +3101,7 @@ if (debug) this.log(
 
       // PV forecast vs actual image
       const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+      const pvForecast = this._liveState.policy_pv_forecast_hourly;
       const pvCapW     = this.getSetting('pv_capacity_w') || 0;
 
       this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
@@ -3204,7 +3266,7 @@ if (debug) this.log(
     this.planningImagePv = await this.homey.images.createImage();
     this.planningImagePv.setStream(async (stream) => {
       const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+      const pvForecast = this._liveState.policy_pv_forecast_hourly;
       const pvCapW     = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
@@ -3214,9 +3276,9 @@ if (debug) this.log(
     await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
     this.log('📷 PV Opwek camera geregistreerd');
 
-    // Load initial data from settings so the camera has content immediately
+    // Load initial data so the camera has content immediately
     const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-    const pvForecast = this.homey.settings.get('policy_pv_forecast_hourly');
+    const pvForecast = this._liveState.policy_pv_forecast_hourly;
     const pvCapW     = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
       this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };

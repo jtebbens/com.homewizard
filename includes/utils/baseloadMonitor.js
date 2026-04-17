@@ -84,6 +84,10 @@ class BaseloadMonitor {
     this.enabled = false;
     this._clearNightTimers();
     this._resetNightState();
+    if (this._saveTimer) {
+      clearTimeout(this._saveTimer);
+      this._saveTimer = null;
+    }
   }
 
   updatePower(power, batteryPower = null) {
@@ -597,12 +601,19 @@ class BaseloadMonitor {
   }
 
   _save() {
-    this.homey.settings.set('baseload_state',{
-      nightHistory:this.nightHistory,
-      currentBaseload:this.currentBaseload,
-      deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
-      invalidNightCounter:this.invalidNightCounter
-    });
+    // Debounce 5min — homey.settings.set allocates ~30 MB V8 heap per call
+    // (framework-internal). Baseload state lives in-memory anyway; only this
+    // nightly/rare persistence exists for restart recovery.
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      this.homey.settings.set('baseload_state',{
+        nightHistory:this.nightHistory,
+        currentBaseload:this.currentBaseload,
+        deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
+        invalidNightCounter:this.invalidNightCounter
+      });
+    }, 5 * 60 * 1000);
   }
 
   _loadState() {
