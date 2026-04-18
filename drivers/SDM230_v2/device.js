@@ -39,6 +39,8 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('SDM230_v2');
+
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.token = await this.getStoreValue('token');
@@ -218,6 +220,55 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
     }
+    if (this._settingsFlushTimer) {
+      this.homey.clearTimeout(this._settingsFlushTimer);
+      this._settingsFlushTimer = null;
+    }
+    if (this._settingsQueue) this._settingsQueue.clear();
+  }
+
+  // Batched settings persistence — homey.settings.set allocates ~30 MB V8 heap
+  // per call. Spacing writes 8s apart lets GC reclaim the previous spike.
+  _queueSettingsPersist(key, value) {
+    if (!this._settingsQueue) this._settingsQueue = new Map();
+    this._settingsQueue.set(key, value);
+    if (this._settingsFlushTimer) return;
+    this._settingsFlushTimer = this.homey.setTimeout(() => {
+      this._settingsFlushTimer = null;
+      this._flushSettingsQueue();
+    }, 8000);
+  }
+
+  _flushSettingsQueue() {
+    if (!this._settingsQueue || this._settingsQueue.size === 0) return;
+
+    let heapMB = 0;
+    try { heapMB = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+    if (heapMB > 40) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+      return;
+    }
+
+    const [key, value] = this._settingsQueue.entries().next().value;
+    this._settingsQueue.delete(key);
+    try {
+      if (key === '__settings__') {
+        this.setSettings(value).catch(err => this.error('Failed to persist settings:', err.message));
+      } else {
+        this.homey.settings.set(key, value);
+      }
+    } catch (e) {
+      this.error(`Failed to persist ${key}:`, e.message);
+    }
+    if (this._settingsQueue.size > 0) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+    }
   }
 
   onDiscoveryAvailable(discoveryResult) {
@@ -288,12 +339,8 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
    * @returns {Promise<void>} A promise that resolves when the capability is set
    */
   async _setCapabilityValue(capability, value) {
-    // Test if value is undefined, if so, we don't set the capability
-    if (value === undefined) {
-      return;
-    }
+    if (value === undefined) return;
 
-    // Create a new capability if it doesn't exist
     if (!this.hasCapability(capability)) {
       try {
         await this.addCapability(capability);
@@ -306,7 +353,9 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       }
     }
 
-    // Set the capability value
+    // Skip write when value unchanged — avoids framework allocation + listener churn
+    if (this.getCapabilityValue(capability) === value) return;
+
     await this.setCapabilityValue(capability, value).catch(this.error);
   }
 
@@ -370,9 +419,10 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         }
       }
 
-      // 2. Sync settings if discovery changed the URL
-      if (this.url && this.url !== settings.url) {
-        await this.setSettings({ url: this.url }).catch(this.error);
+      // 2. Sync settings if discovery changed the URL — batched, only on actual change
+      if (this.url && this.url !== settings.url && this._lastPersistedUrl !== this.url) {
+        this._lastPersistedUrl = this.url;
+        this._queueSettingsPersist('__settings__', { url: this.url });
       }
 
       // Refresh token if missing
@@ -380,8 +430,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
         this.token = await this.getStoreValue('token');
       }
 
-      // --- Main API calls ---
-      const data = await api.getMeasurement(this.url, this.token);
+      // --- Main API calls (parallel) ---
+      const [data, batteryMode] = await Promise.all([
+        api.getMeasurement(this.url, this.token),
+        api.getMode(this.url, this.token).catch(() => undefined)
+      ]);
 
       const setCapabilityPromises = [];
 
@@ -411,36 +464,30 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       setCapabilityPromises.push(this._setCapabilityValue('measure_voltage', data.voltage_v));
       setCapabilityPromises.push(this._setCapabilityValue('measure_current', data.current_a));
 
-      await Promise.allSettled(setCapabilityPromises);
-
-      // --- Battery mode handling ---
-      const batteryMode = await api.getMode(this.url, this.token);
-
+      // Battery mode — batch capability updates, debounce settings persist
       if (batteryMode) {
         const normalized = normalizeBatteryMode(batteryMode);
 
-        // Update settings if changed
-        if (settings.mode !== normalized) {
-          await this.setSettings({ mode: normalized });
+        if (this._liveMode !== normalized) {
+          this._liveMode = normalized;
+          if (settings.mode !== normalized) {
+            this._queueSettingsPersist('__settings__', { mode: normalized });
+          }
         }
 
-        // Update capabilities
-        await this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null);
-        await this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null);
+        setCapabilityPromises.push(this._setCapabilityValue('measure_power.battery_group_power_w', batteryMode.power_w ?? null));
+        setCapabilityPromises.push(this._setCapabilityValue('measure_power.battery_group_target_power_w', batteryMode.target_power_w ?? null));
+        setCapabilityPromises.push(this._setCapabilityValue('measure_power.battery_group_max_consumption_w', batteryMode.max_consumption_w ?? null));
+        setCapabilityPromises.push(this._setCapabilityValue('measure_power.battery_group_max_production_w', batteryMode.max_production_w ?? null));
 
-        // Flow triggers
-        await this._triggerFlowOnChange('battery_mode_changed_SDM230_v2', normalized);
-        //await this._triggerFlowOnChange('measure_power.battery_group_power_w', batteryMode.power_w ?? null);
+        this._triggerFlowOnChange('battery_mode_changed_SDM230_v2', normalized);
       }
 
-    
+      await Promise.allSettled(setCapabilityPromises);
 
       // Trigger flows when values change
-      //await this._triggerFlowOnChange('measure_power', data.power_w);
-      await this._triggerFlowOnChange('meter_power.import', data.energy_import_kwh);
-      await this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh);
+      this._triggerFlowOnChange('meter_power.import', data.energy_import_kwh);
+      this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh);
       //await this._triggerFlowOnChange('measure_voltage', data.voltage_v);
       //await this._triggerFlowOnChange('measure_current', data.current_a);
 

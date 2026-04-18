@@ -13,6 +13,8 @@ class HomeWizardRainmeter extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('rainmeter');
+
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     // this.log(`HomeWizard Rainmeter ${this.getName()} has been inited`);

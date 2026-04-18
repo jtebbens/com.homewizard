@@ -23,20 +23,51 @@ const v8 = require('v8');
 
 const Testing = false;
 
-// Helper: log current heap in MB via v8 (process.memoryUsage rss fails on Homey sandbox)
+// Helper: log V8 heap + (if available) process RSS. Memory Warning Limit on Homey
+// could be RSS-based rather than heap — try both so we can correlate which bucket
+// is actually growing.
 function logMem(label) {
   try {
     const hs = v8.getHeapStatistics();
-    const heap = (hs.used_heap_size    / 1024 / 1024).toFixed(1);
+    const heap  = (hs.used_heap_size   / 1024 / 1024).toFixed(1);
     const total = (hs.total_heap_size  / 1024 / 1024).toFixed(1);
-    const ext  = (hs.external_memory   / 1024 / 1024).toFixed(1);
-    console.log(`[MEM] ${label}: heap=${heap}/${total}MB ext=${ext}MB`);
+    const ext   = (hs.external_memory  / 1024 / 1024).toFixed(1);
+    let rssPart = '';
+    try {
+      const mu = process.memoryUsage();
+      const rss = (mu.rss / 1024 / 1024).toFixed(1);
+      const ab  = (mu.arrayBuffers / 1024 / 1024).toFixed(1);
+      rssPart = ` rss=${rss}MB ab=${ab}MB`;
+    } catch (_) { /* sandbox blocks rss */ }
+    console.log(`[MEM] ${label}: heap=${heap}/${total}MB ext=${ext}MB${rssPart}`);
   } catch (e) {
     console.log(`[MEM] ${label}: unavailable (${e.message})`);
   }
 }
 
+// Global device counter — each driver bumps on onInit so the runtime log shows
+// which driver-types contribute how many instances. Useful for triaging crashes
+// from users whose device mix differs from ours (e.g. the other user has 2×
+// plugin_battery, we don't).
+const _deviceCounts = {};
+function bumpDeviceCount(driverId) {
+  _deviceCounts[driverId] = (_deviceCounts[driverId] || 0) + 1;
+}
+function logDeviceCounts() {
+  const entries = Object.entries(_deviceCounts);
+  if (entries.length === 0) return;
+  const summary = entries
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k}=${v}`)
+    .join(' ');
+  console.log(`[MEM] devices: ${summary}`);
+}
+
 class HomeWizardApp extends Homey.App {
+  // Exposed for drivers: this.homey.app.logMem('my-driver:event-name')
+  logMem(label) { logMem(label); }
+  bumpDeviceCount(driverId) { bumpDeviceCount(driverId); }
+
   async onInit() {
     this.log('HomeWizard app ready!');
     this.baseloadMonitor = null;
@@ -60,6 +91,7 @@ class HomeWizardApp extends Homey.App {
         this._memInterval = setInterval(() => {
           _runtimeCount++;
           logMem(`run+${_runtimeCount}min`);
+          if (_runtimeCount === 1 || _runtimeCount % 10 === 0) logDeviceCounts();
         }, 60_000);
       }
     }, 5000);

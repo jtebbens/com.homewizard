@@ -9,6 +9,8 @@ class HomeWizardEnergylink extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('energylink');
+
     this.startPolling();
 
     // Flow triggers

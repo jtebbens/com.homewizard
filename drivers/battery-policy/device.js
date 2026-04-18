@@ -24,6 +24,7 @@ function _memMB(label) {
 class BatteryPolicyDevice extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('battery-policy');
     this.log('BatteryPolicyDevice initialized');
     _memMB('onInit-start');
 
@@ -200,6 +201,20 @@ class BatteryPolicyDevice extends Homey.Device {
 
   _flushSettingsQueue() {
     if (!this._settingsQueue || this._settingsQueue.size === 0) return;
+
+    // Heap-aware: each settings.set allocates ~30 MB transient. If we're already
+    // elevated (e.g. weather fetch, widget broadcast, camera chart), another
+    // 30 MB on top would trip the Memory Warning. Reschedule until heap settles.
+    let heapMB = 0;
+    try { heapMB = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+    if (heapMB > 40) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+      return;
+    }
+
     const [key, value] = this._settingsQueue.entries().next().value;
     this._settingsQueue.delete(key);
     try {
@@ -215,14 +230,13 @@ class BatteryPolicyDevice extends Homey.Device {
     }
   }
 
-  // Store rebuildable UI state in-memory (served to settings page via api.js).
-  // Emits a realtime 'live-state-update' event so the settings page can re-render
-  // the affected section without polling.
+  // Store rebuildable UI state in-memory for fast internal reads (cameras, widget),
+  // and queue a batched settings.set so the settings page (which reads via Homey.get)
+  // sees the same data. The batcher spaces writes 8s apart so each ~30 MB spike
+  // is fully GC'd before the next allocation.
   _setLive(key, value) {
     this._liveState[key] = value;
-    try {
-      this.homey.api.realtime('live-state-update', { key });
-    } catch (_) { /* noop */ }
+    this._queueSettingsPersist(key, value);
   }
 
   async _initializeCapabilities() {
@@ -944,7 +958,8 @@ if (debug) this.log(
       if (this._isPredictiveMode) {
         // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
         const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-        const pvForecast = this._liveState.policy_pv_forecast_hourly;
+        const pvForecast = this._liveState.policy_pv_forecast_hourly
+          ?? this.homey.settings.get('policy_pv_forecast_hourly');
         const pvCapW     = this.getSetting('pv_capacity_w') || 0;
         this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
         this.planningImagePv?.update().catch(() => {});
@@ -3101,7 +3116,8 @@ if (debug) this.log(
 
       // PV forecast vs actual image
       const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this._liveState.policy_pv_forecast_hourly;
+      const pvForecast = this._liveState.policy_pv_forecast_hourly
+        ?? this.homey.settings.get('policy_pv_forecast_hourly');
       const pvCapW     = this.getSetting('pv_capacity_w') || 0;
 
       this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
@@ -3266,7 +3282,8 @@ if (debug) this.log(
     this.planningImagePv = await this.homey.images.createImage();
     this.planningImagePv.setStream(async (stream) => {
       const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this._liveState.policy_pv_forecast_hourly;
+      const pvForecast = this._liveState.policy_pv_forecast_hourly
+        ?? this.homey.settings.get('policy_pv_forecast_hourly');
       const pvCapW     = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
@@ -3278,7 +3295,8 @@ if (debug) this.log(
 
     // Load initial data so the camera has content immediately
     const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-    const pvForecast = this._liveState.policy_pv_forecast_hourly;
+    const pvForecast = this._liveState.policy_pv_forecast_hourly
+      ?? this.homey.settings.get('policy_pv_forecast_hourly');
     const pvCapW     = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
       this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
@@ -3288,8 +3306,26 @@ if (debug) this.log(
 
   async _initModeHistoryCamera() {
     if (this._modeChartImage) return;
+
+    // Seed recording + build body BEFORE registering camera, so Homey's initial
+    // fetch has valid content. Without this the first stream fetch returns
+    // empty and Homey hides the tile in the device "More Info" page.
+    if (this.p1Device) {
+      const mode = this.p1Device._currentDetailedMode
+        || this.p1Device.getCapabilityValue('battery_group_charge_mode')
+        || 'unknown';
+      const soc = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
+      this._recordModeHistory(mode);
+      this._recordSoCHistory(soc);
+    }
+
     this._modeChartImage = await this.homey.images.createImage();
     this._modeChartImage.setStream(async (stream) => {
+      // Build body on demand — ensures fresh data on every fetch, survives
+      // in-memory resets after app restart.
+      if (this._modeHistory?.length) {
+        await this._buildModeChartBody();
+      }
       if (!this._modeChartBody) { stream.end(); return; }
       // Guard: Homey fetches the stream asynchronously — the HTTP request to quickchart
       // adds ~30 MB of heap. Skip if heap is already elevated to avoid a crash.
@@ -3302,28 +3338,20 @@ if (debug) this.log(
       }
       await this._streamModeChart(stream);
     });
-    await this.setCameraImage('battery_mode_history', 'Batterij Modi', this._modeChartImage);
-    this.log('📷 Batterij Modi camera geregistreerd');
 
-    // Seed first recording so chart has data immediately
-    if (this.p1Device) {
-      const mode = this.p1Device._currentDetailedMode
-        || this.p1Device.getCapabilityValue('battery_group_charge_mode')
-        || 'unknown';
-      const soc = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
-      this._recordModeHistory(mode);
-      this._recordSoCHistory(soc);
-    }
+    // Pre-build body so the initial setCameraImage fetch has content
     if (this._modeHistory?.length) {
-      // Guard: skip initial chart generation if heap is still elevated after startup
       let heap = 0;
       try { heap = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (heap > 40) {
-        this.log(`[MEM] Skipping initial mode chart — heap ${heap.toFixed(1)} MB > 40 MB guard`);
+        this.log(`[MEM] Skipping initial mode chart body — heap ${heap.toFixed(1)} MB > 40 MB guard`);
       } else {
-        await this._updateModeChart();
+        await this._buildModeChartBody();
       }
     }
+
+    await this.setCameraImage('battery_mode_history', 'Batterij Modi', this._modeChartImage);
+    this.log('📷 Batterij Modi camera geregistreerd');
   }
 
   async _updateModeChart() {
@@ -3334,6 +3362,18 @@ if (debug) this.log(
       return;
     }
     this._modeChartUpdating = true;
+
+    try {
+      await this._buildModeChartBody();
+      await this._modeChartImage.update();
+      this.log('📊 Battery mode chart updated (15-min slots)');
+    } finally {
+      this._modeChartUpdating = false;
+    }
+  }
+
+  async _buildModeChartBody() {
+    if (!this._modeHistory?.length) return;
 
     // Build 24h of 15-min slots (96 total), oldest first
     const currentSlotMs = Math.floor(Date.now() / (15 * 60000)) * (15 * 60000);
@@ -3456,13 +3496,6 @@ if (debug) this.log(
       height: 500,
       chart: chartCfg,
     });
-
-    try {
-      await this._modeChartImage.update();
-      this.log('📊 Battery mode chart updated (15-min slots)');
-    } finally {
-      this._modeChartUpdating = false;
-    }
   }
 
   _recordModeHistory(mode) {

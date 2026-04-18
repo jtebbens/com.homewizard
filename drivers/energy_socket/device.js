@@ -67,6 +67,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('energy_socket');
     const _memSock = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][socket] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
     _memSock('onInit-start');
 

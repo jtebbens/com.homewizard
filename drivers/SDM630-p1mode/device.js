@@ -55,6 +55,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
 async onInit() {
+    this.homey.app.bumpDeviceCount?.('SDM630-p1mode');
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
