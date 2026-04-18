@@ -246,7 +246,25 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
     } // End of _flowListenersRegistered_SDM630 guard
 
     _memS('after-flowCards');
-    this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
+
+    const allDevices = this.driver.getDevices();
+    const deviceCount = Math.max(1, allDevices.length);
+    const myIndex = Math.max(0, allDevices.indexOf(this));
+    const pollIntervalMs = 1000 * settings.polling_interval;
+    const offsetMs = myIndex === 0 ? 500 : Math.round((myIndex / deviceCount) * pollIntervalMs);
+
+    this.log(`⏱️ Polling interval ${settings.polling_interval}s, spread offset ${Math.round(offsetMs/1000)}s (device ${myIndex + 1}/${deviceCount})`);
+
+    if (this.onPollInterval) clearInterval(this.onPollInterval);
+    this._firstPollDone = false;
+    this._firstPollTimeout = this.homey.setTimeout(() => {
+      this._firstPollTimeout = null;
+      if (this.__deleted) return;
+      this.log(`🚀 First poll starting (after ${Math.round(offsetMs/1000)}s delay)`);
+      this._firstPollDone = true;
+      this.onPoll();
+      this.onPollInterval = setInterval(this.onPoll.bind(this), pollIntervalMs);
+    }, offsetMs);
 
     this._triggerFlowPrevious = {};
 
@@ -281,6 +299,11 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
   }
 
   onDeleted() {
+    this.__deleted = true;
+    if (this._firstPollTimeout) {
+      this.homey.clearTimeout(this._firstPollTimeout);
+      this._firstPollTimeout = null;
+    }
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -339,21 +362,21 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
   onDiscoveryAvailable(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
-    this.onPoll();
+    if (this._firstPollDone) this.onPoll();
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
-    this.onPoll();
+    if (this._firstPollDone) this.onPoll();
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
     this.url = `https://${discoveryResult.address}`;
     this.log(`URL: ${this.url}`);
     this.setAvailable();
-    this.onPoll();
+    if (this._firstPollDone) this.onPoll();
   }
 
   /**
