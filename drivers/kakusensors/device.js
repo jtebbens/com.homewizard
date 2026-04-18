@@ -9,6 +9,8 @@ class HomeWizardKakusensors extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('kakusensors');
+
     if (debug) this.log(`Init Kakusensor ${this.getName()}`);
 
     this.startPolling();

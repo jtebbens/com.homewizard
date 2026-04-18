@@ -15,6 +15,8 @@ class HomeWizardThermometer extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('thermometer');
+
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     const devices = this.homey.drivers.getDriver('thermometer').getDevices();

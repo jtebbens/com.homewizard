@@ -57,6 +57,8 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('SDM230-p1mode');
+
     this._debugLogs = [];
 
     this.agent = new http.Agent({

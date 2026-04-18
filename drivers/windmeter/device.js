@@ -10,6 +10,8 @@ class HomeWizardWindmeter extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('windmeter');
+
     this.log(`HomeWizard Windmeter ${this.getName()} initialized`);
 
     const devices = this.homey.drivers.getDriver('windmeter').getDevices();

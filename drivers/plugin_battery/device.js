@@ -140,6 +140,8 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('plugin_battery');
+    this.homey.app.logMem?.('[plugin_battery] onInit-start');
     wsDebug.init(this.homey);
 
     this._pollErrorCount = 0;
@@ -267,6 +269,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         this._updateBatteryGroup();
       }, 60000);
     }
+
+    this.homey.app.logMem?.('[plugin_battery] onInit-done');
   }
 
   onUninit() {
@@ -297,6 +301,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       clearInterval(this._batteryGroupInterval);
       this._batteryGroupInterval = null;
     }
+    if (this._settingsFlushTimer) {
+      this.homey.clearTimeout(this._settingsFlushTimer);
+      this._settingsFlushTimer = null;
+    }
+    if (this._settingsQueue) this._settingsQueue.clear();
 
     if (this.wsManager) {
       this.wsManager.stop();
@@ -859,12 +868,59 @@ async _updateBatteryGroup() {
   };
 
   let group = this.homey.settings.get('pluginBatteryGroup') || {};
-  const prev = JSON.stringify(group[batteryId]);
-  const next = JSON.stringify(info);
 
-  if (prev !== next) {
+  // Compare on slow-changing fields only — exclude power_w (fluctuates constantly,
+  // realtime path already covers it) and updated_at (always changes). Writing
+  // every 60s × N batteries = ~30 MB heap spike per write, too expensive.
+  const prevInfo = group[batteryId];
+  const dataChanged = !prevInfo
+    || prevInfo.soc_pct !== info.soc_pct
+    || prevInfo.cycles !== info.cycles
+    || prevInfo.capacity_kwh !== info.capacity_kwh;
+
+  if (dataChanged) {
     group[batteryId] = info;
-    this.homey.settings.set('pluginBatteryGroup', group);
+    this._queueSettingsPersist('pluginBatteryGroup', group);
+  }
+}
+
+// Batched settings persistence — homey.settings.set allocates ~30 MB V8 heap
+// per call. Spacing writes 8s apart lets GC reclaim the previous spike.
+_queueSettingsPersist(key, value) {
+  if (!this._settingsQueue) this._settingsQueue = new Map();
+  this._settingsQueue.set(key, value);
+  if (this._settingsFlushTimer) return;
+  this._settingsFlushTimer = this.homey.setTimeout(() => {
+    this._settingsFlushTimer = null;
+    this._flushSettingsQueue();
+  }, 8000);
+}
+
+_flushSettingsQueue() {
+  if (!this._settingsQueue || this._settingsQueue.size === 0) return;
+
+  let heapMB = 0;
+  try { heapMB = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+  if (heapMB > 40) {
+    this._settingsFlushTimer = this.homey.setTimeout(() => {
+      this._settingsFlushTimer = null;
+      this._flushSettingsQueue();
+    }, 8000);
+    return;
+  }
+
+  const [key, value] = this._settingsQueue.entries().next().value;
+  this._settingsQueue.delete(key);
+  try {
+    this.homey.settings.set(key, value);
+  } catch (e) {
+    this.error(`Failed to persist ${key}:`, e.message);
+  }
+  if (this._settingsQueue.size > 0) {
+    this._settingsFlushTimer = this.homey.setTimeout(() => {
+      this._settingsFlushTimer = null;
+      this._flushSettingsQueue();
+    }, 8000);
   }
 }
 

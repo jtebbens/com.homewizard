@@ -14,6 +14,8 @@ class HomeWizardWattcher extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('wattcher');
+
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     this.log(`HomeWizard Wattcher ${this.getName()} has been inited`);

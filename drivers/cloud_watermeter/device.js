@@ -13,6 +13,7 @@ const debug = false
 module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('cloud_watermeter');
     this.log('Cloud Watermeter initialized:', this.getName());
 
     // Get stored credentials

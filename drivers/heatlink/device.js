@@ -90,6 +90,8 @@ class HomeWizardHeatlink extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('heatlink');
+
     this.log(`Heatlink init: ${this.getName()}`);
 
     this.startPolling();

@@ -26,6 +26,7 @@ class CloudP1Device extends Device {
    * onInit is called when the device is initialized.
    */
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('cloud_p1');
     this.log('CloudP1Device has been initialized');
 
     // Get device data

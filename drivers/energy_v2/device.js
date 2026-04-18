@@ -443,6 +443,7 @@ async reconnectWithManualIP(ip) {
 
 
  async onInit() {
+    this.homey.app.bumpDeviceCount?.('energy_v2');
     const _memE = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][energy_v2] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
     _memE('onInit-start');
     wsDebug.init(this.homey);
@@ -1983,11 +1984,12 @@ async _handleBatteries(data) {
       this.flowTriggerBatteryMode(this);
       this._cacheSet('last_battery_mode', normalizedMode);
 
-      // ✅ CPU FIX: fire-and-forget — setSettings writes to persistent storage
-      // and blocks the event loop if awaited on every battery update
-      this.setSettings({ mode: normalizedMode }).catch(err => {
-        this.error('❌ Failed to update setting "mode":', err);
-      });
+      // Batched persist — setSettings allocates ~30 MB V8 heap per call. Only
+      // queue when mode actually changes (_liveMode in-memory compare).
+      if (this._liveMode !== normalizedMode) {
+        this._liveMode = normalizedMode;
+        this._queueSettingsPersist('__settings__', { mode: normalizedMode });
+      }
     }
 
     // --- Update battery power capabilities ---
@@ -2080,6 +2082,51 @@ async _handleBatteries(data) {
 
 
 
+  // Batched settings persistence — homey.settings.set / setSettings allocates
+  // ~30 MB V8 heap per call. Spacing writes 8s apart lets GC reclaim each spike.
+  // Special key '__settings__' routes through setSettings (device-scoped).
+  _queueSettingsPersist(key, value) {
+    if (!this._settingsQueue) this._settingsQueue = new Map();
+    this._settingsQueue.set(key, value);
+    if (this._settingsFlushTimer) return;
+    this._settingsFlushTimer = this.homey.setTimeout(() => {
+      this._settingsFlushTimer = null;
+      this._flushSettingsQueue();
+    }, 8000);
+  }
+
+  _flushSettingsQueue() {
+    if (!this._settingsQueue || this._settingsQueue.size === 0) return;
+
+    let heapMB = 0;
+    try { heapMB = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+    if (heapMB > 40) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+      return;
+    }
+
+    const [key, value] = this._settingsQueue.entries().next().value;
+    this._settingsQueue.delete(key);
+    try {
+      if (key === '__settings__') {
+        this.setSettings(value).catch(err => this.error('Failed to persist settings:', err.message));
+      } else {
+        this.homey.settings.set(key, value);
+      }
+    } catch (e) {
+      this.error(`Failed to persist ${key}:`, e.message);
+    }
+    if (this._settingsQueue.size > 0) {
+      this._settingsFlushTimer = this.homey.setTimeout(() => {
+        this._settingsFlushTimer = null;
+        this._flushSettingsQueue();
+      }, 8000);
+    }
+  }
+
   onUninit() {
     // Cleanup intervals and timers when app stops/crashes
     this.__deleted = true;
@@ -2112,6 +2159,11 @@ async _handleBatteries(data) {
       clearInterval(this._debugInterval);
       this._debugInterval = null;
     }
+    if (this._settingsFlushTimer) {
+      this.homey.clearTimeout(this._settingsFlushTimer);
+      this._settingsFlushTimer = null;
+    }
+    if (this._settingsQueue) this._settingsQueue.clear();
     if (this.wsManager) {
       this.wsManager.stop();
       this.wsManager = null;

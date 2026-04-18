@@ -35,6 +35,8 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('watermeter');
+
     this._debugLogs = [];
     this.__deleted = false;
 

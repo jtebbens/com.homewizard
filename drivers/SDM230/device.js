@@ -49,6 +49,7 @@ async function updateCapability(device, capability, value) {
 module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('SDM230');
     this._debugLogs = [];
     this._pollFailCount = 0;
 

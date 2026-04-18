@@ -98,6 +98,7 @@ function getWifiQuality(percent) {
 module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
   async onInit() {
+    this.homey.app.bumpDeviceCount?.('energy');
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
     this._pollErrorCount = 0;

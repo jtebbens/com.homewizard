@@ -66,6 +66,8 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('SDM630');
+
     this._debugLogs = [];
 
     const settings = this.getSettings();

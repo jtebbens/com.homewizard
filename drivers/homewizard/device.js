@@ -88,6 +88,8 @@ class HomeWizardDevice extends Homey.Device {
 
   async onInit() {
 
+    this.homey.app.bumpDeviceCount?.('homewizard');
+
     // ⬅️ BELANGRIJK: bind device instance mee als laatste argument
     this.callnewAsyncBound = (...args) => callnewAsync(...args, this);
 
