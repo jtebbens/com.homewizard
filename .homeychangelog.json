@@ -1333,5 +1333,8 @@
   },
   "3.15.34": {
     "en": "Added more diagnostics"
+  },
+  "3.15.35": {
+    "en": "Memory optimization: reduced transient heap spikes to prevent app restarts."
   }
 }
