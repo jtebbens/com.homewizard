@@ -1338,6 +1338,6 @@
     "en": "Memory optimization: reduced transient heap spikes to prevent app restarts."
   },
   "3.15.36": {
-    "en": "Start delay on SDM630 and other drivers."
+    "en": "Memory optimization: start-up HTTP polls of P1/SDM meters are now spread over the first ~10s to prevent heap spikes that caused \"Memory Warning Limit Reached\" crashes on Homeys with many devices."
   }
 }

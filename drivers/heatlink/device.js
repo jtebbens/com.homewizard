@@ -111,6 +111,7 @@ class HomeWizardHeatlink extends Homey.Device {
 
           if (ok) {
             this.log('settarget target_temperature -> true');
+            this._overrideAt = Date.now();
             await this.setStoreValue('setTemperature', temperature);
             return true;
           }
@@ -119,6 +120,7 @@ class HomeWizardHeatlink extends Homey.Device {
           this.log('ERR settarget target_temperature -> false');
           this.error(`Heatlink ${this.getName()} settarget failed: ${err.message}`);
 
+          this._overrideAt = null;
           await this.setStoreValue('setTemperature', 0);
           this.getStatus().catch(this.error);
           return false;
@@ -179,28 +181,25 @@ class HomeWizardHeatlink extends Homey.Device {
         this.setStoreValue('thermTemperature', rsp).catch(this.error);
       }
 
-      const override = await this.getStoreValue('setTemperature');
+      let override = await this.getStoreValue('setTemperature');
+      const overrideAge = this._overrideAt ? Date.now() - this._overrideAt : Infinity;
+      const OVERRIDE_GRACE_MS = 30000;
 
-      // If override is active but Heatlink reports a different tte → clear override
-      if (override > 0 && tte !== override) {
+      // Only treat mismatch as "rejected" when the override has had time to propagate
+      // through the Heatlink gateway. Within grace, assume tte is still stale.
+      if (override > 0 && tte !== override && overrideAge >= OVERRIDE_GRACE_MS) {
         this.log('Heatlink rejected override, clearing override flag');
         await this.setStoreValue('setTemperature', 0).catch(this.error);
-
-        // Immediately sync Homey to real Heatlink value
-        promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
+        this._overrideAt = null;
+        override = 0;
       }
 
-
       if (override > 0) {
-        // Override active → Homey must follow the override
         if (tte === override) {
-          // Heatlink has accepted the override
+          // Heatlink accepted the override
           promises.push(this.setCapabilityValue('target_temperature', tte).catch(this.error));
-        } else {
-          // Heatlink has NOT accepted the override yet
-          // Do NOT overwrite Homey with stale tte
-          // Let polling try again later
         }
+        // else: still within grace — leave UI as-is, don't overwrite with stale tte
       } else {
         // No override → follow thermostat setpoint (rsp)
         promises.push(this.setCapabilityValue('target_temperature', rsp).catch(this.error));
