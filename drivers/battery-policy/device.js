@@ -21,6 +21,20 @@ function _memMB(label) {
   }
 }
 
+function _settingsFootprintKB(settings) {
+  try {
+    const all = settings.getAll();
+    const entries = Object.entries(all)
+      .map(([k, v]) => ({ k, bytes: JSON.stringify(v).length }))
+      .sort((a, b) => b.bytes - a.bytes);
+    const totalKB = (entries.reduce((s, e) => s + e.bytes, 0) / 1024).toFixed(1);
+    const top = entries.slice(0, 8).map(e => `${e.k}=${(e.bytes / 1024).toFixed(1)}kB`).join(' | ');
+    return `${totalKB}kB total | ${top}`;
+  } catch (_) {
+    return 'unavailable';
+  }
+}
+
 class BatteryPolicyDevice extends Homey.Device {
 
   async onInit() {
@@ -31,12 +45,10 @@ class BatteryPolicyDevice extends Homey.Device {
     // Components
     this.learningEngine = new LearningEngine(this.homey, this);
     await this.learningEngine.initialize();
-    _memMB('after-learningEngine.initialize');
 
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
-    _memMB('after-engines-created');
     this.explainabilityEngine = null; // lazy-loaded on first policy check
     this.chartGenerator = null;       // lazy-loaded on first chart request
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
@@ -78,7 +90,6 @@ class BatteryPolicyDevice extends Homey.Device {
     } catch (e) { /* ignore */ }
 
     await this._initializeCapabilities();
-    _memMB('after-initializeCapabilities');
     this._registerCapabilityListeners();
 
     // Connect P1 after short delay
@@ -131,6 +142,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // After T+10s the heap settles at ~29 MB, so 90s is safely past the danger window.
     this.homey.setTimeout(() => {
       try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Startup widget restore failed:', e); }
+      this._logSettingsFootprint();
     }, 90 * 1000);
 
     // Set default for price_resolution if not yet saved (existing paired devices)
@@ -179,6 +191,10 @@ class BatteryPolicyDevice extends Homey.Device {
 
     this.log('BatteryPolicyDevice ready');
     _memMB('onInit-done');
+  }
+
+  _logSettingsFootprint() {
+    this.log(`[MEM] settings footprint: ${_settingsFootprintKB(this.homey.settings)}`);
   }
 
   // Queue a settings.set call for deferred, serialized execution.
@@ -1066,24 +1082,20 @@ if (debug) this.log(
         }
       }
 
-      _memMB('[DIAG] before-gatherInputs');
       const inputs = await this._gatherInputs();
       if (!inputs.battery || inputs.battery.stateOfCharge === undefined) {
         this.log('Skipping policy check — battery state not ready');
         return;
       }
-      _memMB('[DIAG] after-gatherInputs');
 
       // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update)
       if (this.optimizationEngine.isStale() && inputs.tariff) {
         await this._recomputeOptimizer(inputs);
-        _memMB('[DIAG] after-recomputeOptimizer');
       }
       inputs.optimizer = this.optimizationEngine;
       inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
 
       const result = this.policyEngine.calculatePolicy(inputs);
-      _memMB('[DIAG] after-calculatePolicy');
 
       // Free large price arrays before loading the explainability engine.
       // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
@@ -1095,7 +1107,6 @@ if (debug) this.log(
         inputs.tariff.allPrices = null;
         inputs.tariff.next24Hours = null;
       }
-      _memMB('[DIAG] after-free-priceArrays');
 
       // ------------------------------------------------------
       // 📊 LEARNING: Apply confidence adjustment based on history
@@ -1124,14 +1135,12 @@ if (debug) this.log(
       } else {
         if (!this.explainabilityEngine) {
           this.explainabilityEngine = new (require('../../lib/explainability-engine'))(this.homey);
-          _memMB('after-lazy-load-explainability');
         }
         explanation = this.explainabilityEngine.generateExplanation(
           result,
           inputs,
           result.scores
         );
-        _memMB('[DIAG] after-generateExplanation');
         this.homey.api.realtime('explainability_update', explanation);
         this._setLive('policy_explainability', explanation);
         this.log('Saving explainability length:', JSON.stringify(explanation).length);
@@ -1340,11 +1349,9 @@ if (debug) this.log(
       // Release ExplainabilityEngine after use — module stays compiled in V8 cache,
       // re-instantiation next run is free. Frees ~10–15 MB on memory-constrained devices.
       this.explainabilityEngine = null;
-      _memMB('[DIAG] after-explainability-freed');
 
       // Push compact data to the dashboard widget
       try { this._saveWidgetData(); } catch (e) { this.error('Widget data save failed:', e); }
-      _memMB('[DIAG] after-saveWidgetData');
 
     } catch (error) {
       this.error('Policy check failed:', error);
@@ -1357,15 +1364,12 @@ if (debug) this.log(
   }
 
   _saveWidgetData({ skipChart = false } = {}) {
-    _memMB('[DIAG] saveWidgetData-start');
     const schedule  = this._liveState.policy_optimizer_schedule || [];
-    _memMB('[DIAG] after-get-schedule');
     const state     = this._liveState.battery_policy_state      || {};
     const use1h     = this.getSetting('price_resolution') === '1h';
     const priceData = use1h
       ? (this.homey.settings.get('policy_all_prices') || [])
       : (this.homey.settings.get('policy_all_prices_15min') || []);
-    _memMB('[DIAG] after-get-priceData');
     const step      = use1h ? 3600 * 1000 : 15 * 60 * 1000;
     const now       = Date.now();
 
@@ -1543,8 +1547,6 @@ if (debug) this.log(
     const slots = [...pastSlots, ...expandedFuture]
       .sort((a, b) => a.ts - b.ts)
       .slice(0, 192); // max 48h worth of 15-min slots
-    _memMB('[DIAG] saveWidget:after-slots-build');
-
     const compact = {
       currentSoc:   state.batterySOC   ?? null,
       currentMode:  state.currentMode  ?? 'standby',
@@ -1553,15 +1555,11 @@ if (debug) this.log(
       updatedAt:    new Date().toISOString(),
       slots
     };
-    _memMB('[DIAG] saveWidget:after-compact-build');
-
     // In-memory cache — widget api.js reads via driver.getDevices()[0]._widgetData.
     // Avoids the ~30 MB heap spike that homey.settings.set allocates per call
     // (measured: 8 KB payload triggered 30 MB framework-internal allocation).
     this._widgetData = compact;
-    _memMB('[DIAG] saveWidget:after-memcache');
     this.homey.api.realtime('planning-update', compact);
-    _memMB('[DIAG] saveWidget:after-api.realtime');
     this.log(`[Widget] Data saved: ${slots.length} slots`);
 
     // Camera image in device UI (fire-and-forget)
@@ -2361,12 +2359,8 @@ if (debug) this.log(
         weatherData = this._applyWeatherOverride(weatherData, weatherOverride);
       }
     }
-    _memMB('[DIAG] gatherInputs:after-weather');
-
     const batteryState = await this._getBatteryState();
-    _memMB('[DIAG] gatherInputs:after-batteryState');
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
-    _memMB('[DIAG] gatherInputs:after-getCurrentTariff');
 
     const debugPrice = tariffInfo?.currentPrice != null ? tariffInfo.currentPrice.toFixed(3) : 'n/a';
     const debugTopLow = Array.isArray(tariffInfo?.top3Lowest)
@@ -2395,14 +2389,11 @@ if (debug) this.log(
       : `rte=${(this.efficiencyEstimator.getEfficiency() * 100).toFixed(1)}% (<5 cycli)`;
     const debugLearningText = `days=${learningStats.days_tracking} samples=${learningStats.total_samples} coverage=${learningStats.pattern_coverage}% pv_acc=${learningStats.pv_accuracy}% | rte: ${rteModeSummary} @${now}`;
 
-    _memMB('[DIAG] gatherInputs:after-learningStats');
     await this.setCapabilityValue('policy_debug_price', debugPriceText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3low', debugTopLowText).catch(this.error);
     await this.setCapabilityValue('policy_debug_top3high', debugTopHighText).catch(this.error);
     await this.setCapabilityValue('policy_debug_sun', debugSunText).catch(this.error);
     await this.setCapabilityValue('policy_debug_learning', debugLearningText).catch(this.error);
-    _memMB('[DIAG] gatherInputs:after-setCapabilities');
-    
     // Push debug data to app settings for planning view
     this._setLive('policy_debug_top3low', debugTopLowText);
     this._setLive('policy_debug_top3high', debugTopHighText);
@@ -2441,7 +2432,6 @@ if (debug) this.log(
         };
       });
       this._setLive('policy_weather_hourly', hourlyWeather);
-      _memMB('[DIAG] gatherInputs:after-weatherSettings');
       if (weatherData.fetchedAt) {
         this._setLive('policy_weather_fetched_at', new Date(weatherData.fetchedAt).toISOString());
       }
