@@ -58,6 +58,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // State
     this.p1Device = null;
     this.weatherData = null;
+    this.buienradarData = null;
     this.lastRecommendation = null;
     this._liveState = {}; // in-memory store for rebuildable UI state (served via api.js)
     this._lastPvEstimateW = 0; // For EMA smoothing
@@ -130,9 +131,10 @@ class BatteryPolicyDevice extends Homey.Device {
     }, 7.5 * 60 * 1000);
 
     // Register cameras — deferred to 60s so the startup memory spike has settled.
-    this.homey.setTimeout(() => {
-      this._initModeHistoryCamera().catch(e => this.error('Mode camera init failed:', e));
-      this._initPvCamera().catch(e => this.error('PV camera init failed:', e));
+    // Sequential await prevents concurrent setCameraImage calls from racing in Homey's image manager.
+    this.homey.setTimeout(async () => {
+      await this._initModeHistoryCamera().catch(e => this.error('Mode camera init failed:', e));
+      await this._initPvCamera().catch(e => this.error('PV camera init failed:', e));
     }, 60 * 1000);
 
     // Restore widget data from cached settings after startup peak has settled.
@@ -917,6 +919,20 @@ if (debug) this.log(
 
       this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude, pvTilt, pvAzimuth);
 
+      // Buienradar: 5-min precipitation radar for next 2 hours (fire-and-forget, non-critical)
+      this.weatherForecaster.fetchBuienradar(latitude, longitude)
+        .then(data => {
+          this.buienradarData = data;
+          if (data.length > 0) {
+            const rainingSlots = data.filter(s => s.mmPerHour >= 0.1);
+            if (rainingSlots.length > 0) {
+              const maxMmh = Math.max(...data.map(s => s.mmPerHour));
+              this.log(`🌧️ Buienradar: ${rainingSlots.length}/24 slots met neerslag (max ${maxMmh.toFixed(1)} mm/u)`);
+            }
+          }
+        })
+        .catch(e => this.error('Buienradar update failed:', e));
+
       // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
       const pvCapW = devSettings.pv_capacity_w || 0;
       const PR     = devSettings.pv_performance_ratio || 0.75;
@@ -1620,10 +1636,15 @@ if (debug) this.log(
         .filter(h => typeof h.radiationWm2 === 'number')
         .map(h => {
           const d   = h.time instanceof Date ? h.time : new Date(h.time);
-          // Yield factor slot index: hour*4 (hourly data always on the hour, minutes=0)
-          const slotIdx = d.getUTCHours() * 4;
+          // Average yield factor across all 4 × 15-min slots of this UTC hour.
+          // Using only slot[0] (h*4) would underestimate the sunrise hour: the first
+          // slot (e.g. 04:00–04:15) is often pre-sunrise with yf≈0, while slots
+          // 04:15–04:59 carry the real production — causing forecast to start 1h late.
+          const s0 = d.getUTCHours() * 4;
+          const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
+          const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
           const rawPvW = learnedSlots >= 10
-            ? Math.round(h.radiationWm2 * (yfs[slotIdx] ?? 0))
+            ? Math.round(h.radiationWm2 * yf)
             : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
@@ -1753,7 +1774,7 @@ if (debug) this.log(
     // Only scales today's future slots; tomorrow's forecast is unchanged.
     if (pvForecast && this.learningEngine && Array.isArray(this.learningEngine.data?.pv_predictions)) {
       const nowMs       = Date.now();
-      const cutoffMs    = nowMs - 6 * 3600_000;
+      const cutoffMs    = nowMs - 3 * 3600_000;
       const todayNLDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
       const todayPreds  = this.learningEngine.data.pv_predictions.filter(p =>
         p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
@@ -1766,7 +1787,7 @@ if (debug) this.log(
         const sumActual   = todayPreds.reduce((s, p) => s + p.actual,    0);
         const rawRatio    = sumActual / sumForecast;
         const ratio       = Math.min(2.5, Math.max(0.4, rawRatio));
-        if (Math.abs(ratio - 1.0) > 0.15) {
+        if (Math.abs(ratio - 1.0) > 0.10) {
           const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
           pvForecast = pvForecast.map(slot => {
             if (new Date(slot.timestamp) <= now) return slot;
@@ -1776,8 +1797,28 @@ if (debug) this.log(
           });
           this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} (clamped=${ratio.toFixed(2)}) → scaled ${futureSlotsCount} future slots today`);
         } else {
-          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} → within 15% threshold, no scaling`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} → within 10% threshold, no scaling`);
         }
+      }
+    }
+
+    // Buienradar rain correction: cap near-term PV slots based on precipitation radar.
+    // Only applies within the 2-hour Buienradar window; only reduces, never increases.
+    if (pvForecast && Array.isArray(this.buienradarData) && this.buienradarData.length > 0) {
+      const buienradarEndMs = this.buienradarData[this.buienradarData.length - 1].time.getTime();
+      let correctedCount = 0;
+      pvForecast = pvForecast.map(slot => {
+        const slotMs = new Date(slot.timestamp).getTime();
+        if (slotMs > buienradarEndMs) return slot;
+        const nearest = this.buienradarData.reduce((a, b) =>
+          Math.abs(b.time.getTime() - slotMs) < Math.abs(a.time.getTime() - slotMs) ? b : a
+        );
+        if (nearest.factor >= 1.0) return slot;
+        correctedCount++;
+        return { ...slot, pvPowerW: Math.round(slot.pvPowerW * nearest.factor) };
+      });
+      if (correctedCount > 0) {
+        this.log(`🌧️ Buienradar: PV correctie op ${correctedCount} slots`);
       }
     }
 
@@ -2141,7 +2182,10 @@ if (debug) this.log(
           const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
           if (hHour > nowAmsHour) continue;             // include current hour in forecast line
           if (pvForecastByDay[0][hHour] != null) continue; // don't overwrite future slots
-          const rawPvW = Math.round(h.radiationWm2 * (yfs[d.getUTCHours() * 4] ?? 0));
+          const s0p = d.getUTCHours() * 4;
+          const yf4p = [yfs[s0p], yfs[s0p+1], yfs[s0p+2], yfs[s0p+3]].filter(v => v != null && v > 0);
+          const yfp  = yf4p.length > 0 ? yf4p.reduce((a, b) => a + b, 0) / yf4p.length : 0;
+          const rawPvW = Math.round(h.radiationWm2 * yfp);
           pvForecastByDay[0][hHour] = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
         }
       }
@@ -2407,7 +2451,7 @@ if (debug) this.log(
       coverage:   learningStats.pattern_coverage,
       pvAccuracy: learningStats.pv_accuracy,
       rte:        rte != null ? +(rte * 100).toFixed(1) : null,
-      cycles:     rteInsightsObj?.cycleCount ?? 0,
+      cycles:     this.efficiencyEstimator.getCycleCount(),
       updatedAt:  new Date().toISOString(),
     });
     
@@ -3015,6 +3059,7 @@ if (debug) this.log(
       'pv_surplus_forecast',
       'policy_pv_forecast_hourly',
       'policy_pv_actual_today',
+      `batt_mode_hist_${this.getData().id}`,
     ];
     for (const key of settingsToClean) {
       try { this.homey.settings.unset(key); } catch (_) {}

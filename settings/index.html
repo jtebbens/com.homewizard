@@ -562,7 +562,7 @@
       <div>Break-even prijs: <strong id="arb-be">–</strong></div>
       <div>Huidige prijs: <strong id="arb-price">–</strong></div>
       <div>Arbitrage: <strong id="arb-signal">–</strong></div>
-      <div>RTE: <strong id="arb-rte">–</strong></div>
+      <div>Batterijrendement: <strong id="arb-rte">–</strong></div>
     </div>
 
     <h3>Redenen</h3>
@@ -980,7 +980,8 @@
           document.getElementById('baseload-cost-details').innerHTML = `
             <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) =
             <strong>~€${monthlyCost.toFixed(2)}/maand</strong> (€${yearlyCost.toFixed(0)}/jaar)<br>
-            <span style="font-size:12px;color:#808080;">Typisch sluipverbruik: 200-300W</span>
+            <span style="font-size:12px;color:#808080;">Typisch sluipverbruik: 200-300W</span><br>
+            <span style="font-size:11px;color:#666;">De groene punten tonen per nacht de laagste waarden (pieken eruit). De gele stippellijn is het gemiddelde van de 3 rustigste nachten — dat is dit getal.</span>
           `;
         } else {
           document.getElementById('baseload-value').innerText = 'Geen data';
@@ -990,18 +991,57 @@
         const labels = history.map(n => n.date);
         const values = history.map(n => n.avg || null);
         const invalid = history.map(n => n.invalid);
+
+        // Per-night filtered minimum: median of lowest 50% of samples <1000W
+        // mirrors _computeSmartBaseload() in baseloadMonitor.js
+        const filteredMinima = history.map(n => {
+          if (n.invalid || !Array.isArray(n.samples) || n.samples.length < 10) return null;
+          const ps = n.samples.map(s => s.power).filter(p => typeof p === 'number' && p >= 0 && p < 1000);
+          if (ps.length < 10) return null;
+          ps.sort((a, b) => a - b);
+          const half = ps.slice(0, Math.floor(ps.length / 2));
+          return half[Math.floor(half.length / 2)];
+        });
+
         const ctx2 = document.getElementById('baseloadChart').getContext('2d');
         new Chart(ctx2, {
           type: 'line',
           data: {
             labels,
-            datasets: [{
-              label: 'Watt', data: values,
-              borderColor: 'rgba(32,242,155,1)', backgroundColor: 'rgba(32,242,155,0.15)',
-              spanGaps: true,
-              pointBackgroundColor: invalid.map(v => v ? 'red' : 'green'),
-              pointRadius: 5
-            }]
+            datasets: [
+              {
+                label: 'Stille ondergrens per nacht (pieken eruit)',
+                data: filteredMinima,
+                borderColor: 'rgba(32,242,155,1)', backgroundColor: 'rgba(32,242,155,0.12)',
+                spanGaps: false,
+                pointRadius: 5,
+                pointBackgroundColor: invalid.map(v => v ? 'red' : 'rgba(32,242,155,1)'),
+                fill: true,
+                order: 1
+              },
+              {
+                label: 'Nachtgemiddelde (incl. koelkastpieken)',
+                data: values,
+                borderColor: 'rgba(120,120,120,0.5)',
+                backgroundColor: 'transparent',
+                spanGaps: true,
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(120,120,120,0.5)',
+                borderDash: [3, 3],
+                fill: false,
+                order: 2
+              },
+              ...(currentBaseload ? [{
+                label: `Sluipverbruik: ${Math.round(currentBaseload)}W (gemiddelde van 3 laagste nachten)`,
+                data: labels.map(() => Math.round(currentBaseload)),
+                borderColor: 'rgba(255,200,80,0.9)',
+                borderDash: [6, 4],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false,
+                order: 0
+              }] : [])
+            ]
           }
         });
 
@@ -1496,7 +1536,7 @@
             sun_forecast: 'Zonprognose',
             strategy:     'Strategie',
             load:         'Belasting',
-            RTE:          'Efficiëntie',
+            RTE:          'Batterijrendement',
             peak:         'Piekuren',
             time:         'Tijdstip',
             confidence:   'Zekerheid'
@@ -2256,9 +2296,9 @@
         </div>` +
         pill('Patroon', coverage, '%', 50, 80) +
         pill('PV-nauwkeurigheid', pvAccuracy, '%', 70, 85) +
-        pill('RTE', rte, '%', 70, 80) +
+        pill('Batterijrendement', rte, '%', 70, 80) +
         `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
-          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">RTE-cycli</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Rendementscycli</span>
           <span style="font-size:16px;font-weight:bold;color:${cycles >= 5 ? '#20F29B' : '#FCD34D'};">${cycles ?? '—'}</span>
           <span style="font-size:10px;color:var(--dim);">${cycles >= 5 ? 'betrouwbaar' : '< 5 nodig'}</span>
         </div>` +
@@ -2466,7 +2506,11 @@
           const payback    = extraBatt > 0 && yearly > 0.001
             ? (extraBatt * investment / yearly).toFixed(1) + ' jaar'
             : null;
-          const paybackLabel = useSeasonalBase ? 'Terugverdientijd (gecorrigeerd):' : 'Terugverdientijd:';
+          const paybackBasis = useSeasonalBase ? 'seizoensgecorrigeerd' : 'jaargemiddelde';
+          // Projected payback for current battery based on optimizer estimate
+          const dpProjectedPaybackYears = isCurrent && s.profit > 0
+            ? (investment / (s.profit * 365)).toFixed(1)
+            : null;
 
           const border = isCurrent
             ? 'border:2px solid #7ecb7e;'
@@ -2486,20 +2530,21 @@
             ${isCurrent
               ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Huidige setup</div>
                  <div style="font-size:11px;color:var(--dim);">
-                   Schatting (DP): <span style="color:var(--text);">${fmt(s.profit)}/dag</span>
+                   Optimizerprognose: <span style="color:var(--text);">${fmt(s.profit)}/dag</span>
+                   ${dpProjectedPaybackYears ? `<span style="color:var(--dim);"> → ~${dpProjectedPaybackYears} jaar terugverdientijd</span>` : ''}
                  </div>
                  ${hasCycleData
                    ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;">
-                        Werkelijk: <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}/dag</span>
+                        Werkelijk gemeten: <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}/dag</span>
                         <span style="color:var(--dim);"> (${cycleHistory.length} cycli)</span>
                       </div>`
                    : `<div style="font-size:11px;color:var(--dim);margin-top:2px;">Werkelijk: nog geen cycli</div>`
                  }`
               : extraBatt > 0
-                ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">${fmtD(delta)}/dag</div>
-                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar (jaargemiddelde)</div>
-                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">${paybackLabel} ${payback}</div>
-                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''} seizoensgecorrigeerd</div>` : ''}`
+                ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">+${fmtD(delta)}/dag extra (optimizerprognose)</div>
+                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar extra (${paybackBasis})</div>
+                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd extra batterij: ${payback}</div>
+                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">Alleen de meerwinst t.o.v. huidige setup · ${paybackBasis} · o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''}</div>` : ''}`
                 : `<div style="font-size:11px;color:var(--dim);">${fmtD(delta)}/dag vs huidig</div>`
             }
             ${(() => {
@@ -2543,7 +2588,7 @@
       if (!hasCycleData) {
         roiEl.innerHTML = `<div style="margin-top:24px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:13px;">
           <strong style="color:var(--muted);">Werkelijk rendement</strong> — nog geen cycli gemeten.
-          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (SoC ≤ 3%).
+          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (laadniveau ≤ 3%).
         </div>`;
         return;
       }
@@ -2580,16 +2625,16 @@
           <h3 style="margin:0 0 4px;">Werkelijk gemeten rendement</h3>
           <p style="font-size:12px;color:var(--dim);margin:0 0 16px;">
             Gebaseerd op ${cycleHistory.length} voltooide cycli. Wordt bijgewerkt bij elke volledige ontlaadcyclus.
-            De DP-schatting hierboven is theoretisch; dit zijn de gemeten resultaten.
+            De optimizerprognose in de kaarten hierboven is een berekende schatting; onderstaande cijfers zijn werkelijk gemeten resultaten.
           </p>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
             ${[
               ['Totaal verdiend', `€${measuredTotalProfit.toFixed(2)}`, '#20F29B'],
-              ['Cycli', cycleHistory.length, 'var(--text)'],
-              ['Gem./cyclus', `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
-              ['Prognose', `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
-              ['ROI tot nu toe', `${roiPct}%`, 'var(--purple-lt)'],
+              ['Voltooide cycli', cycleHistory.length, 'var(--text)'],
+              ['Gemiddeld per cyclus', `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
+              ['Jaarprognose (gemeten)', `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
+              ['Terugverdiend tot nu', `${roiPct}%`, 'var(--purple-lt)'],
             ].map(([label, val, color]) =>
               `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
                 <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${label}</div>
@@ -2599,7 +2644,7 @@
           </div>
 
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd batterij (€${invest})</div>
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd huidige batterij — werkelijk gemeten (investering €${invest})</div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
               <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
                 <div style="width:${paybackPct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s;"></div>

@@ -77,7 +77,12 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
     }
 
     const interval = Math.max(settings.polling_interval, 2);
-    const offset = Math.floor(Math.random() * interval * 1000);
+
+    const allDevices = this.driver.getDevices();
+    const deviceCount = Math.max(allDevices.length, 1);
+    const myIndex = Math.max(allDevices.indexOf(this), 0);
+    const offset = myIndex === 0 ? 500 : Math.round((myIndex / deviceCount) * interval * 1000);
+    this.log(`⏱️ SDM630 poll interval ${interval}s, spread offset ${Math.round(offset / 1000)}s (device ${myIndex + 1}/${deviceCount})`);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 

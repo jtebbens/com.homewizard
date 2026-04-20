@@ -104,6 +104,36 @@ class HomeWizardApp extends Homey.App {
           require('inspector').open(9225, '0.0.0.0', true);
       }
     }
+
+    // On version change: remove orphaned settings keys left by deleted devices.
+    // Deferred 30s so all drivers and devices have finished initializing.
+    const currentVersion = require('./app.json').version;
+    const lastVersion = this.homey.settings.get('_hw_app_version');
+    if (lastVersion !== currentVersion) {
+      this.log(`[MIGRATE] Version change: ${lastVersion || 'new install'} → ${currentVersion}`);
+      setTimeout(() => this._runSettingsMigration(currentVersion), 30_000);
+    }
+  }
+
+  _runSettingsMigration(currentVersion) {
+    try {
+      const driver = this.homey.drivers.getDriver('battery-policy');
+      const activeIds = new Set(driver.getDevices().map(d => d.getData().id));
+      const all = this.homey.settings.getAll();
+      let removed = 0;
+      for (const key of Object.keys(all)) {
+        if (key.startsWith('batt_mode_hist_')) {
+          const id = key.replace('batt_mode_hist_', '');
+          if (!activeIds.has(id)) {
+            try { this.homey.settings.unset(key); removed++; } catch (_) {}
+          }
+        }
+      }
+      if (removed > 0) this.log(`[MIGRATE] Removed ${removed} orphaned batt_mode_hist key(s)`);
+    } catch (e) {
+      this.error('[MIGRATE] Settings migration failed:', e.message);
+    }
+    try { this.homey.settings.set('_hw_app_version', currentVersion); } catch (_) {}
   }
 
   _setupGlobalErrorHandlers() {
