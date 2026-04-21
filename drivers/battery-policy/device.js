@@ -970,6 +970,37 @@ if (debug) this.log(
         }
         this.weatherData.pvKwhToday     = todayKwh     !== null ? Math.round(todayKwh     * 10) / 10 : null;
         this.weatherData.pvKwhRemaining = remainingKwh !== null ? Math.round(remainingKwh * 10) / 10 : null;
+
+        // Build per-hour PV forecast for the chart (today + tomorrow).
+        // Uses dailyProfiles (all 24h, incl. past) so the chart line is complete and consistent.
+        // Runs here — not in _recomputeOptimizer — so it updates even when the policy is disabled,
+        // and chart values are NOT distorted by the accuracy-discount applied for optimizer planning.
+        if (learnedSlots >= 10 || pvCapW > 0) {
+          const nowFc       = new Date();
+          const nowAmsDate  = nowFc.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const pvFcByDay   = [{}, {}];
+
+          for (const h of this.weatherData.dailyProfiles) {
+            const d     = h.time instanceof Date ? h.time : new Date(h.time);
+            const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            const dayIdx = hDate === nowAmsDate ? 0 : hDate > nowAmsDate ? 1 : -1;
+            if (dayIdx < 0) continue;
+            const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+            const s0    = d.getUTCHours() * 4;
+            let pvPowerW;
+            if (learnedSlots >= 10 && yfs) {
+              const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
+              const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
+              const raw = Math.round(h.radiationWm2 * yf);
+              pvPowerW  = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
+            } else {
+              pvPowerW  = pvCapW > 0 ? Math.round(pvCapW * PR * (h.radiationWm2 / 1000)) : 0;
+            }
+            pvFcByDay[dayIdx][hHour] = pvPowerW;
+          }
+
+          this._setLive('policy_pv_forecast_hourly', pvFcByDay);
+        }
       } else {
         this.weatherData.pvKwhToday = null;
       }
@@ -2151,57 +2182,6 @@ if (debug) this.log(
       }
     }
 
-    // Persist hourly PV forecast so the settings chart uses the same values as the optimizer.
-    // Keyed by Amsterdam local hour (0-23) for the next 48h (today + tomorrow).
-    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
-      const now         = new Date();
-      const nowAmsDate  = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      const nowAmsHour  = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-      const pvForecastByDay = [{}, {}];
-
-      // Future hours: one pvForecast entry per hour — map directly by Amsterdam local hour.
-      for (const { timestamp, pvPowerW } of pvForecast) {
-        const t      = new Date(timestamp);
-        const tDate  = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const tHour  = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-        const dayIdx = tDate === nowAmsDate ? 0 : 1;
-        if (dayIdx === 0 || tDate > nowAmsDate) {
-          pvForecastByDay[dayIdx][tHour] = pvPowerW;
-        }
-      }
-
-      // Past hours today: apply the same learned yield factors to dailyProfiles radiation so
-      // the chart line is consistent across the full day. Without this, past hours fall back to
-      // pvCapW × PR × radiation/1000 which underestimates partial-sunrise slots (e.g. the first
-      // morning slot after DST where the sun rose mid-hour but learned data knows the real yield).
-      if (learnedSlots >= 10 && yfs && Array.isArray(inputs.weather?.dailyProfiles)) {
-        for (const h of inputs.weather.dailyProfiles) {
-          const d     = h.time instanceof Date ? h.time : new Date(h.time);
-          const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-          if (hDate !== nowAmsDate) continue;
-          const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-          if (hHour > nowAmsHour) continue;             // include current hour in forecast line
-          if (pvForecastByDay[0][hHour] != null) continue; // don't overwrite future slots
-          const s0p = d.getUTCHours() * 4;
-          const yf4p = [yfs[s0p], yfs[s0p+1], yfs[s0p+2], yfs[s0p+3]].filter(v => v != null && v > 0);
-          const yfp  = yf4p.length > 0 ? yf4p.reduce((a, b) => a + b, 0) / yf4p.length : 0;
-          const rawPvW = Math.round(h.radiationWm2 * yfp);
-          pvForecastByDay[0][hHour] = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
-        }
-      }
-
-      // Debug: log what Amsterdam hours got populated
-      const hrs = Object.keys(pvForecastByDay[0]).map(Number).sort((a, b) => a - b);
-      const sample = hrs.filter(h => h >= 7 && h <= 16).map(h => `${h}:${pvForecastByDay[0][h]}`).join(' ');
-      this.log(`[PV forecast] nowAmsHour=${nowAmsHour} today keys=[${sample}]`);
-      const firstFuture = pvForecast.find(e => new Date(e.timestamp) > new Date());
-      if (firstFuture) {
-        const t = new Date(firstFuture.timestamp);
-        this.log(`[PV forecast] first future entry UTC=${t.toISOString()} AmsHour=${parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)}`);
-      }
-
-      this._setLive('policy_pv_forecast_hourly', pvForecastByDay);
-    }
   }
 
   /**
@@ -3613,12 +3593,6 @@ if (debug) this.log(
       if (h < 24) return forecastToday[h] ?? null;
       return forecastTomorrow[h - 24] ?? null;
     });
-
-    // Debug: log actual vs forecast per hour to diagnose 1-hour offset
-    const debugHours = [7,8,9,10,11,12,13,14,15,16];
-    const actualDbg   = debugHours.map(h => `${h}:${pvHourly[h] ?? '-'}`).join(' ');
-    const forecastDbg = debugHours.map(h => `${h}:${forecastToday[h] ?? '-'}`).join(' ');
-    this.log(`[PV chart] nowAmsHour=${nowAmsHour} actual=[${actualDbg}] forecast=[${forecastDbg}]`);
 
     // Compute daily totals (kWh)
     const actualTodayKwh = pvHourly.reduce((sum, w) => sum + (w || 0), 0) / 1000;
