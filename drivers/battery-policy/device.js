@@ -2190,6 +2190,16 @@ if (debug) this.log(
         }
       }
 
+      // Debug: log what Amsterdam hours got populated
+      const hrs = Object.keys(pvForecastByDay[0]).map(Number).sort((a, b) => a - b);
+      const sample = hrs.filter(h => h >= 7 && h <= 16).map(h => `${h}:${pvForecastByDay[0][h]}`).join(' ');
+      this.log(`[PV forecast] nowAmsHour=${nowAmsHour} today keys=[${sample}]`);
+      const firstFuture = pvForecast.find(e => new Date(e.timestamp) > new Date());
+      if (firstFuture) {
+        const t = new Date(firstFuture.timestamp);
+        this.log(`[PV forecast] first future entry UTC=${t.toISOString()} AmsHour=${parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)}`);
+      }
+
       this._setLive('policy_pv_forecast_hourly', pvForecastByDay);
     }
   }
@@ -3603,6 +3613,12 @@ if (debug) this.log(
       if (h < 24) return forecastToday[h] ?? null;
       return forecastTomorrow[h - 24] ?? null;
     });
+
+    // Debug: log actual vs forecast per hour to diagnose 1-hour offset
+    const debugHours = [7,8,9,10,11,12,13,14,15,16];
+    const actualDbg   = debugHours.map(h => `${h}:${pvHourly[h] ?? '-'}`).join(' ');
+    const forecastDbg = debugHours.map(h => `${h}:${forecastToday[h] ?? '-'}`).join(' ');
+    this.log(`[PV chart] nowAmsHour=${nowAmsHour} actual=[${actualDbg}] forecast=[${forecastDbg}]`);
 
     // Compute daily totals (kWh)
     const actualTodayKwh = pvHourly.reduce((sum, w) => sum + (w || 0), 0) / 1000;
