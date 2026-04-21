@@ -999,6 +999,20 @@ if (debug) this.log(
             pvFcByDay[dayIdx][hHour] = pvPowerW;
           }
 
+          // Override future hours with Solcast-blended forecast from last optimizer run (if available).
+          // Past hours keep the dailyProfiles values above (more accurate for completed hours).
+          if (Array.isArray(this._pvForecastBlended)) {
+            for (const { timestamp, pvPowerW: blendedW } of this._pvForecastBlended) {
+              if (new Date(timestamp) <= nowFc) continue; // only future slots
+              const bt    = new Date(timestamp);
+              const bDate = bt.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+              const bIdx  = bDate === nowAmsDate ? 0 : bDate > nowAmsDate ? 1 : -1;
+              if (bIdx < 0) continue;
+              const bHour = parseInt(bt.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+              pvFcByDay[bIdx][bHour] = blendedW;
+            }
+          }
+
           this._setLive('policy_pv_forecast_hourly', pvFcByDay);
         }
       } else {
@@ -1771,6 +1785,11 @@ if (debug) this.log(
         this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh`);
         this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh`);
       }
+    }
+
+    // Cache blended forecast (after Solcast, before accuracy discount) for chart use in _updateWeather.
+    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
+      this._pvForecastBlended = pvForecast;
     }
 
     // PV accuracy tracking: compare forecast for now vs actual from flow card.
