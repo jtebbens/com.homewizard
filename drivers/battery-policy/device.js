@@ -976,14 +976,15 @@ if (debug) this.log(
         // Runs here — not in _recomputeOptimizer — so it updates even when the policy is disabled,
         // and chart values are NOT distorted by the accuracy-discount applied for optimizer planning.
         if (learnedSlots >= 10 || pvCapW > 0) {
-          const nowFc       = new Date();
-          const nowAmsDate  = nowFc.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-          const pvFcByDay   = [{}, {}];
+          const nowFc          = new Date();
+          const nowAmsDate     = nowFc.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const tomorrowAmsDate = new Date(nowFc.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const pvFcByDay      = [{}, {}];
 
           for (const h of this.weatherData.dailyProfiles) {
             const d     = h.time instanceof Date ? h.time : new Date(h.time);
             const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-            const dayIdx = hDate === nowAmsDate ? 0 : hDate > nowAmsDate ? 1 : -1;
+            const dayIdx = hDate === nowAmsDate ? 0 : hDate === tomorrowAmsDate ? 1 : -1;
             if (dayIdx < 0) continue;
             const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
             const s0    = d.getUTCHours() * 4;
@@ -1006,7 +1007,7 @@ if (debug) this.log(
               if (new Date(timestamp) <= nowFc) continue; // only future slots
               const bt    = new Date(timestamp);
               const bDate = bt.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-              const bIdx  = bDate === nowAmsDate ? 0 : bDate > nowAmsDate ? 1 : -1;
+              const bIdx  = bDate === nowAmsDate ? 0 : bDate === tomorrowAmsDate ? 1 : -1;
               if (bIdx < 0) continue;
               const bHour = parseInt(bt.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
               pvFcByDay[bIdx][bHour] = blendedW;
@@ -3170,7 +3171,7 @@ if (debug) this.log(
         await this._initPvCamera();
       }
 
-      const pvHash = JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
+      const pvHash = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) + JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
       if (pvHash !== this._pvChartHash) {
         await this.planningImagePv.update();
         this._pvChartHash = pvHash;
