@@ -4079,7 +4079,29 @@ if (debug) this.log(
     let costNew;
 
     if (batteryPower > 10) {
-      // Charging
+      // Charging — if we just finished a meaningful discharge session, record the cycle now.
+      // This handles PV-heavy days where SoC never reaches 0% (so the SoC-based trigger above
+      // never fires). Minimum 0.3 kWh prevents noise from short standby/idle transitions.
+      if (this._wasDischarging && (this._cycleKwhDischarged || 0) >= 0.3) {
+        const profit = (this._cycleRevenue || 0) - (this._cycleCost || 0);
+        const avgDischargePrice = this._cycleRevenue / this._cycleKwhDischarged;
+        let cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
+        cycleHistory.push({
+          date: new Date().toISOString().slice(0, 10),
+          kwhDischarged: +this._cycleKwhDischarged.toFixed(3),
+          avgChargePrice: +(this._costAvg || 0).toFixed(4),
+          avgDischargePrice: +avgDischargePrice.toFixed(4),
+          profitEur: +profit.toFixed(4),
+        });
+        if (cycleHistory.length > 60) cycleHistory = cycleHistory.slice(-60);
+        this.homey.settings.set('battery_cycle_history', cycleHistory);
+        this.log(`💰 Cycle recorded (discharge→charge): ${this._cycleKwhDischarged.toFixed(2)}kWh @ avg €${avgDischargePrice.toFixed(3)}, profit €${profit.toFixed(3)}`);
+        this._cycleRevenue = 0;
+        this._cycleCost = 0;
+        this._cycleKwhDischarged = 0;
+      }
+      this._wasDischarging = false;
+
       if (pvState) {
         const pvMode = this.getSetting('pv_cost_mode') || 'free';
         const feedIn = this.getSetting('feed_in_tariff') ?? 0.08;
@@ -4101,6 +4123,7 @@ if (debug) this.log(
 
     } else if (batteryPower < -10) {
       // Discharging — accumulate revenue for cycle profit tracking
+      this._wasDischarging = true;
       const dischargeKwh = Math.abs(deltaKwh);
       const dischargePrice = this.tariffManager.getCurrentTariff(gridPower).currentPrice;
       this._cycleRevenue       = (this._cycleRevenue       || 0) + dischargeKwh * dischargePrice;
