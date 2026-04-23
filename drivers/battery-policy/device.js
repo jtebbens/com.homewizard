@@ -803,10 +803,12 @@ if (debug) this.log(
 
     this._slotAlignTimeout = this.homey.setTimeout(() => {
       this._slotAlignTimeout = null;
+      this._maybeRefreshWeatherOnly().catch(() => {});
       if (this.getCapabilityValue('policy_enabled')) {
         this._runPolicyCheck().catch(err => this.error('Slot-aligned policy check failed:', err));
       }
       this.policyCheckInterval = this.homey.setInterval(async () => {
+        await this._maybeRefreshWeatherOnly().catch(() => {});
         if (this.getCapabilityValue('policy_enabled')) {
           await this._runPolicyCheck();
         }
@@ -828,6 +830,7 @@ if (debug) this.log(
     const msUntilNextHour = nextHour.getTime() - now;
 
     this._hourBoundaryTimeout = this.homey.setTimeout(async () => {
+      await this._maybeRefreshWeatherOnly().catch(() => {});
       if (this.getCapabilityValue('policy_enabled')) {
         this.log(`⏰ Hour boundary reached (${new Date().getHours()}:00) → running policy check`);
         await this._runPolicyCheck().catch(err => this.error('Hour-boundary policy check failed:', err));
@@ -995,22 +998,42 @@ if (debug) this.log(
               const raw = Math.round(h.radiationWm2 * yf);
               pvPowerW  = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
             } else {
-              pvPowerW  = pvCapW > 0 ? Math.round(pvCapW * PR * (h.radiationWm2 / 1000)) : 0;
+              pvPowerW  = pvCapW > 0 ? Math.min(pvCapW, Math.round(pvCapW * PR * (h.radiationWm2 / 1000))) : 0;
             }
             pvFcByDay[dayIdx][hHour] = pvPowerW;
           }
 
-          // Override future hours with Solcast-blended forecast from last optimizer run (if available).
-          // Past hours keep the dailyProfiles values above (more accurate for completed hours).
-          if (Array.isArray(this._pvForecastBlended)) {
-            for (const { timestamp, pvPowerW: blendedW } of this._pvForecastBlended) {
-              if (new Date(timestamp) <= nowFc) continue; // only future slots
-              const bt    = new Date(timestamp);
-              const bDate = bt.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-              const bIdx  = bDate === nowAmsDate ? 0 : bDate === tomorrowAmsDate ? 1 : -1;
-              if (bIdx < 0) continue;
-              const bHour = parseInt(bt.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-              pvFcByDay[bIdx][bHour] = blendedW;
+          // Fetch Solcast and override future hours — runs here (weather update) so it works
+          // regardless of whether the policy is enabled or the optimizer has run.
+          if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
+            if (!this._solcastProvider) {
+              // eslint-disable-next-line global-require
+              const SolcastProvider = require('../../lib/solcast-provider');
+              this._solcastProvider = new SolcastProvider(this.homey);
+            }
+            try {
+              const solcastForecast = await this._solcastProvider.getForecast(
+                settings.solcast_api_key,
+                settings.solcast_resource_id,
+              );
+              if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
+                let applied = 0;
+                for (const s of solcastForecast) {
+                  const st = new Date(s.timestamp);
+                  if (st <= nowFc) continue;
+                  const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+                  const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
+                  if (sIdx < 0) continue;
+                  const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+                  pvFcByDay[sIdx][sHour] = s.pvPowerW;
+                  applied++;
+                }
+                const scTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
+                const scTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
+                this.log(`[Solcast] Applied ${applied} future slots — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
+              }
+            } catch (err) {
+              this.log(`[Solcast] Chart forecast error: ${err.message}`);
             }
           }
 
@@ -1035,13 +1058,18 @@ if (debug) this.log(
 
       if (this._isPredictiveMode) {
         // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
-        const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-        const pvForecast = this._liveState.policy_pv_forecast_hourly
-          ?? this.homey.settings.get('policy_pv_forecast_hourly');
-        const pvCapW     = this.getSetting('pv_capacity_w') || 0;
-        this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
-        this.planningImagePv?.update().catch(() => {});
+        if (!this.planningImagePv) this._initPvCamera().catch(() => {});
+        else this.planningImagePv.update().catch(() => {});
         return;
+      }
+
+      // When policy is disabled (user off, not predictive): refresh PV camera with fresh forecast.
+      // After a restart planningImagePv is null (only _updatePlanningChart initialises it, which
+      // only runs after a policy run). Call _initPvCamera so the camera is registered with Homey
+      // and shows the correct today forecast rather than a stale cached image.
+      if (!this.getCapabilityValue('policy_enabled')) {
+        if (!this.planningImagePv) this._initPvCamera().catch(() => {});
+        else this.planningImagePv.update().catch(() => {});
       }
 
       // Invalidate optimizer — new PV forecast may change the optimal charge schedule.
@@ -1097,6 +1125,17 @@ if (debug) this.log(
     }
 
     return { latitude: lat, longitude: lon };
+  }
+
+  // Refresh weather + PV forecast when policy is disabled (no full policy run needed).
+  async _maybeRefreshWeatherOnly() {
+    const settings = this.getSettings();
+    if (settings.tariff_type !== 'dynamic') return;
+    const intervalMs = (settings.weather_update_interval || 1) * 3_600_000;
+    const age = this.weatherData?.fetchedAt ? Date.now() - this.weatherData.fetchedAt : Infinity;
+    if (age > intervalMs) {
+      await this._updateWeather();
+    }
   }
 
   async _runPolicyCheck({ skipEnabledCheck = false } = {}) {
@@ -3573,7 +3612,8 @@ if (debug) this.log(
 
   _buildPvChartConfig(pvData) {
     const { pvActual, pvForecast, pvCapacityW } = pvData || {};
-    const pvHourly   = Array.isArray(pvActual?.hourly) ? pvActual.hourly : [];
+    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const pvHourly = (pvActual?.date === todayStr && Array.isArray(pvActual?.hourly)) ? pvActual.hourly : [];
     const forecastToday    = pvForecast?.[0] || {};
     const forecastTomorrow = pvForecast?.[1] || {};
 
