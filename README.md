@@ -51,7 +51,30 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.10)
+## 📝 Latest Updates (v3.15.37)
+
+### Battery Policy — PV Forecast & Learning
+
+* **Yield-factor normalisatie (v1 + v2)** — Yield-factoren die geleerd zijn terwijl `radiation_bias_factor > 1.5` actief was, zijn systematisch te laag gekalibreerd (biased radiation als basis). Eenmalige reset zodat ze opnieuw leren met onbiased radiation. V2 reset tevens de bias-factor zelf die door de onjuiste yield-factoren kunstmatig opgedreven was tot de cap
+* **Solcast verplaatst naar `_updateWeather`** — Solcast forecast wordt nu opgehaald bij elke weather-update (ook als policy uitgeschakeld is), zodat de PV-chart altijd actueel is
+* **Intraday PV scaling bijgesteld** — Lagere learning-gewichten voor intraday-correctie; voorkomt overreactie op tijdelijke afwijkingen vroeg op de dag
+* **Cycle-registratie bij discharge→charge overgang** — Batterijcycli worden nu ook geregistreerd als de SoC nooit 0% bereikt (typisch op PV-rijke dagen): trigger is de overgang van ontladen naar laden zodra ≥ 0.3 kWh ontladen is
+
+### Battery Policy — Batterij Modi Camera
+
+* **Predictive modi zichtbaar in camera** — In predictive mode (HW Slim Laden actief) werden modi niet opgenomen omdat de policy niet draait. De slot-interval registreert nu ook modus + SoC als policy uitgeschakeld is, zodat wisselingen tussen predictive_charge, predictive_discharge, predictive_zero en predictive_standby zichtbaar worden in de Batterij Modi webcam
+
+### Memory & Stabiliteit
+
+* **Startup crash fix (v3.15.35)** — `homey.settings.set` kost ~30 MB V8-heap per aanroep ongeacht payload. Bij meerdere gelijktijdige devices tijdens opstarten piekte het heap tot 70+ MB → Memory Warning. Alle drivers gebruiken nu een geserialiseerde write-queue (8 s tussen schrijven). Rebuildable UI-state (planning, explainability, weather) leeft in `_liveState` in memory en wordt via `api.js` geserveerd — nooit meer naar `homey.settings`
+* **Settings page live-state** — `Homey.get` in de settings page merget automatisch de in-memory live-state via een GET `/getLiveState` API-call. Bestaande render-code hoeft niet aangepast
+* **SDM230_v2 / SDM630_v2 polling spread (v3.15.36)** — Bij meerdere SDM-devices wordt de eerste poll gespreid over de polling-interval zodat gelijktijdige HTTP-requests vermeden worden
+* **Initieel weer en policy uitgesteld** — Weather fetch uitgesteld naar T+30 s, eerste policy check naar T+45 s na opstarten. Voorkomt een cumulatieve heap-piek van 70+ MB tijdens de onInit-cascade bij gebruikers met veel devices
+* **Device-type teller in memory-log** — `[MEM]` logregel toont nu aantallen per driver-type (`energy_v2=2 plugin_battery=1 …`) zodat crashes van gebruikers met andere device-mixen sneller te triageren zijn
+
+---
+
+## Previous Updates (v3.15.10)
 
 ### Battery Policy — Optimizer & PV Modelling
 
@@ -88,7 +111,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ---
 
-## Previous Updates (v3.15.3)
+## Previous Updates (v3.15.10 and earlier)
 
 ### Battery Policy — Multi-Battery Discharge Fix
 
