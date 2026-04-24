@@ -1987,9 +1987,11 @@
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
         const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgPlannedSoc, avgPlannedConsumptionW, avgConsumptionW, minSampleCount, day } = hourGroup;
-        // Use same radiation-based formula as the chart so tooltip and curve always match.
+        // Mirror renderPvCurve: prefer learned forecast, fall back to radiation estimate.
         const displayPvW = pvEnabled
-          ? Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR)
+          ? (pvForecastByDay[day]?.[hour] != null
+              ? pvForecastByDay[day][hour]
+              : Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR))
           : 0;
         const hwDef = HW_MODES[dominantMode] || HW_MODES.standby;
         const priceDisplay = avgPrice !== null ? `€${avgPrice.toFixed(3)}` : '?';

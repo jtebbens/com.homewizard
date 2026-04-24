@@ -811,6 +811,13 @@ if (debug) this.log(
         await this._maybeRefreshWeatherOnly().catch(() => {});
         if (this.getCapabilityValue('policy_enabled')) {
           await this._runPolicyCheck();
+        } else if (this.p1Device) {
+          // Policy disabled (predictive or user off): still record mode + SoC for the camera chart
+          const mode = this.p1Device._currentDetailedMode
+            || this.p1Device.getCapabilityValue('battery_group_charge_mode')
+            || 'unknown';
+          this._recordModeHistory(mode);
+          this._recordSoCHistory(this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50);
         }
       }, intervalMs);
     }, msUntilNextSlot);
