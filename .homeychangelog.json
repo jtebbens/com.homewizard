@@ -1339,5 +1339,8 @@
   },
   "3.15.36": {
     "en": "Memory optimization: start-up HTTP polls of P1/SDM meters are now spread over the first ~10s to prevent heap spikes that caused \"Memory Warning Limit Reached\" crashes on Homeys with many devices."
+  },
+  "3.15.37": {
+    "en": "Bugfixes on pv estimate, planning, webcam update, slim laden mode detection, fine tuning SDM230"
   }
 }
