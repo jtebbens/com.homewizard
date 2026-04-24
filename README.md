@@ -55,22 +55,22 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ### Battery Policy — PV Forecast & Learning
 
-* **Yield-factor normalisatie (v1 + v2)** — Yield-factoren die geleerd zijn terwijl `radiation_bias_factor > 1.5` actief was, zijn systematisch te laag gekalibreerd (biased radiation als basis). Eenmalige reset zodat ze opnieuw leren met onbiased radiation. V2 reset tevens de bias-factor zelf die door de onjuiste yield-factoren kunstmatig opgedreven was tot de cap
-* **Solcast verplaatst naar `_updateWeather`** — Solcast forecast wordt nu opgehaald bij elke weather-update (ook als policy uitgeschakeld is), zodat de PV-chart altijd actueel is
-* **Intraday PV scaling bijgesteld** — Lagere learning-gewichten voor intraday-correctie; voorkomt overreactie op tijdelijke afwijkingen vroeg op de dag
-* **Cycle-registratie bij discharge→charge overgang** — Batterijcycli worden nu ook geregistreerd als de SoC nooit 0% bereikt (typisch op PV-rijke dagen): trigger is de overgang van ontladen naar laden zodra ≥ 0.3 kWh ontladen is
+* **Yield-factor normalisation (v1 + v2)** — Yield factors learned while `radiation_bias_factor > 1.5` was active were systematically under-calibrated (biased radiation as baseline). One-time reset so they re-learn against unbiased radiation. v2 also resets the bias factor itself, which had been artificially inflated to the cap by the miscalibrated yield factors
+* **Solcast moved to `_updateWeather`** — Solcast forecast is now fetched on every weather update (including when policy is disabled), keeping the PV chart current at all times
+* **Intraday PV scaling tuned** — Lower learning weights for intraday correction; prevents overreaction to temporary deviations early in the day
+* **Cycle recorded on discharge→charge transition** — Battery cycles are now also recorded when SoC never reaches 0% (typical on PV-heavy days): trigger is the transition from discharging to charging once ≥ 0.3 kWh has been discharged
 
-### Battery Policy — Batterij Modi Camera
+### Battery Policy — Battery Mode Camera
 
-* **Predictive modi zichtbaar in camera** — In predictive mode (HW Slim Laden actief) werden modi niet opgenomen omdat de policy niet draait. De slot-interval registreert nu ook modus + SoC als policy uitgeschakeld is, zodat wisselingen tussen predictive_charge, predictive_discharge, predictive_zero en predictive_standby zichtbaar worden in de Batterij Modi webcam
+* **Predictive modes visible in camera** — In predictive mode (HW Slim Laden active) modes were not recorded because the policy does not run. The slot interval now also records mode + SoC when policy is disabled, so switches between predictive_charge, predictive_discharge, predictive_zero and predictive_standby become visible in the Battery Modes webcam
 
-### Memory & Stabiliteit
+### Memory & Stability
 
-* **Startup crash fix (v3.15.35)** — `homey.settings.set` kost ~30 MB V8-heap per aanroep ongeacht payload. Bij meerdere gelijktijdige devices tijdens opstarten piekte het heap tot 70+ MB → Memory Warning. Alle drivers gebruiken nu een geserialiseerde write-queue (8 s tussen schrijven). Rebuildable UI-state (planning, explainability, weather) leeft in `_liveState` in memory en wordt via `api.js` geserveerd — nooit meer naar `homey.settings`
-* **Settings page live-state** — `Homey.get` in de settings page merget automatisch de in-memory live-state via een GET `/getLiveState` API-call. Bestaande render-code hoeft niet aangepast
-* **SDM230_v2 / SDM630_v2 polling spread (v3.15.36)** — Bij meerdere SDM-devices wordt de eerste poll gespreid over de polling-interval zodat gelijktijdige HTTP-requests vermeden worden
-* **Initieel weer en policy uitgesteld** — Weather fetch uitgesteld naar T+30 s, eerste policy check naar T+45 s na opstarten. Voorkomt een cumulatieve heap-piek van 70+ MB tijdens de onInit-cascade bij gebruikers met veel devices
-* **Device-type teller in memory-log** — `[MEM]` logregel toont nu aantallen per driver-type (`energy_v2=2 plugin_battery=1 …`) zodat crashes van gebruikers met andere device-mixen sneller te triageren zijn
+* **Startup crash fix (v3.15.35)** — `homey.settings.set` allocates ~30 MB V8 heap per call regardless of payload size. With multiple devices initialising concurrently, heap peaked at 70+ MB → Memory Warning. All drivers now use a serialised write queue (8 s between writes). Rebuildable UI state (planning, explainability, weather) lives in `_liveState` in memory and is served via `api.js` — never written to `homey.settings`
+* **Settings page live-state** — `Homey.get` on the settings page now automatically merges in-memory live-state via a GET `/getLiveState` API call. Existing render code requires no changes
+* **SDM230_v2 / SDM630_v2 polling spread (v3.15.36)** — When multiple SDM devices are present, the first poll is spread across the polling interval to avoid simultaneous HTTP requests
+* **Initial weather and policy deferred** — Weather fetch deferred to T+30 s, first policy check to T+45 s after startup. Prevents a cumulative heap peak of 70+ MB during the onInit cascade on setups with many devices
+* **Device-type counter in memory log** — `[MEM]` log line now shows instance counts per driver type (`energy_v2=2 plugin_battery=1 …`) to speed up triage of crashes from users with different device configurations
 
 ---
 
