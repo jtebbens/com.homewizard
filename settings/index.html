@@ -481,6 +481,7 @@
     <h2 id="planning-title"></h2>
     <p id="planning-subtitle" style="color:#A0A0A0;margin-bottom:20px;"></p>
     <div id="planning-status" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
+    <div id="planning-predictive-banner" style="display:none;margin-bottom:16px;padding:12px 16px;background:#0a1f1e;border:1px solid #02DACE;border-radius:8px;color:#02DACE;font-size:13px;"></div>
     <div id="planning-legend" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:30px;padding:15px;background:#1a1a1a;border-radius:8px;border:1px solid #2d2d2d;"></div>
     <div id="planning-grid"></div>
     <div id="planning-daily-profit"></div>
@@ -1978,6 +1979,17 @@
         </div>
       `;
 
+      /* ── Slim Laden banner ── */
+      const predictiveBanner = document.getElementById('planning-predictive-banner');
+      if (policyState?.currentMode === 'predictive') {
+        predictiveBanner.style.display = 'block';
+        predictiveBanner.innerHTML = lang === 'nl'
+          ? '🤖 <strong>HW Slim Laden actief</strong> — de battery wordt aangestuurd door Slim Laden, niet door de policy engine. De planning hieronder toont het DP-advies als indicatie.'
+          : '🤖 <strong>HW Smart Charging active</strong> — battery is controlled by Smart Charging, not the policy engine. The schedule below shows the DP plan as an indication.';
+      } else {
+        predictiveBanner.style.display = 'none';
+      }
+
       /* ── Legend ── */
       const legendItems = ['to_full', 'zero_charge_only', 'zero_discharge_only', 'zero', 'standby'];
       document.getElementById('planning-legend').innerHTML = legendItems.map(mode => {
@@ -2693,6 +2705,37 @@
           </details>
 
           ${profitEntries.length > 0 ? (() => {
+            // ── SVG bar chart: projected vs actual ──────────────────────────
+            const chartEntries = profitEntries.slice(-14);
+            const maxVal = Math.max(0.01, ...chartEntries.map(e => Math.max(e.projectedProfit, e.actualProfit)));
+            const W = 600, H = 160, ML = 42, MR = 8, MT = 10, MB = 28;
+            const plotW = W - ML - MR, plotH = H - MT - MB;
+            const n = chartEntries.length;
+            const groupW = plotW / n;
+            const barW = Math.max(4, groupW * 0.32);
+            const yTicks = 4;
+            let gridLines = '', yLabels = '', bars = '', xLabels = '';
+            for (let i = 0; i <= yTicks; i++) {
+              const y = MT + plotH - (i / yTicks) * plotH;
+              const val = (i / yTicks) * maxVal;
+              gridLines += `<line x1="${ML}" y1="${y}" x2="${W - MR}" y2="${y}" stroke="#2d2d2d" stroke-width="1"/>`;
+              yLabels += `<text x="${ML - 4}" y="${y + 4}" text-anchor="end" font-size="9" fill="#666">€${val.toFixed(2)}</text>`;
+            }
+            chartEntries.forEach((e, i) => {
+              const cx = ML + i * groupW + groupW / 2;
+              const projH = (e.projectedProfit / maxVal) * plotH;
+              const actH  = (e.actualProfit  / maxVal) * plotH;
+              const projY = MT + plotH - projH;
+              const actY  = MT + plotH - actH;
+              const actColor = e.actualProfit >= e.projectedProfit - 0.001 ? '#20F29B' : '#F87171';
+              bars += `<rect x="${cx - barW - 1}" y="${projY}" width="${barW}" height="${projH}" fill="#7C5CBF" opacity="0.8" rx="2"/>`;
+              bars += `<rect x="${cx + 1}" y="${actY}"  width="${barW}" height="${actH}"  fill="${actColor}" opacity="0.85" rx="2"/>`;
+              const label = e.date.slice(5); // MM-DD
+              xLabels += `<text x="${cx}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#555">${label}</text>`;
+            });
+            const legend = `<rect x="${ML}" y="2" width="8" height="8" fill="#7C5CBF" rx="1"/><text x="${ML+11}" y="10" font-size="9" fill="#999">Gepland</text><rect x="${ML+65}" y="2" width="8" height="8" fill="#20F29B" rx="1"/><text x="${ML+76}" y="10" font-size="9" fill="#999">Werkelijk</text>`;
+            const svgChart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block;margin-bottom:12px;">${gridLines}${yLabels}${bars}${xLabels}${legend}</svg>`;
+
             const trackRows = [...profitEntries].reverse().slice(0, 14).map(e => {
               const err = e.trackingError ?? ((e.actualProfit - e.projectedProfit) / e.projectedProfit * 100);
               const errColor = err >= 0 ? '#20F29B' : '#F87171';
@@ -2707,9 +2750,13 @@
                 <td style="padding:5px 8px;text-align:right;font-weight:bold;color:${errColor};">${e.predictiveActive ? '—' : errSign + err.toFixed(1) + '%'}</td>
               </tr>`;
             }).join('');
-            const avgErr = profitEntries.slice(-14).reduce((s, e) => s + (e.trackingError ?? 0), 0) / Math.min(profitEntries.length, 14);
+            const nonPredEntries = profitEntries.slice(-14).filter(e => !e.predictiveActive);
+            const avgErr = nonPredEntries.length
+              ? nonPredEntries.reduce((s, e) => s + (e.trackingError ?? 0), 0) / nonPredEntries.length
+              : 0;
             const avgColor = avgErr >= 0 ? '#20F29B' : '#F87171';
             return `
+            ${svgChart}
             <details style="margin-top:12px;">
               <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">
                 Tracking error — werkelijk vs. DP-prognose (laatste 14 dagen)
