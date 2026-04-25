@@ -1010,41 +1010,45 @@ if (debug) this.log(
             pvFcByDay[dayIdx][hHour] = pvPowerW;
           }
 
-          // Fetch Solcast and override future hours — runs here (weather update) so it works
-          // regardless of whether the policy is enabled or the optimizer has run.
-          if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
-            if (!this._solcastProvider) {
-              // eslint-disable-next-line global-require
-              const SolcastProvider = require('../../lib/solcast-provider');
-              this._solcastProvider = new SolcastProvider(this.homey);
-            }
-            try {
-              const solcastForecast = await this._solcastProvider.getForecast(
-                settings.solcast_api_key,
-                settings.solcast_resource_id,
-              );
-              if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
-                let applied = 0;
-                for (const s of solcastForecast) {
-                  const st = new Date(s.timestamp);
-                  if (st <= nowFc) continue;
-                  const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-                  const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
-                  if (sIdx < 0) continue;
-                  const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-                  pvFcByDay[sIdx][sHour] = s.pvPowerW;
-                  applied++;
-                }
-                const scTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
-                const scTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-                this.log(`[Solcast] Applied ${applied} future slots — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
+          // Only write chart if optimizer hasn't pushed a fresher blended forecast recently.
+          // Prevents _updateWeather (1h cycle) from overwriting the 15-min optimizer chart.
+          // Also skips the Solcast fetch — optimizer already blends Solcast, no extra API call needed.
+          const blendAge = this._pvForecastBlendedAt ? Date.now() - this._pvForecastBlendedAt : Infinity;
+          if (blendAge > 30 * 60 * 1000) {
+            // Optimizer hasn't run recently (policy disabled or first startup): apply Solcast here.
+            if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
+              if (!this._solcastProvider) {
+                // eslint-disable-next-line global-require
+                const SolcastProvider = require('../../lib/solcast-provider');
+                this._solcastProvider = new SolcastProvider(this.homey);
               }
-            } catch (err) {
-              this.log(`[Solcast] Chart forecast error: ${err.message}`);
+              try {
+                const solcastForecast = await this._solcastProvider.getForecast(
+                  settings.solcast_api_key,
+                  settings.solcast_resource_id,
+                );
+                if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
+                  let applied = 0;
+                  for (const s of solcastForecast) {
+                    const st = new Date(s.timestamp);
+                    if (st <= nowFc) continue;
+                    const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+                    const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
+                    if (sIdx < 0) continue;
+                    const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+                    pvFcByDay[sIdx][sHour] = s.pvPowerW;
+                    applied++;
+                  }
+                  const scTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
+                  const scTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
+                  this.log(`[Solcast] Applied ${applied} future slots — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
+                }
+              } catch (err) {
+                this.log(`[Solcast] Chart forecast error: ${err.message}`);
+              }
             }
+            this._setLive('policy_pv_forecast_hourly', pvFcByDay);
           }
-
-          this._setLive('policy_pv_forecast_hourly', pvFcByDay);
         }
       } else {
         this.weatherData.pvKwhToday = null;
@@ -1062,6 +1066,24 @@ if (debug) this.log(
         sun4h: this.weatherData.sunshineNext4Hours,
         sunScore
       });
+
+      if (this.learningEngine) {
+        const ls  = this.learningEngine.getStatistics();
+        const bF  = this.learningEngine.data?.radiation_bias_factor ?? 1.0;
+        const yfs = this.learningEngine.getSolarLearnedSlotCount();
+        this.log(`[Learning] days=${ls.days_tracking} samples=${ls.total_samples} coverage=${ls.pattern_coverage}% pv_acc=${ls.pv_accuracy}% | yield=${yfs}/96 slots bias=${bF.toFixed(3)}`);
+        // Keep learning_status fresh even when policy/optimizer isn't running
+        const rte = this.efficiencyEstimator?.getEfficiency();
+        this._setLive('learning_status', {
+          days:       ls.days_tracking,
+          samples:    ls.total_samples,
+          coverage:   ls.pattern_coverage,
+          pvAccuracy: ls.pv_accuracy,
+          rte:        rte != null ? +(rte * 100).toFixed(1) : null,
+          cycles:     this.efficiencyEstimator?.getCycleCount() ?? 0,
+          updatedAt:  new Date().toISOString(),
+        });
+      }
 
       if (this._isPredictiveMode) {
         // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
@@ -1834,9 +1856,23 @@ if (debug) this.log(
       }
     }
 
-    // Cache blended forecast (after Solcast, before accuracy discount) for chart use in _updateWeather.
+    // Sync chart with optimizer input (post-Solcast blend, pre-accuracy-discount).
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
-      this._pvForecastBlended = pvForecast;
+      this._pvForecastBlended   = pvForecast;
+      this._pvForecastBlendedAt = Date.now();
+      const _fcNow      = new Date();
+      const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const pvFcByDay   = [{}, {}];
+      for (const slot of pvForecast) {
+        const st    = new Date(slot.timestamp);
+        const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
+        if (sIdx < 0) continue;
+        const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        pvFcByDay[sIdx][sHour] = Math.round(slot.pvPowerW);
+      }
+      this._setLive('policy_pv_forecast_hourly', pvFcByDay);
     }
 
     // PV accuracy tracking: compare forecast for now vs actual from flow card.
@@ -4058,6 +4094,9 @@ if (debug) this.log(
       this._cycleRevenue = 0;
       this._cycleCost = 0;
       this._cycleKwhDischarged = 0;
+      await this.setStoreValue('cycle_kwh_discharged', 0);
+      await this.setStoreValue('cycle_revenue', 0);
+      await this.setStoreValue('cycle_cost', 0);
 
       if ((this._costEnergy || 0) > 0 || (this._costAvg || 0) > 0) {
         this.log(`💰 CostModel RESET: SoC ${soc}% <= ${Math.max(minSoc, 3)}% → clearing stale energy`);
@@ -4071,8 +4110,11 @@ if (debug) this.log(
 
     // Initialize in-memory accumulators from store on first call
     if (this._costEnergy === undefined) {
-      this._costEnergy = await this.getStoreValue('battery_energy_kwh') || 0;
-      this._costAvg = await this.getStoreValue('battery_avg_cost') || 0;
+      this._costEnergy       = await this.getStoreValue('battery_energy_kwh')    || 0;
+      this._costAvg          = await this.getStoreValue('battery_avg_cost')       || 0;
+      this._cycleKwhDischarged = await this.getStoreValue('cycle_kwh_discharged') || 0;
+      this._cycleRevenue     = await this.getStoreValue('cycle_revenue')          || 0;
+      this._cycleCost        = await this.getStoreValue('cycle_cost')             || 0;
     }
 
     // Log every 60s (every 12th call)
@@ -4106,6 +4148,9 @@ if (debug) this.log(
         this._cycleRevenue = 0;
         this._cycleCost = 0;
         this._cycleKwhDischarged = 0;
+        await this.setStoreValue('cycle_kwh_discharged', 0);
+        await this.setStoreValue('cycle_revenue', 0);
+        await this.setStoreValue('cycle_cost', 0);
       }
       this._wasDischarging = false;
 
@@ -4146,8 +4191,11 @@ if (debug) this.log(
 
     // Persist to store every 2 minutes (every 8th call) instead of every 15s
     if (this._costModelCallCount % 8 === 0) {
-      await this.setStoreValue('battery_energy_kwh', this._costEnergy);
-      await this.setStoreValue('battery_avg_cost', this._costAvg);
+      await this.setStoreValue('battery_energy_kwh',    this._costEnergy);
+      await this.setStoreValue('battery_avg_cost',      this._costAvg);
+      await this.setStoreValue('cycle_kwh_discharged',  this._cycleKwhDischarged || 0);
+      await this.setStoreValue('cycle_revenue',         this._cycleRevenue       || 0);
+      await this.setStoreValue('cycle_cost',            this._cycleCost          || 0);
     }
   }
 
