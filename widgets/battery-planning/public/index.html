@@ -158,6 +158,8 @@
   <div class="empty" style="padding:0">Laden...</div>
 </div>
 
+<div id="predictive-banner" style="display:none;padding:5px 10px;background:#02DACE22;border:1px solid #02DACE55;border-radius:6px;color:#02DACE;font-size:11px;font-weight:600;text-align:center;">🤖 HW Slim Laden actief — planning is DP-advies</div>
+
 <hr class="divider">
 
 <div class="chart-wrap" id="chart-wrap">
@@ -207,6 +209,8 @@ function relativeTime(isoStr) {
 }
 
 function renderStatus(data) {
+  const banner = document.getElementById('predictive-banner');
+  if (banner) banner.style.display = data.currentMode === 'predictive' ? 'block' : 'none';
   const row = document.getElementById('status-row');
   const modeColor = MODE_COLORS[data.currentMode] || '#546e7a';
   const modeIcon  = MODE_ICONS[data.currentMode]  || '⏸';
@@ -253,10 +257,10 @@ function renderSvg(slots) {
   if (empty) empty.style.display = 'none';
 
   // H includes chart area + SoC strip (8px) + time axis (16px)
-  const W = 400, H = 144;
+  const W = 400, H = 152;
   const PAD_L = 32, PAD_R = 4, PAD_T = 6;
   const SOC_H = 8, AXIS_H = 16;
-  const PAD_B = SOC_H + AXIS_H + 4;
+  const PAD_B = SOC_H + AXIS_H + 10;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
 
@@ -268,7 +272,7 @@ function renderSvg(slots) {
 
   if (prices.length === 0) return;
 
-  const priceMin = Math.max(0, Math.min(...prices) - 0.02);
+  const priceMin = Math.min(...prices) - 0.02;
   const priceMax = Math.max(...prices) + 0.02;
   const priceRange = priceMax - priceMin || 0.01;
   const pvMax  = Math.max(...pvs, 1);

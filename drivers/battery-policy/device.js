@@ -129,13 +129,39 @@ class BatteryPolicyDevice extends Homey.Device {
       // are never a blind spot. When Slim Laden is active, also refresh the DP
       // projection (read-only) so we know what our optimizer would have planned.
       if (this._isPredictiveMode) {
-        this._gatherInputs().then(inputs => {
+        const timeout = new Promise((_, reject) =>
+          this.homey.setTimeout(() => reject(new Error('timeout')), 20_000));
+        Promise.race([this._gatherInputs(), timeout]).then(inputs => {
           if (inputs?.tariff) {
             this.optimizationEngine.updateSettings({});
-            return this._recomputeOptimizer(inputs);
+            return this._recomputeOptimizer(inputs).then(() => inputs);
           }
-        }).then(() => {
+        }).then(inputs => {
           this._updateProfitTracking(null, true);
+          // Patch live SoC into battery_policy_state so widget shows correct value
+          const liveSoc = this.p1Device?.getCapabilityValue('battery_group_average_soc') ?? null;
+          if (liveSoc != null) {
+            const ps = this._liveState.battery_policy_state
+              ?? this.homey.settings.get('battery_policy_state') ?? {};
+            ps.batterySOC = liveSoc;
+            ps.currentMode = 'predictive';
+            this._setLive('battery_policy_state', ps);
+          }
+          // Record predictive mode in planning chart history
+          try {
+            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+            const nowTs  = new Date();
+            const bucket = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+            const existing = modeHistory.findIndex(
+              h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
+            );
+            const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: liveSoc, price: null };
+            if (existing >= 0) modeHistory[existing] = entry;
+            else modeHistory.push(entry);
+            if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
+            this._queueSettingsPersist('policy_mode_history', modeHistory);
+          } catch (e) { this.error('Failed to save predictive mode history (flush):', e); }
+          try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Widget save (predictive) failed:', e.message); }
         }).catch(e => this.error('Predictive profit tracking failed:', e.message));
       } else {
         this._updateProfitTracking(null, false);
@@ -686,8 +712,13 @@ if (debug) this.log(
         const PV_DAYLIGHT_START = 7;          // 7 AM
         const PV_DAYLIGHT_END = 18;           // 6 PM
 
-        // Get current sun score and time
-        const currentHour = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        // Get current hour (cached per minute to avoid toLocaleString overhead at 4×/min)
+        const nowMin = Math.floor(Date.now() / 60_000);
+        if (this._cachedHourMin !== nowMin) {
+          this._cachedHour = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+          this._cachedHourMin = nowMin;
+        }
+        const currentHour = this._cachedHour;
         const isDaylight = currentHour >= PV_DAYLIGHT_START && currentHour < PV_DAYLIGHT_END;
         const sunScore = this.getCapabilityValue('sun_score') ?? 0;
         const hasSunlight = sunScore >= PV_SUN_THRESHOLD;
@@ -768,8 +799,15 @@ if (debug) this.log(
               this._isPredictiveMode = true;
               this.log('[Policy] Predictive mode gedetecteerd (P1 poll) — explanation_summary live bijhouden');
             }
-            // Keep explanation_summary in sync with live SoC while predictive mode is active
+            // Keep explanation_summary + currentMode in sync while predictive is active
             await this.setCapabilityValue('explanation_summary', `Slim laden: actief - SoC ${soc}%`).catch(this.error);
+            const ps = this._liveState.battery_policy_state
+              ?? this.homey.settings.get('battery_policy_state')
+              ?? {};
+            if (ps.currentMode !== 'predictive') {
+              ps.currentMode = 'predictive';
+              this._setLive('battery_policy_state', ps);
+            }
           } else if (this._isPredictiveMode) {
             // Predictive mode just ended
             this._isPredictiveMode = false;
@@ -976,7 +1014,7 @@ if (debug) this.log(
       const pvCapW = devSettings.pv_capacity_w || 0;
       const PR     = devSettings.pv_performance_ratio || 0.75;
       if (Array.isArray(this.weatherData.dailyProfiles)) {
-        const todayDate    = new Date().toISOString().slice(0, 10);
+        const todayDate    = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
         const todayProfiles = this.weatherData.dailyProfiles.filter(h => h.time.toISOString().startsWith(todayDate));
         const yfs           = this.learningEngine?.getSolarYieldFactorsSmoothed();
         const learnedSlots  = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
@@ -1083,7 +1121,12 @@ if (debug) this.log(
         this.weatherData.pvKwhToday = null;
       }
 
-      const sunScore = this.weatherForecaster.calculateSunScore(this.weatherData);
+      const { sunshineNext4Hours: _s4, sunshineTodayRemaining: _st, sunshineTomorrow: _stom } = this.weatherData;
+      const sunScore = Math.round(
+        Math.min(50, (_s4 / 4) * 50) +
+        Math.min(25, (_st / 8) * 25) +
+        Math.min(25, (_stom / 10) * 25)
+      );
 
       await this.setCapabilityValue('sun_score', sunScore);
       await this.setCapabilityValue(
@@ -1237,6 +1280,35 @@ if (debug) this.log(
             this.planningImagePv?.update().catch(() => {});
           }
           await this.setCapabilityValue('explanation_summary', `Slim laden: actief - SoC ${currentSoC}%`).catch(this.error);
+          // Record predictive mode in planning chart history
+          try {
+            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+            const nowTs  = new Date();
+            const bucket = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+            const existing = modeHistory.findIndex(
+              h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
+            );
+            const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: currentSoC, price: null };
+            if (existing >= 0) modeHistory[existing] = entry;
+            else modeHistory.push(entry);
+            if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
+            this._queueSettingsPersist('policy_mode_history', modeHistory);
+          } catch (e) { this.error('Failed to save predictive mode history:', e); }
+          // Still recompute DP + update widget so planning stays fresh
+          try {
+            const inputs = await this._gatherInputs();
+            if (inputs?.tariff) {
+              this.optimizationEngine.updateSettings({});
+              await this._recomputeOptimizer(inputs);
+              // Patch live SoC into battery_policy_state so widget shows correct value
+              const ps = this._liveState.battery_policy_state
+                ?? this.homey.settings.get('battery_policy_state') ?? {};
+              ps.batterySOC = currentSoC;
+              ps.currentMode = 'predictive';
+              this._setLive('battery_policy_state', ps);
+              this._saveWidgetData({ skipChart: true });
+            }
+          } catch (e) { this.error('Predictive recompute failed:', e.message); }
           return;
         }
       }
@@ -1525,8 +1597,10 @@ if (debug) this.log(
   }
 
   _saveWidgetData({ skipChart = false } = {}) {
-    const schedule  = this._liveState.policy_optimizer_schedule || [];
-    const state     = this._liveState.battery_policy_state      || {};
+    const schedule  = this._liveState.policy_optimizer_schedule
+      ?? this.homey.settings.get('policy_optimizer_schedule') ?? [];
+    const state     = this._liveState.battery_policy_state
+      ?? this.homey.settings.get('battery_policy_state') ?? {};
     const use1h     = this.getSetting('price_resolution') === '1h';
     const priceData = use1h
       ? (this.homey.settings.get('policy_all_prices') || [])
@@ -1786,6 +1860,18 @@ if (debug) this.log(
       }
     }
 
+    // Throttled diagnostic log — once per hour so you can verify the check is running
+    // and see current values without flooding the log.
+    const nowMs = Date.now();
+    if (!this._lastReoptDiagLog || nowMs - this._lastReoptDiagLog > 3_600_000) {
+      this._lastReoptDiagLog = nowMs;
+      const schedule = this.optimizationEngine._schedule;
+      const currentSlot = schedule?.slots?.filter(s => new Date(s.timestamp).getTime() <= nowMs).at(-1);
+      const socDelta = (currentSoc != null && currentSlot?.socProjected != null)
+        ? Math.abs(currentSoc - currentSlot.socProjected).toFixed(1) : '—';
+      const pvRatio = this._lastIntradayPvRatio?.toFixed(2) ?? '—';
+      this.log(`[Reopt] No trigger — SoC delta=${socDelta}pp, PV ratio at last run=${pvRatio}`);
+    }
     return false;
   }
 
@@ -1802,7 +1888,7 @@ if (debug) this.log(
    */
   _updateProfitTracking(todayEntry = null, predictiveActive = false) {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
       let hist = null;
       let ownedEntry = false;
 
@@ -2315,7 +2401,7 @@ if (debug) this.log(
         // Rolling daily profit history — one entry per day, max 30 days.
         // Used by the frontend to compute a seasonally-averaged payback period.
         // Also stores actual self-sufficiency, updated on every policy run.
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
         let hist = this.homey.settings.get('expansion_profit_history') || { entries: [] };
         if (!Array.isArray(hist.entries)) hist.entries = [];
         const lastEntry = hist.entries[hist.entries.length - 1];
@@ -3536,7 +3622,12 @@ if (debug) this.log(
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
-      await this._streamPvChart(stream, { pvActual, pvForecast, pvCapacityW: pvCapW });
+      try {
+        await this._streamPvChart(stream, { pvActual, pvForecast, pvCapacityW: pvCapW });
+      } catch (e) {
+        this.error('PV chart stream error:', e.message);
+        if (!stream.destroyed) stream.end();
+      }
     });
     await this.setCameraImage('planning_pv', 'PV Opwek', this.planningImagePv);
     this.log('📷 PV Opwek camera geregistreerd');
@@ -3812,10 +3903,10 @@ if (debug) this.log(
       return pvHourly[h] ?? null;
     });
 
-    // Forecast PV data (full today + tomorrow)
+    // Forecast PV data (full today + tomorrow) — use 0 for missing hours so line stays continuous
     const forecastData = hours.map(h => {
-      if (h < 24) return forecastToday[h] ?? null;
-      return forecastTomorrow[h - 24] ?? null;
+      if (h < 24) return forecastToday[h] ?? 0;
+      return forecastTomorrow[h - 24] ?? 0;
     });
 
     // Compute daily totals (kWh)
@@ -4202,7 +4293,7 @@ if (debug) this.log(
         const avgDischargePrice = this._cycleRevenue / this._cycleKwhDischarged;
         let cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
         cycleHistory.push({
-          date: new Date().toISOString().slice(0, 10),
+          date: new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10),
           kwhDischarged: +this._cycleKwhDischarged.toFixed(3),
           avgChargePrice: +(this._costAvg || 0).toFixed(4),
           avgDischargePrice: +avgDischargePrice.toFixed(4),
@@ -4257,7 +4348,7 @@ if (debug) this.log(
         const avgDischargePrice = this._cycleRevenue / this._cycleKwhDischarged;
         let cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
         cycleHistory.push({
-          date: new Date().toISOString().slice(0, 10),
+          date: new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10),
           kwhDischarged: +this._cycleKwhDischarged.toFixed(3),
           avgChargePrice: +(this._costAvg || 0).toFixed(4),
           avgDischargePrice: +avgDischargePrice.toFixed(4),
