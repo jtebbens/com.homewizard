@@ -1351,5 +1351,8 @@
   },
   "3.15.40": {
     "en": "planning bug fix"
+  },
+  "3.15.41": {
+    "en": "Missing standby mode in planning to allow pv straight to grid"
   }
 }
