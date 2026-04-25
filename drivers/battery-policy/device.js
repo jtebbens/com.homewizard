@@ -124,6 +124,22 @@ class BatteryPolicyDevice extends Homey.Device {
       } else {
         this._updateModeChart().catch(e => this.error('Mode chart update failed:', e));
       }
+
+      // Profit tracking — runs regardless of policy state so predictive-mode days
+      // are never a blind spot. When Slim Laden is active, also refresh the DP
+      // projection (read-only) so we know what our optimizer would have planned.
+      if (this._isPredictiveMode) {
+        this._gatherInputs().then(inputs => {
+          if (inputs?.tariff) {
+            this.optimizationEngine.updateSettings({});
+            return this._recomputeOptimizer(inputs);
+          }
+        }).then(() => {
+          this._updateProfitTracking(null, true);
+        }).catch(e => this.error('Predictive profit tracking failed:', e.message));
+      } else {
+        this._updateProfitTracking(null, false);
+      }
     };
     this.homey.setTimeout(() => {
       _modeFlushFn();
@@ -888,6 +904,19 @@ if (debug) this.log(
                 // tomorrow's prices (96→192 slots) that change the optimal schedule.
                 this.optimizationEngine.updateSettings({});
                 await this._runPolicyCheck();
+              } else if (priceCount > 0) {
+                // Policy disabled — run DP in read-only mode (no mode apply) so
+                // projectedProfit stays current for tracking even on manual-control days.
+                try {
+                  const inputs = await this._gatherInputs();
+                  if (inputs.battery && inputs.tariff) {
+                    this.optimizationEngine.updateSettings({});
+                    await this._recomputeOptimizer(inputs);
+                  }
+                } catch (e) {
+                  this.error('Predictive DP (policy off) failed:', e.message);
+                }
+                this._updateProfitTracking();
               }
             } catch (err) {
               this.error('❌ Price refresh failed:', err);
@@ -1218,8 +1247,10 @@ if (debug) this.log(
         return;
       }
 
-      // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update)
-      if (this.optimizationEngine.isStale() && inputs.tariff) {
+      // Recompute optimizer schedule if stale (lazy, every ~90 min or after price update),
+      // or when intra-day conditions have drifted significantly from the last DP run.
+      const currentSoc = inputs.battery?.stateOfCharge ?? null;
+      if ((this.optimizationEngine.isStale() || this._shouldForceReoptimize(currentSoc)) && inputs.tariff) {
         await this._recomputeOptimizer(inputs);
       }
       inputs.optimizer = this.optimizationEngine;
@@ -1705,6 +1736,112 @@ if (debug) this.log(
   }
 
   /**
+   * Returns true when intra-day conditions have drifted enough from the last DP
+   * run that a forced recompute is warranted — even if the schedule isn't stale yet.
+   *
+   * Two triggers:
+   *  1. SoC deviation >15 pp from the projected SoC of the current slot.
+   *  2. PV intraday ratio changed by >25% relative to the ratio used in the last run.
+   */
+  _shouldForceReoptimize(currentSoc) {
+    const schedule = this.optimizationEngine._schedule;
+    if (!schedule?.slots?.length) return false;
+
+    // ── Trigger 1: SoC deviation ─────────────────────────────────────────────
+    if (currentSoc != null) {
+      const nowMs = Date.now();
+      // Find the slot whose timestamp is closest to (and ≤) now.
+      const currentSlot = schedule.slots
+        .filter(s => new Date(s.timestamp).getTime() <= nowMs)
+        .at(-1);
+      if (currentSlot?.socProjected != null) {
+        const socDelta = Math.abs(currentSoc - currentSlot.socProjected);
+        if (socDelta > 15) {
+          this.log(`[Reopt] SoC deviation ${socDelta.toFixed(1)} pp (actual ${currentSoc}% vs projected ${currentSlot.socProjected}%) → forcing recompute`);
+          return true;
+        }
+      }
+    }
+
+    // ── Trigger 2: PV intraday ratio drift ───────────────────────────────────
+    if (this._lastIntradayPvRatio != null &&
+        this.learningEngine &&
+        Array.isArray(this.learningEngine.data?.pv_predictions)) {
+      const now = new Date();
+      const nowMs = now.getTime();
+      const cutoffMs = nowMs - 3 * 3_600_000;
+      const preds = this.learningEngine.data.pv_predictions.filter(p =>
+        p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
+        p.predicted > 50 && p.actual > 50
+      );
+      if (preds.length >= 4) {
+        const sumF = preds.reduce((s, p) => s + p.predicted, 0);
+        const sumA = preds.reduce((s, p) => s + p.actual,    0);
+        const currentRatio = Math.min(2.5, Math.max(0.4, sumA / sumF));
+        const ratioDelta = Math.abs(currentRatio - this._lastIntradayPvRatio);
+        if (ratioDelta > 0.25) {
+          this.log(`[Reopt] PV ratio drift ${ratioDelta.toFixed(2)} (was ${this._lastIntradayPvRatio.toFixed(2)}, now ${currentRatio.toFixed(2)}) → forcing recompute`);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Update today's profit tracking entry in expansion_profit_history.
+   * Compares DP projected profit with realized cycle profits.
+   * Called from expansion analysis (inside _saveWidgetData), from price refresh
+   * when policy is disabled, and from the mode-flush interval during predictive mode.
+   *
+   * @param {object|null} todayEntry     - Existing today-entry to mutate in-place, or null
+   *   to load/create from settings (standalone call path).
+   * @param {boolean}     predictiveActive - True when HW Slim Laden is controlling the battery.
+   *   Stored in the entry so the UI can show a badge on those days.
+   */
+  _updateProfitTracking(todayEntry = null, predictiveActive = false) {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      let hist = null;
+      let ownedEntry = false;
+
+      if (!todayEntry) {
+        hist = this.homey.settings.get('expansion_profit_history') || { entries: [] };
+        if (!Array.isArray(hist.entries)) hist.entries = [];
+        const last = hist.entries[hist.entries.length - 1];
+        if (!last || last.date !== today) {
+          todayEntry = { date: today };
+          hist.entries.push(todayEntry);
+          if (hist.entries.length > 30) hist.entries = hist.entries.slice(-30);
+        } else {
+          todayEntry = last;
+        }
+        ownedEntry = true;
+      }
+
+      const projectedProfit = this.optimizationEngine._schedule?.projectedProfit ?? 0;
+      todayEntry.projectedProfit = +projectedProfit.toFixed(4);
+
+      const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
+      const actualProfit = cycleHistory
+        .filter(c => c.date === today)
+        .reduce((sum, c) => sum + (c.profitEur || 0), 0);
+      todayEntry.actualProfit = +actualProfit.toFixed(4);
+
+      if (projectedProfit > 0.001) {
+        todayEntry.trackingError = +((actualProfit - projectedProfit) / projectedProfit * 100).toFixed(1);
+      }
+
+      if (predictiveActive) todayEntry.predictiveActive = true;
+
+      if (ownedEntry) this._queueSettingsPersist('expansion_profit_history', hist);
+    } catch (e) {
+      this.error('_updateProfitTracking failed:', e.message);
+    }
+  }
+
+  /**
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
@@ -1920,6 +2057,7 @@ if (debug) this.log(
         const sumActual   = todayPreds.reduce((s, p) => s + p.actual,    0);
         const rawRatio    = sumActual / sumForecast;
         const ratio       = Math.min(2.5, Math.max(0.4, rawRatio));
+        this._lastIntradayPvRatio = ratio;
         if (Math.abs(ratio - 1.0) > 0.10) {
           const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
           pvForecast = pvForecast.map(slot => {
@@ -2195,24 +2333,7 @@ if (debug) this.log(
           : null;
         if (todayActualSelfSufficiencyPct !== null) todayEntry.actualSelfSufficiencyPct = todayActualSelfSufficiencyPct;
 
-        // ── Actual vs. projected profit tracking ─────────────────────────────
-        // Compare realized cycle profits with the DP's projected optimum.
-        // Stored per day in the history entry; used to identify tracking error
-        // (how well the policy engine follows the DP's optimal schedule).
-        const projectedProfit = this.optimizationEngine._schedule?.projectedProfit ?? 0;
-        todayEntry.projectedProfit = +projectedProfit.toFixed(4);
-
-        // Sum actual cycle profits for today from battery_cycle_history
-        const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
-        const todayCycles = cycleHistory.filter(c => c.date === today);
-        const actualProfit = todayCycles.reduce((sum, c) => sum + (c.profitEur || 0), 0);
-        todayEntry.actualProfit = +actualProfit.toFixed(4);
-
-        // Tracking error: positive = actual beat projection, negative = underperformed
-        if (projectedProfit > 0.001) {
-          todayEntry.trackingError = +((actualProfit - projectedProfit) / projectedProfit * 100).toFixed(1);
-        }
-
+        this._updateProfitTracking(todayEntry);
         this._queueSettingsPersist('expansion_profit_history', hist);
 
         // Augment scenarios with avgProfit + seasonally-corrected avgProfit.
