@@ -91,6 +91,28 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ---
 
+## Previous Updates (v3.15.10+)
+
+### Battery Policy — DP-Primary Refactor
+
+* **DP is the sole decision-maker for dynamic tariff** — `calculatePolicy()` calls `optimizer.getSlot(now)` → `charge | preserve | discharge`. Exceptions (confidence 75): `soc_too_low`, `soc_full`, `pv_store_wins`, `delay_charge`. When DP is followed (confidence 90): no exception. Removed dead scorers: `_applyTariffScore`, `_applyDayAheadStrategy`, `_getFutureExpensiveHours`, `_applyPeakTimingGuard`, `_applyOptimizerBias`
+* **`_refreshPvSticky` refactor** — PV detection decoupled from score side-effects; pure PV detection + sticky timer only
+* **PV accuracy fix** — Bounded error function + one-time migration for corrupted score in LearningEngine
+* **Intraday PV scaling** — Remaining forecast for today corrected based on actual PV output so far
+* **Explainability DP-reasons** — DP decision visible as reason in settings UI
+* **PV chart forecast fix** — `pvForecastByDay` moved from `_recomputeOptimizer` to `_updateWeather`; accuracy-discount no longer applied to chart; chart now current even with policy disabled
+
+### Battery Policy — v3.15.5 Optimizations
+
+* **Weather attenuation** — WMO codes (snow/fog/thunderstorm/heavy rain) → PV correction factor via `_weatherAttenuation()`; confidence-gated on precipitation probability
+* **DP terminal value** — Residual value of stored energy at horizon end: top-quartile price × 0.8 × RTE × kWh. Discounted linearly when PV tomorrow can partially refill battery; zeroed when PV refill ≥ 80% of capacity
+* **Per-slot confidence margin** — `learningEngine.getConsumptionCV()` per hour → array to optimizer instead of single scalar
+* **PV headroom + cycle cost waiver** — Night floor €0 when pvRatio ≥ 1.5; cycle cost = 0 when PV is abundant
+* **SoC forward simulation** — Dashed SoC line in planning chart simulates from real SoC instead of stale optimizer data
+* **Profit tracking** — Actual vs. projected profit per slot in `expansion_profit_history`, visible in Uitbreiding tab
+
+---
+
 ## Previous Updates (v3.15.10)
 
 ### Battery Policy — Optimizer & PV Modelling

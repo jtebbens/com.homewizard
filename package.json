@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "athom app run",
-    "test-unit": "node test/xadi-provider.test.js",
+    "test-unit": "node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/terminal-value.test.js",
     "lint": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "lint-check": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },

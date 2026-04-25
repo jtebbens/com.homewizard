@@ -509,29 +509,6 @@ class BaseloadMonitor {
 
   _avg(a) {return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;}
 
-  /**
-   * Calculate monthly and yearly cost estimate for current baseload
-   * @param {number} avgPricePerKwh - Average electricity price in €/kWh
-   * @returns {object} { baseloadW, monthlyKwh, monthlyCost, yearlyCost }
-   */
-  getMonthlyEstimate(avgPricePerKwh = 0.25) {
-    if (!this.currentBaseload || typeof avgPricePerKwh !== 'number') {
-      return { baseloadW: null, monthlyKwh: null, monthlyCost: null, yearlyCost: null };
-    }
-    
-    const baseloadW = this.currentBaseload;
-    const monthlyKwh = (baseloadW / 1000) * 24 * 30; // W to kW, 24h/day, 30 days
-    const monthlyCost = monthlyKwh * avgPricePerKwh;
-    const yearlyCost = monthlyCost * 12;
-    
-    return {
-      baseloadW: Math.round(baseloadW),
-      monthlyKwh: Math.round(monthlyKwh * 10) / 10,
-      monthlyCost: Math.round(monthlyCost * 100) / 100,
-      yearlyCost: Math.round(yearlyCost * 100) / 100
-    };
-  }
-
   _durAbove(t) {
     let ms=0;
     for (let i=1;i<this.currentNightSamples.length;i++) {
@@ -546,15 +523,6 @@ class BaseloadMonitor {
     for (let i=1;i<this.currentNightSamples.length;i++) {
       const p=this.currentNightSamples[i-1],c=this.currentNightSamples[i];
       if (p.power<t && c.power<t) ms+=c.ts-p.ts;
-    }
-    return ms;
-  }
-
-  _durAbsBelow(m) {
-    let ms=0;
-    for (let i=1;i<this.currentNightSamples.length;i++) {
-      const p=this.currentNightSamples[i-1],c=this.currentNightSamples[i];
-      if (Math.abs(p.power)<m && Math.abs(c.power)<m) ms+=c.ts-p.ts;
     }
     return ms;
   }
