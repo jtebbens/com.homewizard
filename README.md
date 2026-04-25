@@ -51,7 +51,24 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.37)
+## 📝 Latest Updates (v3.15.38)
+
+### Battery Cycle Tracking
+
+* **Cycle accumulators survive restarts** — `_cycleKwhDischarged`, `_cycleRevenue` and `_cycleCost` are now persisted to device store (alongside `_costEnergy`/`_costAvg`). Previously a restart during an active discharge silently reset all accumulators to zero, causing the evening discharge to be missing from cycle history and ROI tracking
+* **RTE learning cycle fix** — Balance guard lowered from 1.45 → 1.40. The old threshold (1.45) meant the minimum measurable RTE at guard-passage was 1/1.45 = 68.9%, just below the 70% floor — so every measurement that barely passed the guard was immediately discarded. With 1.40 the minimum is 71.4%, ensuring a valid measurement every time the guard passes
+
+### Battery Policy
+
+* **Negative price → always charge to full** — When spot price is negative, the mapper now returns `to_full` regardless of PV state. Charging at negative prices earns money, so PV-mode guards (`zero_charge_only`, `pvStoreWins`) are bypassed
+
+### UI
+
+* **Learning status always current** — `learning_status` is now written on every `_updateWeather` call (hourly), not only when the optimizer runs. Previously, with policy disabled or in predictive mode, the Leerdagen/coverage/PV-accuracy pills in the settings UI would show stale values
+
+---
+
+## Previous Updates (v3.15.37)
 
 ### Battery Policy — PV Forecast & Learning
 
