@@ -4323,6 +4323,9 @@
       "platforms": [
         "local"
       ],
+      "connectivity": [
+        "cloud"
+      ],
       "capabilities": [
         "meter_water",
         "meter_water.daily"
@@ -5501,10 +5504,13 @@
         "large": "drivers/energylink/assets/images/large.jpg",
         "small": "drivers/energylink/assets/images/small.jpg"
       },
+      "class": "sensor",
       "platforms": [
         "local"
       ],
-      "class": "sensor",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power.used",
@@ -5722,10 +5728,13 @@
         "large": "drivers/heatlink/assets/images/large.jpg",
         "small": "drivers/heatlink/assets/images/small.jpg"
       },
+      "class": "thermostat",
       "platforms": [
         "local"
       ],
-      "class": "thermostat",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [
         "measure_temperature",
         "target_temperature",
@@ -5791,6 +5800,9 @@
       "class": "other",
       "platforms": [
         "local"
+      ],
+      "connectivity": [
+        "lan"
       ],
       "capabilities": [],
       "pair": [
@@ -5869,10 +5881,13 @@
         "large": "drivers/kakusensors/assets/images/large.jpg",
         "small": "drivers/kakusensors/assets/images/small.jpg"
       },
+      "class": "sensor",
       "platforms": [
         "local"
       ],
-      "class": "sensor",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [],
       "pair": [
         {
@@ -6152,10 +6167,13 @@
         "large": "drivers/rainmeter/assets/images/large.jpg",
         "small": "drivers/rainmeter/assets/images/small.jpg"
       },
+      "class": "sensor",
       "platforms": [
         "local"
       ],
-      "class": "sensor",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [
         "measure_rain.last3h",
         "measure_rain.total"
@@ -6203,6 +6221,9 @@
       },
       "platforms": [
         "local"
+      ],
+      "connectivity": [
+        "lan"
       ],
       "class": "sensor",
       "capabilities": [
@@ -6390,10 +6411,13 @@
         "large": "drivers/wattcher/assets/images/large.jpg",
         "small": "drivers/wattcher/assets/images/small.jpg"
       },
+      "class": "sensor",
       "platforms": [
         "local"
       ],
-      "class": "sensor",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [
         "measure_power",
         "meter_power"
@@ -6439,10 +6463,13 @@
         "large": "drivers/windmeter/assets/images/large.jpg",
         "small": "drivers/windmeter/assets/images/small.jpg"
       },
+      "class": "sensor",
       "platforms": [
         "local"
       ],
-      "class": "sensor",
+      "connectivity": [
+        "lan"
+      ],
       "capabilities": [
         "measure_wind_angle",
         "measure_wind_strength.cur",
