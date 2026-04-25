@@ -1348,5 +1348,8 @@
   },
   "3.15.39": {
     "en": "Extra rules and checks for battery policy negative prices. pv tuning estimates, planning update."
+  },
+  "3.15.40": {
+    "en": "planning bug fix"
   }
 }
