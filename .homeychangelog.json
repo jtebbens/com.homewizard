@@ -1357,5 +1357,8 @@
   },
   "3.15.42": {
     "en": "Standby fix planning negative prices"
+  },
+  "3.15.43": {
+    "en": "weather timeout blocks planning, fixed"
   }
 }
