@@ -51,7 +51,18 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.38)
+## 📝 Latest Updates (v3.15.40+)
+
+### Battery Policy — Negatieve prijzen optimizer
+
+* **RTE-fix voor fysieke SoC** — `chargeSocDeltaG` berekende eerder met RTE-factor waardoor de DP dacht dat de batterij 5 uur nodig heeft om vol te gaan in plaats van de fysieke 4 uur (bij 800W / 2.688 kWh). RTE-verliezen zitten nu correct op de discharge-kant (`dischargeValue × RTE`), wat overeenkomt met hoe de firmware de SoC rapporteert
+* **Slim selecteren bij negatieve prijzen** — De DP slaat nu marginale negatieve slots over (bijv. −€0.021) wanneer er voldoende betere slots (−€0.367) beschikbaar zijn om de batterij vol te krijgen. Eerder werd de batterij altijd 5 slots geladen waardoor ook de minst negatieve slot meegenomen werd
+* **preserve bij negatieve prijs → standby** — Bij een negatieve spotprijs én sterke PV wordt de batterij nu in standby gehouden (niet zero_charge_only). PV-lading via zero_charge_only zou de capaciteit opvullen vóór de goedkopere grid-charge slots, waardoor de beste −€0.367 slots deels gemist worden
+* **PV-nauwkeurigheid beschermd bij negatieve prijzen** — `recordPvAccuracy()` wordt niet meer aangeroepen wanneer de spotprijs negatief is. Gebruikers zetten hun omvormer uit om exportkosten te vermijden; actual=0 met forecast>0 zou de PV-leerdata onterecht verslechteren
+
+---
+
+## Previous Updates (v3.15.38)
 
 ### Battery Cycle Tracking
 

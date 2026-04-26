@@ -2086,7 +2086,12 @@ if (debug) this.log(
       const _fcNow      = new Date();
       const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
       const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      const pvFcByDay   = [{}, {}];
+      // Seed from existing chart (built by _updateWeather from dailyProfiles, all 24h) so
+      // past hours aren't lost — pvForecast (hourlyForecast) only contains future slots.
+      const _existing   = this._liveState.policy_pv_forecast_hourly
+        ?? this.homey.settings.get('policy_pv_forecast_hourly')
+        ?? [{}, {}];
+      const pvFcByDay   = [{ ..._existing[0] }, { ..._existing[1] ?? {} }];
       for (const slot of pvForecast) {
         const st    = new Date(slot.timestamp);
         const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2101,7 +2106,11 @@ if (debug) this.log(
     // PV accuracy tracking: compare forecast for now vs actual from flow card.
     // Only when flow card provides fresh inverter data (< 20 min old) and at least one
     // side shows meaningful PV (> 50W) to avoid noisy night comparisons.
-    if (pvForecast && this.learningEngine && this._pvProductionW != null && this._pvProductionTimestamp) {
+    // Skip at negative prices: users often disable their inverter to avoid export penalty,
+    // so actual=0 with forecast>0 would wrongly degrade the PV accuracy score.
+    const _currentPriceForPvAcc = inputs.tariff?.currentPrice ?? null;
+    if (pvForecast && this.learningEngine && this._pvProductionW != null && this._pvProductionTimestamp
+        && (_currentPriceForPvAcc === null || _currentPriceForPvAcc >= 0)) {
       const ageMs = Date.now() - this._pvProductionTimestamp;
       if (ageMs < 20 * 60 * 1000) {
         const predictedW = this.optimizationEngine._getPvForSlot(pvForecast, now.toISOString());
@@ -2256,6 +2265,22 @@ if (debug) this.log(
       this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor €${weakPvFloor}, day floor €${dayFloor} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = perSlotFloors;
     }
+    // Negative tariff headroom: when strongly negative prices are coming (< -€0.10),
+    // lower the discharge floor to €0.00 for all slots before the first negative window.
+    // This lets the DP discharge at any positive price — using house load to drain the
+    // battery passively and grid export for the remainder — maximising room for paid charging.
+    // Applied after PV headroom so it can override the per-slot floor array if needed.
+    const minFuturePrice = prices.length ? Math.min(...prices.map(p => p.price)) : 0;
+    if (minFuturePrice < -0.10) {
+      const firstNegIdx = prices.findIndex(p => p.price < -0.10);
+      if (firstNegIdx > 0) {
+        const preNegFloors = prices.map((_, t) => t < firstNegIdx ? 0.00
+          : (Array.isArray(minDischargePrice) ? minDischargePrice[t] : minDischargePrice));
+        this.log(`⚡ Negatief tarief headroom: min €${minFuturePrice.toFixed(3)} @ slot ${firstNegIdx} → discharge floor €0.00 voor slot 0–${firstNegIdx - 1}`);
+        minDischargePrice = preNegFloors;
+      }
+    }
+
     // Per-slot consumption margin: scales with each slot's coefficient of variation.
     // Stable slots (CV~0, e.g. night) → tight margin 1.10.
     // Volatile slots (CV~1, e.g. cooking peak) → wide margin 1.35.
