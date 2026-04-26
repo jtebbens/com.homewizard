@@ -1363,5 +1363,8 @@
   },
   "3.15.44": {
     "en": "Planning fix, day after negative prices blocked"
+  },
+  "3.15.45": {
+    "en": "policy fix standby"
   }
 }
