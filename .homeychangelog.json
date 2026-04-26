@@ -1354,5 +1354,8 @@
   },
   "3.15.41": {
     "en": "Missing standby mode in planning to allow pv straight to grid"
+  },
+  "3.15.42": {
+    "en": "Standby fix planning negative prices"
   }
 }
