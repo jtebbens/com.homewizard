@@ -1360,5 +1360,8 @@
   },
   "3.15.43": {
     "en": "weather timeout blocks planning, fixed"
+  },
+  "3.15.44": {
+    "en": "Planning fix, day after negative prices blocked"
   }
 }
