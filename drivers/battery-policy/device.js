@@ -222,8 +222,8 @@ class BatteryPolicyDevice extends Homey.Device {
     this._setLive('device_settings', {
       max_charge_price:    s.max_charge_price    || 0.19,
       min_discharge_price: s.min_discharge_price || 0.22,
-      min_soc:             s.min_soc             || 10,
-      max_soc:             s.max_soc             || 95,
+      min_soc:             s.min_soc             ?? 0,
+      max_soc:             s.max_soc             ?? 100,
       battery_efficiency:  s.battery_efficiency  || 0.75,
       min_profit_margin:   s.min_profit_margin   || 0.01,
       tariff_type:         s.tariff_type         || 'dynamic',
@@ -1406,8 +1406,8 @@ if (debug) this.log(
       this._setLive('device_settings', {
         max_charge_price:    this.getSetting('max_charge_price')    || 0.19,
         min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
-        min_soc:             this.getSetting('min_soc')             || 10,
-        max_soc:             this.getSetting('max_soc')             || 95,
+        min_soc:             this.getSetting('min_soc')             ?? 0,
+        max_soc:             this.getSetting('max_soc')             ?? 100,
         battery_efficiency:  this.getSetting('battery_efficiency') || 0.75,
         min_profit_margin:   this.getSetting('min_profit_margin')   || 0.01,
         tariff_type:         this.getSetting('tariff_type')         || 'dynamic',
@@ -1659,7 +1659,7 @@ if (debug) this.log(
       const maxDischargeW = state.maxDischargePowerW || 800;
       const rte          = this.efficiencyEstimator?.getEfficiency() ?? 0.75;
       const slotH        = step / 3_600_000; // 1 for hourly, 0.25 for 15-min
-      const maxSoc       = this.getSetting('max_soc') ?? 95;
+      const maxSoc       = this.getSetting('max_soc') ?? 100;
       const minSoc       = this.getSetting('min_soc') ?? 0;
 
       let simSoc = currentSoc;
@@ -1906,7 +1906,8 @@ if (debug) this.log(
         ownedEntry = true;
       }
 
-      const projectedProfit = this.optimizationEngine._schedule?.projectedProfit ?? 0;
+      const sched = this.optimizationEngine._schedule;
+      const projectedProfit = (sched?.todayProjectedProfit ?? sched?.projectedProfit) ?? 0;
       todayEntry.projectedProfit = +projectedProfit.toFixed(4);
 
       const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
@@ -2256,13 +2257,17 @@ if (debug) this.log(
       const dayFloor     = inputs.settings?.min_discharge_price || 0.22;
       const weakPvFloor  = Math.max(actualBreakEven + 0.02, 0.115);
       const pvStrongW    = (inputs.battery?.maxChargePowerW || 800) * 0.5; // mirrors pvStrongCoverage=400/800
+      const maxSoc       = inputs.settings?.max_soc ?? 95;
+      // When battery is at max_soc, PV cannot add more energy — the opportunity-cost
+      // reasoning behind dayFloor (PV recharges for free) does not apply.
+      const effectiveDayFloor = soc >= maxSoc ? weakPvFloor : dayFloor;
       const perSlotFloors = prices.map(p => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
-        if (pvW >= pvStrongW) return dayFloor;
+        if (pvW >= pvStrongW) return effectiveDayFloor;
         if (pvW >= 50)        return weakPvFloor;
         return nightFloor;
       });
-      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor €${weakPvFloor}, day floor €${dayFloor} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
+      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor €${weakPvFloor}, day floor €${dayFloor}${soc >= maxSoc ? ` (→ €${weakPvFloor} omdat SoC ${soc}%=max, geen PV-ruimte)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = perSlotFloors;
     }
     // Negative tariff headroom: when strongly negative prices are coming (< -€0.10),
@@ -2330,12 +2335,36 @@ if (debug) this.log(
       });
     }
 
-    if (pvKwhTomorrow > 0) {
-      const pvRefill = Math.min(1, pvKwhTomorrow / capacityKwh);
+    // When battery was charged at zero or negative cost (avgCost ≤ 0) AND pvKwhTomorrow
+    // is stale/missing (=0), assume PV will refill so terminal value doesn't block discharge.
+    // Only applies when pvKwhTomorrow is actually 0 — a real forecast must be respected.
+    const _avgCost    = inputs.batteryCost?.avgCost ?? null;
+    const _costActive = _avgCost !== null && (inputs.batteryCost?.energyKwh ?? 0) >= 0.5;
+    const _negativeCharge = _costActive && _avgCost <= 0;
+    const effectivePvKwhTomorrow = (_negativeCharge && pvKwhTomorrow === 0)
+      ? capacityKwh * 2
+      : pvKwhTomorrow;
+
+    if (effectivePvKwhTomorrow > 0) {
+      const pvRefill = Math.min(1, effectivePvKwhTomorrow / capacityKwh);
       const terminalFactor = pvRefill >= 0.8 ? 0 : Math.max(0, 1 - pvRefill / 0.8);
-      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}`);
+      const negNote = _negativeCharge ? ` (→ ${effectivePvKwhTomorrow.toFixed(1)}kWh: negatief geladen €${_avgCost.toFixed(3)}, terminal=0)` : '';
+      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow);
+
+    // Compact planning summary — always visible in user diagnostics.
+    {
+      const _slots = this.optimizationEngine._schedule?.slots ?? [];
+      const _cnt   = { charge: 0, discharge: 0, preserve: 0, standby: 0 };
+      let _socMin = 100, _socMax = 0;
+      for (const s of _slots) {
+        if (_cnt[s.action] !== undefined) _cnt[s.action]++;
+        if (s.socProjected != null) { _socMin = Math.min(_socMin, s.socProjected); _socMax = Math.max(_socMax, s.socProjected); }
+      }
+      const _profit = this.optimizationEngine._schedule?.todayProjectedProfit ?? this.optimizationEngine._schedule?.projectedProfit ?? 0;
+      this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
+    }
 
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
@@ -3202,8 +3231,8 @@ if (debug) this.log(
     this.homey.settings.set('device_settings', {
       max_charge_price:    newSettings.max_charge_price    || 0.19,
       min_discharge_price: newSettings.min_discharge_price || 0.22,
-      min_soc:             newSettings.min_soc             || 10,
-      max_soc:             newSettings.max_soc             || 95,
+      min_soc:             newSettings.min_soc             ?? 0,
+      max_soc:             newSettings.max_soc             ?? 100,
       battery_efficiency:  newSettings.battery_efficiency  || 0.75,
       min_profit_margin:   newSettings.min_profit_margin   || 0.01,
       tariff_type:         newSettings.tariff_type         || 'dynamic',

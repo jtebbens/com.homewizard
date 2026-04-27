@@ -119,6 +119,7 @@ class HomeWizardApp extends Homey.App {
     try {
       const driver = this.homey.drivers.getDriver('battery-policy');
       const activeIds = new Set(driver.getDevices().map(d => d.getData().id));
+      if (typeof this.homey.settings.getAll !== 'function') return;
       const all = this.homey.settings.getAll();
       let removed = 0;
       for (const key of Object.keys(all)) {
