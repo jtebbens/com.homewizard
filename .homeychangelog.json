@@ -1375,5 +1375,8 @@
   },
   "3.15.48": {
     "en": "DP fixes"
+  },
+  "3.15.49": {
+    "en": "Consumption usage planning fix"
   }
 }
