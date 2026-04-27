@@ -514,6 +514,18 @@
       </div>
     </div>
 
+    <!-- Diagnose knop -->
+    <div style="margin-top:32px;">
+      <details id="planning-diagnose-details" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
+        <summary style="cursor:pointer;color:var(--muted);font-size:12px;user-select:none;list-style:none;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;">🔍</span>
+          <span>Diagnose — kopieer dit bij een supportvraag</span>
+        </summary>
+        <pre id="planning-diagnose-box" style="margin-top:12px;font-size:11px;user-select:all;white-space:pre-wrap;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;color:var(--text);">—</pre>
+        <button id="planning-diagnose-copy-btn" style="margin-top:8px;padding:6px 14px;background:var(--purple);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">📋 Kopieer</button>
+      </details>
+    </div>
+
     <!-- Modal for 15-min detail -->
     <div id="hourDetailModal" class="hour-detail-modal" onclick="closeHourDetail(event)"></div>
   </div>
@@ -1932,9 +1944,10 @@
             interval.hwMode     = slot.hwMode;
             interval.policyMode = slot.action;   // 'charge' | 'discharge' | 'preserve'
             interval.soc        = slot.socProjected ?? currentSOC;
-            interval.pvW         = slot.pvW ?? 0;
+            interval.pvW          = slot.pvW ?? 0;
             interval.consumptionW = slot.consumptionW ?? null;
             interval.sampleCount  = slot.sampleCount  ?? null;
+            interval.reason       = slot.reason       ?? null;
           }
         }
       }
@@ -2251,6 +2264,110 @@
 
       // ── Consumption profile chart ──────────────────────────────────────────
       renderConsumptionProfile(settings);
+
+      // ── Planning diagnose snapshot ─────────────────────────────────────────
+      (function renderPlanningDiagnose() {
+        const dbg = settings['policy_last_run_debug'];
+        const ps  = policyState || {};
+        const fmt  = v  => (v  != null ? String(v)                           : '—');
+        const fmtE = v  => (v  != null ? `€${Number(v).toFixed(3)}`          : '—');
+        const fmtW = v  => (v  != null ? `${Math.round(v)}W`                 : '—');
+        const pad  = (s, n, r) => { s = String(s ?? '—'); return r ? s.padStart(n) : s.padEnd(n); };
+
+        const lines = [
+          '=== HomeWizard Battery Planning — Diagnose ===',
+          `Tijdstip:      ${new Date().toISOString()}`,
+          `App versie:    ${dbg ? (typeof dbg === 'string' ? JSON.parse(dbg) : dbg).appVersion ?? '—' : '—'}`,
+          '',
+          '--- Configuratie ---',
+          `Batterij:      ${fmt(ps.batteryCount)}× · ${fmt(ps.totalCapacityKwh != null ? ps.totalCapacityKwh.toFixed(2) : null)} kWh · max laad ${fmtW(ps.maxChargePowerW)} / ontlaad ${fmtW(ps.maxDischargePowerW)}`,
+          `SoC nu:        ${fmt(currentSOC)}%  (${fmt(ps.currentMode)})  · min ${fmt(minSoc)}%  max ${fmt(maxSoc)}%`,
+          `Efficiëntie:   ${fmt(battEff)}  cycluskosten ${fmtE(deviceSettings['cycle_cost_per_kwh'] ?? 0.075)}/kWh`,
+          `Beleid:        ${fmt(userPolicyMode)}  tarief ${fmt(tariffType)}  strict ${fmt(respectMinMax)}  res. ${use15Min ? '15 min' : '1 uur'}`,
+          `Laadprijs max: ${fmtE(maxChgPrice)}  (dynamisch effectief: ${fmtE(effectiveChgPrice)})`,
+          `Ontlaadpr min: ${fmtE(minDchPrice)}  min winst ${fmtE(minProfit)}`,
+          `PV:            ${fmtW(pvCapW)}  PR ${fmt(pvPR)}  actief ${fmt(pvEnabled)}`,
+          `Morgen prijzen: ${hasTomorrowPrices ? 'ja' : 'nee'}`,
+        ];
+
+        if (dbg) {
+          const d = typeof dbg === 'string' ? JSON.parse(dbg) : dbg;
+          lines.push(
+            '',
+            '--- Actieve slot (laatste policy run) ---',
+            `Tijdstip:      ${fmt(d.ts)}`,
+            `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}`,
+            `Beslissing:    ${fmt(d.policyMode)} → ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
+            `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
+            `Optimizer:     ${fmt(d.optimizer)}`,
+            `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
+          );
+        }
+
+        // Per-slot tabel: toekomstige slots vanaf huidig (of alle slots bij geen curIdx)
+        const startIdx = curIdx >= 0 ? curIdx : 0;
+        const futureSlots = intervals.slice(startIdx);
+
+        if (futureSlots.length > 0) {
+          lines.push('', '--- Planning per slot (huidig → einde) ---');
+          lines.push(
+            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'SoC%'.padEnd(5)}  Reden`
+          );
+          lines.push('─'.repeat(105));
+
+          for (const iv of futureSlots) {
+            const timeStr  = iv.timestamp
+              ? iv.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })
+              : '??:??';
+            const dayMark  = iv.day === 1 ? '+1 ' : '   ';
+            const priceStr = iv.priceKnown ? `€${iv.price.toFixed(3)}` : '  ?    ';
+            const action   = iv.policyMode ?? '—';
+            const mode     = iv.hwMode     ?? '—';
+            const pvW      = iv.pvW          != null ? Math.round(iv.pvW)          : null;
+            const consW    = iv.consumptionW  != null ? Math.round(iv.consumptionW) : null;
+            const nettoW   = (pvW != null && consW != null) ? (consW - pvW) : null;
+            const socStr   = iv.soc != null ? `${Math.round(iv.soc)}%` : '—';
+            const curMark  = iv.isCurrent ? '◀' : ' ';
+            const reason   = iv.reason ?? '';
+
+            lines.push(
+              `${dayMark}${timeStr.padEnd(5)}${curMark} ` +
+              `${priceStr.padEnd(7)}  ` +
+              `${action.padEnd(10)}  ` +
+              `${mode.padEnd(20)}  ` +
+              `${pad(pvW  != null ? pvW  : '—',  6, true)}  ` +
+              `${pad(consW != null ? consW : '—', 8, true)}  ` +
+              `${pad(nettoW != null ? nettoW : '—', 8, true)}  ` +
+              `${socStr.padEnd(5)}  ${reason}`
+            );
+          }
+        }
+
+        const box = document.getElementById('planning-diagnose-box');
+        if (box) box.textContent = lines.join('\n');
+
+        const btn = document.getElementById('planning-diagnose-copy-btn');
+        if (btn && !btn._listenerAdded) {
+          btn._listenerAdded = true;
+          btn.addEventListener('click', () => {
+            const text = document.getElementById('planning-diagnose-box')?.textContent || '';
+            navigator.clipboard.writeText(text).then(() => {
+              btn.textContent = '✅ Gekopieerd';
+              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+            }).catch(() => {
+              const ta = document.createElement('textarea');
+              ta.value = text;
+              ta.style.cssText = 'position:fixed;opacity:0';
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+              btn.textContent = '✅ Gekopieerd';
+              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+            });
+          });
+        }
+      })();
     }
 
     /* ══════════════════════════════════════════════════════════
