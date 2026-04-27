@@ -2197,19 +2197,35 @@ if (debug) this.log(
     // BaseloadMonitor is optional (requires P1 baseload feature to be active).
     const baseloadW = this.homey.app?.baseloadMonitor?.currentBaseload ?? 0;
     let consumptionWPerSlot = null;
+    // Prefer explicit Amsterdam hour/minute fields from the price record (both KwhPrice and
+    // Xadi provide these via toLocaleString / item.hour). This avoids any UTC/local timestamp
+    // parsing ambiguity: if a provider returns Amsterdam-local times without a UTC indicator,
+    // _getAmsterdamTime() would shift the hour by +2 (CEST), causing all consumption lookups
+    // to land on the wrong slot and return baseload-floor (~314 W) everywhere.
+    const hasSlotFields = typeof prices[0]?.hour === 'number' && typeof prices[0]?.minute === 'number';
     if (this.learningEngine) {
-      const now = new Date();
-      consumptionWPerSlot = [];
+      const rawLearned = [];
+      let nonZeroCount = 0;
       for (let h = 0; h < prices.length; h++) {
-        // Use the actual price slot timestamp so consumption aligns with the right hour,
-        // not now + h * slotMs which drifts when prices don't start exactly at 'now'.
         const futureTime = new Date(prices[h].timestamp);
-        const learned = this.learningEngine.getPredictedConsumption(futureTime) ?? 0;
+        const learned = hasSlotFields
+          ? (this.learningEngine.getPredictedConsumptionForSlot(futureTime, prices[h].hour, prices[h].minute) ?? 0)
+          : (this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
+        if (learned > 0) nonZeroCount++;
+        rawLearned.push(learned);
+      }
+      // Only pass consumption data when the learning engine has meaningful data.
+      // When nothing is learned yet (all slots return 0), the baseload floor (~300W
+      // standby power) would make the optimizer think discharge is always baseload-limited —
+      // causing it to plan too little PV charging. With null the optimizer uses
+      // maxDischargePowerW (unconstrained 800W), which is the correct conservative assumption.
+      if (nonZeroCount > 0) {
         // Floor by baseload: a learned value below the measured baseload is an
         // artefact of averaging quiet evenings — the house always consumes at least
         // baseload, so the optimizer should never plan slower discharge than that.
-        consumptionWPerSlot.push(Math.max(learned, baseloadW));
+        consumptionWPerSlot = rawLearned.map(v => Math.max(v, baseloadW));
       }
+      this.log(`🔮 Consumption: ${nonZeroCount}/${prices.length} learned slots (hasSlotFields=${hasSlotFields}), sample=[${rawLearned.slice(0,3).map(v=>Math.round(v)).join(',')},...], nonZero=${nonZeroCount}`);
     }
 
     const slotLabel = slotMs === 900_000 ? '15-min' : '1h';
@@ -2295,7 +2311,9 @@ if (debug) this.log(
       const perSlotMargins = [];
       let cvSum = 0, cvCount = 0;
       for (let h = 0; h < prices.length; h++) {
-        const cv = this.learningEngine.getConsumptionCV(new Date(prices[h].timestamp));
+        const cv = hasSlotFields
+          ? this.learningEngine.getConsumptionCVForSlot(new Date(prices[h].timestamp), prices[h].hour, prices[h].minute)
+          : this.learningEngine.getConsumptionCV(new Date(prices[h].timestamp));
         if (cv !== null) {
           perSlotMargins.push(Math.min(1.35, 1.10 + cv * 0.25));
           cvSum += cv; cvCount++;
