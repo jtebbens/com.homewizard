@@ -1381,5 +1381,8 @@
   },
   "3.15.50": {
     "en": "Delayed charged fix planning"
+  },
+  "3.15.51": {
+    "en": "Bugfix, delayed charge but virtual SoC rises which should not be the case."
   }
 }
