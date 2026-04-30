@@ -1387,5 +1387,8 @@
   },
   "3.15.52": {
     "en": "DP patched for delayed charging based on cheap prices"
+  },
+  "3.15.53": {
+    "en": "Rollback last changes as it got worse, put vPreserve in place with oppurtunity fix"
   }
 }
