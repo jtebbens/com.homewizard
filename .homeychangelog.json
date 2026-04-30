@@ -1390,5 +1390,8 @@
   },
   "3.15.53": {
     "en": "Rollback last changes as it got worse, put vPreserve in place with oppurtunity fix"
+  },
+  "3.15.54": {
+    "en": "PV solar fix when no flow card is active it falls back to the forecasted value from weather"
   }
 }
