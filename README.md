@@ -51,14 +51,36 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.40+)
+## 📝 Latest Updates (v3.15.49–v3.15.55)
 
-### Battery Policy — Negatieve prijzen optimizer
+### Battery Policy — DP Optimizer Fixes
 
-* **RTE-fix voor fysieke SoC** — `chargeSocDeltaG` berekende eerder met RTE-factor waardoor de DP dacht dat de batterij 5 uur nodig heeft om vol te gaan in plaats van de fysieke 4 uur (bij 800W / 2.688 kWh). RTE-verliezen zitten nu correct op de discharge-kant (`dischargeValue × RTE`), wat overeenkomt met hoe de firmware de SoC rapporteert
-* **Slim selecteren bij negatieve prijzen** — De DP slaat nu marginale negatieve slots over (bijv. −€0.021) wanneer er voldoende betere slots (−€0.367) beschikbaar zijn om de batterij vol te krijgen. Eerder werd de batterij altijd 5 slots geladen waardoor ook de minst negatieve slot meegenomen werd
-* **preserve bij negatieve prijs → standby** — Bij een negatieve spotprijs én sterke PV wordt de batterij nu in standby gehouden (niet zero_charge_only). PV-lading via zero_charge_only zou de capaciteit opvullen vóór de goedkopere grid-charge slots, waardoor de beste −€0.367 slots deels gemist worden
-* **PV-nauwkeurigheid beschermd bij negatieve prijzen** — `recordPvAccuracy()` wordt niet meer aangeroepen wanneer de spotprijs negatief is. Gebruikers zetten hun omvormer uit om exportkosten te vermijden; actual=0 met forecast>0 zou de PV-leerdata onterecht verslechteren
+* **`getSlot` biased toward active slot (v3.15.55)** — At the exact midpoint between two hourly slots (e.g. 12:30), `getSlot()` previously picked the *next* slot due to a millisecond timing offset, causing that slot's action to be applied up to 30 minutes too early. It now always returns the most recently started slot (the one currently being executed), falling back to nearest-future only when no past slot exists yet (e.g. on first startup)
+* **Partial-slot charge modelling (v3.15.55)** — When the optimizer recomputes mid-slot, it previously modelled the current slot as a full 1-hour charging opportunity (0.8 kWh). This caused it to overestimate how much charge could be obtained in the remaining time and incorrectly skip the next slot. The DP now scales `chargeSocDeltaG` and `chargeKwhFull` for slot 0 based on the fraction of the slot still remaining (`slot0RemainingFrac`), so it correctly plans additional charge slots when needed (e.g. `charge=2` instead of `charge=1`)
+* **`vPreserve` opportunity cost (v3.15.53)** — The DP previously treated PV charging during `preserve` slots as free: storing surplus PV had zero cost in the value function. It now subtracts the foregone export revenue (`storedKwh × price × exportRatio`) from `vPreserve`. This corrects the bias toward preserve when PV could profitably be exported instead, making `standby` more competitive at low positive prices
+
+### Battery Policy — Planning & Consumption
+
+* **Consumption slot timezone fix (v3.15.49)** — Price records now carry explicit Amsterdam `hour`/`minute` fields. When present, consumption lookups use `getPredictedConsumptionForSlot()` instead of deriving the hour from the UTC timestamp. Previously, UTC timestamps without a timezone indicator were shifted by +2h (CEST), causing all consumption forecasts to land on the wrong slot and return the baseload floor (~314 W) everywhere
+* **Null consumption when nothing is learned (v3.15.49)** — If the learning engine has not yet accumulated any non-zero consumption data, `consumptionWPerSlot` is passed as `null` to the optimizer instead of an all-zero array. An all-zero array caused the baseload floor to over-constrain discharge planning as if the house never consumed power; `null` correctly instructs the optimizer to use unconstrained max discharge power (800 W)
+* **`pvStoreWins` simulation in planning forward pass (v3.15.49)** — The optimizer's forward pass now simulates the `_pvStoreWins` override that the runtime policy engine applies. When a standby slot would have `pvStoreWins` active (PV surplus worth more than current export price), the planning chart shows `zero_charge_only` and updates the projected SoC accordingly — matching what actually happens at runtime
+* **Planning slot reasons (v3.15.49)** — `_mapActionToHwModeForPlanning` now returns a `reason` string alongside `hwMode` (e.g. `dp:charge negative_price`, `preserve:pv_strong(3200W)`). Stored in the schedule and visible in the settings UI for easier diagnostics
+
+### Battery Policy — PV Estimation
+
+* **PV estimation fallback to weather forecast (v3.15.54)** — `_estimatePvProduction()` is now used everywhere house consumption is calculated. When no flow card is supplying live PV data (or the data is stale), it falls back to a weather-based estimate using sun score and configured PV capacity. Previously `this._pvProductionW ?? 0` was used directly, causing 0 W PV during stale periods and overcounting house consumption by the full battery charge power in the learning engine
+* **P1 firmware `batteryPower = 0` correction (v3.15.55)** — The P1/DSMR firmware incorrectly reports battery power as 0 W when the battery is in `to_full` mode. The battery-policy device now detects this case (mode = `to_full`, reported power = 0) and substitutes the configured max charge power from device state. Without this correction the learning engine recorded house consumption ~800 W too high during every grid-charging session
+
+---
+
+## Previous Updates (v3.15.40)
+
+### Battery Policy — Negative Price Optimizer
+
+* **RTE correction for physical SoC** — `chargeSocDeltaG` was previously computed including the RTE factor, causing the DP to think the battery needed 5 hours to fill instead of the physical 4 hours (at 800 W / 2.688 kWh). RTE losses are now applied only on the discharge side (`dischargeValue × RTE`), matching how the firmware reports physical SoC
+* **Skip marginal negative slots** — The DP now skips marginally negative slots (e.g. −€0.021) when better slots (e.g. −€0.367) provide sufficient capacity to fill the battery. Previously all negative slots were charged, including the least valuable ones
+* **Preserve at negative price → standby** — When spot price is negative and PV is strong, the battery is now held in standby instead of `zero_charge_only`. Charging from PV surplus via `zero_charge_only` would consume capacity before cheaper grid-charge slots, partially missing the best −€0.367 windows
+* **PV accuracy protected at negative prices** — `recordPvAccuracy()` is no longer called when spot price is negative. Users often disable their inverter to avoid export costs; recording actual=0 against a positive forecast would incorrectly degrade PV learning data
 
 ---
 
