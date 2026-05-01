@@ -564,6 +564,17 @@ if (debug) this.log(
           }
         }
 
+        // P1 firmware bug: to_full mode reports battery power as 0W via DSMR.
+        // Correct to the actual charge power so house consumption is calculated correctly.
+        if (batteryPower === 0) {
+          const chargeMode = this.p1Device?.getCapabilityValue('battery_group_charge_mode');
+          if (chargeMode === 'to_full') {
+            const state = this._liveState.battery_policy_state
+              ?? this.homey.settings.get('battery_policy_state') ?? {};
+            batteryPower = state.maxChargePowerW ?? 800;
+          }
+        }
+
         if (debug) this.log(`🐛 batteryPower resolved → ${batteryPower}W`);
         if (debug) this.log(`🐛 gridPower value → ${gridPower}W`);
 
@@ -652,7 +663,10 @@ if (debug) this.log(
         // gridPower: + = import, − = export
         // batteryPower: + = charging (consuming PV/grid), − = discharging (supplying house)
         // pvProductionW: always >= 0 (PV output)
-        const pvW = this._pvProductionW ?? 0;
+        const pvW = this._estimatePvProduction({
+          gridPower, batteryPower,
+          sunScore: this.getCapabilityValue('sun_score') ?? 0,
+        });
         const houseConsumptionW = gridPower - batteryPower + pvW;
         if (houseConsumptionW >= 0) {
           await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
@@ -1908,7 +1922,9 @@ if (debug) this.log(
 
       const sched = this.optimizationEngine._schedule;
       const projectedProfit = (sched?.todayProjectedProfit ?? sched?.projectedProfit) ?? 0;
-      todayEntry.projectedProfit = +projectedProfit.toFixed(4);
+      if (projectedProfit > (todayEntry.projectedProfit ?? 0)) {
+        todayEntry.projectedProfit = +projectedProfit.toFixed(4);
+      }
 
       const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
       const actualProfit = cycleHistory

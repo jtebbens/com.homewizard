@@ -2574,7 +2574,8 @@
 
       // Profit tracking error (actual vs DP projection per day)
       const profitHist    = settings['expansion_profit_history'] || {};
-      const profitEntries = (profitHist.entries || []).filter(e => e.projectedProfit > 0.001 && e.actualProfit != null);
+      const todayStr      = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+      const profitEntries = (profitHist.entries || []).filter(e => e.projectedProfit > 0.001 && e.actualProfit != null && e.date !== todayStr);
       let measuredDailyProfit = null;
       let measuredYearlyProfit = null;
       let measuredPaybackYears = null;
