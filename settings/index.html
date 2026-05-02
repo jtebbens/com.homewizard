@@ -83,7 +83,7 @@
     @media (max-width: 480px) {
       .tab { padding: 8px 10px; font-size: 12px; }
     }
-
+!500
     .debug-box {
       background: var(--surface); padding: 15px; border-radius: 6px;
       border: 1px solid var(--border);
@@ -2855,9 +2855,10 @@
             const svgChart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block;margin-bottom:12px;">${gridLines}${yLabels}${bars}${xLabels}${legend}</svg>`;
 
             const trackRows = [...profitEntries].reverse().slice(0, 14).map(e => {
-              const err = e.trackingError ?? ((e.actualProfit - e.projectedProfit) / e.projectedProfit * 100);
-              const errColor = err >= 0 ? '#20F29B' : '#F87171';
-              const errSign  = err >= 0 ? '+' : '';
+              const raw = e.trackingError ?? null;
+              const err = (raw !== null && Math.abs(raw) <= 500) ? raw : null;
+              const errColor = err !== null ? (err >= 0 ? '#20F29B' : '#F87171') : 'var(--muted)';
+              const errSign  = err !== null && err >= 0 ? '+' : '';
               const predictiveBadge = e.predictiveActive
                 ? `<span style="font-size:9px;background:#2a1f5a;color:#a78bfa;padding:1px 4px;border-radius:3px;margin-left:4px;">🤖 Slim Laden</span>`
                 : '';
@@ -2865,20 +2866,20 @@
                 <td style="padding:5px 8px;color:var(--muted);">${e.date}${predictiveBadge}</td>
                 <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(e.projectedProfit).toFixed(3)}</td>
                 <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(e.actualProfit).toFixed(3)}</td>
-                <td style="padding:5px 8px;text-align:right;font-weight:bold;color:${errColor};">${e.predictiveActive ? '—' : errSign + err.toFixed(1) + '%'}</td>
+                <td style="padding:5px 8px;text-align:right;font-weight:bold;color:${errColor};">${(e.predictiveActive || err === null) ? '—' : errSign + err.toFixed(1) + '%'}</td>
               </tr>`;
             }).join('');
-            const nonPredEntries = profitEntries.slice(-14).filter(e => !e.predictiveActive);
+            const nonPredEntries = profitEntries.slice(-14).filter(e => !e.predictiveActive && e.trackingError != null && Math.abs(e.trackingError) <= 500);
             const avgErr = nonPredEntries.length
-              ? nonPredEntries.reduce((s, e) => s + (e.trackingError ?? 0), 0) / nonPredEntries.length
-              : 0;
-            const avgColor = avgErr >= 0 ? '#20F29B' : '#F87171';
+              ? nonPredEntries.reduce((s, e) => s + e.trackingError, 0) / nonPredEntries.length
+              : null;
+            const avgColor = avgErr !== null ? (avgErr >= 0 ? '#20F29B' : '#F87171') : 'var(--muted)';
             return `
             ${svgChart}
             <details style="margin-top:12px;">
               <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">
                 Tracking error — werkelijk vs. DP-prognose (laatste 14 dagen)
-                <span style="margin-left:8px;font-weight:bold;color:${avgColor};">${avgErr >= 0 ? '+' : ''}${avgErr.toFixed(1)}% gem.</span>
+                <span style="margin-left:8px;font-weight:bold;color:${avgColor};">${avgErr !== null ? (avgErr >= 0 ? '+' : '') + avgErr.toFixed(1) + '% gem.' : '—'}</span>
               </summary>
               <p style="font-size:11px;color:var(--dim);margin:0 0 8px;">
                 Positief = werkelijk beter dan DP-prognose. Negatief = beleid volgde schema niet volledig (bijv. door handmatige overrides of PV-afwijkingen).

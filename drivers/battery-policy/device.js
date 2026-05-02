@@ -1932,8 +1932,11 @@ if (debug) this.log(
         .reduce((sum, c) => sum + (c.profitEur || 0), 0);
       todayEntry.actualProfit = +actualProfit.toFixed(4);
 
-      if (projectedProfit > 0.001) {
-        todayEntry.trackingError = +((actualProfit - projectedProfit) / projectedProfit * 100).toFixed(1);
+      const storedProjected = todayEntry.projectedProfit ?? 0;
+      if (storedProjected > 0.05) {
+        todayEntry.trackingError = +((actualProfit - storedProjected) / storedProjected * 100).toFixed(1);
+      } else {
+        delete todayEntry.trackingError;
       }
 
       if (predictiveActive) todayEntry.predictiveActive = true;
@@ -2404,7 +2407,7 @@ if (debug) this.log(
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {
-      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null, minDischargePrice);
+      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null, minDischargePrice, maxChargePowerW);
       // Enrich with consumption sample count for confidence display in the UI
       if (this.learningEngine) {
         for (const slot of planningSchedule) {
