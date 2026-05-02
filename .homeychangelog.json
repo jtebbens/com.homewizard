@@ -1396,5 +1396,8 @@
   },
   "3.15.55": {
     "en": "Planning fixes negative prices, tune best hour slots to charge"
+  },
+  "3.15.56": {
+    "en": "Planning fix, standby early pv production bypasses delayed charge. calculation dp planned vs actual fix"
   }
 }
