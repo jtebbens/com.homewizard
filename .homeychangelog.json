@@ -1402,5 +1402,8 @@
   },
   "3.15.57": {
     "en": "Planning tuning, policy kept falling back to standby while planning wanted to charge"
+  },
+  "3.15.58": {
+    "en": "Day ahead planning tuning, delay discharge, cater for household usage to be included in policy calculations"
   }
 }
