@@ -1399,5 +1399,8 @@
   },
   "3.15.56": {
     "en": "Planning fix, standby early pv production bypasses delayed charge. calculation dp planned vs actual fix"
+  },
+  "3.15.57": {
+    "en": "Planning tuning, policy kept falling back to standby while planning wanted to charge"
   }
 }
