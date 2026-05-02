@@ -1062,6 +1062,24 @@ if (debug) this.log(
         this.weatherData.pvKwhToday     = todayKwh     !== null ? Math.round(todayKwh     * 10) / 10 : null;
         this.weatherData.pvKwhRemaining = remainingKwh !== null ? Math.round(remainingKwh * 10) / 10 : null;
 
+        // Net surplus = PV remaining minus expected consumption during PV hours.
+        // Prevents delay-charge on low-PV days where household load consumes most of the yield.
+        if (remainingKwh !== null && this.learningEngine) {
+          let consumptionDuringPvHours = 0;
+          for (const h of futureProfiles) {
+            const slotIndex = h.time.getUTCHours() * 4;
+            const pvW = learnedSlots >= 10
+              ? h.radiationWm2 * (yfs?.[slotIndex] ?? 0)
+              : pvCapW * PR * (h.radiationWm2 / 1000);
+            if (pvW > 0) consumptionDuringPvHours += (this.learningEngine.getPredictedConsumption(h.time) ?? 0) / 1000;
+          }
+          const surplus = Math.max(0, remainingKwh - consumptionDuringPvHours);
+          this.weatherData.pvSurplusRemaining = Math.round(surplus * 10) / 10;
+          this.log(`☀️ PV surplus remaining: ${surplus.toFixed(1)} kWh (${remainingKwh.toFixed(1)} kWh PV − ${consumptionDuringPvHours.toFixed(1)} kWh consumption during PV hours)`);
+        } else {
+          this.weatherData.pvSurplusRemaining = null;
+        }
+
         // Build per-hour PV forecast for the chart (today + tomorrow).
         // Uses dailyProfiles (all 24h, incl. past) so the chart line is complete and consistent.
         // Runs here — not in _recomputeOptimizer — so it updates even when the policy is disabled,
