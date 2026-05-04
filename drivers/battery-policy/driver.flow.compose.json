@@ -48,8 +48,8 @@
     },
     {
       "id": "favorable_consumption_window",
-      "title": { "en": "Good time to run appliances", "nl": "Gunstig moment om apparaten aan te zetten" },
-      "titleFormatted": { "en": "Good time to run appliances", "nl": "Gunstig moment om apparaten aan te zetten" },
+      "title": { "en": "Good time to run appliances starts", "nl": "Gunstig moment om apparaten aan te zetten begint" },
+      "titleFormatted": { "en": "Good time to run appliances starts", "nl": "Gunstig moment om apparaten aan te zetten begint" },
       "hint": {
         "en": "Triggers when electricity becomes cheap (top-3 of the day) or solar panels start producing significantly. Use this to send a notification or switch on a smart plug.",
         "nl": "Vuurt als stroom goedkoop wordt (top-3 van de dag) of zonnepanelen significant gaan produceren. Gebruik dit voor een melding of om een slimme stekker in te schakelen."
