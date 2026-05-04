@@ -83,7 +83,7 @@
     @media (max-width: 480px) {
       .tab { padding: 8px 10px; font-size: 12px; }
     }
-!500
+
     .debug-box {
       background: var(--surface); padding: 15px; border-radius: 6px;
       border: 1px solid var(--border);
@@ -149,6 +149,7 @@
     /* hwMode colour accents on card border */
     .planning-hour-card.hw-to_full           { border-color: var(--purple); }
     .planning-hour-card.hw-zero_charge_only  { border-color: var(--purple-lt); }
+    .planning-hour-card.hw-pv_trickle        { border-color: #4fa8d8; }
     .planning-hour-card.hw-zero_discharge_only{ border-color: var(--green); }
     .planning-hour-card.hw-zero             { border-color: var(--orange); }
     .planning-hour-card.hw-standby          { border-color: var(--border); }
@@ -200,6 +201,7 @@
     }
     .hw-badge-to_full           { background: var(--purple); color:#fff; }
     .hw-badge-zero_charge_only  { background: var(--purple-lt); color:#000; }
+    .hw-badge-pv_trickle        { background: #4fa8d8; color:#000; }
     .hw-badge-zero_discharge_only { background: var(--green); color:#000; }
     .hw-badge-zero              { background: var(--orange); color:#000; }
     .hw-badge-standby           { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
@@ -514,6 +516,27 @@
       </div>
     </div>
 
+    <!-- PV Forecast nauwkeurigheid -->
+    <div id="pv-accuracy-section" style="display:none;margin-top:30px;">
+      <details id="pv-accuracy-details" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
+        <summary style="cursor:pointer;color:var(--text);font-size:13px;user-select:none;list-style:none;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;">☀️</span>
+          <span style="font-weight:600;">PV Forecast nauwkeurigheid</span>
+          <span id="pv-accuracy-summary" style="margin-left:auto;font-size:12px;color:var(--muted);"></span>
+        </summary>
+        <div id="pv-accuracy-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;"></div>
+        <div style="position:relative;height:140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:14px;">
+          <canvas id="pvAccuracyChart"></canvas>
+        </div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
+          <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>Open-Meteo</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>Solcast</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#8b9fff;vertical-align:middle;margin-right:4px;"></span>Blended</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
+        </div>
+      </details>
+    </div>
+
     <!-- Diagnose knop -->
     <div style="margin-top:32px;">
       <details id="planning-diagnose-details" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
@@ -637,6 +660,7 @@
     const HW_MODES = {
       to_full: { icon: '🔌', nl: 'Laden (net)', en: 'Charge (grid)', cls: 'hw-to_full', badge: 'hw-badge-to_full' },
       zero_charge_only: { icon: '☀️', nl: 'Laden (PV)', en: 'Charge (PV)', cls: 'hw-zero_charge_only', badge: 'hw-badge-zero_charge_only' },
+      pv_trickle: { icon: '🌤️', nl: 'Sprokkelen', en: 'Trickle (PV)', cls: 'hw-pv_trickle', badge: 'hw-badge-pv_trickle' },
       zero_discharge_only: { icon: '🔋', nl: 'Ontladen', en: 'Discharge', cls: 'hw-zero_discharge_only', badge: 'hw-badge-zero_discharge_only' },
       zero: { icon: '🛡️', nl: 'Peak Shaving', en: 'Peak Shaving', cls: 'hw-zero', badge: 'hw-badge-zero' },
       standby: { icon: '⏸️', nl: 'Standby', en: 'Standby', cls: 'hw-standby', badge: 'hw-badge-standby' },
@@ -1933,7 +1957,7 @@
 
           if (interval.isCurrent && policyState?.currentMode) {
             interval.hwMode     = policyState.currentMode;
-            interval.policyMode = policyState.policyMode || 'preserve';
+            interval.policyMode = policyState.dpAction || policyState.policyMode || 'preserve';
             interval.soc        = currentSOC;
             continue;
           }
@@ -2262,6 +2286,9 @@
       // ── Learning engine status ─────────────────────────────────────────────
       renderLearningStatus(settings);
 
+      // ── PV forecast accuracy chart ─────────────────────────────────────────
+      renderPvAccuracy(settings);
+
       // ── Consumption profile chart ──────────────────────────────────────────
       renderConsumptionProfile(settings);
 
@@ -2296,7 +2323,7 @@
             '',
             '--- Actieve slot (laatste policy run) ---',
             `Tijdstip:      ${fmt(d.ts)}`,
-            `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}`,
+            `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}  live PV ${d.pvEstimate != null ? d.pvEstimate + 'W' : '—'}`,
             `Beslissing:    ${fmt(d.policyMode)} → ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
             `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
             `Optimizer:     ${fmt(d.optimizer)}`,
@@ -2378,14 +2405,14 @@
       const data  = settings['pv_surplus_forecast'];
       if (!block || !data) return;
 
-      const { netPvKwh, remainingKwh, fillFraction, soc } = data;
+      const { netPvKwh, remainingKwh, fillFraction, soc, chargeSlots } = data;
       if (netPvKwh == null || remainingKwh == null || fillFraction == null) return;
 
       const pct = Math.round(fillFraction * 100);
+      const hasGridCharge = chargeSlots != null && chargeSlots > 0;
       let icon, color, msg;
 
       if (remainingKwh < 0.5) {
-        // Battery already (nearly) full
         icon = '🔋'; color = '#20F29B';
         msg = `Batterij vrijwel vol (${soc}% SoC) — geen aanvulling nodig.`;
       } else if (pct >= 95) {
@@ -2393,10 +2420,13 @@
         msg = `Batterij wordt volledig vol van zonne-energie (verwacht netto ${netPvKwh.toFixed(1)} kWh surplus).`;
       } else if (pct >= 60) {
         icon = '🌤️'; color = '#FCD34D';
-        msg = `Batterij wordt ~${pct}% vol van zon (${netPvKwh.toFixed(1)} kWh netto, ruimte ${remainingKwh.toFixed(1)} kWh). Aanvulling via net bij lage prijs kan lonen.`;
+        msg = `Batterij wordt ~${pct}% vol van zon (${netPvKwh.toFixed(1)} kWh netto, ruimte ${remainingKwh.toFixed(1)} kWh).${hasGridCharge ? ` Aanvulling via net gepland (${chargeSlots} slot${chargeSlots > 1 ? 's' : ''}).` : ''}`;
+      } else if (hasGridCharge) {
+        icon = '⚡'; color = '#FCD34D';
+        msg = `PV-surplus beperkt (${netPvKwh.toFixed(1)} kWh, ~${pct}% van restcapaciteit). Laden via net gepland: ${chargeSlots} slot${chargeSlots > 1 ? 's' : ''}.`;
       } else {
-        icon = '⚡'; color = '#F87171';
-        msg = `PV-surplus beperkt: ${netPvKwh.toFixed(1)} kWh verwacht, slechts ~${pct}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh). Laden via net bij lage prijzen aanbevolen.`;
+        icon = '☁️'; color = 'var(--muted)';
+        msg = `PV-surplus beperkt: ${netPvKwh.toFixed(1)} kWh verwacht (~${pct}% van restcapaciteit ${remainingKwh.toFixed(1)} kWh). Geen goedkope laadslots gevonden.`;
       }
 
       block.style.display = 'block';
@@ -2452,6 +2482,131 @@
                ⚠ Leermotor heeft nog onvoldoende data — planning minder nauwkeurig.
              </div>`
           : '');
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       PV FORECAST ACCURACY CHART
+    ══════════════════════════════════════════════════════════ */
+    let _pvAccuracyChart = null;
+
+    function renderPvAccuracy(settings) {
+      const st = settings['learning_status'];
+      const section = document.getElementById('pv-accuracy-section');
+      if (!section || !st) return;
+
+      const { pvPredictions, accOM, accSC, wOM, wSC, pvAccuracy } = st;
+      if (!pvPredictions || pvPredictions.length === 0) return;
+
+      section.style.display = '';
+
+      // Summary in <summary> header
+      const summaryEl = document.getElementById('pv-accuracy-summary');
+      if (summaryEl) summaryEl.textContent = pvAccuracy != null ? `${pvAccuracy}% algeheel` : '';
+
+      // Pills
+      const pillsEl = document.getElementById('pv-accuracy-pills');
+      if (pillsEl) {
+        const mkPill = (label, value, unit, lo, hi) => {
+          const color = value == null ? 'var(--dim)'
+            : value >= hi ? '#20F29B'
+            : value >= lo ? '#FCD34D'
+            : '#F87171';
+          const display = value != null ? `${value}${unit}` : '—';
+          return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
+            <span style="font-size:16px;font-weight:bold;color:${color};">${display}</span>
+          </div>`;
+        };
+        pillsEl.innerHTML =
+          mkPill('Algeheel', pvAccuracy, '%', 70, 85) +
+          mkPill('Open-Meteo', accOM, '%', 70, 85) +
+          mkPill('Solcast', accSC, '%', 70, 85) +
+          (wOM != null && wSC != null
+            ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
+                <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
+                <span style="font-size:16px;font-weight:bold;color:var(--text);">${wOM}% / ${wSC}%</span>
+               </div>`
+            : '');
+      }
+
+      // Chart
+      const canvas = document.getElementById('pvAccuracyChart');
+      if (!canvas) return;
+
+      const cutoff    = Date.now() - 72 * 60 * 60 * 1000;
+      const recent    = pvPredictions.filter(p => p.timestamp >= cutoff);
+      if (recent.length === 0) return;
+
+      const fmtTime = ts => {
+        const d = new Date(ts);
+        return d.toLocaleString('nl-NL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      };
+      const NIGHT_MS = 6 * 60 * 60 * 1000;
+      const labels = [], omData = [], scData = [], blendData = [], actualData = [];
+      for (let i = 0; i < recent.length; i++) {
+        if (i > 0 && recent[i].timestamp - recent[i - 1].timestamp > NIGHT_MS) {
+          labels.push('');
+          omData.push(null); scData.push(null); blendData.push(null); actualData.push(null);
+        }
+        labels.push(fmtTime(recent[i].timestamp));
+        omData.push(recent[i].om    ?? null);
+        scData.push(recent[i].sc    ?? null);
+        blendData.push(recent[i].predicted);
+        actualData.push(recent[i].actual);
+      }
+      const step = Math.max(1, Math.floor(labels.length / 8));
+
+      if (_pvAccuracyChart) { _pvAccuracyChart.destroy(); _pvAccuracyChart = null; }
+
+      const mkDataset = (label, data, color, dash = []) => ({
+        label, data,
+        borderColor: color,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderDash: dash,
+        pointRadius: 0,
+        tension: 0.3,
+        spanGaps: true,
+      });
+
+      _pvAccuracyChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            mkDataset('Open-Meteo', omData,    '#60a5fa', [4, 2]),
+            mkDataset('Solcast',    scData,    '#f59e0b', [4, 2]),
+            mkDataset('Blended',   blendData, '#8b9fff'),
+            mkDataset('Werkelijk', actualData,'#20F29B'),
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: {
+            callbacks: {
+              label: item => `${item.dataset.label}: ${Math.round(item.parsed.y)} W`,
+            },
+          }},
+          scales: {
+            x: {
+              ticks: {
+                color: '#808080',
+                font: { size: 10 },
+                callback: (val, i) => i % step === 0 ? labels[i] : '',
+                maxRotation: 0,
+              },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+            },
+            y: {
+              ticks: { color: '#808080', font: { size: 10 }, callback: v => `${v}W` },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              min: 0,
+            },
+          },
+        },
+      });
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -2572,10 +2727,6 @@
       const cycleHistory  = settings['battery_cycle_history'] || [];
       const hasCycleData  = cycleHistory.length > 0;
 
-      // Profit tracking error (actual vs DP projection per day)
-      const profitHist    = settings['expansion_profit_history'] || {};
-      const todayStr      = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
-      const profitEntries = (profitHist.entries || []).filter(e => e.projectedProfit > 0.001 && e.actualProfit != null && e.date !== todayStr);
       let measuredDailyProfit = null;
       let measuredYearlyProfit = null;
       let measuredPaybackYears = null;
@@ -2822,83 +2973,6 @@
             </div>
           </details>
 
-          ${profitEntries.length > 0 ? (() => {
-            // ── SVG bar chart: projected vs actual ──────────────────────────
-            const chartEntries = profitEntries.slice(-14);
-            const maxVal = Math.max(0.01, ...chartEntries.map(e => Math.max(e.projectedProfit, e.actualProfit)));
-            const W = 600, H = 160, ML = 42, MR = 8, MT = 10, MB = 28;
-            const plotW = W - ML - MR, plotH = H - MT - MB;
-            const n = chartEntries.length;
-            const groupW = plotW / n;
-            const barW = Math.max(4, groupW * 0.32);
-            const yTicks = 4;
-            let gridLines = '', yLabels = '', bars = '', xLabels = '';
-            for (let i = 0; i <= yTicks; i++) {
-              const y = MT + plotH - (i / yTicks) * plotH;
-              const val = (i / yTicks) * maxVal;
-              gridLines += `<line x1="${ML}" y1="${y}" x2="${W - MR}" y2="${y}" stroke="#2d2d2d" stroke-width="1"/>`;
-              yLabels += `<text x="${ML - 4}" y="${y + 4}" text-anchor="end" font-size="9" fill="#666">€${val.toFixed(2)}</text>`;
-            }
-            chartEntries.forEach((e, i) => {
-              const cx = ML + i * groupW + groupW / 2;
-              const projH = (e.projectedProfit / maxVal) * plotH;
-              const actH  = (e.actualProfit  / maxVal) * plotH;
-              const projY = MT + plotH - projH;
-              const actY  = MT + plotH - actH;
-              const actColor = e.actualProfit >= e.projectedProfit - 0.001 ? '#20F29B' : '#F87171';
-              bars += `<rect x="${cx - barW - 1}" y="${projY}" width="${barW}" height="${projH}" fill="#7C5CBF" opacity="0.8" rx="2"/>`;
-              bars += `<rect x="${cx + 1}" y="${actY}"  width="${barW}" height="${actH}"  fill="${actColor}" opacity="0.85" rx="2"/>`;
-              const label = e.date.slice(5); // MM-DD
-              xLabels += `<text x="${cx}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#555">${label}</text>`;
-            });
-            const legend = `<rect x="${ML}" y="2" width="8" height="8" fill="#7C5CBF" rx="1"/><text x="${ML+11}" y="10" font-size="9" fill="#999">Gepland</text><rect x="${ML+65}" y="2" width="8" height="8" fill="#20F29B" rx="1"/><text x="${ML+76}" y="10" font-size="9" fill="#999">Werkelijk</text>`;
-            const svgChart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;display:block;margin-bottom:12px;">${gridLines}${yLabels}${bars}${xLabels}${legend}</svg>`;
-
-            const trackRows = [...profitEntries].reverse().slice(0, 14).map(e => {
-              const raw = e.trackingError ?? null;
-              const err = (raw !== null && Math.abs(raw) <= 500) ? raw : null;
-              const errColor = err !== null ? (err >= 0 ? '#20F29B' : '#F87171') : 'var(--muted)';
-              const errSign  = err !== null && err >= 0 ? '+' : '';
-              const predictiveBadge = e.predictiveActive
-                ? `<span style="font-size:9px;background:#2a1f5a;color:#a78bfa;padding:1px 4px;border-radius:3px;margin-left:4px;">🤖 Slim Laden</span>`
-                : '';
-              return `<tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:5px 8px;color:var(--muted);">${e.date}${predictiveBadge}</td>
-                <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(e.projectedProfit).toFixed(3)}</td>
-                <td style="padding:5px 8px;text-align:right;color:var(--dim);">€${(e.actualProfit).toFixed(3)}</td>
-                <td style="padding:5px 8px;text-align:right;font-weight:bold;color:${errColor};">${(e.predictiveActive || err === null) ? '—' : errSign + err.toFixed(1) + '%'}</td>
-              </tr>`;
-            }).join('');
-            const nonPredEntries = profitEntries.slice(-14).filter(e => !e.predictiveActive && e.trackingError != null && Math.abs(e.trackingError) <= 500);
-            const avgErr = nonPredEntries.length
-              ? nonPredEntries.reduce((s, e) => s + e.trackingError, 0) / nonPredEntries.length
-              : null;
-            const avgColor = avgErr !== null ? (avgErr >= 0 ? '#20F29B' : '#F87171') : 'var(--muted)';
-            return `
-            ${svgChart}
-            <details style="margin-top:12px;">
-              <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">
-                Tracking error — werkelijk vs. DP-prognose (laatste 14 dagen)
-                <span style="margin-left:8px;font-weight:bold;color:${avgColor};">${avgErr !== null ? (avgErr >= 0 ? '+' : '') + avgErr.toFixed(1) + '% gem.' : '—'}</span>
-              </summary>
-              <p style="font-size:11px;color:var(--dim);margin:0 0 8px;">
-                Positief = werkelijk beter dan DP-prognose. Negatief = beleid volgde schema niet volledig (bijv. door handmatige overrides of PV-afwijkingen).
-              </p>
-              <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:12px;">
-                  <thead>
-                    <tr style="color:var(--muted);border-bottom:1px solid var(--border);">
-                      <th style="text-align:left;padding:5px 8px;">Datum</th>
-                      <th style="text-align:right;padding:5px 8px;">DP-prognose</th>
-                      <th style="text-align:right;padding:5px 8px;">Werkelijk</th>
-                      <th style="text-align:right;padding:5px 8px;">Verschil</th>
-                    </tr>
-                  </thead>
-                  <tbody>${trackRows}</tbody>
-                </table>
-              </div>
-            </details>`;
-          })() : ''}
         </div>`;
     }
 

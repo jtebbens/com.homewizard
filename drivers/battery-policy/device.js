@@ -137,7 +137,6 @@ class BatteryPolicyDevice extends Homey.Device {
             return this._recomputeOptimizer(inputs).then(() => inputs);
           }
         }).then(inputs => {
-          this._updateProfitTracking(null, true);
           // Patch live SoC into battery_policy_state so widget shows correct value
           const liveSoc = this.p1Device?.getCapabilityValue('battery_group_average_soc') ?? null;
           if (liveSoc != null) {
@@ -162,9 +161,7 @@ class BatteryPolicyDevice extends Homey.Device {
             this._queueSettingsPersist('policy_mode_history', modeHistory);
           } catch (e) { this.error('Failed to save predictive mode history (flush):', e); }
           try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Widget save (predictive) failed:', e.message); }
-        }).catch(e => this.error('Predictive profit tracking failed:', e.message));
-      } else {
-        this._updateProfitTracking(null, false);
+        }).catch(e => this.error('Predictive mode flush failed:', e.message));
       }
     };
     this.homey.setTimeout(() => {
@@ -956,19 +953,6 @@ if (debug) this.log(
                 // tomorrow's prices (96→192 slots) that change the optimal schedule.
                 this.optimizationEngine.updateSettings({});
                 await this._runPolicyCheck();
-              } else if (priceCount > 0) {
-                // Policy disabled — run DP in read-only mode (no mode apply) so
-                // projectedProfit stays current for tracking even on manual-control days.
-                try {
-                  const inputs = await this._gatherInputs();
-                  if (inputs.battery && inputs.tariff) {
-                    this.optimizationEngine.updateSettings({});
-                    await this._recomputeOptimizer(inputs);
-                  }
-                } catch (e) {
-                  this.error('Predictive DP (policy off) failed:', e.message);
-                }
-                this._updateProfitTracking();
               }
             } catch (err) {
               this.error('❌ Price refresh failed:', err);
@@ -1702,7 +1686,7 @@ if (debug) this.log(
           // Charge at max rate from grid
           const deltaKwh = (maxChargeW / 1000) * slotH * rte;
           simSoc += (deltaKwh / capKwh) * 100;
-        } else if (slot.mode === 'zero_charge_only') {
+        } else if (slot.mode === 'zero_charge_only' || slot.mode === 'pv_trickle') {
           // Charge from PV only — effective rate is min(pvW, maxChargeW)
           const chargeW = Math.min(pvW, maxChargeW);
           const deltaKwh = (chargeW / 1000) * slotH * rte;
@@ -1908,64 +1892,6 @@ if (debug) this.log(
   }
 
   /**
-   * Update today's profit tracking entry in expansion_profit_history.
-   * Compares DP projected profit with realized cycle profits.
-   * Called from expansion analysis (inside _saveWidgetData), from price refresh
-   * when policy is disabled, and from the mode-flush interval during predictive mode.
-   *
-   * @param {object|null} todayEntry     - Existing today-entry to mutate in-place, or null
-   *   to load/create from settings (standalone call path).
-   * @param {boolean}     predictiveActive - True when HW Slim Laden is controlling the battery.
-   *   Stored in the entry so the UI can show a badge on those days.
-   */
-  _updateProfitTracking(todayEntry = null, predictiveActive = false) {
-    try {
-      const today = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
-      let hist = null;
-      let ownedEntry = false;
-
-      if (!todayEntry) {
-        hist = this.homey.settings.get('expansion_profit_history') || { entries: [] };
-        if (!Array.isArray(hist.entries)) hist.entries = [];
-        const last = hist.entries[hist.entries.length - 1];
-        if (!last || last.date !== today) {
-          todayEntry = { date: today };
-          hist.entries.push(todayEntry);
-          if (hist.entries.length > 30) hist.entries = hist.entries.slice(-30);
-        } else {
-          todayEntry = last;
-        }
-        ownedEntry = true;
-      }
-
-      const sched = this.optimizationEngine._schedule;
-      const projectedProfit = (sched?.todayProjectedProfit ?? sched?.projectedProfit) ?? 0;
-      if (projectedProfit > (todayEntry.projectedProfit ?? 0)) {
-        todayEntry.projectedProfit = +projectedProfit.toFixed(4);
-      }
-
-      const cycleHistory = this.homey.settings.get('battery_cycle_history') || [];
-      const actualProfit = cycleHistory
-        .filter(c => c.date === today)
-        .reduce((sum, c) => sum + (c.profitEur || 0), 0);
-      todayEntry.actualProfit = +actualProfit.toFixed(4);
-
-      const storedProjected = todayEntry.projectedProfit ?? 0;
-      if (storedProjected > 0.05) {
-        todayEntry.trackingError = +((actualProfit - storedProjected) / storedProjected * 100).toFixed(1);
-      } else {
-        delete todayEntry.trackingError;
-      }
-
-      if (predictiveActive) todayEntry.predictiveActive = true;
-
-      if (ownedEntry) this._queueSettingsPersist('expansion_profit_history', hist);
-    } catch (e) {
-      this.error('_updateProfitTracking failed:', e.message);
-    }
-  }
-
-  /**
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
@@ -2028,27 +1954,6 @@ if (debug) this.log(
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
-      // Expose upcoming net PV kWh (after house consumption) to the policy engine.
-      // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
-      // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
-      // Net = sum of max(0, pvW - consW) per slot — only surplus goes into the battery.
-      if (pvForecast && inputs.weather) {
-        const nowMs = now.getTime();
-        const windowEndMs = nowMs + 24 * 3600_000;
-        let pvWhTomorrowNet = 0;
-        for (const { timestamp, pvPowerW } of pvForecast) {
-          const slotMs = new Date(timestamp).getTime();
-          if (slotMs <= nowMs) continue;       // skip current and past slots
-          if (slotMs > windowEndMs) continue;  // only next 24h
-          const consW = this.learningEngine
-            ? (this.learningEngine.getPredictedConsumption(new Date(timestamp)) ?? 0)
-            : 0;
-          // Surplus after house consumption, capped by battery group max charge rate.
-          // Excess PV above the charge rate goes to the grid, not the battery.
-          pvWhTomorrowNet += Math.min(maxChargePowerW, Math.max(0, pvPowerW - consW)); // W × 1h = Wh
-        }
-        inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrowNet / 100) / 10; // 1 decimal
-      }
     }
 
     // Blend external PV forecasts into Open-Meteo pvForecast.
@@ -2084,25 +1989,33 @@ if (debug) this.log(
         }
       }
 
+      // Save unblended OM forecast for per-model accuracy tracking
+      this._pvForecastOM = pvForecast;
+
       // ── Blend all available sources per hourly slot ──────────────────────────
       if (solcastByHourMs) {
+        this._pvForecastSC = solcastByHourMs;
+
+        const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+
         const todayNLDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const tomorrowNLDate = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const byDay = { [todayNLDate]: { om: 0, sc: 0, bl: 0 }, [tomorrowNLDate]: { om: 0, sc: 0, bl: 0 } };
 
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
-          const sources = [slot.pvPowerW];
           const dayKey = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
 
           const scSlots = solcastByHourMs.get(slotMs);
+          let blendedW;
           if (scSlots?.length > 0) {
-            const avg = Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length);
-            sources.push(avg);
-            if (byDay[dayKey]) byDay[dayKey].sc += avg;
+            const scAvg = Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length);
+            blendedW = Math.round(wOM * slot.pvPowerW + wSC * scAvg);
+            if (byDay[dayKey]) byDay[dayKey].sc += scAvg;
+          } else {
+            blendedW = slot.pvPowerW;
           }
 
-          const blendedW = Math.round(sources.reduce((a, b) => a + b, 0) / sources.length);
           if (byDay[dayKey]) { byDay[dayKey].om += slot.pvPowerW; byDay[dayKey].bl += blendedW; }
           return { ...slot, pvPowerW: blendedW };
         });
@@ -2112,33 +2025,42 @@ if (debug) this.log(
         const td = byDay[todayNLDate], tm = byDay[tomorrowNLDate];
         const scToday    = td.sc > 0 ? ` SC=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})` : '';
         const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})` : '';
-        this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh`);
+        const accOM = this.learningEngine?.data?.pv_accuracy_om;
+        const accSC = this.learningEngine?.data?.pv_accuracy_sc;
+        const wLog = accOM != null && accSC != null
+          ? ` [w_om=${wOM.toFixed(2)} w_sc=${wSC.toFixed(2)} acc: om=${(accOM*100).toFixed(0)}% sc=${(accSC*100).toFixed(0)}%]`
+          : ` [w_om=${wOM.toFixed(2)} w_sc=${wSC.toFixed(2)} learning]`;
+        this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh${wLog}`);
         this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh`);
+      } else {
+        this._pvForecastSC = null;
       }
     }
 
-    // Sync chart with optimizer input (post-Solcast blend, pre-accuracy-discount).
+    // Compute net PV surplus for next 24h using the blended forecast (post-Solcast).
+    // Placed after the blend so Solcast data is included in the terminal value calculation.
+    // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
+    // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
+    if (pvForecast && inputs.weather) {
+      const nowMs = now.getTime();
+      const windowEndMs = nowMs + 24 * 3600_000;
+      let pvWhTomorrowNet = 0;
+      for (const { timestamp, pvPowerW } of pvForecast) {
+        const slotMs = new Date(timestamp).getTime();
+        if (slotMs <= nowMs) continue;
+        if (slotMs > windowEndMs) continue;
+        const consW = this.learningEngine
+          ? (this.learningEngine.getPredictedConsumption(new Date(timestamp)) ?? 0)
+          : 0;
+        pvWhTomorrowNet += Math.min(maxChargePowerW, Math.max(0, pvPowerW - consW));
+      }
+      inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrowNet / 100) / 10;
+    }
+
+    // Snapshot blended forecast before discounts (used for accuracy tracking below).
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       this._pvForecastBlended   = pvForecast;
       this._pvForecastBlendedAt = Date.now();
-      const _fcNow      = new Date();
-      const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      // Seed from existing chart (built by _updateWeather from dailyProfiles, all 24h) so
-      // past hours aren't lost — pvForecast (hourlyForecast) only contains future slots.
-      const _existing   = this._liveState.policy_pv_forecast_hourly
-        ?? this.homey.settings.get('policy_pv_forecast_hourly')
-        ?? [{}, {}];
-      const pvFcByDay   = [{ ..._existing[0] }, { ..._existing[1] ?? {} }];
-      for (const slot of pvForecast) {
-        const st    = new Date(slot.timestamp);
-        const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
-        if (sIdx < 0) continue;
-        const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-        pvFcByDay[sIdx][sHour] = Math.round(slot.pvPowerW);
-      }
-      this._setLive('policy_pv_forecast_hourly', pvFcByDay);
     }
 
     // PV accuracy tracking: compare forecast for now vs actual from flow card.
@@ -2154,7 +2076,17 @@ if (debug) this.log(
         const predictedW = this.optimizationEngine._getPvForSlot(pvForecast, now.toISOString());
         const actualW    = this._pvProductionW;
         if (predictedW > 50 && actualW > 50) {
-          this.learningEngine.recordPvAccuracy(predictedW, actualW).catch(e =>
+          // Also pass per-model predictions for adaptive blend weight learning
+          const omW = this._pvForecastOM
+            ? this.optimizationEngine._getPvForSlot(this._pvForecastOM, now.toISOString())
+            : null;
+          const nowMs = now.getTime();
+          const hourMs = nowMs - (now.getUTCMinutes() * 60_000) - (now.getUTCSeconds() * 1_000) - now.getUTCMilliseconds();
+          const scSlots = this._pvForecastSC?.get(hourMs);
+          const scW = scSlots?.length > 0
+            ? Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length)
+            : null;
+          this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW).catch(e =>
             this.error('PV accuracy recording failed:', e)
           );
         }
@@ -2368,10 +2300,11 @@ if (debug) this.log(
     // How much of the remaining battery capacity will be filled by net PV surplus today?
     // Uses the same per-slot interpolation as the DP so both agree on expected PV.
     if (pvForecast && consumptionWPerSlot) {
+      const pvIdx = this.optimizationEngine._buildPvIndex(pvForecast);
       const slotH = slotMs / 3_600_000;
       let netPvKwh = 0;
       for (let h = 0; h < prices.length; h++) {
-        const pvW  = this.optimizationEngine._getPvForSlot(pvForecast, prices[h].timestamp);
+        const pvW  = this.optimizationEngine._getPvForSlot(pvIdx, new Date(prices[h].timestamp).getTime());
         const consW = consumptionWPerSlot[h] ?? 0;
         netPvKwh += Math.max(0, pvW - consW) * slotH / 1000;
       }
@@ -2381,11 +2314,14 @@ if (debug) this.log(
         ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
         : 1;
       this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
+      const _planSlots = this.optimizationEngine._schedule?.slots ?? [];
+      const chargeSlots = _planSlots.filter(s => s.action === 'charge').length;
       this._setLive('pv_surplus_forecast', {
         netPvKwh:      Math.round(netPvKwh * 100) / 100,
         remainingKwh:  Math.round(remainingKwh * 100) / 100,
         fillFraction:  Math.round(fillFraction * 100) / 100,
         soc,
+        chargeSlots,
         updatedAt:     new Date().toISOString(),
       });
     }
@@ -2411,14 +2347,14 @@ if (debug) this.log(
     // Compact planning summary — always visible in user diagnostics.
     {
       const _slots = this.optimizationEngine._schedule?.slots ?? [];
-      const _cnt   = { charge: 0, discharge: 0, preserve: 0, standby: 0 };
+      const _cnt   = { charge: 0, discharge: 0, preserve: 0, standby: 0, trickle: 0 };
       let _socMin = 100, _socMax = 0;
       for (const s of _slots) {
         if (_cnt[s.action] !== undefined) _cnt[s.action]++;
         if (s.socProjected != null) { _socMin = Math.min(_socMin, s.socProjected); _socMax = Math.max(_socMax, s.socProjected); }
       }
       const _profit = this.optimizationEngine._schedule?.todayProjectedProfit ?? this.optimizationEngine._schedule?.projectedProfit ?? 0;
-      this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
+      this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
     }
 
     // Persist planning schedule for the settings UI (single source of truth).
@@ -2434,6 +2370,35 @@ if (debug) this.log(
       }
       this._setLive('policy_optimizer_schedule', planningSchedule);
 
+      // Sync PV chart from schedule slots — average of 4 × 15-min pvW per hour,
+      // identical source and aggregation as consumption (avgConsumptionW in the UI).
+      {
+        const _fcNow      = new Date();
+        const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const _existing   = this._liveState.policy_pv_forecast_hourly
+          ?? this.homey.settings.get('policy_pv_forecast_hourly')
+          ?? [{}, {}];
+        const pvFcByDay   = [{ ..._existing[0] }, { ..._existing[1] ?? {} }];
+        const pvSumByDayHour = [{}, {}];
+        const pvCntByDayHour = [{}, {}];
+        for (const slot of planningSchedule) {
+          if (slot.pvW == null) continue;
+          const st    = new Date(slot.timestamp);
+          const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
+          if (sIdx < 0) continue;
+          const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+          pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + slot.pvW;
+          pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
+        }
+        for (let d = 0; d < 2; d++) {
+          for (const h of Object.keys(pvSumByDayHour[d])) {
+            pvFcByDay[d][h] = Math.round(pvSumByDayHour[d][h] / pvCntByDayHour[d][h]);
+          }
+        }
+        this._setLive('policy_pv_forecast_hourly', pvFcByDay);
+      }
 
       // ── SoC plan snapshot: first planned SoC per slot, never overwritten ──
       // Allows the frontend to show "planned XX%" alongside actual SoC for past slots.
@@ -2473,38 +2438,49 @@ if (debug) this.log(
           ? (new Date(prices[1].timestamp) - new Date(prices[0].timestamp)) / 3_600_000
           : 1;
 
-        const scenarios = [];
-        for (let n = 1; n <= 4; n++) {
-          const kwh    = +(n * KWH_PER_UNIT).toFixed(3);
-          const powerW = n * W_PER_UNIT;
+        // Cache key: prices only change on the hour, soc rounded to 5% to avoid
+        // rerunning 4× DP on every minor SoC fluctuation between policy checks.
+        const expansionKey = `${prices.length}_${prices[0]?.timestamp}_${prices.at(-1)?.timestamp}`
+          + `_${Math.round(soc / 5) * 5}_${Math.round(pvKwhTomorrow * 10)}`;
 
-          const result = this.optimizationEngine.computeExpectedProfit(
-            prices, soc, kwh, powerW, powerW,
-            pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow
-          );
-          const profit = +result.profit.toFixed(4);
-          const selfSufficiencyPct = result.selfSufficiencyPct;
+        let scenarios;
+        if (this._expansionCache?.key === expansionKey) {
+          scenarios = this._expansionCache.scenarios;
+        } else {
+          scenarios = [];
+          for (let n = 1; n <= 4; n++) {
+            const kwh    = +(n * KWH_PER_UNIT).toFixed(3);
+            const powerW = n * W_PER_UNIT;
 
-          // Power bottleneck: slots where house consumption exceeds battery discharge power,
-          // so the battery is at full output but grid still imports the remainder.
-          // Uses the current schedule's discharge slots as a proxy (good enough for diagnostics).
-          let shortfallSlots = 0;
-          let shortfallKwh   = 0;
-          if (Array.isArray(consumptionWPerSlot)) {
-            for (let t = 0; t < dischargeSlots.length; t++) {
-              if (dischargeSlots[t]?.action !== 'discharge') continue;
-              const consumption = consumptionWPerSlot[t];
-              if (consumption == null) continue;
-              const shortfall = Math.max(0, consumption - powerW);
-              if (shortfall > 0) {
-                shortfallSlots++;
-                shortfallKwh += shortfall * slotH / 1000;
+            const result = this.optimizationEngine.computeExpectedProfit(
+              prices, soc, kwh, powerW, powerW,
+              pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow
+            );
+            const profit = +result.profit.toFixed(4);
+            const selfSufficiencyPct = result.selfSufficiencyPct;
+
+            // Power bottleneck: slots where house consumption exceeds battery discharge power,
+            // so the battery is at full output but grid still imports the remainder.
+            // Uses the current schedule's discharge slots as a proxy (good enough for diagnostics).
+            let shortfallSlots = 0;
+            let shortfallKwh   = 0;
+            if (Array.isArray(consumptionWPerSlot)) {
+              for (let t = 0; t < dischargeSlots.length; t++) {
+                if (dischargeSlots[t]?.action !== 'discharge') continue;
+                const consumption = consumptionWPerSlot[t];
+                if (consumption == null) continue;
+                const shortfall = Math.max(0, consumption - powerW);
+                if (shortfall > 0) {
+                  shortfallSlots++;
+                  shortfallKwh += shortfall * slotH / 1000;
+                }
               }
             }
-          }
 
-          scenarios.push({ units: n, kwh, powerW, profit, selfSufficiencyPct,
-            shortfallSlots, shortfallKwh: +shortfallKwh.toFixed(3) });
+            scenarios.push({ units: n, kwh, powerW, profit, selfSufficiencyPct,
+              shortfallSlots, shortfallKwh: +shortfallKwh.toFixed(3) });
+          }
+          this._expansionCache = { key: expansionKey, scenarios };
         }
 
         // Rolling daily profit history — one entry per day, max 30 days.
@@ -2528,7 +2504,6 @@ if (debug) this.log(
           : null;
         if (todayActualSelfSufficiencyPct !== null) todayEntry.actualSelfSufficiencyPct = todayActualSelfSufficiencyPct;
 
-        this._updateProfitTracking(todayEntry);
         this._queueSettingsPersist('expansion_profit_history', hist);
 
         // Augment scenarios with avgProfit + seasonally-corrected avgProfit.
@@ -2853,14 +2828,23 @@ if (debug) this.log(
     // Push structured learning stats for the UI status block
     const rte = this.efficiencyEstimator.getEfficiency();
     const rteInsightsObj = this.efficiencyEstimator.getEfficiencyInsights();
+    const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+    const accOM = this.learningEngine?.data?.pv_accuracy_om ?? null;
+    const accSC = this.learningEngine?.data?.pv_accuracy_sc ?? null;
+    const pvPredictions = this.learningEngine?.data?.pv_predictions?.slice(-864) ?? [];
     this._setLive('learning_status', {
-      days:       learningStats.days_tracking,
-      samples:    learningStats.total_samples,
-      coverage:   learningStats.pattern_coverage,
-      pvAccuracy: learningStats.pv_accuracy,
-      rte:        rte != null ? +(rte * 100).toFixed(1) : null,
-      cycles:     this.efficiencyEstimator.getCycleCount(),
-      updatedAt:  new Date().toISOString(),
+      days:           learningStats.days_tracking,
+      samples:        learningStats.total_samples,
+      coverage:       learningStats.pattern_coverage,
+      pvAccuracy:     learningStats.pv_accuracy,
+      rte:            rte != null ? +(rte * 100).toFixed(1) : null,
+      cycles:         this.efficiencyEstimator.getCycleCount(),
+      accOM:          accOM != null ? +(accOM * 100).toFixed(1) : null,
+      accSC:          accSC != null ? +(accSC * 100).toFixed(1) : null,
+      wOM:            +(wOM * 100).toFixed(0),
+      wSC:            +(wSC * 100).toFixed(0),
+      pvPredictions,
+      updatedAt:      new Date().toISOString(),
     });
     
     // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
@@ -3085,7 +3069,7 @@ if (debug) this.log(
       // ⭐ Alleen echte HomeWizard modes
       let targetMode = null;
 
-      if (mode === 'zero_charge_only') {
+      if (mode === 'zero_charge_only' || mode === 'pv_trickle') {
         targetMode = 'zero_charge_only';
       } else if (mode === 'zero_discharge_only') {
         targetMode = 'zero_discharge_only';
@@ -3834,12 +3818,13 @@ if (debug) this.log(
     for (const b of this._modeHistory) bySlot[b.h] = b;
 
     const MODE_ORDER = [
-      'to_full', 'zero_charge_only', 'zero_discharge_only', 'zero', 'standby',
+      'to_full', 'zero_charge_only', 'pv_trickle', 'zero_discharge_only', 'zero', 'standby',
       'predictive_zero', 'predictive_charge', 'predictive_discharge', 'predictive_standby',
     ];
     const MODE_COLORS = {
       to_full:              '#5f6fff',
       zero_charge_only:     '#8b9fff',
+      pv_trickle:           '#4fa8d8',
       zero_discharge_only:  '#20F29B',
       zero:                 '#FB923C',
       standby:              '#808080',
@@ -3849,7 +3834,8 @@ if (debug) this.log(
       predictive_standby:   'rgba(128,128,128,0.55)',
     };
     const MODE_LABELS = {
-      to_full: 'Laden', zero_charge_only: 'Laden PV', zero_discharge_only: 'Ontladen',
+      to_full: 'Laden', zero_charge_only: 'Laden PV', pv_trickle: 'Sprokkelen',
+      zero_discharge_only: 'Ontladen',
       zero: 'Nul', standby: 'Standby',
       predictive_zero: 'HW Nul', predictive_charge: 'HW Laden',
       predictive_discharge: 'HW Ontladen', predictive_standby: 'HW Standby',
@@ -4143,6 +4129,7 @@ if (debug) this.log(
     const MODE_COLORS = {
       to_full:             '#5f6fff',
       zero_charge_only:    '#8b9fff',
+      pv_trickle:          '#4fa8d8',
       zero_discharge_only: '#20F29B',
       zero:                '#FB923C',
       standby:             '#808080',
@@ -4210,7 +4197,8 @@ if (debug) this.log(
     const modesPresent = [...new Set(shown.map(s => s.mode))].filter(m => m !== 'past');
 
     const MODE_LABELS = {
-      to_full: 'Laden', zero_charge_only: 'PV laden', zero_discharge_only: 'Ontladen',
+      to_full: 'Laden', zero_charge_only: 'PV laden', pv_trickle: 'Sprokkelen',
+      zero_discharge_only: 'Ontladen',
       zero: 'Nul', standby: 'Standby', predictive: 'Slim laden',
     };
 
