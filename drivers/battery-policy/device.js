@@ -1344,6 +1344,18 @@ if (debug) this.log(
       inputs.optimizer = this.optimizationEngine;
       inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
 
+      // Log planned vs actual SoC to detect consumption/discharge drift.
+      if (currentSoc != null && inputs.optimizerSlots?.length) {
+        const nowMs = Date.now();
+        const plannedSlot = inputs.optimizerSlots
+          .filter(s => new Date(s.timestamp).getTime() <= nowMs)
+          .at(-1);
+        if (plannedSlot?.socProjected != null) {
+          const socDrift = currentSoc - plannedSlot.socProjected;
+          this.log(`[SoC] actual=${currentSoc}% planned=${plannedSlot.socProjected.toFixed(1)}% drift=${socDrift > 0 ? '+' : ''}${socDrift.toFixed(1)}pp`);
+        }
+      }
+
       const result = this.policyEngine.calculatePolicy(inputs);
 
       // Free large price arrays before loading the explainability engine.
