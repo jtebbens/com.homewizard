@@ -3,7 +3,6 @@
     "allowed_elements": ["details", "summary"]
   },
   "MD013": false,
-  "MD024": {
-    "siblings_only": true
-  }
+  "MD024": false,
+  "MD022" : false
 }

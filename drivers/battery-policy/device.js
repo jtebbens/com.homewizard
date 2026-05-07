@@ -596,13 +596,13 @@ if (debug) this.log(
           // Log progress every 5 min (every 20th call at 15s interval)
           this._effLogCounter = (this._effLogCounter || 0) + 1;
           if (this._effLogCounter % 20 === 0) {
-            const chargedWh   = (s.totalChargeKwh   * 1000).toFixed(0);
-            const dischargedWh = (s.totalDischargeKwh * 1000).toFixed(0);
-            const balance = s.totalDischargeKwh > 0
-              ? (s.totalChargeKwh / s.totalDischargeKwh).toFixed(2) : '—';
+            const pendingWh   = ((s.pendingChargeKwh   || 0) * 1000).toFixed(0);
+            const chargedWh   = ((s.sessionChargeKwh   || 0) * 1000).toFixed(0);
+            const dischargedWh = ((s.sessionDischargeKwh || 0) * 1000).toFixed(0);
+            const dir = s.lastPowerDirection || '?';
             this.log(
-              `[RTE] learning: charged=${chargedWh}Wh / 1000Wh, discharged=${dischargedWh}Wh / 1000Wh, ` +
-              `balance=${balance} (>1.4 = wacht), current RTE=${( s.efficiency * 100).toFixed(1)}%`
+              `[RTE] session: dir=${dir} pending=${pendingWh}Wh charge=${chargedWh}Wh discharge=${dischargedWh}Wh ` +
+              `cycles=${this.efficiencyEstimator.getCycleCount()} RTE=${(s.efficiency * 100).toFixed(1)}%`
             );
           }
 
