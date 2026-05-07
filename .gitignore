@@ -11,6 +11,7 @@ DEVELOPMENT.md
 SKILL.md
 CRASH_DIAGNOSIS.md
 refactor.md
+refactor-log.md
 
 # Optional: any other internal prompt files
 *.prompt.md

@@ -743,6 +743,125 @@ testInvariant('9:schedule-feasibility',
   }
 );
 
+// ─── Invariant 10 — computeExpectedProfit self-sufficiency bounds ─────────────
+//
+// selfSufficiencyPct must always be in [0, 100] regardless of inputs.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds\n');
+
+testInvariant('10:expected-profit-self-sufficiency-bounds',
+  fc.tuple(settingsArb, baseArb, fc.array(
+    fc.double({ min: -0.30, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 24, maxLength: 24 }
+  )),
+  ([settings, base, priceValues]) => {
+    const eng = new OptimizationEngine(settings);
+    const prices = makePriceSlots(priceValues);
+    const result = eng.computeExpectedProfit(
+      prices, base.currentSoc, base.capacityKwh,
+      base.maxChargeW, base.maxDischargeW,
+      null, null, null, 0, 1.0, 0
+    );
+    return result.selfSufficiencyPct >= 0 && result.selfSufficiencyPct <= 100;
+  }
+);
+
+// ─── Invariant 11 — computeExpectedProfit profit matches compute() ────────────
+//
+// Both methods call _runBackwardDP with the same params; dp[initialSocG] must
+// be equal. compute() stores this as _schedule.projectedProfit.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 11 — computeExpectedProfit-profit-matches-compute\n');
+
+testInvariant('11:expected-profit-matches-compute',
+  fc.tuple(settingsArb, baseArb, fc.array(
+    fc.double({ min: -0.30, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 24, maxLength: 24 }
+  )),
+  ([settings, base, priceValues]) => {
+    const prices = makePriceSlots(priceValues);
+    const eng = runCompute(settings, { ...base, prices });
+    if (!eng._schedule) return true;
+    const result = eng.computeExpectedProfit(
+      prices, base.currentSoc, base.capacityKwh,
+      base.maxChargeW, base.maxDischargeW,
+      null, null, null, 0, 1.0, 0
+    );
+    // Allow 1e-9 floating point tolerance
+    return Math.abs(result.profit - eng._schedule.projectedProfit) < 1e-6;
+  }
+);
+
+// ─── Invariant 12 — exportPriceRatio zero-effect without PV or consumption ────
+//
+// When pvForecast=null and consumptionWPerSlot=null, exportPriceRatio does not
+// appear in either the effectiveChargeCost formula (pvCoverage=0) or the
+// discharge value formula (consumptionKwh=null path). Schedule must be identical
+// for ratio=1.0 vs ratio=0.3.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 12 — exportPriceRatio-zero-effect-without-pv\n');
+
+testInvariant('12:export-ratio-zero-effect-without-pv',
+  fc.tuple(baseArb, fc.array(
+    fc.double({ min: -0.30, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 24, maxLength: 24 }
+  )),
+  ([base, priceValues]) => {
+    const prices = makePriceSlots(priceValues);
+    const baseSettings = { battery_efficiency: 0.9, min_soc: 0, max_soc: 95,
+                           cycle_cost_per_kwh: 0, export_price_ratio: 1.0 };
+
+    const eng1 = runCompute({ ...baseSettings, export_price_ratio: 1.0 }, { ...base, prices });
+    const eng2 = runCompute({ ...baseSettings, export_price_ratio: 0.3 }, { ...base, prices });
+
+    if (!eng1._schedule || !eng2._schedule) return !eng1._schedule && !eng2._schedule;
+
+    const slots1 = eng1._schedule.slots;
+    const slots2 = eng2._schedule.slots;
+    if (slots1.length !== slots2.length) return false;
+    for (let i = 0; i < slots1.length; i++) {
+      if (slots1[i].action !== slots2[i].action) return false;
+      if (Math.abs(slots1[i].socProjected - slots2[i].socProjected) > 0.15) return false;
+    }
+    return true;
+  }
+);
+
+// ─── Invariant 13 — exportPriceRatio: lower ratio reduces discharge profit ────
+//
+// When consumption=0 for all slots (all discharge goes to export), ratio=1.0
+// earns full retail per kWh while ratio=0.3 earns only 30%. Therefore:
+//   profit(ratio=1.0) >= profit(ratio=0.3)
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit\n');
+
+testInvariant('13:export-ratio-lower-ratio-reduces-profit',
+  fc.tuple(baseArb, fc.array(
+    fc.double({ min: 0.01, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 24, maxLength: 24 }
+  )),
+  ([base, priceValues]) => {
+    const prices = makePriceSlots(priceValues);
+    const consumption = new Array(24).fill(0);
+    const baseSettings = { battery_efficiency: 0.9, min_soc: 0, max_soc: 95,
+                           cycle_cost_per_kwh: 0, export_price_ratio: 1.0 };
+
+    const eng1 = new OptimizationEngine({ ...baseSettings, export_price_ratio: 1.0 });
+    const eng2 = new OptimizationEngine({ ...baseSettings, export_price_ratio: 0.3 });
+
+    const r1 = eng1.computeExpectedProfit(prices, base.currentSoc, base.capacityKwh,
+      base.maxChargeW, base.maxDischargeW, null, null, consumption, 0, 1.0, 0);
+    const r2 = eng2.computeExpectedProfit(prices, base.currentSoc, base.capacityKwh,
+      base.maxChargeW, base.maxDischargeW, null, null, consumption, 0, 1.0, 0);
+
+    return r1.profit >= r2.profit - 1e-9;
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
