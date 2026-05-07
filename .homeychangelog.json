@@ -1405,5 +1405,8 @@
   },
   "3.15.58": {
     "en": "Day ahead planning tuning, delay discharge, cater for household usage to be included in policy calculations"
+  },
+  "3.15.59": {
+    "en": "Planning tuning, added trickle mode to charge battery when cloudy day is forecasted"
   }
 }
