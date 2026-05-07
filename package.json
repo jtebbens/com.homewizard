@@ -10,7 +10,8 @@
   },
   "scripts": {
     "test": "athom app run",
-    "test-unit": "node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/terminal-value.test.js",
+    "test-unit": "node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/terminal-value.test.js && node test/optimizer-properties.test.js",
+    "test-properties": "node test/optimizer-properties.test.js",
     "lint": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "lint-check": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
@@ -29,6 +30,7 @@
     "@types/homey": "npm:homey-apps-sdk-v3-types@^0.3.3",
     "@types/node": "^25.0.1",
     "eslint": "^7.32.0",
-    "eslint-config-athom": "^3.1.5"
+    "eslint-config-athom": "^3.1.5",
+    "fast-check": "^4.7.0"
   }
 }
