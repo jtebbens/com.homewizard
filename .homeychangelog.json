@@ -1411,5 +1411,8 @@
   },
   "3.15.60": {
     "en": "Textual reason fixes and delayed charging."
+  },
+  "3.15.61": {
+    "en": "Planning fix when next day during night has higher prices to compensate"
   }
 }
