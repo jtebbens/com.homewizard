@@ -1408,5 +1408,8 @@
   },
   "3.15.59": {
     "en": "Planning tuning, added trickle mode to charge battery when cloudy day is forecasted"
+  },
+  "3.15.60": {
+    "en": "Textual reason fixes and delayed charging."
   }
 }
