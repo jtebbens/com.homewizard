@@ -1470,7 +1470,9 @@ if (debug) this.log(
       // explanation_summary shows the ACTIVE mode, not the recommended mode
       const currentActiveMode = this.getCapabilityValue('active_mode') || recommended;
       const activeSummary = this.explainabilityEngine
-        ? this.explainabilityEngine._generateShortSummary({ hwMode: currentActiveMode }, inputs)
+        ? (inputs.dpDecision
+            ? this.explainabilityEngine._generateDpShortSummary({ hwMode: currentActiveMode }, inputs)
+            : this.explainabilityEngine._generateShortSummary({ hwMode: currentActiveMode }, inputs))
         : currentActiveMode;
       await this.setCapabilityValue('explanation_summary', activeSummary);
       await this.setCapabilityValue('last_update', new Date().toISOString());
@@ -1598,10 +1600,9 @@ if (debug) this.log(
 
           // Always sync explanation_summary to the actual hardware mode
           if (this.explainabilityEngine) {
-            const hwActiveSummary = this.explainabilityEngine._generateShortSummary(
-              { hwMode: actualHwMode },
-              inputs
-            );
+            const hwActiveSummary = inputs.dpDecision
+              ? this.explainabilityEngine._generateDpShortSummary({ hwMode: actualHwMode }, inputs)
+              : this.explainabilityEngine._generateShortSummary({ hwMode: actualHwMode }, inputs);
             await this.setCapabilityValue('explanation_summary', hwActiveSummary).catch(this.error);
           }
         }
