@@ -862,6 +862,109 @@ testInvariant('13:export-ratio-lower-ratio-reduces-profit',
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 14: Night-slot ordering — discharge deferred to higher-priced slot
+//
+// When pvKwhTomorrow >= 80% capacity (PV refills tomorrow) and a later night
+// slot has a strictly higher discharge price, the DP must NOT discharge at the
+// cheaper earlier slot when SoC allows only one discharge.
+//
+// Setup: [nightA(priceA), nightB(priceB>priceA), pvDay × 8 slots].
+// The PV-day slots ensure pvKwhFromT[1] >= capacityKwh, which normally triggers
+// dp-flattening at slot 0 — destroying the price gradient.  Our fix blocks
+// flattening when a better-priced night slot is ahead.
+//
+// consumptionWPerSlot is randomised per slot: it determines effective discharge
+// power (= min(maxDischargeW, consW)), so each slot's revenue = price × consKwh.
+// To isolate price ordering, consW is equal for both night slots — so revenue
+// is driven by price alone.  PV-day slots carry their own (lower) consumption.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 14 — night-discharge-defers-to-better-price\n');
+
+testInvariant('14:night-discharge-defers-to-better-price',
+  fc.tuple(
+    fc.record({
+      battery_efficiency:  fc.double({ min: 0.50, max: 0.90, noNaN: true, noDefaultInfinity: true }),
+      min_soc:             fc.constant(0),
+      max_soc:             fc.constant(100),
+      cycle_cost_per_kwh:  fc.double({ min: 0, max: 0.08, noNaN: true, noDefaultInfinity: true }),
+      export_price_ratio:  fc.constant(1.0),
+    }),
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 12.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 800 }),
+    }),
+    // priceA (lower night slot), priceB = priceA + delta (higher night slot)
+    fc.double({ min: 0.230, max: 0.340, noNaN: true, noDefaultInfinity: true }),
+    fc.double({ min: 0.005, max: 0.040, noNaN: true, noDefaultInfinity: true }),
+    // house consumption for both night slots (same → price drives the ordering)
+    fc.integer({ min: 250, max: 700 }),
+  ),
+  ([settings, base, priceA, priceDelta, nightConsW]) => {
+    const priceB          = priceA + priceDelta;        // priceB > priceA
+    const minDischargePrice = 0.220;
+    const { capacityKwh, maxChargeW, maxDischargeW } = base;
+
+    // Effective discharge power per slot = min(maxDischargeW, consW)
+    const effectiveDischargeW = Math.min(maxDischargeW, nightConsW);
+    // SoC % consumed per 1-hour discharge slot (no RTE on SoC projection)
+    const perSlotSocPct = (effectiveDischargeW / 1000) * 100 / capacityKwh;
+
+    // Skip degenerate cases: discharge delta too small to matter
+    if (perSlotSocPct < 0.5) return true;
+
+    // currentSoc = exactly 1 slot's worth: enough for 1 discharge but not 2.
+    // After discharge socG drops to 0 = minSoc → can't discharge again.
+    const currentSoc = Math.min(99, perSlotSocPct);
+
+    // Guard: skip if SoC too small to discharge even once
+    if (currentSoc < perSlotSocPct - 0.1) return true;
+
+    // PV-day slots: high PV so pvKwhFromT[slot 1 onwards] >= capacityKwh.
+    // 8 hourly slots at maxChargeW W each → pvKwh = maxChargeW/1000 * 8
+    const pvDaySlots   = 8;
+    const pvDayW       = maxChargeW;                               // full charge power
+    const pvDayConsW   = 150;                                      // low consumption during PV hours
+    const pvKwhFromDay = (pvDayW / 1000) * pvDaySlots;            // kWh PV available
+    // Only proceed when PV day can actually refill battery (triggers flatten guard)
+    if (pvKwhFromDay < capacityKwh * 0.8) return true;
+
+    // Price array: [nightA, nightB, pvDay×8 at low price (no discharge incentive)]
+    const priceValues  = [priceA, priceB, ...Array(pvDaySlots).fill(0.05)];
+    const prices       = makePriceSlots(priceValues);
+
+    // PV forecast: no PV for night slots, pvDayW for PV slots
+    const pvWValues    = [0, 0, ...Array(pvDaySlots).fill(pvDayW)];
+    const pvForecast   = makePvForecast(prices, pvWValues);
+
+    // consumptionWPerSlot: nightConsW for night, pvDayConsW for PV day
+    const consumptionW = [nightConsW, nightConsW, ...Array(pvDaySlots).fill(pvDayConsW)];
+
+    // pvKwhTomorrow: net PV surplus that enters battery (pvW - consW, clamped ≥ 0)
+    const pvKwhTomorrow = pvDaySlots * Math.max(0, pvDayW - pvDayConsW) / 1000;
+
+    const eng = runCompute(settings, {
+      ...base,
+      currentSoc,
+      prices,
+      pvForecast,
+      consumptionW,
+      minDischargePrice,
+      pvKwhTomorrow,
+    });
+
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+    if (slots.length < 2) return true;
+
+    // Invariant: slot 0 (priceA, cheaper) must NOT be discharged.
+    // The DP must preserve SoC for slot 1 (priceB, more expensive).
+    return slots[0].action !== 'discharge';
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
