@@ -2323,7 +2323,7 @@
             '',
             '--- Actieve slot (laatste policy run) ---',
             `Tijdstip:      ${fmt(d.ts)}`,
-            `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}  live PV ${d.pvEstimate != null ? d.pvEstimate + 'W' : '—'}`,
+            `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.houseConsumption != null ? d.houseConsumption + 'W' : (d.currentLoad != null ? d.currentLoad + 'W' : '—')}  live PV ${d.pvEstimate != null ? d.pvEstimate + 'W' : '—'}`,
             `Beslissing:    ${fmt(d.policyMode)} → ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
             `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
             `Optimizer:     ${fmt(d.optimizer)}`,

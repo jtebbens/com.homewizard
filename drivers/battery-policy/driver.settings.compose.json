@@ -281,8 +281,8 @@
         "type": "number",
         "label": { "en": "Peak Shaving Threshold (W)", "nl": "Piekbeveiliging drempelwaarde (W)" },
         "hint": {
-          "en": "When the instantaneous house load exceeds this value and the optimizer says 'preserve', the battery will discharge to cover the peak. Set to 0 to disable. Typical value: 2500W (e.g. oven + lighting).",
-          "nl": "Als het momentane huisverbruik deze waarde overschrijdt en de optimizer 'bewaren' adviseert, ontlaadt de batterij om de piek te dekken. Stel 0 in om uit te schakelen. Typische waarde: 2500W (bijv. oven + verlichting)."
+          "en": "When the instantaneous house load exceeds this value and the optimizer says 'preserve', the battery will discharge to cover the peak. Set to 0 to disable. Typical value: 1500W (e.g. electric cooking). Set lower than your cooking load.",
+          "nl": "Als het momentane huisverbruik deze waarde overschrijdt en de optimizer 'bewaren' adviseert, ontlaadt de batterij om de piek te dekken. Stel 0 in om uit te schakelen. Typische waarde: 1500W (bijv. elektrisch koken). Stel lager in dan je kookverbruik."
         },
         "value": 0,
         "min": 0,
