@@ -2370,6 +2370,36 @@
           }
         }
 
+        // Event history — last 8h of policy_mode_history entries with extended fields
+        const evHistory = (settings['policy_mode_history'] || [])
+          .filter(h => h.pvW != null || h.consumW != null || h.gridW != null)
+          .filter(h => Date.now() - new Date(h.ts).getTime() <= 8 * 3600 * 1000)
+          .slice(-32);
+        if (evHistory.length > 0) {
+          lines.push('', '--- Event History (laatste 8 uur) ---');
+          lines.push(
+            `${'Tijd'.padEnd(6)}  ${'HWMode'.padEnd(20)}  ${'Policy→DP'.padEnd(20)}  ${'Prijs'.padEnd(7)}  ${'SoC'.padStart(4)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Grid(W)'.padStart(7)}  ${'Batt(W)'.padStart(7)}  Exception`
+          );
+          lines.push('─'.repeat(115));
+          for (const h of evHistory) {
+            const ts   = new Date(h.ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+            const p = (s, n, r) => { s = String(s ?? '—'); return r ? s.padStart(n) : s.padEnd(n); };
+            const policyDp = `${h.policyMode ?? '—'}→${h.dpAction ?? '—'}`;
+            lines.push(
+              `${ts.padEnd(6)}  ` +
+              `${p(h.hwMode, 20)}  ` +
+              `${p(policyDp, 20)}  ` +
+              `${h.price != null ? `€${Number(h.price).toFixed(3)}` : '—'.padEnd(7)}  ` +
+              `${p(h.soc != null ? Math.round(h.soc) + '%' : null, 4, true)}  ` +
+              `${p(h.pvW     != null ? Math.round(h.pvW)     : null, 6, true)}  ` +
+              `${p(h.consumW != null ? Math.round(h.consumW) : null, 8, true)}  ` +
+              `${p(h.gridW   != null ? Math.round(h.gridW)   : null, 7, true)}  ` +
+              `${p(h.battW   != null ? Math.round(h.battW)   : null, 7, true)}  ` +
+              `${h.exception ?? ''}`
+            );
+          }
+        }
+
         const box = document.getElementById('planning-diagnose-box');
         if (box) box.textContent = lines.join('\n');
 
