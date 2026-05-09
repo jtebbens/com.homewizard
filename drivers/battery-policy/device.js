@@ -63,6 +63,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._liveState = {}; // in-memory store for rebuildable UI state (served via api.js)
     this._lastPvEstimateW = 0; // For EMA smoothing
     this._pvProductionW = null; // User-provided PV production via flow card
+    this._lastLoggedPvW = null; // Suppress repeat PV log lines when value unchanged
     this._pvProductionTimestamp = null; // When the PV data was last updated
     this._pvActualHourly = null; // Accumulator for chart: {date, hourly[], sums[], counts[]}
     this._pvState = false; // Track PV state with hysteresis
@@ -949,6 +950,14 @@ if (debug) this.log(
               this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources})`);
 
               if (priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
+                // When tomorrow's prices arrive for the first time today, refresh weather
+                // so pvKwhTomorrow in the terminal value uses an up-to-date PV forecast.
+                const todayDate = new Date().toDateString();
+                if (priceCount > 24 && this._tomorrowPricesWeatherRefreshedOn !== todayDate) {
+                  this._tomorrowPricesWeatherRefreshedOn = todayDate;
+                  this.log('📡 Tomorrow prices detected — refreshing weather for terminal value accuracy');
+                  await this._updateWeather().catch(e => this.error('Weather refresh on tomorrow prices failed:', e));
+                }
                 // Always recompute optimizer after price refresh — new data may include
                 // tomorrow's prices (96→192 slots) that change the optimal schedule.
                 this.optimizationEngine.updateSettings({});
@@ -1557,7 +1566,7 @@ if (debug) this.log(
         // the beginning of the day even when the battery isn't responding yet.
         try {
           const modeHistory = this.homey.settings.get('policy_mode_history') || [];
-          const currentPrice = result.tariff?.currentPrice ?? null;
+          const currentPrice = result.debug?.price ?? inputs.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
           const nowTs   = new Date();
           const bucket  = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
@@ -1570,7 +1579,14 @@ if (debug) this.log(
             price:  currentPrice,
             soc:    currentSoc,
             maxChargePrice: this.getSetting('max_charge_price'),
-            minDischargePrice: this.getSetting('min_discharge_price')
+            minDischargePrice: this.getSetting('min_discharge_price'),
+            pvW:     result.debug?.pvEstimate      ?? null,
+            consumW: result.debug?.houseConsumption ?? null,
+            gridW:   this.getCapabilityValue('grid_power_mirror') ?? null,
+            battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
+            policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
+            dpAction: typeof dpAction === 'string' ? dpAction : (dpAction?.action ?? null),
+            exception: result.debug?.exception ?? null,
           };
           if (existing >= 0) {
             // Update existing bucket — keep best SoC (non-null wins)
@@ -2700,7 +2716,8 @@ if (debug) this.log(
         if (this._pvProductionW === 0 && this._lastPvEstimateW > 0) {
           this._lastPvEstimateW = 0;
         }
-        if (settings.enable_logging) {
+        if (settings.enable_logging && this._pvProductionW !== this._lastLoggedPvW) {
+          this._lastLoggedPvW = this._pvProductionW;
           this.log(`PV from flow card: ${this._pvProductionW}W (age: ${Math.round(age/1000)}s)`);
         }
         return this._pvProductionW;
