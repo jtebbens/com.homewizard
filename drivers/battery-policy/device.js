@@ -2908,7 +2908,8 @@ if (debug) this.log(
     const p1 = {
       resolved_gridPower: batteryState.gridPower,
       battery_power: batteryState.groupPower,
-      pv_power_estimated: pvEstimateW
+      pv_power_estimated: pvEstimateW,
+      avg_consumption_w: Math.round(this.learningEngine.getPredictedConsumption(new Date()) ?? 0),
     };
 
     // ------------------------------------------------------
