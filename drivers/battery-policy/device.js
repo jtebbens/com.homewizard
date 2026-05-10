@@ -653,6 +653,33 @@ if (debug) this.log(
           await this.setCapabilityValue('grid_power_mirror', gridPower);
         }
 
+        // ── Reactive peak shaving trigger ─────────────────────────────────────
+        // Fire extra policy run when load exceeds peak_shaving_threshold within
+        // peak_hours window — reacts within 15s instead of waiting up to 15 min.
+        {
+          const psThreshold = this.getSetting('peak_shaving_threshold') ?? 0;
+          if (psThreshold > 0) {
+            const psHours       = this.getSetting('peak_hours') || '';
+            const [psStart, psEnd] = psHours.split('-').map(s => parseInt(s, 10));
+            const nowHourNL     = parseInt(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false }), 10);
+            const inPsWindow    = psHours && !isNaN(psStart) && !isNaN(psEnd)
+              ? (nowHourNL >= psStart && nowHourNL < psEnd)
+              : true;
+            if (inPsWindow) {
+              const psDischarge = batteryPower < 0 ? Math.abs(batteryPower) : 0;
+              const psLoad      = Math.max(0, gridPower + psDischarge);
+              if (psLoad > psThreshold) {
+                const nowMs = Date.now();
+                if (!this._lastPeakTriggerTs || nowMs - this._lastPeakTriggerTs > 2 * 60 * 1000) {
+                  this._lastPeakTriggerTs = nowMs;
+                  this.log(`[PEAK] Load ${Math.round(psLoad)}W > ${psThreshold}W in peak window → reactive policy run`);
+                  this._runPolicyCheck().catch(e => this.error('[PEAK] reactive trigger:', e));
+                }
+              }
+            }
+          }
+        }
+
         // ------------------------------------------------------
         // 📊 LEARNING: Record consumption patterns
         // ------------------------------------------------------
@@ -1898,7 +1925,7 @@ if (debug) this.log(
         const sumA = preds.reduce((s, p) => s + p.actual,    0);
         const currentRatio = Math.min(2.5, Math.max(0.4, sumA / sumF));
         const ratioDelta = Math.abs(currentRatio - this._lastIntradayPvRatio);
-        if (ratioDelta > 0.25) {
+        if (ratioDelta > 0.15) {
           this.log(`[Reopt] PV ratio drift ${ratioDelta.toFixed(2)} (was ${this._lastIntradayPvRatio.toFixed(2)}, now ${currentRatio.toFixed(2)}) → forcing recompute`);
           return true;
         }
@@ -1958,10 +1985,13 @@ if (debug) this.log(
     const pvCapacityW = inputs.settings?.pv_capacity_w || 0;
     const pvPR        = inputs.settings?.pv_performance_ratio || 0.75;
     const yfs          = this.learningEngine?.getSolarYieldFactorsSmoothed();
+    const maxYfs       = this.learningEngine?.getSolarSlotMaxYieldFactors();
+    const maxRads      = this.learningEngine?.data?.solar_slot_max_radiation;
     const learnedSlots = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
 
     if (Array.isArray(inputs.weather?.hourlyForecast)) {
 
+      let clearSkyCeilingApplied = 0;
       pvForecast = inputs.weather.hourlyForecast
         .filter(h => typeof h.radiationWm2 === 'number')
         .map(h => {
@@ -1973,15 +2003,45 @@ if (debug) this.log(
           const s0 = d.getUTCHours() * 4;
           const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
           const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          const rawPvW = learnedSlots >= 10
+          let rawPvW = learnedSlots >= 10
             ? Math.round(h.radiationWm2 * yf)
             : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
+
+          // Clear-sky ceiling: EMA converges toward average, not peak — on clear days after
+          // cloudy periods yield factors are biased low. When current radiation is near the
+          // historical max for this slot, apply a floor based on the peak yield factor ever
+          // observed (×0.95 for degradation margin). Prevents systematic underprediction.
+          if (learnedSlots >= 10 && maxYfs && maxRads) {
+            const maxYf4 = [maxYfs[s0], maxYfs[s0+1], maxYfs[s0+2], maxYfs[s0+3]].filter(v => v > 0);
+            const maxRad4 = [maxRads[s0], maxRads[s0+1], maxRads[s0+2], maxRads[s0+3]].filter(v => v > 0);
+            if (maxYf4.length > 0 && maxRad4.length > 0) {
+              const avgMaxYf  = maxYf4.reduce((a, b) => a + b, 0) / maxYf4.length;
+              const avgMaxRad = maxRad4.reduce((a, b) => a + b, 0) / maxRad4.length;
+              if (h.radiationWm2 >= avgMaxRad * 0.90) {
+                const clearSkyFloor = Math.round(h.radiationWm2 * avgMaxYf * 0.95);
+                if (clearSkyFloor > rawPvW) { rawPvW = clearSkyFloor; clearSkyCeilingApplied++; }
+              }
+            }
+          }
+
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
           const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
           return { timestamp: d.toISOString(), pvPowerW: pvW };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
+      if (clearSkyCeilingApplied > 0) {
+        this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
+      }
+
+      // Snapshot today's forecast once at first weather fetch of the day (NL timezone).
+      // Accuracy tracking compares against this snapshot, not the rolling forecast,
+      // to avoid degrading the score when OM updates its forecast mid-day.
+      const _pvSnapDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      if (this._pvDayStartForecastDate !== _pvSnapDate) {
+        this._pvDayStartForecast     = pvForecast;
+        this._pvDayStartForecastDate = _pvSnapDate;
+      }
 
     }
 
@@ -2102,7 +2162,9 @@ if (debug) this.log(
         && (_currentPriceForPvAcc === null || _currentPriceForPvAcc >= 0)) {
       const ageMs = Date.now() - this._pvProductionTimestamp;
       if (ageMs < 20 * 60 * 1000) {
-        const predictedW = this.optimizationEngine._getPvForSlot(pvForecast, now.toISOString());
+        const predictedW = this._pvDayStartForecast
+          ? this.optimizationEngine._getPvForSlot(this._pvDayStartForecast, now.toISOString())
+          : 0;
         const actualW    = this._pvProductionW;
         if (predictedW > 50 && actualW > 50) {
           // Also pass per-model predictions for adaptive blend weight learning
@@ -2119,6 +2181,15 @@ if (debug) this.log(
             this.error('PV accuracy recording failed:', e)
           );
         }
+      }
+    }
+
+    // Daily PV level bias: correct systematic over/under-prediction learned across days.
+    if (pvForecast && this.learningEngine) {
+      const dailyBias = this.learningEngine.getDailyPvBiasFactor();
+      if (dailyBias !== 1.0) {
+        pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * dailyBias) }));
+        this.log(`[PV daily bias] factor=${dailyBias.toFixed(3)} applied`);
       }
     }
 
