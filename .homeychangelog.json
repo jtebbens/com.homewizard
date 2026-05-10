@@ -1420,5 +1420,8 @@
   },
   "3.15.63": {
     "en": "Diag planning extention to improve troubleshooting"
+  },
+  "3.15.64": {
+    "en": "Energysocket triggers on finished job on dishwasher,washingmschine. Watermeter leak detection (15l/min for 60min default). PV and planning tuning."
   }
 }

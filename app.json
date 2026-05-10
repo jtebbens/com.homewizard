@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.15.63",
+  "version": "3.15.64",
   "platforms": [
     "local"
   ],
@@ -648,6 +648,31 @@
               "nl": "Offline duur (seconden)"
             },
             "example": 120
+          }
+        ]
+      },
+      {
+        "id": "appliance_finished",
+        "title": {
+          "en": "Appliance finished",
+          "nl": "Apparaat klaar"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_socket"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "active_minutes",
+            "type": "number",
+            "title": {
+              "en": "Active duration (min)",
+              "nl": "Actieve duur (min)"
+            },
+            "example": 45
           }
         ]
       },
@@ -4325,7 +4350,8 @@
       ],
       "capabilities": [
         "meter_water",
-        "meter_water.daily"
+        "meter_water.daily",
+        "alarm_water"
       ],
       "capabilitiesOptions": {
         "meter_water.daily": {
@@ -4920,6 +4946,63 @@
                 "nl": "Cloud verbinding 1=actief 0=uit"
               },
               "value": 1
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Appliance detection",
+            "nl": "Apparaat detectie"
+          },
+          "children": [
+            {
+              "id": "appliance_detection_enabled",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable appliance detection",
+                "nl": "Apparaat detectie inschakelen"
+              },
+              "value": false
+            },
+            {
+              "id": "active_threshold_w",
+              "type": "number",
+              "label": {
+                "en": "Active threshold (W)",
+                "nl": "Actief-drempel (W)"
+              },
+              "value": 50,
+              "min": 1
+            },
+            {
+              "id": "standby_threshold_w",
+              "type": "number",
+              "label": {
+                "en": "Standby threshold (W)",
+                "nl": "Stand-by drempel (W)"
+              },
+              "value": 5,
+              "min": 0
+            },
+            {
+              "id": "min_active_minutes",
+              "type": "number",
+              "label": {
+                "en": "Min active duration (min)",
+                "nl": "Min actieve duur (min)"
+              },
+              "value": 5,
+              "min": 0
+            },
+            {
+              "id": "trigger_on_poweroff",
+              "type": "checkbox",
+              "label": {
+                "en": "Also trigger on power-off (0W)",
+                "nl": "Ook triggeren bij volledige uitschakeling (0W)"
+              },
+              "value": true
             }
           ]
         }
@@ -6279,6 +6362,7 @@
         "identify",
         "measure_water",
         "meter_water",
+        "alarm_water",
         "rssi"
       ],
       "energy": {
@@ -6356,6 +6440,41 @@
                 "nl": "Cloud verbinding 1=actief 0=uit"
               },
               "value": 1
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Leak detection",
+            "nl": "Lekdetectie"
+          },
+          "children": [
+            {
+              "id": "leak_flow_lpm",
+              "type": "number",
+              "label": {
+                "en": "Flow threshold (L/min)",
+                "nl": "Drempelwaarde (L/min)"
+              },
+              "hint": {
+                "en": "Continuous flow above this value triggers leak detection. Default: 15 L/min.",
+                "nl": "Aanhoudende doorstroom boven deze waarde activeert lekdetectie. Standaard: 15 L/min."
+              },
+              "value": 15
+            },
+            {
+              "id": "leak_duration_minutes",
+              "type": "number",
+              "label": {
+                "en": "Duration before alarm (minutes)",
+                "nl": "Duur voor alarm (minuten)"
+              },
+              "hint": {
+                "en": "How many minutes of continuous flow before triggering the alarm. Default: 60.",
+                "nl": "Hoeveel minuten aanhoudende doorstroom voor het alarm. Standaard: 60."
+              },
+              "value": 60
             }
           ]
         }
