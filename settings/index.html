@@ -160,6 +160,7 @@
     .planning-hour-mode  { font-size:36px; margin:10px 0; }
     .planning-hour-mode-text { font-size:11px; color: var(--muted); margin-bottom:8px; }
     .planning-hour-details   { font-size:11px; color: var(--dim); margin-top:8px; }
+    .planning-hour-reason    { font-size:10px; color: var(--dim); margin-top:4px; font-style:italic; opacity:0.8; }
 
     .planning-status-item  { text-align:center; }
     .planning-status-label { font-size:12px; color: var(--muted); margin-bottom:5px; }
@@ -583,22 +584,21 @@
   <div id="explain" class="tab-content">
     <h2>Battery Policy Explainability</h2>
     <div id="explain-summary" style="margin-bottom:15px;font-size:14px;"></div>
-    <!-- ⭐ ARBITRAGE PANEL -->
-    <div id="arbitrage-panel" style="
-      margin: 15px 0;
-      padding: 12px;
-      border-radius: 8px;
-      background: #1a1a1a;
-      border: 1px solid #2d2d2d;
-      font-size: 13px;
-      line-height: 1.4;
-    ">
-      <h3 style="margin-top:0;">⚡ Batterij Economie</h3>
-      <div>Gemiddelde kostprijs: <strong id="arb-avg">–</strong></div>
-      <div>Break-even prijs: <strong id="arb-be">–</strong></div>
-      <div>Huidige prijs: <strong id="arb-price">–</strong></div>
-      <div>Arbitrage: <strong id="arb-signal">–</strong></div>
-      <div>Batterijrendement: <strong id="arb-rte">–</strong></div>
+    <!-- ⭐ ECONOMICS PANEL -->
+    <div id="economics-panel" style="margin:15px 0;padding:14px;border-radius:8px;background:#1a1a1a;border:1px solid #2d2d2d;font-size:13px;line-height:1.6;">
+      <h3 style="margin-top:0;margin-bottom:10px;">⚡ Batterij Economie</h3>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
+        <div style="flex:1;min-width:100px;">
+          <div style="font-size:11px;color:#666;margin-bottom:2px;">Gisteren</div>
+          <div id="econ-yesterday" style="font-size:20px;font-weight:bold;">–</div>
+        </div>
+        <div style="flex:1;min-width:100px;">
+          <div style="font-size:11px;color:#666;margin-bottom:2px;">Afgelopen 7 dagen</div>
+          <div id="econ-week" style="font-size:20px;font-weight:bold;">–</div>
+        </div>
+      </div>
+      <div id="econ-status" style="margin-bottom:6px;">–</div>
+      <div id="econ-insight" style="font-size:12px;color:#A0A0A0;font-style:italic;margin-top:8px;border-top:1px solid #2d2d2d;padding-top:8px;">–</div>
     </div>
 
     <h3>Redenen</h3>
@@ -890,6 +890,29 @@
     /* ══════════════════════════════════════════════════════════
        15-MINUTE HELPERS
     ══════════════════════════════════════════════════════════ */
+    function formatReason(reason, lang) {
+      if (!reason) return '';
+      const nl = lang === 'nl';
+      if (reason === 'preserve:soc_full' || reason === 'trickle:soc_full')
+        return nl ? '🔋 Batterij vol' : '🔋 Battery full';
+      if (reason === 'preserve:hold')
+        return nl ? '⏳ Bewaren voor piekprijs' : '⏳ Holding for peak price';
+      if (reason.startsWith('trickle:pv_weak'))
+        return nl ? '🌤 Zwakke PV, overschot opslaan' : '🌤 Weak PV, storing surplus';
+      if (reason === 'dp:pv_export_wins')
+        return nl ? '📤 Exporteren loont meer dan opslaan' : '📤 Exporting beats storing';
+      if (reason === 'dp:pv_store_wins')
+        return nl ? '🔋 PV opslaan loont meer dan exporteren' : '🔋 Storing PV beats exporting';
+      if (reason.startsWith('dp:discharge')) {
+        const m = reason.match(/min\(([^)]+)\)/);
+        const minP = m ? ` (min €${parseFloat(m[1]).toFixed(2)})` : '';
+        return nl ? `⚡ Ontladen: prijs boven minimum${minP}` : `⚡ Discharging: above min price${minP}`;
+      }
+      if (reason.startsWith('dp:charge'))
+        return nl ? '🔌 Laden: gunstige prijs' : '🔌 Charging: favorable price';
+      return reason;
+    }
+
     function groupIntervalsByHour(intervals, socPlan = {}) {
       const hourly = [];
       for (let day = 0; day < 2; day++) {
@@ -933,6 +956,13 @@
               const vals = hourIntervals.map(i => i.sampleCount).filter(v => v != null);
               return vals.length ? Math.min(...vals) : null;
             })(),
+            dominantReason: (() => {
+              const reasons = hourIntervals.map(i => i.reason).filter(Boolean);
+              if (!reasons.length) return null;
+              const freq = {};
+              for (const r of reasons) freq[r] = (freq[r] || 0) + 1;
+              return Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
+            })(),
           });
         }
       }
@@ -957,10 +987,11 @@
       `;
 
       intervals.forEach(interval => {
-        const { minute, price, hwMode, soc, priceKnown } = interval;
+        const { minute, price, hwMode, soc, priceKnown, reason } = interval;
         const hwDef = HW_MODES[hwMode] || HW_MODES.standby;
         const priceDisplay = priceKnown ? `€${price.toFixed(3)}` : '?';
         const timeLabel = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        const reasonHtml = reason ? `<div style="grid-column:1/-1;font-size:11px;color:var(--dim);padding:0 4px 4px;font-style:italic;">${formatReason(reason, lang)}</div>` : '';
 
         modalHtml += `
           <div class="interval-detail-row">
@@ -969,6 +1000,7 @@
             <div class="interval-mode">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
             <div class="interval-price">${priceDisplay}</div>
             <div class="interval-soc">SoC: ${soc.toFixed(0)}%</div>
+            ${reasonHtml}
           </div>
         `;
       });
@@ -1531,35 +1563,132 @@
             (hwInfo ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:#A0A0A0;">Geïmplementeerd als ${hwBadge}${data.hwMode === 'zero_charge_only' && data.policyMode === 'preserve' ? ' — om eventuele zonne-energie op te vangen' : ''}</div>` : '') +
             `<div style="font-size:13px;color:#ffffff">${data.shortSummary || ''}</div>` +
             `<div style="font-size:12px;color:#A0A0A0;margin-top:6px">${data.summary || ''}</div>`;
-          const avg = data?.batteryCost?.avgCost ?? null;
-          const be = data?.batteryCost?.breakEven ?? null;
+          const avg   = data?.batteryCost?.avgCost ?? null;
+          const be    = data?.batteryCost?.breakEven ?? null;
           const price = data?.effectivePrice ?? null;
-          const rte = data?.batteryEfficiency ?? null;
+          if (be !== null) window.cachedBreakEven = be;
 
-          if (avg !== null) document.getElementById('arb-avg').innerText = `€${avg.toFixed(3)}`;
-          if (be !== null) document.getElementById('arb-be').innerText = `€${be.toFixed(3)}`;
-          if (price !== null) document.getElementById('arb-price').innerText = `€${price.toFixed(3)}`;
-          if (rte !== null) document.getElementById('arb-rte').innerText = `${(rte * 100).toFixed(0)}%`;
+          // Yesterday + week totals from cached daily profit
+          const profit = window.cachedDailyProfit || [];
+          const sorted = [...profit].sort((a, b) => b.date.localeCompare(a.date));
+          const yesterday = sorted[0] ?? null;
+          const weekNet   = sorted.slice(0, 7).reduce((s, d) => s + (d.net ?? 0), 0);
 
+          const elYest = document.getElementById('econ-yesterday');
+          if (yesterday) {
+            const c = yesterday.net >= 0 ? '#20F29B' : '#f87171';
+            elYest.innerHTML = `<span style="color:${c}">${yesterday.net >= 0 ? '+' : ''}€${yesterday.net.toFixed(2)}</span>`;
+          } else {
+            elYest.innerHTML = `<span style="color:#666">–</span>`;
+          }
+          const elWeek = document.getElementById('econ-week');
+          if (sorted.length > 0) {
+            const c = weekNet >= 0 ? '#20F29B' : '#f87171';
+            elWeek.innerHTML = `<span style="color:${c}">${weekNet >= 0 ? '+' : ''}€${weekNet.toFixed(2)}</span>`;
+          } else {
+            elWeek.innerHTML = `<span style="color:#666">–</span>`;
+          }
+
+          // Smart status: price vs break-even
+          const elStatus = document.getElementById('econ-status');
           if (price !== null && be !== null) {
             const diff = price - be;
             const actualMode = data?.recommendation ?? '';
-            const isDischargeMode = ['zero_discharge_only', 'discharge'].includes(actualMode);
-            const isChargeMode = ['to_full', 'zero_charge_only', 'charge'].includes(actualMode);
-            let signal;
+            const isDischarging = ['zero_discharge_only', 'discharge'].includes(actualMode);
+            const isCharging    = ['to_full', 'zero_charge_only', 'charge'].includes(actualMode);
+            let signal, color;
             if (diff > 0.01) {
-              signal = isDischargeMode
-                ? `Ontladen (+€${diff.toFixed(3)}/kWh)`
-                : `Prijs gunstig voor ontladen (+€${diff.toFixed(3)}/kWh) — nu geblokkeerd`;
+              color  = '#20F29B';
+              signal = isDischarging ? `✅ Ontladen loont (+€${diff.toFixed(3)}/kWh)` : `✅ Prijs gunstig voor ontladen (+€${diff.toFixed(3)}/kWh)`;
             } else if (diff < -0.01) {
-              signal = isChargeMode
-                ? `Laden (–€${Math.abs(diff).toFixed(3)}/kWh)`
-                : `Prijs gunstig voor laden (–€${Math.abs(diff).toFixed(3)}/kWh) — nu geblokkeerd`;
+              color  = '#5f6fff';
+              signal = isCharging ? `🔋 Laden gunstig (–€${Math.abs(diff).toFixed(3)}/kWh)` : `🔋 Prijs gunstig voor laden (–€${Math.abs(diff).toFixed(3)}/kWh)`;
             } else {
-              signal = 'Rond break-even';
+              color  = '#fdd835';
+              signal = `⚖️ Rond break-even`;
             }
-            document.getElementById('arb-signal').innerText = signal;
+            elStatus.innerHTML = `<span style="color:${color}">${signal}</span>`
+              + (avg ? ` <span style="font-size:11px;color:#555;">· kostprijs €${avg.toFixed(3)} · break-even €${be.toFixed(3)}</span>` : '');
+          } else {
+            elStatus.innerHTML = `<span style="color:#555">–</span>`;
           }
+
+          // Forward-looking insight from optimizer schedule
+          const elInsight = document.getElementById('econ-insight');
+          const schedule  = window.cachedOptimizerSchedule || [];
+          const now       = new Date();
+          const todayDate = now.getDate();
+          const tomorrowDate = new Date(now); tomorrowDate.setDate(todayDate + 1);
+          const futureSlots  = schedule.filter(s => new Date(s.timestamp) > now);
+          const todayFuture  = futureSlots.filter(s => new Date(s.timestamp).getDate() === todayDate);
+          const tomorrowSlots = futureSlots.filter(s => new Date(s.timestamp).getDate() === tomorrowDate.getDate());
+
+          const hasPvExportWins   = futureSlots.some(s => s.reason === 'dp:pv_export_wins');
+          const hasChargeToday    = todayFuture.some(s => ['to_full', 'zero_charge_only'].includes(s.hwMode));
+          const hasTomorrowCharge = tomorrowSlots.some(s => ['to_full', 'zero_charge_only'].includes(s.hwMode));
+          const hasTomorrowDisch  = tomorrowSlots.some(s => s.hwMode === 'zero_discharge_only');
+          const hasTrickle        = tomorrowSlots.some(s => s.hwMode === 'pv_trickle');
+
+          const currentSOC = window.cachedPolicyState?.batterySOC ?? null;
+          const fmt = (slots, key) => {
+            const s = slots.find(sl => sl[key]);
+            return s ? new Date(s.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : null;
+          };
+
+          // ── Vandaag ──
+          const todayChargeSlots = todayFuture.filter(s => ['to_full', 'zero_charge_only'].includes(s.hwMode));
+          const todayDischSlots  = todayFuture.filter(s => s.hwMode === 'zero_discharge_only');
+          const todayTrickle     = todayFuture.some(s => s.hwMode === 'pv_trickle');
+          const todayMaxSoc      = todayFuture.reduce((m, s) => Math.max(m, s.socProjected ?? 0), currentSOC ?? 0);
+
+          let todayLine = '';
+          if (todayChargeSlots.length) {
+            const t = new Date(todayChargeSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            todayLine += `🔌 Laden vanaf ${t}`;
+          } else if (hasPvExportWins) {
+            todayLine += `📤 Geen laden: PV exporteren loont meer dan opslaan`;
+          } else if (currentSOC !== null && currentSOC >= 95) {
+            todayLine += `🔋 Batterij vol (${Math.round(currentSOC)}%)`;
+          } else {
+            todayLine += `⏸ Geen laden gepland: prijs te hoog`;
+          }
+          if (todayDischSlots.length) {
+            const t = new Date(todayDischSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            const maxDischSoc = todayDischSlots[todayDischSlots.length - 1]?.socProjected ?? null;
+            todayLine += ` · ⚡ Ontladen vanaf ${t}${maxDischSoc != null ? ` → ${Math.round(maxDischSoc)}% SoC` : ''}`;
+          } else {
+            todayLine += ` · Geen ontladen gepland`;
+          }
+
+          // ── Morgen ──
+          let tomorrowLine = '';
+          const tmrChargeSlots = tomorrowSlots.filter(s => ['to_full', 'zero_charge_only'].includes(s.hwMode));
+          const tmrDischSlots  = tomorrowSlots.filter(s => s.hwMode === 'zero_discharge_only');
+          const tmrTrickle     = tomorrowSlots.some(s => s.hwMode === 'pv_trickle');
+          const tmrPvExport    = tomorrowSlots.some(s => s.reason === 'dp:pv_export_wins');
+          const tmrMaxSoc      = tomorrowSlots.reduce((m, s) => Math.max(m, s.socProjected ?? 0), 0);
+
+          if (tmrChargeSlots.length) {
+            const t = new Date(tmrChargeSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            tomorrowLine += `🔌 Laden vanaf ${t}`;
+          } else if (tmrPvExport) {
+            tomorrowLine += `📤 Geen laden: PV exporteren loont meer dan opslaan`;
+          } else if (tmrTrickle) {
+            tomorrowLine += `🌤 Alleen sprokkelen (PV-overschot)`;
+          } else {
+            tomorrowLine += `⏸ Geen laden gepland`;
+          }
+          if (tmrDischSlots.length) {
+            const t = new Date(tmrDischSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            const endSoc = tmrDischSlots[tmrDischSlots.length - 1]?.socProjected ?? null;
+            tomorrowLine += ` · ⚡ Ontladen vanaf ${t}${endSoc != null ? ` → ${Math.round(endSoc)}% SoC` : ''}`;
+          } else {
+            tomorrowLine += ` · Geen ontladen gepland`;
+          }
+
+          elInsight.innerHTML =
+            `<div style="margin-bottom:4px;"><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Vandaag</span> <span style="font-style:normal;">${todayLine}</span></div>` +
+            (tomorrowSlots.length ? `<div><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Morgen</span> <span style="font-style:normal;">${tomorrowLine}</span></div>` : '');
 
           const reasonsList = document.getElementById('explain-reasons');
           reasonsList.innerHTML = '';
@@ -1608,6 +1737,10 @@
 
           // Diagnostic snapshot is rendered inside renderBatteryPlanning (has access to policyState + deviceSettings)
         }
+
+        window.cachedDailyProfit      = settings['policy_daily_profit']      || [];
+        window.cachedOptimizerSchedule = settings['policy_optimizer_schedule'] || [];
+        window.cachedPolicyState       = settings['battery_policy_state']      || {};
 
         let explainRaw = settings['policy_explainability'];
         try { renderExplainability(typeof explainRaw === 'string' ? JSON.parse(explainRaw) : explainRaw); }
@@ -2200,6 +2333,7 @@
                 ? `<br><span style="font-size:10px;color:${minSampleCount === 0 ? '#f87171' : '#f0c040'};">${minSampleCount === 0 ? '🔴 geen verbruiksdata' : `🟡 ${minSampleCount} samples`}</span>`
                 : ''}
             </div>
+            ${hourGroup.dominantReason ? `<div class="planning-hour-reason">${formatReason(hourGroup.dominantReason, lang)}</div>` : ''}
             <div class="expand-indicator">+</div>
           </div>`;
       }).join('');
@@ -2342,7 +2476,7 @@
           );
           lines.push('─'.repeat(105));
 
-          for (const iv of futureSlots) {
+          const pushSlotRow = (iv, repeatCount) => {
             const timeStr  = iv.timestamp
               ? iv.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })
               : '??:??';
@@ -2356,6 +2490,7 @@
             const socStr   = iv.soc != null ? `${Math.round(iv.soc)}%` : '—';
             const curMark  = iv.isCurrent ? '◀' : ' ';
             const reason   = iv.reason ?? '';
+            const countStr = repeatCount > 1 ? `  [×${repeatCount}]` : '';
 
             lines.push(
               `${dayMark}${timeStr.padEnd(5)}${curMark} ` +
@@ -2365,9 +2500,32 @@
               `${pad(pvW  != null ? pvW  : '—',  6, true)}  ` +
               `${pad(consW != null ? consW : '—', 8, true)}  ` +
               `${pad(nettoW != null ? nettoW : '—', 8, true)}  ` +
-              `${socStr.padEnd(5)}  ${reason}`
+              `${socStr.padEnd(5)}  ${reason}${countStr}`
             );
+          };
+
+          let groupIv = null, groupCount = 0;
+          const slotKey = iv => {
+            const pvW   = iv.pvW          != null ? Math.round(iv.pvW)          : null;
+            const consW = iv.consumptionW  != null ? Math.round(iv.consumptionW) : null;
+            return [iv.policyMode, iv.hwMode, pvW, consW,
+                    iv.soc != null ? Math.round(iv.soc) : null,
+                    iv.reason, iv.priceKnown ? iv.price.toFixed(3) : '?',
+                    iv.day].join('|');
+          };
+
+          for (const iv of futureSlots) {
+            if (iv.isCurrent) {
+              if (groupIv) { pushSlotRow(groupIv, groupCount); groupIv = null; groupCount = 0; }
+              pushSlotRow(iv, 1);
+            } else if (groupIv && slotKey(iv) === slotKey(groupIv)) {
+              groupCount++;
+            } else {
+              if (groupIv) pushSlotRow(groupIv, groupCount);
+              groupIv = iv; groupCount = 1;
+            }
           }
+          if (groupIv) pushSlotRow(groupIv, groupCount);
         }
 
         // Event history — last 8h of policy_mode_history entries with extended fields

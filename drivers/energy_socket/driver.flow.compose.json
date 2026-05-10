@@ -1,0 +1,23 @@
+{
+  "triggers": [
+    {
+      "id": "appliance_finished",
+      "title": {
+        "en": "Appliance finished",
+        "nl": "Apparaat klaar"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "active_minutes",
+          "type": "number",
+          "title": {
+            "en": "Active duration (min)",
+            "nl": "Actieve duur (min)"
+          },
+          "example": 45
+        }
+      ]
+    }
+  ]
+}

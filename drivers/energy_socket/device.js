@@ -184,6 +184,11 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       await this._putState({ switch_lock: value });
     });
 
+    this._applianceState = 'idle';
+    this._applianceActiveStart = 0;
+    this._applianceFinishedAt = 0;
+    this._flowTriggerApplianceFinished = this.homey.flow.getDeviceTriggerCard('appliance_finished');
+
     _memSock(`onInit-done (device ${safeIndex + 1}/${allDevices.length})`);
   }
 
@@ -544,6 +549,8 @@ _flushFetchStats() {
     const offset = Number(this.getSetting('offset_socket')) || 0;
     const watt = data.active_power_w + offset;
 
+    this._updateApplianceState(watt);
+
     const tasks = [];
     const cap = (name, value) => {
       if (value === undefined || value === null) return;
@@ -620,6 +627,58 @@ _flushFetchStats() {
   }
 }
 
+
+  _updateApplianceState(watt) {
+    const settings = this.getSettings();
+    if (!settings.appliance_detection_enabled) return;
+    const activeThreshold  = Number(settings.active_threshold_w)  || 50;
+    const standbyThreshold = Number(settings.standby_threshold_w) || 5;
+    const minActiveMinutes = Number(settings.min_active_minutes)   || 5;
+    const triggerOnPowerOff = settings.trigger_on_poweroff !== false;
+
+    const now = Date.now();
+    const isActive   = watt >= activeThreshold;
+    const isStandby  = watt > 0 && watt < standbyThreshold;
+    const isPowerOff = watt <= 0;
+
+    if (this._applianceState === 'idle') {
+      if (isActive) {
+        this._applianceState = 'active';
+        this._applianceActiveStart = now;
+        this._debugLog(`Appliance active (${watt}W >= ${activeThreshold}W)`);
+      }
+    } else if (this._applianceState === 'active') {
+      if (isActive) return;
+      const activeMinutes = Math.round((now - this._applianceActiveStart) / 60000);
+      const longEnough = activeMinutes >= minActiveMinutes;
+
+      if ((isStandby || (isPowerOff && triggerOnPowerOff)) && longEnough) {
+        this._applianceState = 'finished';
+        this._applianceFinishedAt = now;
+        this._debugLog(`Appliance finished after ${activeMinutes}min (${watt}W)`);
+        this._triggerApplianceFinished(activeMinutes);
+      } else if ((isStandby || isPowerOff) && !longEnough) {
+        this._applianceState = 'idle';
+        this._debugLog(`Appliance reset — too short (${activeMinutes}min < ${minActiveMinutes}min)`);
+      }
+      // middlezone (standby < watt < active): blijft 'active'
+    } else if (this._applianceState === 'finished') {
+      if (isActive) {
+        this._applianceState = 'active';
+        this._applianceActiveStart = now;
+        this._debugLog(`Appliance re-armed (${watt}W)`);
+      } else if (now - this._applianceFinishedAt > 60000) {
+        this._applianceState = 'idle';
+      }
+    }
+  }
+
+  _triggerApplianceFinished(activeMinutes) {
+    if (!this._flowTriggerApplianceFinished) return;
+    this._flowTriggerApplianceFinished
+      .trigger(this, { active_minutes: activeMinutes })
+      .catch(this.error);
+  }
 
   /**
    * Settings handler

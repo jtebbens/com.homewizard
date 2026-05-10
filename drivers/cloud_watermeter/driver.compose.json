@@ -8,7 +8,8 @@
   "platforms": [ "local"],
   "capabilities": [
     "meter_water",
-    "meter_water.daily"
+    "meter_water.daily",
+    "alarm_water"
   ],
   "capabilitiesOptions": {
     "meter_water.daily": {
@@ -95,6 +96,30 @@
             "en": "How often to fetch data from HomeWizard Cloud (default: 900s / 15 min)",
             "nl": "Hoe vaak data ophalen van HomeWizard Cloud (standaard: 900s / 15 min)"
           }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Leak detection",
+        "nl": "Lekdetectie"
+      },
+      "children": [
+        {
+          "id": "leak_multiplier",
+          "type": "number",
+          "label": {
+            "en": "Anomaly multiplier",
+            "nl": "Afwijkingsfactor"
+          },
+          "hint": {
+            "en": "Alarm when water use in a 6-hour block exceeds this multiple of the learned average. Default: 5× (e.g. normal 50L → alarm above 250L). Requires ~4 weeks of data per time block.",
+            "nl": "Alarm als waterverbruik in een 6-uursblok deze veelvoud van het geleerde gemiddelde overschrijdt. Standaard: 5× (bv. normaal 50L → alarm boven 250L). Vereist ~4 weken data per tijdblok."
+          },
+          "value": 5,
+          "min": 2,
+          "max": 20
         }
       ]
     }
