@@ -40,16 +40,16 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
       await this.setStoreValue('last_date', new Date().toDateString());
     }
 
-    // Add meter_water.daily capability if it doesn't exist
-    // Safe add: guard against race / 409 errors
-    if (!this.hasCapability('meter_water.daily')) {
-      try {
-        await this.addCapability('meter_water.daily');
-      } catch (err) {
-        if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
-          this.log('Capability already exists: meter_water.daily — ignoring');
-        } else {
-          throw err;
+    for (const cap of ['meter_water.daily', 'alarm_water']) {
+      if (!this.hasCapability(cap)) {
+        try {
+          await this.addCapability(cap);
+        } catch (err) {
+          if (err && (err.code === 409 || err.statusCode === 409 || (err.message && err.message.includes('capability_already_exists')))) {
+            this.log(`Capability already exists: ${cap} — ignoring`);
+          } else {
+            throw err;
+          }
         }
       }
     }
@@ -317,11 +317,106 @@ async processWaterData(data) {
     const cumulativeWater = this.getStoreValue('cumulative_water') || 0;
     const manualOffset = parseFloat(this.getSetting('manual_offset')) || 0;
     const totalWater = cumulativeWater + dailyTotalM3 + manualOffset;
-    
+
     await this.setCapabilityValue('meter_water', totalWater);
     if (debug) this.log(`Cumulative water meter updated: ${totalWater.toFixed(3)} m³ (cumulative: ${cumulativeWater.toFixed(3)} m³, daily: ${dailyTotalM3.toFixed(3)} m³, offset: ${manualOffset.toFixed(3)} m³)`);
   }
+
+  // --- Leak detection (pattern-based) ---
+  await this._updateLeakPattern(data.values);
 }
+
+  /**
+   * Pattern-based leak detection.
+   *
+   * Day split into 4 blocks of 6h. 28 EMA slots (7 days × 4 blocks).
+   * A completed block is committed to EMA once, 30 min after block end.
+   * Alarm fires when block usage > ema × multiplier (min 4 readings).
+   */
+  async _updateLeakPattern(values) {
+    if (!this.hasCapability('alarm_water')) return;
+
+    const SLOTS_PER_BLOCK = 24; // 6h / 15min
+    const ALPHA = 0.2;
+    const MIN_COUNT = 4;
+    const BLOCK_BUFFER_MIN = 30;
+
+    // Sum liters per 6h block from today's 15-min slots
+    const blockTotals = [0, 0, 0, 0];
+    values.forEach((d, i) => {
+      if (d.water == null) return;
+      const b = Math.floor(i / SLOTS_PER_BLOCK);
+      if (b < 4) blockTotals[b] += d.water;
+    });
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const hourFrac = now.getHours() + now.getMinutes() / 60;
+    const currentBlock = Math.floor(hourFrac / 6);
+    const minutesPastBlockStart = (hourFrac - currentBlock * 6) * 60;
+
+    const pattern = this.getStoreValue('water_pattern') || {};
+    const committed = this.getStoreValue('water_pattern_committed') || [];
+    const today = now.toDateString();
+
+    let leakDetected = false;
+    const multiplier = this.getSetting('leak_multiplier') ?? 5;
+
+    for (let b = 0; b < 4; b++) {
+      const slotKey = `${dayOfWeek}-${b}`;
+      const commitKey = `${today}-${b}`;
+
+      const isCompleted = b < currentBlock ||
+        (b === currentBlock - 1 && minutesPastBlockStart >= BLOCK_BUFFER_MIN);
+
+      if (!isCompleted) {
+        // Current incomplete block: check anomaly only, don't commit
+        if (b === currentBlock) {
+          const entry = pattern[slotKey];
+          if (entry && entry.count >= MIN_COUNT && entry.ema > 0) {
+            if (blockTotals[b] > entry.ema * multiplier) {
+              leakDetected = true;
+              if (debug) this.log(`⚠️ Leak (current block ${b}): ${blockTotals[b].toFixed(0)}L > ${(entry.ema * multiplier).toFixed(0)}L (ema=${entry.ema.toFixed(0)}L×${multiplier})`);
+            }
+          }
+        }
+        continue;
+      }
+
+      if (committed.includes(commitKey)) continue;
+
+      // Check anomaly before updating EMA
+      const entry = pattern[slotKey] || { ema: null, count: 0 };
+      if (entry.count >= MIN_COUNT && entry.ema > 0) {
+        if (blockTotals[b] > entry.ema * multiplier) {
+          leakDetected = true;
+          this.log(`⚠️ Leak (block ${b}, day ${dayOfWeek}): ${blockTotals[b].toFixed(0)}L > ${(entry.ema * multiplier).toFixed(0)}L (ema=${entry.ema.toFixed(0)}L×${multiplier})`);
+        }
+      }
+
+      // Update EMA
+      entry.ema = entry.ema === null ? blockTotals[b] : ALPHA * blockTotals[b] + (1 - ALPHA) * entry.ema;
+      entry.count++;
+      pattern[slotKey] = entry;
+
+      // Mark as committed (keep last 28 entries)
+      committed.push(commitKey);
+      if (committed.length > 28) committed.splice(0, committed.length - 28);
+
+      if (debug) this.log(`Pattern updated slot ${slotKey}: ema=${entry.ema.toFixed(0)}L count=${entry.count}`);
+    }
+
+    await this.setStoreValue('water_pattern', pattern);
+    await this.setStoreValue('water_pattern_committed', committed);
+
+    const currentAlarm = this.getCapabilityValue('alarm_water');
+    if (leakDetected && !currentAlarm) {
+      await this.setCapabilityValue('alarm_water', true);
+    } else if (!leakDetected && currentAlarm) {
+      this.log('✅ Leak alarm cleared');
+      await this.setCapabilityValue('alarm_water', false);
+    }
+  }
 
   /**
    * Handle settings changes
@@ -335,9 +430,9 @@ async processWaterData(data) {
 
     if (changedKeys.includes('manual_offset')) {
       this.log(`Manual offset changed to ${newSettings.manual_offset} m³`);
-      // Trigger an update to reflect the new offset
       await this.fetchWaterData();
     }
+
   }
 
   /**

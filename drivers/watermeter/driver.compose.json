@@ -15,6 +15,7 @@
     "identify",
     "measure_water",
     "meter_water",
+    "alarm_water",
     "rssi"
   ],
   "energy": {
@@ -85,6 +86,41 @@
                       "nl": "Cloud verbinding 1=actief 0=uit"
         },
           "value": 1
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Leak detection",
+        "nl": "Lekdetectie"
+      },
+      "children": [
+        {
+          "id": "leak_flow_lpm",
+          "type": "number",
+          "label": {
+            "en": "Flow threshold (L/min)",
+            "nl": "Drempelwaarde (L/min)"
+          },
+          "hint": {
+            "en": "Continuous flow above this value triggers leak detection. Default: 15 L/min.",
+            "nl": "Aanhoudende doorstroom boven deze waarde activeert lekdetectie. Standaard: 15 L/min."
+          },
+          "value": 15
+        },
+        {
+          "id": "leak_duration_minutes",
+          "type": "number",
+          "label": {
+            "en": "Duration before alarm (minutes)",
+            "nl": "Duur voor alarm (minuten)"
+          },
+          "hint": {
+            "en": "How many minutes of continuous flow before triggering the alarm. Default: 60.",
+            "nl": "Hoeveel minuten aanhoudende doorstroom voor het alarm. Standaard: 60."
+          },
+          "value": 60
         }
       ]
     }

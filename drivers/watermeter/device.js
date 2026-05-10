@@ -58,6 +58,16 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       await this.setSettings({ offset_water: 0 });
     }
 
+    if (settings.leak_flow_lpm == null) {
+      await this.setSettings({ leak_flow_lpm: 15 });
+    }
+
+    if (settings.leak_duration_minutes == null) {
+      await this.setSettings({ leak_duration_minutes: 60 });
+    }
+
+    this._leakFlowStart = null;
+
     const interval = Math.max(settings.offset_polling, 2);
     const offset = Math.floor(Math.random() * interval * 1000);
 
@@ -76,6 +86,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
       'measure_water',
       'meter_water',
       'meter_water.daily',
+      'alarm_water',
       'identify',
       'rssi'
     ];
@@ -93,6 +104,7 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
 
   onUninit() {
     this.__deleted = true;
+    this._leakFlowStart = null;
 
     if (this._startupPollTimeout) {
       clearTimeout(this._startupPollTimeout);
@@ -240,6 +252,27 @@ _flushDebugLogs() {
       const dailyUsage = Math.max(0, totalM3 - dailyStart);
 
       await updateCapability(this, 'meter_water.daily', dailyUsage);
+
+      // --- Leak detection ---
+      const leakFlowThreshold = settings.leak_flow_lpm ?? 15;
+      const leakDurationMs = (settings.leak_duration_minutes ?? 60) * 60 * 1000;
+
+      if (data.active_liter_lpm >= leakFlowThreshold) {
+        if (this._leakFlowStart === null) {
+          this._leakFlowStart = Date.now();
+        } else if (Date.now() - this._leakFlowStart >= leakDurationMs) {
+          if (!this.getCapabilityValue('alarm_water')) {
+            this._debugLog(`⚠️ Leak alarm: ${data.active_liter_lpm} L/min for ${Math.round((Date.now() - this._leakFlowStart) / 60000)} min`);
+            await updateCapability(this, 'alarm_water', true);
+          }
+        }
+      } else {
+        this._leakFlowStart = null;
+        if (this.getCapabilityValue('alarm_water')) {
+          this._debugLog('✅ Leak alarm cleared: flow stopped');
+          await updateCapability(this, 'alarm_water', false);
+        }
+      }
 
       await this.setAvailable();
 

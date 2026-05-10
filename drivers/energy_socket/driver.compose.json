@@ -112,6 +112,63 @@
           "value": 1
         }
       ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Appliance detection",
+        "nl": "Apparaat detectie"
+      },
+      "children": [
+        {
+          "id": "appliance_detection_enabled",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable appliance detection",
+            "nl": "Apparaat detectie inschakelen"
+          },
+          "value": false
+        },
+        {
+          "id": "active_threshold_w",
+          "type": "number",
+          "label": {
+            "en": "Active threshold (W)",
+            "nl": "Actief-drempel (W)"
+          },
+          "value": 50,
+          "min": 1
+        },
+        {
+          "id": "standby_threshold_w",
+          "type": "number",
+          "label": {
+            "en": "Standby threshold (W)",
+            "nl": "Stand-by drempel (W)"
+          },
+          "value": 5,
+          "min": 0
+        },
+        {
+          "id": "min_active_minutes",
+          "type": "number",
+          "label": {
+            "en": "Min active duration (min)",
+            "nl": "Min actieve duur (min)"
+          },
+          "value": 5,
+          "min": 0
+        },
+        {
+          "id": "trigger_on_poweroff",
+          "type": "checkbox",
+          "label": {
+            "en": "Also trigger on power-off (0W)",
+            "nl": "Ook triggeren bij volledige uitschakeling (0W)"
+          },
+          "value": true
+        }
+      ]
     }
   ],
   "pair": [
