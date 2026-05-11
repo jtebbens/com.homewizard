@@ -698,7 +698,9 @@ if (debug) this.log(
         // still discharging, making consumption appear 0W and corrupting the learned EMA.
         const currentHwMode = this.p1Device?.getCapabilityValue('battery_group_charge_mode') ?? '';
         const inDischargeMode = currentHwMode.includes('discharge');
-        const batteryPowerLag = inDischargeMode && Math.abs(batteryPower) < 10 && houseConsumptionW < 50;
+        // Skip stale 0W readings: discharge mode + battery≈0W + either consumption<50W or grid≈0W (nul-op-de-meter with P1 lag)
+        const batteryPowerLag = inDischargeMode && Math.abs(batteryPower) < 10
+          && (houseConsumptionW < 50 || Math.abs(gridPower) < 30);
         if (houseConsumptionW >= 0 && !batteryPowerLag) {
           await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
             this.error('Learning consumption recording failed:', err)
@@ -1602,8 +1604,11 @@ if (debug) this.log(
           const currentPrice = result.debug?.price ?? inputs.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
           const battW        = inputs.p1?.battery_power ?? this._lastBatteryTargetW ?? null;
+          const gridW        = inputs.p1?.resolved_gridPower ?? 0;
           const socDropped   = this._lastHistorySoc != null && currentSoc != null && currentSoc < this._lastHistorySoc - 1;
           const sensorLag    = socDropped && battW !== null && Math.abs(battW) < 10;
+          // Immediate stale detection: discharge mode + battery=0W + grid=0W = P1 lag (nul-op-de-meter but battery unreported)
+          const zeroOnMeterLag = inDischargeMode && Math.abs(battW ?? 0) < 10 && Math.abs(gridW) < 30;
           const p1Available  = this.p1Device?.getAvailable() !== false;
           this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
@@ -1624,7 +1629,7 @@ if (debug) this.log(
             battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
             policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
             dpAction: typeof dpAction === 'string' ? dpAction : (dpAction?.action ?? null),
-            exception: !p1Available ? 'p1_unavailable' : sensorLag ? 'battery_sensor_lag' : (result.debug?.exception ?? null),
+            exception: !p1Available ? 'p1_unavailable' : (sensorLag || zeroOnMeterLag) ? 'battery_sensor_lag' : (result.debug?.exception ?? null),
           };
           if (existing >= 0) {
             // Update existing bucket — keep best SoC (non-null wins)
@@ -2418,8 +2423,11 @@ if (debug) this.log(
     if (pvForecast && consumptionWPerSlot) {
       const pvIdx = this.optimizationEngine._buildPvIndex(pvForecast);
       const slotH = slotMs / 3_600_000;
+      const _planSlots = this.optimizationEngine._schedule?.slots ?? [];
       let netPvKwh = 0;
       for (let h = 0; h < prices.length; h++) {
+        const slotAction = _planSlots[h]?.action;
+        if (slotAction !== 'preserve' && slotAction !== 'trickle' && slotAction !== 'charge') continue;
         const pvW  = this.optimizationEngine._getPvForSlot(pvIdx, new Date(prices[h].timestamp).getTime());
         const consW = consumptionWPerSlot[h] ?? 0;
         netPvKwh += Math.max(0, pvW - consW) * slotH / 1000;
@@ -2430,7 +2438,6 @@ if (debug) this.log(
         ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
         : 1;
       this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
-      const _planSlots = this.optimizationEngine._schedule?.slots ?? [];
       const chargeSlots = _planSlots.filter(s => s.action === 'charge').length;
       this._setLive('pv_surplus_forecast', {
         netPvKwh:      Math.round(netPvKwh * 100) / 100,
