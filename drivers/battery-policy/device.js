@@ -693,7 +693,13 @@ if (debug) this.log(
           sunScore: this.getCapabilityValue('sun_score') ?? 0,
         });
         const houseConsumptionW = gridPower - batteryPower + pvW;
-        if (houseConsumptionW >= 0) {
+        // Skip suspiciously-low readings caused by battery_power sensor lag:
+        // when in discharge mode, battery_power can read 0W for 1–2 poll cycles while
+        // still discharging, making consumption appear 0W and corrupting the learned EMA.
+        const currentHwMode = this.p1Device?.getCapabilityValue('battery_group_charge_mode') ?? '';
+        const inDischargeMode = currentHwMode.includes('discharge');
+        const batteryPowerLag = inDischargeMode && Math.abs(batteryPower) < 10 && houseConsumptionW < 50;
+        if (houseConsumptionW >= 0 && !batteryPowerLag) {
           await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
             this.error('Learning consumption recording failed:', err)
           );
@@ -1595,6 +1601,11 @@ if (debug) this.log(
           const modeHistory = this.homey.settings.get('policy_mode_history') || [];
           const currentPrice = result.debug?.price ?? inputs.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
+          const battW        = inputs.p1?.battery_power ?? this._lastBatteryTargetW ?? null;
+          const socDropped   = this._lastHistorySoc != null && currentSoc != null && currentSoc < this._lastHistorySoc - 1;
+          const sensorLag    = socDropped && battW !== null && Math.abs(battW) < 10;
+          const p1Available  = this.p1Device?.getAvailable() !== false;
+          this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
           const bucket  = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
           const existing = modeHistory.findIndex(
@@ -1613,7 +1624,7 @@ if (debug) this.log(
             battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
             policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
             dpAction: typeof dpAction === 'string' ? dpAction : (dpAction?.action ?? null),
-            exception: result.debug?.exception ?? null,
+            exception: !p1Available ? 'p1_unavailable' : sensorLag ? 'battery_sensor_lag' : (result.debug?.exception ?? null),
           };
           if (existing >= 0) {
             // Update existing bucket — keep best SoC (non-null wins)
@@ -2185,11 +2196,16 @@ if (debug) this.log(
     }
 
     // Daily PV level bias: correct systematic over/under-prediction learned across days.
+    // Pass today's avg cloudcover so the clear-sky EMA is used on sunny days.
     if (pvForecast && this.learningEngine) {
-      const dailyBias = this.learningEngine.getDailyPvBiasFactor();
+      const hf = inputs.weather?.hourlyForecast;
+      const cloudVals = Array.isArray(hf) ? hf.map(h => h.cloudCover).filter(v => typeof v === 'number') : [];
+      const todayAvgCloud = cloudVals.length > 0 ? cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length : null;
+      const dailyBias = this.learningEngine.getDailyPvBiasFactor(todayAvgCloud);
       if (dailyBias !== 1.0) {
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * dailyBias) }));
-        this.log(`[PV daily bias] factor=${dailyBias.toFixed(3)} applied`);
+        const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
+        this.log(`[PV daily bias] factor=${dailyBias.toFixed(3)} applied${cloudLabel}`);
       }
     }
 
