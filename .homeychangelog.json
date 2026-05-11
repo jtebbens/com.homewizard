@@ -1423,5 +1423,8 @@
   },
   "3.15.64": {
     "en": "Energysocket triggers on finished job on dishwasher,washingmschine. Watermeter leak detection (15l/min for 60min default). PV and planning tuning."
+  },
+  "3.15.65": {
+    "en": "More tuning on planning, PV forecast, delay, export now more profit then charging."
   }
 }
