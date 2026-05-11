@@ -1608,7 +1608,9 @@ if (debug) this.log(
           const socDropped   = this._lastHistorySoc != null && currentSoc != null && currentSoc < this._lastHistorySoc - 1;
           const sensorLag    = socDropped && battW !== null && Math.abs(battW) < 10;
           // Immediate stale detection: discharge mode + battery=0W + grid=0W = P1 lag (nul-op-de-meter but battery unreported)
-          const zeroOnMeterLag = inDischargeMode && Math.abs(battW ?? 0) < 10 && Math.abs(gridW) < 30;
+          const _hwModeNow     = this.p1Device?.getCapabilityValue('battery_group_charge_mode') ?? '';
+          const _inDischarge   = _hwModeNow.includes('discharge');
+          const zeroOnMeterLag = _inDischarge && Math.abs(battW ?? 0) < 10 && Math.abs(gridW) < 30;
           const p1Available  = this.p1Device?.getAvailable() !== false;
           this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
