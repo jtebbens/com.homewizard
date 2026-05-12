@@ -6,10 +6,20 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 10px;
       background: #f5f5f5;
     }
     
@@ -31,23 +41,30 @@
     .planning-container {
       background: white;
       border-radius: 12px;
-      padding: 20px;
+      padding: 14px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       margin-bottom: 20px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     
     .status-bar {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-bottom: 30px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
       padding: 15px;
       background: #f8f8f8;
       border-radius: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     
     .status-item {
       text-align: center;
+      min-width: 0;
     }
     
     .status-label {
@@ -57,15 +74,19 @@
     }
     
     .status-value {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: bold;
       color: #333;
+      overflow-wrap: anywhere;
     }
     
     .planning-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     
     .hour-card {
@@ -75,6 +96,8 @@
       padding: 12px;
       text-align: center;
       transition: all 0.2s;
+      min-width: 0;
+      overflow: hidden;
     }
     
     .hour-card:hover {
@@ -97,35 +120,37 @@
     }
     
     .hour-time {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       color: #333;
     }
     
     .hour-price {
-      font-size: 14px;
-      margin-bottom: 8px;
+      font-size: 13px;
+      margin-bottom: 6px;
       color: #666;
       font-weight: 600;
     }
     
     .hour-mode {
-      font-size: 36px;
-      margin: 10px 0;
+      font-size: 30px;
+      margin: 6px 0;
     }
     
     .hour-mode-text {
-      font-size: 11px;
+      font-size: 10px;
       color: #666;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      line-height: 1.25;
     }
     
     .hour-details {
-      font-size: 11px;
+      font-size: 10px;
       color: #999;
-      margin-top: 8px;
-      line-height: 1.4;
+      margin-top: 6px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
     
     .legend {
@@ -144,8 +169,8 @@
     
     .legend-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
     
     .legend-item {
@@ -155,6 +180,7 @@
       padding: 8px;
       background: #f8f8f8;
       border-radius: 6px;
+      min-width: 0;
     }
     
     .legend-icon {
@@ -164,8 +190,9 @@
     }
     
     .legend-text {
-      font-size: 13px;
+      font-size: 12px;
       color: #333;
+      overflow-wrap: anywhere;
     }
     
     .loading {
@@ -175,17 +202,97 @@
     }
     
     @media (max-width: 600px) {
+      body {
+        padding: 4px;
+      }
+
+      .planning-container,
+      .legend {
+        padding: 8px;
+      }
+
+      .status-bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .status-label {
+        font-size: 10px;
+      }
+
+      .status-value {
+        font-size: 15px;
+      }
+
       .planning-grid {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        gap: 8px;
+        grid-template-columns: repeat(2, calc((100vw - 24px) / 2));
+        gap: 6px;
+        justify-content: center;
       }
       
       .hour-card {
-        padding: 8px;
+        padding: 7px 6px;
+      }
+
+      .hour-time {
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .hour-price {
+        font-size: 12px;
+        margin-bottom: 4px;
       }
       
       .hour-mode {
-        font-size: 28px;
+        font-size: 24px;
+        margin: 4px 0;
+      }
+
+      .hour-mode-text,
+      .hour-details {
+        font-size: 9px;
+      }
+
+      .legend-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+
+    @media (min-width: 601px) and (max-width: 900px) {
+      body {
+        padding: 6px;
+      }
+
+      .planning-container,
+      .legend {
+        padding: 10px;
+      }
+
+      .planning-grid {
+        grid-template-columns: repeat(3, calc((100vw - 44px) / 3));
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .hour-card {
+        padding: 9px 8px;
+      }
+
+      .hour-mode {
+        font-size: 26px;
+      }
+
+      .legend-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 901px) and (max-width: 1180px) {
+      .planning-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>

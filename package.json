@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "athom app run",
-    "test-unit": "node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/terminal-value.test.js && node test/optimizer-properties.test.js",
+    "test-unit": "node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/terminal-value.test.js && node test/optimizer-properties.test.js && node test/policy-planning.test.js",
     "test-properties": "node test/optimizer-properties.test.js",
     "lint": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "lint-check": "eslint . --ext js,ts,tsx --report-unused-disable-directives --max-warnings 0"

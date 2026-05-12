@@ -44,6 +44,8 @@
       --teal:      #02DACE;
     }
 
+    * { box-sizing: border-box; }
+    html, body { max-width: 100%; overflow-x: hidden; }
     body { font-family: sans-serif; padding: 20px; background: var(--bg); color: var(--text); }
     a { color: var(--purple-lt); }
     h1, h2, h3 { color: var(--text); }
@@ -129,6 +131,8 @@
       transition: all 0.2s;
       position: relative;
       cursor: pointer;
+      min-width: 0;
+      overflow: hidden;
     }
     .planning-hour-card:hover {
       transform: translateY(-2px);
@@ -158,19 +162,27 @@
     .planning-hour-time  { font-size:16px; font-weight:bold; margin-bottom:8px; color: var(--text); }
     .planning-hour-price { font-size:14px; margin-bottom:8px; color: var(--muted); font-weight:600; }
     .planning-hour-mode  { font-size:36px; margin:10px 0; }
-    .planning-hour-mode-text { font-size:11px; color: var(--muted); margin-bottom:8px; }
-    .planning-hour-details   { font-size:11px; color: var(--dim); margin-top:8px; }
+    .planning-hour-mode-text {
+      font-size:11px; color: var(--muted); margin-bottom:8px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .planning-hour-details   {
+      font-size:11px; color: var(--dim); margin-top:8px;
+      overflow-wrap: anywhere;
+    }
     .planning-hour-reason    { font-size:10px; color: var(--dim); margin-top:4px; font-style:italic; opacity:0.8; }
 
-    .planning-status-item  { text-align:center; }
+    .planning-status-item  { text-align:center; min-width:0; }
     .planning-status-label { font-size:12px; color: var(--muted); margin-bottom:5px; }
-    .planning-status-value { font-size:22px; font-weight:bold; color: var(--text); }
+    .planning-status-value { font-size:22px; font-weight:bold; color: var(--text); overflow-wrap:anywhere; }
 
     .planning-legend-item {
       display:flex; align-items:center; gap:10px;
       padding:8px; background: var(--surface2); border-radius:6px;
+      min-width:0;
     }
     .planning-legend-icon { font-size:24px; min-width:32px; text-align:center; }
+    .planning-legend-text { overflow-wrap:anywhere; min-width:0; }
 
     .planning-day-marker {
       grid-column: 1 / -1;
@@ -362,6 +374,8 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 12px;
+      width: 100%;
+      min-width: 0;
     }
 
     @media (min-width: 768px) {
@@ -374,6 +388,19 @@
       #planning-grid {
         grid-template-columns: repeat(6, 1fr);
       }
+    }
+
+    @media (max-width: 767px) {
+      body { padding: 10px; }
+      .planning-hour-card { padding: 8px 6px; }
+      .planning-hour-time { font-size: 14px; margin-bottom: 5px; }
+      .planning-hour-price { font-size: 12px; margin-bottom: 5px; }
+      .planning-hour-mode { font-size: 28px; margin: 6px 0; }
+      .planning-hour-mode-text { display: none; }
+      .planning-hour-details { font-size: 9px; margin-top: 5px; }
+      .planning-hour-reason { display: none; }
+      .planning-status-label { font-size: 10px; }
+      .planning-status-value { font-size: 15px; }
     }
   </style>
 
