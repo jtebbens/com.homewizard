@@ -11,16 +11,24 @@
       padding: 0;
     }
     
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: clip;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background: #1a1a1a;
       color: #ffffff;
-      padding: 20px;
+      padding: 10px;
     }
     
     .container {
       max-width: 1000px;
       margin: 0 auto;
+      width: 100%;
+      min-width: 0;
     }
     
     h1 {
@@ -31,9 +39,12 @@
     
     .planning-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
       margin-bottom: 30px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
     
     .hour-card {
@@ -43,6 +54,8 @@
       text-align: center;
       border: 2px solid transparent;
       transition: all 0.2s;
+      min-width: 0;
+      overflow: hidden;
     }
     
     .hour-card.current {
@@ -59,26 +72,28 @@
     }
     
     .hour-time {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     
     .hour-price {
-      font-size: 14px;
-      margin-bottom: 8px;
+      font-size: 13px;
+      margin-bottom: 6px;
       opacity: 0.9;
     }
     
     .hour-mode {
-      font-size: 32px;
-      margin: 8px 0;
+      font-size: 28px;
+      margin: 6px 0;
     }
     
     .hour-details {
-      font-size: 11px;
+      font-size: 10px;
       opacity: 0.7;
-      margin-top: 8px;
+      margin-top: 6px;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
     
     .legend {
@@ -95,14 +110,15 @@
     
     .legend-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
     }
     
     .legend-item {
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
     }
     
     .legend-icon {
@@ -112,7 +128,8 @@
     }
     
     .legend-text {
-      font-size: 14px;
+      font-size: 12px;
+      overflow-wrap: anywhere;
     }
     
     .status-bar {
@@ -120,10 +137,9 @@
       border-radius: 8px;
       padding: 15px;
       margin-bottom: 20px;
-      display: flex;
-      justify-content: space-around;
-      flex-wrap: wrap;
-      gap: 15px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
     }
     
     .status-item {
@@ -137,21 +153,95 @@
     }
     
     .status-value {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
+      overflow-wrap: anywhere;
     }
     
     @media (max-width: 600px) {
+      body {
+        padding: 4px;
+      }
+
+      .status-bar {
+        padding: 8px;
+        gap: 6px;
+      }
+
+      .status-label {
+        font-size: 10px;
+      }
+
+      .status-value {
+        font-size: 15px;
+      }
+
       .planning-grid {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(2, calc((100vw - 24px) / 2));
+        gap: 6px;
+        justify-content: center;
       }
       
       .hour-card {
-        padding: 8px;
+        padding: 7px 6px;
+      }
+
+      .hour-time {
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+
+      .hour-price {
+        font-size: 12px;
+        margin-bottom: 4px;
       }
       
       .hour-mode {
         font-size: 24px;
+        margin: 4px 0;
+      }
+
+      .hour-details {
+        font-size: 9px;
+      }
+
+      .legend {
+        padding: 10px;
+      }
+
+      .legend-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+
+    @media (min-width: 601px) and (max-width: 900px) {
+      body {
+        padding: 6px;
+      }
+
+      .planning-grid {
+        grid-template-columns: repeat(3, calc((100vw - 44px) / 3));
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .hour-card {
+        padding: 9px 8px;
+      }
+
+      .hour-mode {
+        font-size: 24px;
+      }
+
+      .legend-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 901px) and (max-width: 1180px) {
+      .planning-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>

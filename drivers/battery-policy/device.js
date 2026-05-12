@@ -65,6 +65,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._pvProductionW = null; // User-provided PV production via flow card
     this._lastLoggedPvW = null; // Suppress repeat PV log lines when value unchanged
     this._pvProductionTimestamp = null; // When the PV data was last updated
+    this._lastPvAccuracyBucket = null; // Deduplicate PV accuracy samples per 15-min slot
     this._pvActualHourly = null; // Accumulator for chart: {date, hourly[], sums[], counts[]}
     this._pvState = false; // Track PV state with hysteresis
     this._lastPvPolicyRun = null; // Debounce PV-triggered policy runs
@@ -1142,7 +1143,9 @@ if (debug) this.log(
           // Also skips the Solcast fetch — optimizer already blends Solcast, no extra API call needed.
           const blendAge = this._pvForecastBlendedAt ? Date.now() - this._pvForecastBlendedAt : Infinity;
           if (blendAge > 30 * 60 * 1000) {
-            // Optimizer hasn't run recently (policy disabled or first startup): apply Solcast here.
+            // Optimizer hasn't run recently (policy disabled or first startup): mirror the
+            // optimizer's weighted OM/Solcast blend here so the settings page uses the same
+            // forecast source as the planner.
             if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
               if (!this._solcastProvider) {
                 // eslint-disable-next-line global-require
@@ -1155,7 +1158,8 @@ if (debug) this.log(
                   settings.solcast_resource_id,
                 );
                 if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
-                  let applied = 0;
+                  const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+                  const scByDayHour = [{}, {}];
                   for (const s of solcastForecast) {
                     const st = new Date(s.timestamp);
                     if (st <= nowFc) continue;
@@ -1163,12 +1167,24 @@ if (debug) this.log(
                     const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
                     if (sIdx < 0) continue;
                     const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-                    pvFcByDay[sIdx][sHour] = s.pvPowerW;
-                    applied++;
+                    if (!Array.isArray(scByDayHour[sIdx][sHour])) scByDayHour[sIdx][sHour] = [];
+                    scByDayHour[sIdx][sHour].push(s.pvPowerW);
+                  }
+                  let blendedHours = 0;
+                  for (let d = 0; d < 2; d++) {
+                    for (const [hour, values] of Object.entries(scByDayHour[d])) {
+                      if (!Array.isArray(values) || values.length === 0) continue;
+                      const scAvg = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+                      const omW = pvFcByDay[d][hour];
+                      pvFcByDay[d][hour] = typeof omW === 'number'
+                        ? Math.round(wOM * omW + wSC * scAvg)
+                        : scAvg;
+                      blendedHours++;
+                    }
                   }
                   const scTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
                   const scTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-                  this.log(`[Solcast] Applied ${applied} future slots — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
+                  this.log(`[Solcast] Blended ${blendedHours} chart hours with wOM=${wOM.toFixed(2)} wSC=${wSC.toFixed(2)} — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
                 }
               } catch (err) {
                 this.log(`[Solcast] Chart forecast error: ${err.message}`);
@@ -1732,7 +1748,8 @@ if (debug) this.log(
           price: s.price        != null ? Math.round(s.price        * 10000) / 10000 : null,
           mode:  s.hwMode       || 'standby',
           soc:   s.socProjected != null ? Math.round(s.socProjected) : null,
-          pvW:   Math.round(s.pvW ?? 0)
+          pvW:   Math.round(s.pvW ?? 0),
+          consumptionW: Math.round(s.consumptionW ?? 0)
         };
       });
 
@@ -1761,8 +1778,8 @@ if (debug) this.log(
           const deltaKwh = (maxChargeW / 1000) * slotH * rte;
           simSoc += (deltaKwh / capKwh) * 100;
         } else if (slot.mode === 'zero_charge_only' || slot.mode === 'pv_trickle') {
-          // Charge from PV only — effective rate is min(pvW, maxChargeW)
-          const chargeW = Math.min(pvW, maxChargeW);
+          // Charge from PV only — only net surplus can enter the battery.
+          const chargeW = Math.min(Math.max(0, pvW - (slot.consumptionW || 0)), maxChargeW);
           const deltaKwh = (chargeW / 1000) * slotH * rte;
           simSoc += (deltaKwh / capKwh) * 100;
         } else if (slot.mode === 'zero_discharge_only') {
@@ -2052,15 +2069,6 @@ if (debug) this.log(
         this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
       }
 
-      // Snapshot today's forecast once at first weather fetch of the day (NL timezone).
-      // Accuracy tracking compares against this snapshot, not the rolling forecast,
-      // to avoid degrading the score when OM updates its forecast mid-day.
-      const _pvSnapDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      if (this._pvDayStartForecastDate !== _pvSnapDate) {
-        this._pvDayStartForecast     = pvForecast;
-        this._pvDayStartForecastDate = _pvSnapDate;
-      }
-
     }
 
     // Blend external PV forecasts into Open-Meteo pvForecast.
@@ -2168,6 +2176,15 @@ if (debug) this.log(
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       this._pvForecastBlended   = pvForecast;
       this._pvForecastBlendedAt = Date.now();
+
+      // Snapshot today's blended forecast once at first forecast build of the day (NL timezone).
+      // Accuracy tracking compares against this fixed day-start snapshot, not the rolling forecast,
+      // to avoid degrading the score when providers revise the forecast mid-day.
+      const _pvSnapDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      if (this._pvDayStartForecastDate !== _pvSnapDate) {
+        this._pvDayStartForecast     = pvForecast.map(slot => ({ ...slot }));
+        this._pvDayStartForecastDate = _pvSnapDate;
+      }
     }
 
     // PV accuracy tracking: compare forecast for now vs actual from flow card.
@@ -2175,32 +2192,7 @@ if (debug) this.log(
     // side shows meaningful PV (> 50W) to avoid noisy night comparisons.
     // Skip at negative prices: users often disable their inverter to avoid export penalty,
     // so actual=0 with forecast>0 would wrongly degrade the PV accuracy score.
-    const _currentPriceForPvAcc = inputs.tariff?.currentPrice ?? null;
-    if (pvForecast && this.learningEngine && this._pvProductionW != null && this._pvProductionTimestamp
-        && (_currentPriceForPvAcc === null || _currentPriceForPvAcc >= 0)) {
-      const ageMs = Date.now() - this._pvProductionTimestamp;
-      if (ageMs < 20 * 60 * 1000) {
-        const predictedW = this._pvDayStartForecast
-          ? this.optimizationEngine._getPvForSlot(this._pvDayStartForecast, now.toISOString())
-          : 0;
-        const actualW    = this._pvProductionW;
-        if (predictedW > 50 && actualW > 50) {
-          // Also pass per-model predictions for adaptive blend weight learning
-          const omW = this._pvForecastOM
-            ? this.optimizationEngine._getPvForSlot(this._pvForecastOM, now.toISOString())
-            : null;
-          const nowMs = now.getTime();
-          const hourMs = nowMs - (now.getUTCMinutes() * 60_000) - (now.getUTCSeconds() * 1_000) - now.getUTCMilliseconds();
-          const scSlots = this._pvForecastSC?.get(hourMs);
-          const scW = scSlots?.length > 0
-            ? Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length)
-            : null;
-          this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW).catch(e =>
-            this.error('PV accuracy recording failed:', e)
-          );
-        }
-      }
-    }
+    this._recordPvAccuracySample(now, inputs.tariff?.currentPrice ?? null);
 
     // Daily PV level bias: correct systematic over/under-prediction learned across days.
     // Pass today's avg cloudcover so the clear-sky EMA is used on sunny days.
@@ -2486,7 +2478,14 @@ if (debug) this.log(
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {
-      const planningSchedule = this.policyEngine.buildPlanningSchedule(slots, pvForecast ?? null, minDischargePrice, maxChargePowerW);
+      const planningSchedule = this.policyEngine.buildPlanningSchedule(
+        slots,
+        pvForecast ?? null,
+        minDischargePrice,
+        maxChargePowerW,
+        inputs.dynamicMaxChargePrice ?? null,
+        inputs.battery?.totalCapacityKwh ?? null
+      );
       // Enrich with consumption sample count for confidence display in the UI
       if (this.learningEngine) {
         for (const slot of planningSchedule) {
@@ -2723,6 +2722,10 @@ if (debug) this.log(
       this.learningEngine.updateSolarYieldFactor(new Date(), powerW, radiation);
     }
 
+    // Record PV forecast accuracy from live PV updates too, not only during policy runs.
+    // Samples are deduplicated per 15-minute bucket.
+    this._recordPvAccuracySample(new Date(), this._lastTariffInfo?.currentPrice ?? null);
+
     // Accumulate actual PV per Amsterdam hour for planning chart display.
     const nowAms = new Date();
     const todayStr = nowAms.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2791,6 +2794,39 @@ if (debug) this.log(
 
     const ratio = (nowMs - prev.t) / (next.t - prev.t);
     return prev.r + (next.r - prev.r) * ratio;
+  }
+
+  _recordPvAccuracySample(now = new Date(), currentPrice = null) {
+    if (!this.learningEngine || this._pvProductionW == null || !this._pvProductionTimestamp) return;
+    if (!this._pvDayStartForecast || !Array.isArray(this._pvDayStartForecast) || this._pvDayStartForecast.length === 0) return;
+    if (currentPrice != null && currentPrice < 0) return;
+
+    const ageMs = Date.now() - this._pvProductionTimestamp;
+    if (ageMs >= 20 * 60 * 1000) return;
+
+    const predictedW = this.optimizationEngine._getPvForSlot(this._pvDayStartForecast, now.toISOString()) || 0;
+    const actualW = this._pvProductionW;
+    if (predictedW <= 50 || actualW <= 50) return;
+
+    const bucketMs = Math.floor(now.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+    if (this._lastPvAccuracyBucket === bucketMs) return;
+    this._lastPvAccuracyBucket = bucketMs;
+
+    const omW = this._pvForecastOM
+      ? this.optimizationEngine._getPvForSlot(this._pvForecastOM, now.toISOString())
+      : null;
+    const hourMs = now.getTime()
+      - (now.getUTCMinutes() * 60_000)
+      - (now.getUTCSeconds() * 1_000)
+      - now.getUTCMilliseconds();
+    const scSlots = this._pvForecastSC?.get(hourMs);
+    const scW = scSlots?.length > 0
+      ? Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length)
+      : null;
+
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW).catch(e =>
+      this.error('PV accuracy recording failed:', e)
+    );
   }
 
   /**

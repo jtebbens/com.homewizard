@@ -52,7 +52,11 @@ async function updateCapability(device, capability, value) {
     // This capability is managed exclusively by _updateBatteryGroup().
     if (capability === 'battery_group_charge_mode') {
       if (value != null && current !== value) {
+        const batteryCount = device._cacheGet?.('last_battery_state')?.battery_count;
+        const hasBattery = typeof batteryCount === 'number' ? batteryCount > 0 : true;
+
         if (!device.hasCapability(capability)) {
+          if (!hasBattery) return;
           await safeAddCapability(device, capability);
         }
         await device.setCapabilityValue(capability, value);
@@ -1364,7 +1368,7 @@ async _updateBatteryGroup() {
   const vendorCount = this._cacheGet('last_battery_state')?.battery_count;
 
   // --- Only remove capabilities if ALL sources agree there is no battery ---
-  if (vendorCount === 0 && fallbackCount === 0) {
+  if (vendorCount === 0 && realtimeCount === 0 && fallbackCount === 0) {
     if (debug) this.log('🔋 No battery detected — removing battery capabilities');
 
     const caps = [
