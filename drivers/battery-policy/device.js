@@ -2411,37 +2411,6 @@ if (debug) this.log(
         this.log(`📐 consumptionMargin=per-slot (avgCV=${avgCV.toFixed(2)}, ${cvCount}/${prices.length} slots with CV data)`);
       }
     }
-    // ── PV surplus forecast ────────────────────────────────────────────────────
-    // How much of the remaining battery capacity will be filled by net PV surplus today?
-    // Uses the same per-slot interpolation as the DP so both agree on expected PV.
-    if (pvForecast && consumptionWPerSlot) {
-      const pvIdx = this.optimizationEngine._buildPvIndex(pvForecast);
-      const slotH = slotMs / 3_600_000;
-      const _planSlots = this.optimizationEngine._schedule?.slots ?? [];
-      let netPvKwh = 0;
-      for (let h = 0; h < prices.length; h++) {
-        const slotAction = _planSlots[h]?.action;
-        if (slotAction !== 'preserve' && slotAction !== 'trickle' && slotAction !== 'charge') continue;
-        const pvW  = this.optimizationEngine._getPvForSlot(pvIdx, new Date(prices[h].timestamp).getTime());
-        const consW = consumptionWPerSlot[h] ?? 0;
-        netPvKwh += Math.max(0, pvW - consW) * slotH / 1000;
-      }
-      const remainingKwh  = Math.max(0, (1 - soc / 100) * capacityKwh);
-      const rteForSurplus = learnedRte ?? 0.75;
-      const fillFraction  = remainingKwh > 0.1
-        ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
-        : 1;
-      this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
-      const chargeSlots = _planSlots.filter(s => s.action === 'charge').length;
-      this._setLive('pv_surplus_forecast', {
-        netPvKwh:      Math.round(netPvKwh * 100) / 100,
-        remainingKwh:  Math.round(remainingKwh * 100) / 100,
-        fillFraction:  Math.round(fillFraction * 100) / 100,
-        soc,
-        chargeSlots,
-        updatedAt:     new Date().toISOString(),
-      });
-    }
 
     // When battery was charged at zero or negative cost (avgCost ≤ 0) AND pvKwhTomorrow
     // is stale/missing (=0), assume PV will refill so terminal value doesn't block discharge.
@@ -2498,6 +2467,36 @@ if (debug) this.log(
         }
       }
       this._setLive('policy_optimizer_schedule', planningSchedule);
+
+      // ── PV surplus forecast ────────────────────────────────────────────────
+      // Use mapped hwModes (not raw DP actions) so mapper overrides like standby→to_full
+      // are counted correctly. Filter: hwModes that actually charge the battery from PV.
+      if (pvForecast && consumptionWPerSlot) {
+        const _psSlotH = planningSchedule.length > 1
+          ? (new Date(planningSchedule[1].timestamp).getTime() - new Date(planningSchedule[0].timestamp).getTime()) / 3_600_000
+          : slotMs / 3_600_000;
+        let netPvKwh = 0;
+        for (const ps of planningSchedule) {
+          const hwm = ps.hwMode;
+          if (hwm !== 'zero_charge_only' && hwm !== 'pv_trickle' && hwm !== 'to_full') continue;
+          netPvKwh += Math.min(maxChargePowerW, Math.max(0, (ps.pvW ?? 0) - (ps.consumptionW ?? 0))) * _psSlotH / 1000;
+        }
+        const remainingKwh  = Math.max(0, (1 - soc / 100) * capacityKwh);
+        const rteForSurplus = learnedRte ?? 0.75;
+        const fillFraction  = remainingKwh > 0.1
+          ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
+          : 1;
+        this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
+        const chargeSlots = planningSchedule.filter(s => s.hwMode === 'to_full').length;
+        this._setLive('pv_surplus_forecast', {
+          netPvKwh:      Math.round(netPvKwh * 100) / 100,
+          remainingKwh:  Math.round(remainingKwh * 100) / 100,
+          fillFraction:  Math.round(fillFraction * 100) / 100,
+          soc,
+          chargeSlots,
+          updatedAt:     new Date().toISOString(),
+        });
+      }
 
       // Sync PV chart from schedule slots — average of 4 × 15-min pvW per hour,
       // identical source and aggregation as consumption (avgConsumptionW in the UI).
