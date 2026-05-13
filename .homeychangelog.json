@@ -1429,5 +1429,8 @@
   },
   "3.15.66": {
     "en": "Bugfix, planning force charge when low pv and cheap prices"
+  },
+  "3.15.67": {
+    "en": "More tuning on planning battery policy"
   }
 }
