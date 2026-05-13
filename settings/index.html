@@ -905,9 +905,9 @@
               const cp2y = Math.min(pad.t + iH, Math.max(pad.t, p2[1] - (p3[1] - p1[1]) / 6));
               cPath += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
             }
-            const totalKwhC = (nonNull.reduce((s, v) => s + v, 0) / 1000).toFixed(1);
+            const totalKwhC = (filled.reduce((s, v, h) => s + (pvWatts[h] > 0 ? v : 0), 0) / 1000).toFixed(1);
             return `<path d="${cPath}" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-dasharray="4 3" clip-path="url(#${clipId})"/>
-                    <text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 26}" text-anchor="end" fill="rgba(255,255,255,0.65)" font-size="11">🏠 ${totalKwhC} kWh geschat huisverbruik</text>`;
+                    <text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 26}" text-anchor="end" fill="rgba(255,255,255,0.65)" font-size="11">🏠 ${totalKwhC} kWh verbruik overdag</text>`;
           })()}
           ${hourLabels}
         </svg>
@@ -935,6 +935,10 @@
         const minP = m ? ` (min €${parseFloat(m[1]).toFixed(2)})` : '';
         return nl ? `⚡ Ontladen: prijs boven minimum${minP}` : `⚡ Discharging: above min price${minP}`;
       }
+      if (reason.startsWith('dp:topup'))
+        return nl ? '🔌 Laden: lage SoC + gunstige prijs' : '🔌 Charging: low SoC + favorable price';
+      if (reason.startsWith('dp:charge_blocked'))
+        return nl ? '⏳ Laden geblokkeerd (prijs te hoog)' : '⏳ Charge blocked (price too high)';
       if (reason.startsWith('dp:charge'))
         return nl ? '🔌 Laden: gunstige prijs' : '🔌 Charging: favorable price';
       return reason;

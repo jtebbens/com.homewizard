@@ -2052,7 +2052,7 @@ if (debug) this.log(
             if (maxYf4.length > 0 && maxRad4.length > 0) {
               const avgMaxYf  = maxYf4.reduce((a, b) => a + b, 0) / maxYf4.length;
               const avgMaxRad = maxRad4.reduce((a, b) => a + b, 0) / maxRad4.length;
-              if (h.radiationWm2 >= avgMaxRad * 0.90) {
+              if (h.radiationWm2 >= avgMaxRad * 0.70) {
                 const clearSkyFloor = Math.round(h.radiationWm2 * avgMaxYf * 0.95);
                 if (clearSkyFloor > rawPvW) { rawPvW = clearSkyFloor; clearSkyCeilingApplied++; }
               }
@@ -2476,6 +2476,11 @@ if (debug) this.log(
 
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
+    // _recomputeOptimizer runs before policyEngine.evaluate(), so dynamicMaxChargePrice is not
+    // yet set on inputs — compute it here so the planning mapper uses the effective price.
+    if (!inputs.dynamicMaxChargePrice) {
+      inputs.dynamicMaxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice);
+    }
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {
       const planningSchedule = this.policyEngine.buildPlanningSchedule(
