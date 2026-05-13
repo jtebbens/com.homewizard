@@ -553,13 +553,19 @@
           <span id="pv-accuracy-summary" style="margin-left:auto;font-size:12px;color:var(--muted);"></span>
         </summary>
         <div id="pv-accuracy-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+          <button id="pv-accuracy-prev" onclick="pvAccuracyNav(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;" title="Oudere dag">&#9664;</button>
+          <span id="pv-accuracy-day-label" style="font-size:12px;color:var(--text);font-weight:600;"></span>
+          <button id="pv-accuracy-next" onclick="pvAccuracyNav(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;" title="Nieuwere dag">&#9654;</button>
+        </div>
+        <div id="pv-accuracy-day-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;"></div>
         <div style="position:relative;height:140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:14px;">
           <canvas id="pvAccuracyChart"></canvas>
         </div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
           <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>Open-Meteo</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>Solcast</span>
-          <span><span style="display:inline-block;width:12px;height:2px;background:#8b9fff;vertical-align:middle;margin-right:4px;"></span>Blended</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#e879f9;vertical-align:middle;margin-right:4px;"></span>Blended</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
         </div>
       </details>
@@ -2707,6 +2713,25 @@
        PV FORECAST ACCURACY CHART
     ══════════════════════════════════════════════════════════ */
     let _pvAccuracyChart = null;
+    let _pvAccuracyDays  = [];
+    let _pvAccuracyDayIdx = 0;
+
+    function _pvPill(label, value, unit, lo, hi) {
+      const color = value == null ? 'var(--dim)'
+        : value >= hi ? '#20F29B'
+        : value >= lo ? '#FCD34D'
+        : '#F87171';
+      const display = value != null ? `${value}${unit}` : '—';
+      return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
+        <span style="font-size:16px;font-weight:bold;color:${color};">${display}</span>
+      </div>`;
+    }
+
+    function pvAccuracyNav(dir) {
+      _pvAccuracyDayIdx = Math.max(0, Math.min(_pvAccuracyDays.length - 1, _pvAccuracyDayIdx + dir));
+      _renderPvAccuracyDay();
+    }
 
     function renderPvAccuracy(settings) {
       const st = settings['learning_status'];
@@ -2718,28 +2743,15 @@
 
       section.style.display = '';
 
-      // Summary in <summary> header
       const summaryEl = document.getElementById('pv-accuracy-summary');
       if (summaryEl) summaryEl.textContent = pvAccuracy != null ? `${pvAccuracy}% algeheel` : '';
 
-      // Pills
       const pillsEl = document.getElementById('pv-accuracy-pills');
       if (pillsEl) {
-        const mkPill = (label, value, unit, lo, hi) => {
-          const color = value == null ? 'var(--dim)'
-            : value >= hi ? '#20F29B'
-            : value >= lo ? '#FCD34D'
-            : '#F87171';
-          const display = value != null ? `${value}${unit}` : '—';
-          return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
-            <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
-            <span style="font-size:16px;font-weight:bold;color:${color};">${display}</span>
-          </div>`;
-        };
         pillsEl.innerHTML =
-          mkPill('Algeheel', pvAccuracy, '%', 70, 85) +
-          mkPill('Open-Meteo', accOM, '%', 70, 85) +
-          mkPill('Solcast', accSC, '%', 70, 85) +
+          _pvPill('Algeheel', pvAccuracy, '%', 70, 85) +
+          _pvPill('Open-Meteo', accOM, '%', 70, 85) +
+          _pvPill('Solcast', accSC, '%', 70, 85) +
           (wOM != null && wSC != null
             ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
                 <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
@@ -2748,30 +2760,82 @@
             : '');
       }
 
+      // Group predictions by local day (Amsterdam TZ)
+      const byDay = {};
+      for (const p of pvPredictions) {
+        const dk = new Date(p.timestamp).toLocaleDateString('sv-SE', { timeZone: 'Europe/Amsterdam' });
+        if (!byDay[dk]) byDay[dk] = [];
+        byDay[dk].push(p);
+      }
+      _pvAccuracyDays = Object.keys(byDay).sort().reverse().map(dk => {
+        const entries = byDay[dk].sort((a, b) => a.timestamp - b.timestamp);
+        const label = new Date(entries[0].timestamp).toLocaleDateString('nl-NL', {
+          timeZone: 'Europe/Amsterdam', weekday: 'short', month: 'short', day: 'numeric'
+        });
+        return { label, entries };
+      });
+
+      if (_pvAccuracyDays.length === 0) return;
+      _pvAccuracyDayIdx = 0;
+      _renderPvAccuracyDay();
+    }
+
+    function _renderPvAccuracyDay() {
+      const days = _pvAccuracyDays;
+      if (!days.length) return;
+      const idx = _pvAccuracyDayIdx;
+      const day = days[idx];
+
+      const labelEl = document.getElementById('pv-accuracy-day-label');
+      if (labelEl) labelEl.textContent = day.label;
+
+      const prevBtn = document.getElementById('pv-accuracy-prev');
+      const nextBtn = document.getElementById('pv-accuracy-next');
+      if (prevBtn) prevBtn.disabled = idx >= days.length - 1;
+      if (nextBtn) nextBtn.disabled = idx <= 0;
+
+      // Per-day accuracy pills
+      const entries  = day.entries;
+      const dayAcc   = entries.length
+        ? Math.round(entries.reduce((s, p) => s + (1 - p.error), 0) / entries.length * 100)
+        : null;
+      const omEnt    = entries.filter(p => p.om != null);
+      const scEnt    = entries.filter(p => p.sc != null);
+      const dayOM    = omEnt.length
+        ? Math.round(omEnt.reduce((s, p) => {
+            const e = Math.abs(p.actual - p.om) / Math.max(p.actual, p.om, 1);
+            return s + (1 - e);
+          }, 0) / omEnt.length * 100)
+        : null;
+      const daySC    = scEnt.length
+        ? Math.round(scEnt.reduce((s, p) => {
+            const e = Math.abs(p.actual - p.sc) / Math.max(p.actual, p.sc, 1);
+            return s + (1 - e);
+          }, 0) / scEnt.length * 100)
+        : null;
+
+      const dayPillsEl = document.getElementById('pv-accuracy-day-pills');
+      if (dayPillsEl) {
+        dayPillsEl.innerHTML =
+          _pvPill('Blended', dayAcc, '%', 70, 85) +
+          _pvPill('Open-Meteo', dayOM, '%', 70, 85) +
+          _pvPill('Solcast', daySC, '%', 70, 85);
+      }
+
       // Chart
       const canvas = document.getElementById('pvAccuracyChart');
       if (!canvas) return;
 
-      const cutoff    = Date.now() - 72 * 60 * 60 * 1000;
-      const recent    = pvPredictions.filter(p => p.timestamp >= cutoff);
-      if (recent.length === 0) return;
-
-      const fmtTime = ts => {
-        const d = new Date(ts);
-        return d.toLocaleString('nl-NL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      };
-      const NIGHT_MS = 6 * 60 * 60 * 1000;
+      const fmtTime = ts => new Date(ts).toLocaleTimeString('nl-NL', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam'
+      });
       const labels = [], omData = [], scData = [], blendData = [], actualData = [];
-      for (let i = 0; i < recent.length; i++) {
-        if (i > 0 && recent[i].timestamp - recent[i - 1].timestamp > NIGHT_MS) {
-          labels.push('');
-          omData.push(null); scData.push(null); blendData.push(null); actualData.push(null);
-        }
-        labels.push(fmtTime(recent[i].timestamp));
-        omData.push(recent[i].om    ?? null);
-        scData.push(recent[i].sc    ?? null);
-        blendData.push(recent[i].predicted);
-        actualData.push(recent[i].actual);
+      for (const p of entries) {
+        labels.push(fmtTime(p.timestamp));
+        omData.push(p.om     ?? null);
+        scData.push(p.sc     ?? null);
+        blendData.push(p.predicted);
+        actualData.push(p.actual);
       }
       const step = Math.max(1, Math.floor(labels.length / 8));
 
@@ -2795,7 +2859,7 @@
           datasets: [
             mkDataset('Open-Meteo', omData,    '#60a5fa', [4, 2]),
             mkDataset('Solcast',    scData,    '#f59e0b', [4, 2]),
-            mkDataset('Blended',   blendData, '#8b9fff'),
+            mkDataset('Blended',   blendData, '#e879f9'),
             mkDataset('Werkelijk', actualData,'#20F29B'),
           ],
         },
