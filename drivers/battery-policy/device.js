@@ -2809,17 +2809,18 @@ if (debug) this.log(
     const ageMs = Date.now() - this._pvProductionTimestamp;
     if (ageMs >= 20 * 60 * 1000) return;
 
-    const predictedW = this.optimizationEngine._getPvForSlot(this._pvDayStartForecast, now.toISOString()) || 0;
+    const nowMs      = now.getTime();
+    const pvDayIdx   = this.optimizationEngine._buildPvIndex(this._pvDayStartForecast);
+    const predictedW = this.optimizationEngine._getPvForSlot(pvDayIdx, nowMs) || 0;
     const actualW = this._pvProductionW;
     if (predictedW <= 50 || actualW <= 50) return;
 
-    const bucketMs = Math.floor(now.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
+    const bucketMs = Math.floor(nowMs / (15 * 60 * 1000)) * (15 * 60 * 1000);
     if (this._lastPvAccuracyBucket === bucketMs) return;
     this._lastPvAccuracyBucket = bucketMs;
 
-    const omW = this._pvForecastOM
-      ? this.optimizationEngine._getPvForSlot(this._pvForecastOM, now.toISOString())
-      : null;
+    const omIdx = this._pvForecastOM ? this.optimizationEngine._buildPvIndex(this._pvForecastOM) : null;
+    const omW   = omIdx ? this.optimizationEngine._getPvForSlot(omIdx, nowMs) : null;
     const hourMs = now.getTime()
       - (now.getUTCMinutes() * 60_000)
       - (now.getUTCSeconds() * 1_000)
