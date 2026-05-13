@@ -1435,5 +1435,8 @@
   },
   "3.15.68": {
     "en": "Planning to_full fix based in dynamic low price vs static. "
+  },
+  "3.15.69": {
+    "en": "pv forecast learning bug fix"
   }
 }
