@@ -1141,11 +1141,13 @@ if (debug) this.log(
           // Only write chart if optimizer hasn't pushed a fresher blended forecast recently.
           // Prevents _updateWeather (1h cycle) from overwriting the 15-min optimizer chart.
           // Also skips the Solcast fetch — optimizer already blends Solcast, no extra API call needed.
+          const omFcByDay = [{ ...pvFcByDay[0] }, { ...pvFcByDay[1] }];
           const blendAge = this._pvForecastBlendedAt ? Date.now() - this._pvForecastBlendedAt : Infinity;
           if (blendAge > 30 * 60 * 1000) {
             // Optimizer hasn't run recently (policy disabled or first startup): mirror the
             // optimizer's weighted OM/Solcast blend here so the settings page uses the same
             // forecast source as the planner.
+            let scFcByDay = null;
             if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
               if (!this._solcastProvider) {
                 // eslint-disable-next-line global-require
@@ -1186,6 +1188,13 @@ if (debug) this.log(
                     wOM = 1.0 - wSC;
                     divLog = ` div=${div.toFixed(2)}`;
                   }
+                  scFcByDay = [{}, {}];
+                  for (let d = 0; d < 2; d++) {
+                    for (const [hour, values] of Object.entries(scByDayHour[d])) {
+                      if (!Array.isArray(values) || values.length === 0) continue;
+                      scFcByDay[d][hour] = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+                    }
+                  }
                   let blendedHours = 0;
                   for (let d = 0; d < 2; d++) {
                     for (const [hour, values] of Object.entries(scByDayHour[d])) {
@@ -1207,6 +1216,8 @@ if (debug) this.log(
               }
             }
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
+            this._setLive('policy_pv_forecast_om', omFcByDay);
+            if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
           }
         }
       } else {
@@ -3752,12 +3763,14 @@ if (debug) this.log(
       }
 
       // PV forecast vs actual image
-      const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this._liveState.policy_pv_forecast_hourly
+      const pvActual     = this.homey.settings.get('policy_pv_actual_today');
+      const pvForecast   = this._liveState.policy_pv_forecast_hourly
         ?? this.homey.settings.get('policy_pv_forecast_hourly');
-      const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+      const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
+      const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+      const pvCapW       = this.getSetting('pv_capacity_w') || 0;
 
-      this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
         await this._initPvCamera();
@@ -3846,7 +3859,7 @@ if (debug) this.log(
       version: '4',
       backgroundColor: '#1c1c1e',
       width: 900,
-      height: 900,
+      height: 720,
       chart: this._configToJs(chartCfg),
     });
 
@@ -3918,15 +3931,17 @@ if (debug) this.log(
     if (this.planningImagePv) return;
     this.planningImagePv = await this.homey.images.createImage();
     this.planningImagePv.setStream(async (stream) => {
-      const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-      const pvForecast = this._liveState.policy_pv_forecast_hourly
+      const pvActual     = this.homey.settings.get('policy_pv_actual_today');
+      const pvForecast   = this._liveState.policy_pv_forecast_hourly
         ?? this.homey.settings.get('policy_pv_forecast_hourly');
-      const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+      const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
+      const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+      const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       try {
-        await this._streamPvChart(stream, { pvActual, pvForecast, pvCapacityW: pvCapW });
+        await this._streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW });
       } catch (e) {
         this.error('PV chart stream error:', e.message);
         if (!stream.destroyed) stream.end();
@@ -3936,12 +3951,14 @@ if (debug) this.log(
     this.log('📷 PV Opwek camera geregistreerd');
 
     // Load initial data so the camera has content immediately
-    const pvActual   = this.homey.settings.get('policy_pv_actual_today');
-    const pvForecast = this._liveState.policy_pv_forecast_hourly
+    const pvActual     = this.homey.settings.get('policy_pv_actual_today');
+    const pvForecast   = this._liveState.policy_pv_forecast_hourly
       ?? this.homey.settings.get('policy_pv_forecast_hourly');
-    const pvCapW     = this.getSetting('pv_capacity_w') || 0;
+    const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
+    const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+    const pvCapW       = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
-      this._pvChartData = { pvActual, pvForecast, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW };
       await this.planningImagePv.update();
     }
   }
@@ -4171,15 +4188,15 @@ if (debug) this.log(
   }
 
   _buildPvChartConfig(pvData) {
-    const { pvActual, pvForecast, pvCapacityW } = pvData || {};
+    const { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW } = pvData || {};
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
     const pvHourly = (pvActual?.date === todayStr && Array.isArray(pvActual?.hourly)) ? pvActual.hourly : [];
     const forecastToday    = pvForecast?.[0] || {};
     const forecastTomorrow = pvForecast?.[1] || {};
 
-    const fLg = 28;
-    const fMd = 24;
-    const fSm = 22;
+    const fLg = 22;
+    const fMd = 19;
+    const fSm = 17;
 
     // Current Amsterdam hour
     const nowAmsHour = parseInt(
@@ -4214,6 +4231,23 @@ if (debug) this.log(
       return forecastTomorrow[h - 24] ?? 0;
     });
 
+    // OM-only and SC-only forecast lines (today + tomorrow)
+    const omToday    = pvForecastOM?.[0] || {};
+    const omTomorrow = pvForecastOM?.[1] || {};
+    const scToday    = pvForecastSC?.[0] || {};
+    const scTomorrow = pvForecastSC?.[1] || {};
+    const hasOM = Object.keys(omToday).length > 0 || Object.keys(omTomorrow).length > 0;
+    const hasSC = Object.keys(scToday).length > 0 || Object.keys(scTomorrow).length > 0;
+
+    const omData = hasOM ? hours.map(h => {
+      if (h < 24) return omToday[h] ?? null;
+      return omTomorrow[h - 24] ?? null;
+    }) : null;
+    const scData = hasSC ? hours.map(h => {
+      if (h < 24) return scToday[h] ?? null;
+      return scTomorrow[h - 24] ?? null;
+    }) : null;
+
     // Compute daily totals (kWh)
     const actualTodayKwh = pvHourly.reduce((sum, w) => sum + (w || 0), 0) / 1000;
     const forecastTodayKwh = Object.values(forecastToday).reduce((sum, w) => sum + (w || 0), 0) / 1000;
@@ -4223,6 +4257,10 @@ if (debug) this.log(
       ...pvHourly.filter(v => v != null).map(v => v),
       ...Object.values(forecastToday).map(v => v || 0),
       ...Object.values(forecastTomorrow).map(v => v || 0),
+      ...Object.values(omToday).map(v => v || 0),
+      ...Object.values(omTomorrow).map(v => v || 0),
+      ...Object.values(scToday).map(v => v || 0),
+      ...Object.values(scTomorrow).map(v => v || 0),
       1
     );
     const yMax = pvCapacityW > 0 ? Math.max(pvCapacityW, pvMax * 1.1) : pvMax * 1.2;
@@ -4270,13 +4308,39 @@ if (debug) this.log(
             spanGaps: false,
             yAxisID: 'yPv',
           },
+          ...(omData ? [{
+            label: 'Open-Meteo',
+            data: omData,
+            borderColor: '#60A5FA',
+            backgroundColor: 'transparent',
+            fill: false,
+            borderWidth: 2,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            tension: 0.4,
+            spanGaps: true,
+            yAxisID: 'yPv',
+          }] : []),
+          ...(scData ? [{
+            label: 'Solcast',
+            data: scData,
+            borderColor: '#34D399',
+            backgroundColor: 'transparent',
+            fill: false,
+            borderWidth: 2,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            tension: 0.4,
+            spanGaps: true,
+            yAxisID: 'yPv',
+          }] : []),
         ],
       },
       options: {
         responsive: false,
         animation: false,
         layout: {
-          padding: { top: 12, bottom: 16, left: 4, right: 4 },
+          padding: { top: 48, bottom: 10, left: 4, right: 4 },
         },
         plugins: {
           legend: {
@@ -4284,7 +4348,7 @@ if (debug) this.log(
             labels: {
               color: '#9a9a9a',
               font: { size: fLg },
-              padding: 18,
+              padding: 12,
               usePointStyle: true,
             },
           },
