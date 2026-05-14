@@ -418,7 +418,7 @@
   <div class="tabs" id="tabs-bar">
     <div class="tab active" data-tab="baseload"  id="tab-baseload"></div>
     <div class="tab"        data-tab="planning"  id="tab-planning"></div>
-    <div class="tab"        data-tab="expansion">Uitbreiding</div>
+    <div class="tab"        data-tab="expansion" id="tab-expansion" data-i18n="settings.tab_expansion">Uitbreiding</div>
     <div class="tab"        data-tab="explain">Policy</div>
     <div class="tab"        data-tab="fetch">Fetch</div>
     <div class="tab"        data-tab="discovery">Discovery</div>
@@ -428,19 +428,19 @@
 
   <!-- TAB: BASELOAD -->
   <div id="baseload" class="tab-content active">
-    <h2>Sluipverbruik grafiek</h2>
+    <h2 data-i18n="settings.baseload_title">Sluipverbruik grafiek</h2>
     <div id="baseload-cost" style="background:#1a1a1a;border:1px solid #2d2d2d;border-radius:8px;padding:15px;margin-bottom:20px;">
-      <div style="font-size:14px;color:#A0A0A0;margin-bottom:8px;">Huidig sluipverbruik</div>
+      <div style="font-size:14px;color:#A0A0A0;margin-bottom:8px;" data-i18n="settings.baseload_current">Huidig sluipverbruik</div>
       <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#ffffff;margin-bottom:12px;">Laden...</div>
       <div id="baseload-cost-details" style="font-size:13px;color:#A0A0A0;line-height:1.6;">Berekening wordt uitgevoerd...</div>
     </div>
     <canvas id="baseloadChart" height="150"></canvas>
-    <h3>Samples van geselecteerde nacht</h3>
+    <h3 data-i18n="settings.baseload_samples_title">Samples van geselecteerde nacht</h3>
     <select id="nightSelector"></select>
-    <button id="toggleSamplesBtn" style="margin-top:10px;">Toon samples</button>
+    <button id="toggleSamplesBtn" style="margin-top:10px;" data-i18n="settings.baseload_show_samples">Toon samples</button>
     <div id="sampleContainer" style="display:none;margin-top:15px;">
       <table id="sampleTable">
-        <thead><tr><th>Tijd</th><th>Vermogen (W)</th></tr></thead>
+        <thead><tr><th data-i18n="settings.col_time">Tijd</th><th data-i18n="settings.col_power">Vermogen (W)</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -454,14 +454,14 @@
         <tr>
           <th>Device</th>
           <th>Uptime</th>
-          <th>Mislukt</th>
+          <th data-i18n="settings.col_failed">Mislukt</th>
           <th>Timeouts</th>
-          <th>Totaal</th>
-          <th>Gem. (ms)</th>
+          <th data-i18n="settings.col_total">Totaal</th>
+          <th data-i18n="settings.col_avg_ms">Gem. (ms)</th>
           <th>WiFi (gem/min)</th>
           <th>mDNS</th>
-          <th>Laatste fout</th>
-          <th>Sinds</th>
+          <th data-i18n="settings.col_last_error">Laatste fout</th>
+          <th data-i18n="settings.col_since">Sinds</th>
         </tr>
       </thead>
       <tbody id="fetch-stats-body">
@@ -472,7 +472,7 @@
 
     <h2 style="margin-top:24px;">Fetch Logs</h2>
     <pre id="fetch-debug" class="debug-box">Loading…</pre>
-    <button id="clear-fetch-btn" style="margin-top:10px;">Wis fetch-logs</button>
+    <button id="clear-fetch-btn" style="margin-top:10px;" data-i18n="settings.btn_clear_fetch">Wis fetch-logs</button>
   </div>
 
   <!-- TAB: DISCOVERY -->
@@ -499,9 +499,9 @@
     <div id="ws-anomalies" style="margin-bottom:12px;"></div>
 
     <div style="margin-top:12px;display:flex;gap:10px;">
-      <button id="ws-refresh-btn">Ververs</button>
+      <button id="ws-refresh-btn" data-i18n="settings.btn_refresh">Ververs</button>
       <button id="ws-copy-btn" style="border-color:#5f6fff;color:#8b9fff;font-weight:bold;">📋 Copy Diagnostics</button>
-      <button id="ws-clear-btn" style="color:#F87171;border-color:#F87171;">Wis journal</button>
+      <button id="ws-clear-btn" style="color:#F87171;border-color:#F87171;" data-i18n="settings.btn_clear_journal">Wis journal</button>
     </div>
 
   </div>
@@ -520,22 +520,22 @@
 
     <!-- Learning engine status -->
     <div id="learning-status-block" style="display:none;margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
-      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">Leermotor status</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;" data-i18n="settings.learning_title">Leermotor status</div>
       <div id="learning-status-inner" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;"></div>
     </div>
 
     <!-- Consumption profile chart -->
     <div id="consumption-profile-section" style="display:none;margin-top:30px;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-        <h3 style="margin:0;font-size:14px;">Verbruiksprofiel (geleerd)</h3>
+        <h3 style="margin:0;font-size:14px;" data-i18n="settings.consumption_profile_title">Verbruiksprofiel (geleerd)</h3>
         <div style="display:flex;gap:4px;">
-          <button class="cons-day-btn" data-day="1" style="padding:3px 8px;font-size:11px;">Ma</button>
-          <button class="cons-day-btn" data-day="2" style="padding:3px 8px;font-size:11px;">Di</button>
-          <button class="cons-day-btn" data-day="3" style="padding:3px 8px;font-size:11px;">Wo</button>
-          <button class="cons-day-btn" data-day="4" style="padding:3px 8px;font-size:11px;">Do</button>
-          <button class="cons-day-btn" data-day="5" style="padding:3px 8px;font-size:11px;">Vr</button>
-          <button class="cons-day-btn" data-day="6" style="padding:3px 8px;font-size:11px;">Za</button>
-          <button class="cons-day-btn" data-day="0" style="padding:3px 8px;font-size:11px;">Zo</button>
+          <button class="cons-day-btn" data-day="1" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_mon">Ma</button>
+          <button class="cons-day-btn" data-day="2" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_tue">Di</button>
+          <button class="cons-day-btn" data-day="3" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_wed">Wo</button>
+          <button class="cons-day-btn" data-day="4" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_thu">Do</button>
+          <button class="cons-day-btn" data-day="5" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_fri">Vr</button>
+          <button class="cons-day-btn" data-day="6" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_sat">Za</button>
+          <button class="cons-day-btn" data-day="0" style="padding:3px 8px;font-size:11px;" data-i18n="settings.day_sun">Zo</button>
         </div>
         <span id="consumption-peak-info" style="font-size:11px;color:var(--muted);margin-left:8px;"></span>
       </div>
@@ -1073,6 +1073,9 @@
       document.getElementById('tab-planning').innerText = Homey.__('settings.tab_planning');
       document.getElementById('planning-title').innerText = Homey.__('settings.planning_title');
       document.getElementById('planning-subtitle').innerText = Homey.__('settings.planning_subtitle');
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const v = Homey.__(el.dataset.i18n); if (v) el.textContent = v;
+      });
 
       Homey.get(async (err, settings) => {
         if (err) return;
@@ -2157,31 +2160,31 @@
         ? (knownPriceIntervals.reduce((s, i) => s + i.price, 0) / knownPriceIntervals.length).toFixed(3)
         : '?';
 
-      const policyModeLabel = userPolicyMode === 'zero' ? 'Peak Shaving' : (lang === 'nl' ? 'Dynamisch Tarief' : 'Dynamic Pricing');
+      const policyModeLabel = userPolicyMode === 'zero' ? 'Peak Shaving' : Homey.__('settings.label_policy_mode_dynamic');
 
       document.getElementById('planning-status').innerHTML = `
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Policy Modus' : 'Policy Mode'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_policy_mode')}</div>
           <div class="planning-status-value" style="font-size:16px;">${policyModeLabel}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Huidige SoC' : 'Current SoC'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_soc')}</div>
           <div class="planning-status-value">${currentSOC}% · ${(currentSOC / 100 * capKwh).toFixed(1)} kWh${(policyState?.batteryCount ?? 1) > 1 ? ` · ${policyState.batteryCount}×` : ''}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Gem. Prijs' : 'Avg. Price'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_avg_price')}</div>
           <div class="planning-status-value">€${avgKnownPrice}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Max Laadprijs' : 'Max Charge Price'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_max_charge')}</div>
           <div class="planning-status-value" style="font-size:18px;color:#8b9fff;">€${maxChgPrice.toFixed(3)}${effectiveChgPrice > maxChgPrice + 0.005 ? `<span style="font-size:12px;color:#aaa;"> / €${effectiveChgPrice.toFixed(3)} dyn</span>` : ''}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Min Ontlaadprijs' : 'Min Discharge Price'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_min_discharge')}</div>
           <div class="planning-status-value" style="font-size:18px;color:#20F29B;">€${minDchPrice.toFixed(3)}</div>
         </div>
         <div class="planning-status-item">
-          <div class="planning-status-label">${lang === 'nl' ? 'Resolutie' : 'Resolution'}</div>
+          <div class="planning-status-label">${Homey.__('settings.label_resolution')}</div>
           <div class="planning-status-value" style="font-size:14px;">${use15Min ? '15 min' : '1 uur'}</div>
         </div>
       `;
@@ -2191,7 +2194,7 @@
       if (policyState?.currentMode === 'predictive') {
         predictiveBanner.style.display = 'block';
         predictiveBanner.innerHTML = lang === 'nl'
-          ? '🤖 <strong>HW Slim Laden actief</strong> — de battery wordt aangestuurd door Slim Laden, niet door de policy engine. De planning hieronder toont het DP-advies als indicatie.'
+          ? '🤖 <strong>HW Slim Laden actief</strong> — de batterij wordt aangestuurd door Slim Laden, niet door de policy engine. De planning hieronder toont het DP-advies als indicatie.'
           : '🤖 <strong>HW Smart Charging active</strong> — battery is controlled by Smart Charging, not the policy engine. The schedule below shows the DP plan as an indication.';
       } else {
         predictiveBanner.style.display = 'none';
@@ -2227,12 +2230,13 @@
         if (hour === 0) {
           const d = new Date();
           d.setDate(d.getDate() + day);
-          const dayName = (lang === 'nl'
-            ? ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag']
-            : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-          )[d.getDay()];
+          const dayName = [
+            Homey.__('settings.day_sun'), Homey.__('settings.day_mon'), Homey.__('settings.day_tue'),
+            Homey.__('settings.day_wed'), Homey.__('settings.day_thu'), Homey.__('settings.day_fri'),
+            Homey.__('settings.day_sat'),
+          ][d.getDay()];
           const dateStr = d.toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { month: 'long', day: 'numeric' });
-          const label = day === 0 ? (lang === 'nl' ? 'Vandaag' : 'Today') : (lang === 'nl' ? 'Morgen' : 'Tomorrow');
+          const label = day === 0 ? Homey.__('settings.today') : Homey.__('settings.tomorrow');
 
           // Cycle detection: count charge↔discharge transitions for this day
           const dayHours = hourlyGroups.filter(g => g.day === day && !g.intervals.every(i => i.isPast));
@@ -2246,9 +2250,9 @@
           }
           const cycleCount = Math.ceil(cycleTransitions / 2);
           const cycleLabel = cycleCount >= 2
-            ? (lang === 'nl' ? ` · 🔄 ${cycleCount}× cyclus` : ` · 🔄 ${cycleCount}× cycle`)
+            ? ` · ${Homey.__('settings.cycle_plural').replace('{n}', cycleCount)}`
             : cycleCount === 1
-              ? (lang === 'nl' ? ' · 🔋 1× cyclus' : ' · 🔋 1× cycle')
+              ? ` · ${Homey.__('settings.cycle_single')}`
               : '';
 
           const dynChgLabel = effectiveChgPrice > maxChgPrice + 0.005
@@ -2264,13 +2268,13 @@
             .reduce((sum, g) => sum + (avgCostPerKwh ?? g.avgPrice ?? 0) * maxChgW / 1000, 0);
           const dayNet = dayDischargeRevenue - dayChargeCost;
           const revenueLabel = dayNet >= 0.01
-            ? ` · 💰 ~€${dayNet.toFixed(2)}${dayChargeCost >= 0.01 ? ' netto' : ''}`
+            ? ` · 💰 ~€${dayNet.toFixed(2)}${dayChargeCost >= 0.01 ? ` ${Homey.__('settings.net_suffix')}` : ''}`
             : '';
 
           let selfSuffLabel = '';
           if (day === 0) {
             const ss = settings['today_self_sufficiency'];
-            if (ss?.pct != null) selfSuffLabel = ` · 🏠 ${ss.pct}% zelfvoorzienend`;
+            if (ss?.pct != null) selfSuffLabel = ` · 🏠 ${ss.pct}% ${Homey.__('settings.self_sufficient')}`;
           }
 
           const consumptionByHour = {};
@@ -2300,13 +2304,13 @@
               const d = new Date(fetchedAt);
               const timeStr = d.toLocaleTimeString(lang === 'nl' ? 'nl-NL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
               const pvLearnedSlots = policyState?.pvLearnedSlots ?? 0;
-              const learnNote  = pvLearnedSlots >= 10 ? '' : ' (min. 10 voor leren)';
-              weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${lang === 'nl' ? 'Weerdata bijgewerkt om' : 'Weather updated at'} ${timeStr}<br>📈 ${pvLearnedSlots}/96 PV-slots geleerd${learnNote}</div>`;
+              const learnNote  = pvLearnedSlots >= 10 ? '' : ` ${Homey.__('settings.min_slots_note')}`;
+              weatherTs = `<div style="font-size:11px;color:var(--dim);margin:4px 0 6px 4px;display:block;">☀️ ${Homey.__('settings.weather_updated_at')} ${timeStr}<br>📈 ${pvLearnedSlots}/96 ${Homey.__('settings.pv_slots_learned')}${learnNote}</div>`;
             }
           }
           const pvSurplusPlaceholder = day === 0 ? '<div id="pv-surplus-block" style="display:none;grid-column:1/-1;font-size:13px;color:var(--muted);padding:2px 0 4px 4px;"></div>' : '';
           const noPriceBadge = (day === 1 && !hasTomorrowPrices)
-            ? `<div style="margin:4px 0 8px;padding:6px 10px;background:#3a2a00;border:1px solid #7a5500;border-radius:6px;font-size:12px;color:#FCD34D;display:inline-block;">⏳ ${lang === 'nl' ? 'Prijzen voor morgen nog niet beschikbaar — planning op basis van vandaag' : 'Tomorrow\'s prices not yet available — planning based on today'}</div>`
+            ? `<div style="margin:4px 0 8px;padding:6px 10px;background:#3a2a00;border:1px solid #7a5500;border-radius:6px;font-size:12px;color:#FCD34D;display:inline-block;">⏳ ${Homey.__('settings.no_tomorrow_prices')}</div>`
             : '';
           dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${noPriceBadge}${weatherTs}${pvCurve}${pvSurplusPlaceholder}`;
         }
