@@ -1438,5 +1438,8 @@
   },
   "3.15.69": {
     "en": "pv forecast learning bug fix"
+  },
+  "3.15.70": {
+    "en": "open meteo factor adjusr"
   }
 }
