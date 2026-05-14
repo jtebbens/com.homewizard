@@ -1441,5 +1441,8 @@
   },
   "3.15.70": {
     "en": "open meteo factor adjusr"
+  },
+  "3.15.71": {
+    "en": "pv trickle bug fix, blocked charging when profit was gone"
   }
 }
