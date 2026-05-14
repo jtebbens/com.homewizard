@@ -1158,7 +1158,7 @@ if (debug) this.log(
                   settings.solcast_resource_id,
                 );
                 if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
-                  const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+                  const { wOM: baseWom, wSC: baseWsc } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
                   const scByDayHour = [{}, {}];
                   for (const s of solcastForecast) {
                     const st = new Date(s.timestamp);
@@ -1169,6 +1169,22 @@ if (debug) this.log(
                     const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
                     if (!Array.isArray(scByDayHour[sIdx][sHour])) scByDayHour[sIdx][sHour] = [];
                     scByDayHour[sIdx][sHour].push(s.pvPowerW);
+                  }
+                  // Divergence correction: when SC exceeds OM for today, reduce SC weight.
+                  let omTodayWh = 0, scTodayWh = 0;
+                  for (const [hour, values] of Object.entries(scByDayHour[0])) {
+                    if (!Array.isArray(values) || values.length === 0) continue;
+                    const omW = pvFcByDay[0][hour];
+                    if (typeof omW !== 'number') continue;
+                    omTodayWh += omW;
+                    scTodayWh += values.reduce((a, b) => a + b, 0) / values.length;
+                  }
+                  let wOM = baseWom, wSC = baseWsc, divLog = '';
+                  if (omTodayWh > 0 && scTodayWh > omTodayWh) {
+                    const div = scTodayWh / omTodayWh;
+                    wSC = baseWsc / div;
+                    wOM = 1.0 - wSC;
+                    divLog = ` div=${div.toFixed(2)}`;
                   }
                   let blendedHours = 0;
                   for (let d = 0; d < 2; d++) {
@@ -1184,7 +1200,7 @@ if (debug) this.log(
                   }
                   const scTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
                   const scTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-                  this.log(`[Solcast] Blended ${blendedHours} chart hours with wOM=${wOM.toFixed(2)} wSC=${wSC.toFixed(2)} — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
+                  this.log(`[Solcast] Blended ${blendedHours} chart hours with wOM=${wOM.toFixed(2)} wSC=${wSC.toFixed(2)}${divLog} — chart forecast now: vandaag ${scTodayKwh.toFixed(1)} kWh, morgen ${scTomKwh.toFixed(1)} kWh`);
                 }
               } catch (err) {
                 this.log(`[Solcast] Chart forecast error: ${err.message}`);
@@ -2111,15 +2127,41 @@ if (debug) this.log(
       if (solcastByHourMs) {
         this._pvForecastSC = solcastByHourMs;
 
-        const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+        const { wOM: baseWom, wSC: baseWsc } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
 
         const todayNLDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const tomorrowNLDate = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const byDay = { [todayNLDate]: { om: 0, sc: 0, bl: 0 }, [tomorrowNLDate]: { om: 0, sc: 0, bl: 0 } };
 
+        // Pre-scan per-day OM vs SC totals for divergence detection.
+        // When SC optimistically exceeds OM, OM's NWP ensemble captures cloud/rain faster
+        // (SC satellite/ML lags on approaching weather fronts). Compute separately per day so
+        // tomorrow's blend isn't skewed by today's weather divergence.
+        const dayTotals = { [todayNLDate]: { om: 0, sc: 0 }, [tomorrowNLDate]: { om: 0, sc: 0 } };
+        for (const slot of pvForecast) {
+          const dk = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          if (!dayTotals[dk]) continue;
+          const scSlots = solcastByHourMs.get(new Date(slot.timestamp).getTime());
+          if (scSlots?.length > 0) {
+            dayTotals[dk].om += slot.pvPowerW;
+            dayTotals[dk].sc += scSlots.reduce((a, b) => a + b, 0) / scSlots.length;
+          }
+        }
+        const getDayWeights = (dk) => {
+          const t = dayTotals[dk];
+          if (t && t.om > 0 && t.sc > t.om) {
+            const div = t.sc / t.om;
+            return { wOM: 1.0 - baseWsc / div, wSC: baseWsc / div, div };
+          }
+          return { wOM: baseWom, wSC: baseWsc, div: null };
+        };
+        const weightsToday    = getDayWeights(todayNLDate);
+        const weightsTomorrow = getDayWeights(tomorrowNLDate);
+
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
           const dayKey = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const { wOM, wSC } = dayKey === todayNLDate ? weightsToday : weightsTomorrow;
 
           const scSlots = solcastByHourMs.get(slotMs);
           let blendedW;
@@ -2142,11 +2184,11 @@ if (debug) this.log(
         const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})` : '';
         const accOM = this.learningEngine?.data?.pv_accuracy_om;
         const accSC = this.learningEngine?.data?.pv_accuracy_sc;
-        const wLog = accOM != null && accSC != null
-          ? ` [w_om=${wOM.toFixed(2)} w_sc=${wSC.toFixed(2)} acc: om=${(accOM*100).toFixed(0)}% sc=${(accSC*100).toFixed(0)}%]`
-          : ` [w_om=${wOM.toFixed(2)} w_sc=${wSC.toFixed(2)} learning]`;
-        this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh${wLog}`);
-        this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh`);
+        const accLog = accOM != null && accSC != null ? ` acc: om=${(accOM*100).toFixed(0)}% sc=${(accSC*100).toFixed(0)}%` : ' learning';
+        const wTd = weightsToday,    dTd = wTd.div != null    ? ` div=${wTd.div.toFixed(2)}`    : '';
+        const wTm = weightsTomorrow, dTm = wTm.div != null    ? ` div=${wTm.div.toFixed(2)}`    : '';
+        this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh [w_om=${wTd.wOM.toFixed(2)} w_sc=${wTd.wSC.toFixed(2)}${dTd}${accLog}]`);
+        this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh [w_om=${wTm.wOM.toFixed(2)} w_sc=${wTm.wSC.toFixed(2)}${dTm}]`);
       } else {
         this._pvForecastSC = null;
       }
