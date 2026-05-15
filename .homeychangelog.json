@@ -1456,5 +1456,8 @@
   },
   "3.15.75": {
     "en": "Buienradar longer range, open meteo cloud coverage added to calculation forecast pv"
+  },
+  "3.15.76": {
+    "en": "Battery mode condition card bug"
   }
 }
