@@ -2253,11 +2253,16 @@ if (debug) this.log(
 
     // Daily PV level bias: correct systematic over/under-prediction learned across days.
     // Pass today's avg cloudcover so the clear-sky EMA is used on sunny days.
+    let _pvDailyBiasFactor = 1.0;
+    let _pvAccFactor = 1.0;
+    let _pvBiasCloud = null;
     if (pvForecast && this.learningEngine) {
       const hf = inputs.weather?.hourlyForecast;
       const cloudVals = Array.isArray(hf) ? hf.map(h => h.cloudCover).filter(v => typeof v === 'number') : [];
       const todayAvgCloud = cloudVals.length > 0 ? cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length : null;
+      _pvBiasCloud = todayAvgCloud;
       const dailyBias = this.learningEngine.getDailyPvBiasFactor(todayAvgCloud);
+      _pvDailyBiasFactor = dailyBias;
       if (dailyBias !== 1.0) {
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * dailyBias) }));
         const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
@@ -2271,10 +2276,17 @@ if (debug) this.log(
       const pvAcc = this.learningEngine.data?.pv_accuracy_score ?? 1.0;
       if (pvAcc < 0.80) {
         const factor = Math.max(0.80, 0.80 + 0.20 * (pvAcc / 0.80));
+        _pvAccFactor = factor;
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * factor) }));
         this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism factor=${factor.toFixed(2)} applied`);
       }
     }
+    this._setLive('policy_pv_bias', {
+      dailyBias: _pvDailyBiasFactor,
+      accFactor: _pvAccFactor,
+      cloud: _pvBiasCloud != null ? Math.round(_pvBiasCloud) : null,
+      net: Math.round(_pvDailyBiasFactor * _pvAccFactor * 1000) / 1000,
+    });
 
     // Intraday PV scaling: correct today's remaining forecast from actual production.
     // Uses pv_predictions already tracked by learning engine — no new API calls.
@@ -3682,6 +3694,7 @@ if (debug) this.log(
       'pv_surplus_forecast',
       'policy_pv_forecast_hourly',
       'policy_pv_actual_today',
+      'policy_pv_bias',
       `batt_mode_hist_${this.getData().id}`,
     ];
     for (const key of settingsToClean) {
