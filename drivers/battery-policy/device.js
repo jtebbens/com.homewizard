@@ -2511,7 +2511,7 @@ if (debug) this.log(
     if (slots?.length > 0) {
       const planningSchedule = this.policyEngine.buildPlanningSchedule(
         slots,
-        pvForecastChart ?? null,
+        pvForecast ?? null,
         minDischargePrice,
         maxChargePowerW,
         inputs.dynamicMaxChargePrice ?? null,
