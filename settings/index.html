@@ -2489,6 +2489,12 @@
           `Laadprijs max: ${fmtE(maxChgPrice)}  (dynamisch effectief: ${fmtE(effectiveChgPrice)})`,
           `Ontlaadpr min: ${fmtE(minDchPrice)}  min winst ${fmtE(minProfit)}`,
           `PV:            ${fmtW(pvCapW)}  PR ${fmt(pvPR)}  actief ${fmt(pvEnabled)}`,
+          (() => {
+            const b = settings['policy_pv_bias'];
+            if (!b) return 'PV bias:       —';
+            const cloudStr = b.cloud != null ? `  bewolking=${b.cloud}%` : '';
+            return `PV bias:       ×${b.dailyBias?.toFixed(3) ?? '—'} (dag)  ×${b.accFactor?.toFixed(2) ?? '—'} (acc)  netto ×${b.net?.toFixed(3) ?? '—'}${cloudStr}`;
+          })(),
           `Morgen prijzen: ${hasTomorrowPrices ? 'ja' : 'nee'}`,
         ];
 
@@ -2513,9 +2519,9 @@
         if (futureSlots.length > 0) {
           lines.push('', '--- Planning per slot (huidig → einde) ---');
           lines.push(
-            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'SoC%'.padEnd(5)}  Reden`
+            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'PVchart'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'SoC%'.padEnd(5)}  Reden`
           );
-          lines.push('─'.repeat(105));
+          lines.push('─'.repeat(115));
 
           const pushSlotRow = (iv, repeatCount) => {
             const timeStr  = iv.timestamp
@@ -2532,15 +2538,22 @@
             const curMark  = iv.isCurrent ? '◀' : ' ';
             const reason   = iv.reason ?? '';
             const countStr = repeatCount > 1 ? `  [×${repeatCount}]` : '';
+            const ivHour   = iv.timestamp
+              ? parseInt(iv.timestamp.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)
+              : null;
+            const pvChart  = (ivHour != null && pvForecastByDay[iv.day ?? 0]?.[ivHour] != null)
+              ? Math.round(pvForecastByDay[iv.day ?? 0][ivHour])
+              : null;
 
             lines.push(
               `${dayMark}${timeStr.padEnd(5)}${curMark} ` +
               `${priceStr.padEnd(7)}  ` +
               `${action.padEnd(10)}  ` +
               `${mode.padEnd(20)}  ` +
-              `${pad(pvW  != null ? pvW  : '—',  6, true)}  ` +
-              `${pad(consW != null ? consW : '—', 8, true)}  ` +
-              `${pad(nettoW != null ? nettoW : '—', 8, true)}  ` +
+              `${pad(pvW     != null ? pvW     : '—',  6, true)}  ` +
+              `${pad(pvChart != null ? pvChart : '—',  7, true)}  ` +
+              `${pad(consW   != null ? consW   : '—',  8, true)}  ` +
+              `${pad(nettoW  != null ? nettoW  : '—',  8, true)}  ` +
               `${socStr.padEnd(5)}  ${reason}${countStr}`
             );
           };
