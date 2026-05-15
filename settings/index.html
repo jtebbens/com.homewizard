@@ -838,7 +838,7 @@
       const nowHour = day === 0
         ? parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)
         : 0;
-      const allKwh       = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
+      const allKwh       = (pvWatts.reduce((a, b, h) => a + (day === 0 && h < nowHour ? (actualWatts?.[h] ?? 0) : b), 0) / 1000).toFixed(1);
       const totalKwh     = (pvWatts.slice(nowHour).reduce((a, b) => a + b, 0) / 1000).toFixed(1);
       const labelX = Math.min(peakX + 6, W - 44);
       const labelY = Math.max(peakY - 6, pad.t + 11);

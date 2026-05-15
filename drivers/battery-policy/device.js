@@ -2247,6 +2247,10 @@ if (debug) this.log(
     // so actual=0 with forecast>0 would wrongly degrade the PV accuracy score.
     this._recordPvAccuracySample(now, inputs.tariff?.currentPrice ?? null);
 
+    // Save unbiased pvForecast for chart display — bias is a planning correction,
+    // chart should show realistic expected production, not inflated DP assumptions.
+    const pvForecastChart = pvForecast ? [...pvForecast] : null;
+
     // Daily PV level bias: correct systematic over/under-prediction learned across days.
     // Pass today's avg cloudcover so the clear-sky EMA is used on sunny days.
     if (pvForecast && this.learningEngine) {
@@ -2560,17 +2564,20 @@ if (debug) this.log(
         const _existing   = this._liveState.policy_pv_forecast_hourly
           ?? this.homey.settings.get('policy_pv_forecast_hourly')
           ?? [{}, {}];
-        const pvFcByDay   = [{ ..._existing[0] }, { ..._existing[1] ?? {} }];
+        const _nowHourNL  = parseInt(_fcNow.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        const pvFcByDay   = [
+          Object.fromEntries(Object.entries(_existing[0] ?? {}).filter(([h]) => parseInt(h) >= _nowHourNL)),
+          { ..._existing[1] ?? {} },
+        ];
         const pvSumByDayHour = [{}, {}];
         const pvCntByDayHour = [{}, {}];
-        for (const slot of planningSchedule) {
-          if (slot.pvW == null) continue;
-          const st    = new Date(slot.timestamp);
+        for (const fc of (pvForecastChart ?? [])) {
+          const st    = new Date(fc.timestamp);
           const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
           const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
           if (sIdx < 0) continue;
           const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-          pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + slot.pvW;
+          pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + fc.pvPowerW;
           pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
         }
         for (let d = 0; d < 2; d++) {
@@ -2578,6 +2585,9 @@ if (debug) this.log(
             pvFcByDay[d][h] = Math.round(pvSumByDayHour[d][h] / pvCntByDayHour[d][h]);
           }
         }
+        const _chartTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
+        const _chartTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
+        this.log(`[PV chart] unbiased forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (future only), morgen ${_chartTomKwh.toFixed(1)} kWh`);
         this._setLive('policy_pv_forecast_hourly', pvFcByDay);
       }
 
