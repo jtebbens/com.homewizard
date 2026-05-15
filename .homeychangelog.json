@@ -1444,5 +1444,8 @@
   },
   "3.15.71": {
     "en": "pv trickle bug fix, blocked charging when profit was gone"
+  },
+  "3.15.72": {
+    "en": "pv forecast fix when stale openmeteo data"
   }
 }
