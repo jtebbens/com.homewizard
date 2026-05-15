@@ -1453,5 +1453,8 @@
   },
   "3.15.74": {
     "en": "buienradar correction fixes on pv forecast"
+  },
+  "3.15.75": {
+    "en": "Buienradar longer range, open meteo cloud coverage added to calculation forecast pv"
   }
 }
