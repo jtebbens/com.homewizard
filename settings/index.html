@@ -2519,11 +2519,14 @@
         if (futureSlots.length > 0) {
           lines.push('', '--- Planning per slot (huidig → einde) ---');
           lines.push(
-            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'PVchart'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'SoC%'.padEnd(5)}  Reden`
+            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'PVchart'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'Batt(W)'.padStart(7)}  ${'SoC%'.padEnd(5)}  Reden`
           );
-          lines.push('─'.repeat(115));
+          lines.push('─'.repeat(124));
 
-          const pushSlotRow = (iv, repeatCount) => {
+          const capacityKwh = ps.totalCapacityKwh ?? 2.69;
+          const slotMinutes = 15;
+
+          const pushSlotRow = (iv, repeatCount, nextSoc = null) => {
             const timeStr  = iv.timestamp
               ? iv.timestamp.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' })
               : '??:??';
@@ -2544,6 +2547,10 @@
             const pvChart  = (ivHour != null && pvForecastByDay[iv.day ?? 0]?.[ivHour] != null)
               ? Math.round(pvForecastByDay[iv.day ?? 0][ivHour])
               : null;
+            const durH = repeatCount * slotMinutes / 60;
+            const battW = (iv.soc != null && nextSoc != null)
+              ? Math.round(((nextSoc - iv.soc) / 100) * capacityKwh * 1000 / durH)
+              : null;
 
             lines.push(
               `${dayMark}${timeStr.padEnd(5)}${curMark} ` +
@@ -2554,6 +2561,7 @@
               `${pad(pvChart != null ? pvChart : '—',  7, true)}  ` +
               `${pad(consW   != null ? consW   : '—',  8, true)}  ` +
               `${pad(nettoW  != null ? nettoW  : '—',  8, true)}  ` +
+              `${pad(battW   != null ? battW   : '—',  7, true)}  ` +
               `${socStr.padEnd(5)}  ${reason}${countStr}`
             );
           };
@@ -2570,12 +2578,12 @@
 
           for (const iv of futureSlots) {
             if (iv.isCurrent) {
-              if (groupIv) { pushSlotRow(groupIv, groupCount); groupIv = null; groupCount = 0; }
+              if (groupIv) { pushSlotRow(groupIv, groupCount, iv.soc); groupIv = null; groupCount = 0; }
               pushSlotRow(iv, 1);
             } else if (groupIv && slotKey(iv) === slotKey(groupIv)) {
               groupCount++;
             } else {
-              if (groupIv) pushSlotRow(groupIv, groupCount);
+              if (groupIv) pushSlotRow(groupIv, groupCount, iv.soc);
               groupIv = iv; groupCount = 1;
             }
           }
