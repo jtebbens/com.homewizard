@@ -2302,22 +2302,32 @@ if (debug) this.log(
       const avgActual = todayPreds.length
         ? todayPreds.reduce((s, p) => s + p.actual, 0) / todayPreds.length : 0;
       if (todayPreds.length >= 4 && avgActual >= 200) {
-        const sumForecast = todayPreds.reduce((s, p) => s + p.predicted, 0);
-        const sumActual   = todayPreds.reduce((s, p) => s + p.actual,    0);
-        const rawRatio    = sumActual / sumForecast;
-        const ratio       = Math.min(2.5, Math.max(0.4, rawRatio));
+        // Per-sample ratios, winsorised at [0.25, 2.5] — prevents a single spike from
+        // dominating the correction (sumActual/sumForecast gave high weight to outliers).
+        const WIN_LO = 0.25, WIN_HI = 2.5;
+        const sampleRatios = todayPreds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
+        const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
+
+        // Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
+        // followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data.
+        const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
+        const cv        = Math.sqrt(variance) / meanRatio;
+        // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
+        const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
+        const ratio     = 1.0 + (meanRatio - 1.0) * cvWeight;
+
         this._lastIntradayPvRatio = ratio;
         if (Math.abs(ratio - 1.0) > 0.10) {
           const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
           pvForecast = pvForecast.map(slot => {
             if (new Date(slot.timestamp) <= now) return slot;
             const slotDate = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-            if (slotDate !== todayNLDate) return slot; // don't scale tomorrow
+            if (slotDate !== todayNLDate) return slot;
             return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
           });
-          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} (clamped=${ratio.toFixed(2)}) → scaled ${futureSlotsCount} future slots today`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
         } else {
-          this.log(`[PV intraday] ${todayPreds.length} samples, ratio=${rawRatio.toFixed(2)} → within 10% threshold, no scaling`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
         }
       }
     }
