@@ -1184,7 +1184,7 @@ if (debug) this.log(
                   let wOM = baseWom, wSC = baseWsc, divLog = '';
                   if (omTodayWh > 0 && scTodayWh > omTodayWh) {
                     const div = scTodayWh / omTodayWh;
-                    wSC = baseWsc / div;
+                    wSC = Math.max(baseWsc * 0.5, baseWsc / Math.sqrt(div));
                     wOM = 1.0 - wSC;
                     divLog = ` div=${div.toFixed(2)}`;
                   }
@@ -2089,7 +2089,7 @@ if (debug) this.log(
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
           const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
-          return { timestamp: d.toISOString(), pvPowerW: pvW };
+          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0 };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
       if (clearSkyCeilingApplied > 0) {
@@ -2158,16 +2158,22 @@ if (debug) this.log(
             dayTotals[dk].sc += scSlots.reduce((a, b) => a + b, 0) / scSlots.length;
           }
         }
-        const getDayWeights = (dk) => {
+        const getDayWeights = (dk, applyDivergence = true) => {
           const t = dayTotals[dk];
-          if (t && t.om > 0 && t.sc > t.om) {
+          // SC satellite/ML lag on approaching weather fronts applies mainly to today's
+          // remaining hours. Tomorrow's SC forecast uses its ML model which is less prone
+          // to front-lag, so skip the divergence penalty for tomorrow entirely.
+          if (applyDivergence && t && t.om > 0 && t.sc > t.om) {
             const div = t.sc / t.om;
-            return { wOM: 1.0 - baseWsc / div, wSC: baseWsc / div, div };
+            // √div for gentler penalty; floor at baseWsc×0.5 so SC never drops below half its
+            // accuracy-derived share.
+            const wSC = Math.max(baseWsc * 0.5, baseWsc / Math.sqrt(div));
+            return { wOM: 1.0 - wSC, wSC, div };
           }
           return { wOM: baseWom, wSC: baseWsc, div: null };
         };
-        const weightsToday    = getDayWeights(todayNLDate);
-        const weightsTomorrow = getDayWeights(tomorrowNLDate);
+        const weightsToday    = getDayWeights(todayNLDate, true);
+        const weightsTomorrow = getDayWeights(tomorrowNLDate, false);
 
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
@@ -2258,10 +2264,17 @@ if (debug) this.log(
     let _pvBiasCloud = null;
     if (pvForecast && this.learningEngine) {
       const hf = inputs.weather?.hourlyForecast;
-      const cloudVals = Array.isArray(hf) ? hf.map(h => h.cloudCover).filter(v => typeof v === 'number') : [];
-      const todayAvgCloud = cloudVals.length > 0 ? cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length : null;
-      _pvBiasCloud = todayAvgCloud;
-      const dailyBias = this.learningEngine.getDailyPvBiasFactor(todayAvgCloud);
+      const cloudVals    = Array.isArray(hf) ? hf.map(h => h.cloudCover).filter(v => typeof v === 'number') : [];
+      const cloudLowVals = Array.isArray(hf) ? hf.map(h => h.cloudCoverLow).filter(v => typeof v === 'number') : [];
+      const todayAvgCloud    = cloudVals.length > 0    ? cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length       : null;
+      const todayAvgCloudLow = cloudLowVals.length > 0 ? cloudLowVals.reduce((a, b) => a + b, 0) / cloudLowVals.length : null;
+      // Low clouds (stratus/cumulus) are more impactful than high cirrus — amplify by ×1.2
+      // and use the higher of total or amplified low-cloud cover as effective cloud cover.
+      const effectiveCloud = (todayAvgCloud != null && todayAvgCloudLow != null)
+        ? Math.min(100, Math.max(todayAvgCloud, todayAvgCloudLow * 1.2))
+        : todayAvgCloud;
+      _pvBiasCloud = effectiveCloud;
+      const dailyBias = this.learningEngine.getDailyPvBiasFactor(effectiveCloud);
       _pvDailyBiasFactor = dailyBias;
       if (dailyBias !== 1.0) {
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * dailyBias) }));
@@ -2334,21 +2347,51 @@ if (debug) this.log(
 
     // Buienradar rain correction: cap near-term PV slots based on precipitation radar.
     // Only applies within the 2-hour Buienradar window; only reduces, never increases.
+    // Uses windowed average over ±7.5 min (half a 15-min slot) so adjacent rainy 5-min
+    // intervals all contribute rather than a single nearest-neighbour point.
     if (pvForecast && Array.isArray(this.buienradarData) && this.buienradarData.length > 0) {
       const buienradarEndMs = this.buienradarData[this.buienradarData.length - 1].time.getTime();
+      const halfSlotMs = 7.5 * 60 * 1000;
       let correctedCount = 0;
       pvForecast = pvForecast.map(slot => {
         const slotMs = new Date(slot.timestamp).getTime();
         if (slotMs > buienradarEndMs) return slot;
-        const nearest = this.buienradarData.reduce((a, b) =>
-          Math.abs(b.time.getTime() - slotMs) < Math.abs(a.time.getTime() - slotMs) ? b : a
+        const inWindow = this.buienradarData.filter(b =>
+          Math.abs(b.time.getTime() - slotMs) <= halfSlotMs
         );
-        if (nearest.factor >= 1.0) return slot;
+        const samples = inWindow.length > 0 ? inWindow : [
+          this.buienradarData.reduce((a, b) =>
+            Math.abs(b.time.getTime() - slotMs) < Math.abs(a.time.getTime() - slotMs) ? b : a
+          ),
+        ];
+        const avgFactor = samples.reduce((s, b) => s + b.factor, 0) / samples.length;
+        if (avgFactor >= 1.0) return slot;
         correctedCount++;
-        return { ...slot, pvPowerW: Math.round(slot.pvPowerW * nearest.factor) };
+        return { ...slot, pvPowerW: Math.round(slot.pvPowerW * avgFactor) };
       });
       if (correctedCount > 0) {
         this.log(`🌧️ Buienradar: PV correctie op ${correctedCount} slots`);
+      }
+    }
+
+    // OM precipitation: extend rain correction beyond the 2h Buienradar window.
+    // OM irradiance already accounts for most cloud effects; _omPrecipFactor adds a
+    // conservative residual correction for slots with active precipitation.
+    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
+      const buienradarEndMs = (Array.isArray(this.buienradarData) && this.buienradarData.length > 0)
+        ? this.buienradarData[this.buienradarData.length - 1].time.getTime()
+        : 0;
+      let omCorrCount = 0;
+      pvForecast = pvForecast.map(slot => {
+        const slotMs = new Date(slot.timestamp).getTime();
+        if (slotMs <= buienradarEndMs) return slot;
+        const factor = WeatherForecaster._omPrecipFactor(slot.precipMmh ?? 0);
+        if (factor >= 1.0) return slot;
+        omCorrCount++;
+        return { ...slot, pvPowerW: Math.round(slot.pvPowerW * factor) };
+      });
+      if (omCorrCount > 0) {
+        this.log(`🌧️ OM precipitatie: PV correctie op ${omCorrCount} slots`);
       }
     }
 
