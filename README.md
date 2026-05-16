@@ -51,7 +51,42 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.59–v3.15.62)
+## 📝 Latest Updates (v3.15.63–v3.15.77)
+
+### Battery Policy — Night Behaviour Fixes (v3.15.77)
+
+* **Sunset guard broken after midnight weather refresh (v3.15.77)** — After midnight, a weather cache refresh set `todaySunset` to the current day's future sunset timestamp. Because the current time (e.g. 00:48 UTC) was before that sunset (19:30 UTC), `_afterSunset` evaluated to `false`, letting stale PV estimates (EMA still decaying) pass the guard and map `preserve` to `zero_charge_only` instead of `standby`. Fix: `_afterSunset` is now also `true` when the current time is before `todaySunrise`, covering the entire pre-dawn window regardless of which day's sunset is cached
+* **SoC staleness at policy run (v3.15.77)** — `battery_group_average_soc` is updated by a 60-second interval; when the policy engine ran between updates it used a stale SoC, causing the DP to plan from the wrong starting point. Fix: `_updateBatteryGroup()` is now called immediately before `_getBatteryState()` on every policy run, refreshing the capability from live WS data
+* **Event history battery power from WS (v3.15.77)** — `battW` in event history entries now reads `_lastPower` directly from the plugin_battery WebSocket (seconds-fresh) instead of the 30s-stale `battery_group_power_w` capability. Falls back to the capability when no plugin_battery device is found
+* **BMS calibration detection (v3.15.77)** — Battery management systems occasionally run a calibration cycle: battery charges at full power but reports SoC=0% and power=0W. This caused event history entries to look like unexplained grid spikes. Policy engine now detects this signature (`soc=0%`, `battW≈0`, `gridW>700W`, nighttime, no charge/discharge mode commanded) and marks the entry `exception: bms_calibration`
+
+### Battery Policy — PV Forecast Accuracy (v3.15.69–v3.15.76)
+
+* **Multi-source rain correction + ensemble averaging (v3.15.74)** — Buienradar now samples 5 geographic points (center + N/S/E/W at ±0.05°) for more representative local precipitation. PV forecast now averages 4 Open-Meteo radiation models (ECMWF, GFS, ICON, KNMI Harmonie), with spread-adjusted weighting to reduce outlier influence
+* **3-class daily PV bias stratification by cloud cover (v3.15.73)** — Daily PV bias factor is now derived from three cloud-cover classes (clear/partial/overcast) rather than a single global correction, improving accuracy for mixed-sky days
+* **Intraday PV scaling with winsorised ratios + CV dampening (v3.15.72)** — Intraday reoptimisation scales the PV forecast to match morning actuals. Ratio samples are now winsorised (outlier-clipped) and dampened by their coefficient of variation, preventing a single cloudy-then-clear hour from over-correcting the full-day forecast
+* **Clear-sky forecast floor (v3.15.63)** — Intraday reopt now enforces a clear-sky model as a ceiling on per-slot PV corrections; slots cannot be scaled above theoretical maximum irradiance
+
+### Battery Policy — PV Chart & Display (v3.15.69–v3.15.73)
+
+* **OM and Solcast forecast lines shown separately (v3.15.70)** — PV chart now renders Open-Meteo (blue dashed) and Solcast (purple dashed) forecast lines independently alongside the blended orange line, making model agreement visible
+* **Day-start Solcast snapshot for past-hour chart line (v3.15.77)** — The blended orange line now extends into past hours using the day-start Solcast snapshot (saved once per Amsterdam calendar day), preventing the line from dropping to zero for past slots when live data is no longer available
+* **Planning schedule uses unbiased PV forecast (v3.15.73)** — The planning chart's orange forecast line now uses the raw unbiased PV values; the daily bias factor is applied only to optimizer inputs, not to the chart display
+* **PV bias info + pvChart column in diagnose (v3.15.69)** — The `/diagnose` command now shows `PV bias: ×X.XX (dag) ×X.XX (acc) netto ×X.XX bewolking=X%` and a `PVchart` column with the chart-scaled PV value per slot
+
+### Settings & Diagnostics (v3.15.69)
+
+* **Bilingual settings page NL + EN (v3.15.69)** — All settings labels and descriptions are now available in Dutch and English; language follows the Homey locale setting
+
+### Battery Policy — Optimizer (v3.15.63–v3.15.68)
+
+* **Stop trickle-charging when PV export earns more (v3.15.65)** — `pv_trickle` mode is now blocked when the current export price exceeds the opportunity cost of charging; battery switches to `standby` and lets PV export to grid instead
+* **PV trickle cost corrected to zero (v3.15.65)** — The optimizer previously assigned a non-zero charge cost to `pv_trickle` slots, making them compete unfairly with free PV surplus. Trickle-charge cost is now set to zero, consistent with how surplus PV charging is modelled
+* **`pv_surplus_forecast` uses mapped hwModes and charge cap (v3.15.69)** — Surplus forecast now accounts for the actual hwMode mapping (not raw DP action) and respects the max charge power cap, preventing overly optimistic PV surplus estimates
+
+---
+
+## Previous Updates (v3.15.59–v3.15.62)
 
 ### Battery Policy — PV Detection & Diagnostics
 
