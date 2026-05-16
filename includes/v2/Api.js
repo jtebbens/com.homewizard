@@ -81,33 +81,9 @@ module.exports = (function () {
   // GET MODE
   // -------------------------
   api.getMode = async function (url, token) {
-    const data = await fetchJSON(`${url}/api/batteries`, {
+    return fetchJSON(`${url}/api/batteries`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-
-    if (data.mode === 'to_full') return 'to_full';
-    if (data.mode === 'predictive') return 'predictive';
-
-    if (Array.isArray(data.permissions)) {
-      const perms = [...data.permissions].sort().join(',');
-
-      switch (perms) {
-        case '':
-          return 'standby';
-        case 'charge_allowed,discharge_allowed':
-          return 'zero';
-        case 'charge_allowed':
-          return 'zero_charge_only';
-        case 'discharge_allowed':
-          return 'zero_discharge_only';
-        default:
-          // Unknown firmware mode — treat as standby to avoid a crash
-          console.log(`[API] Unknown permissions combination: ${JSON.stringify(data.permissions)}, treating as standby`);
-          return 'standby';
-      }
-    }
-
-    return data.mode;
   };
 
   // -------------------------

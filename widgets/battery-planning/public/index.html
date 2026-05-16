@@ -292,17 +292,7 @@ function renderSvg(slots) {
   const nowMarkerColor = isDark ? 'white' : '#333';
   let svgParts = [];
 
-  // Background mode rectangles
-  shown.forEach((s, i) => {
-    const x = PAD_L + i * slotW;
-    const col = MODE_COLORS[s.mode] || '#546e7a';
-    const isPast = s.ts < now;
-    svgParts.push(
-      `<rect x="${x.toFixed(1)}" y="${PAD_T}" width="${slotW.toFixed(1)}" height="${chartH}" fill="${col}" opacity="${isPast ? 0.07 : 0.15}"/>`
-    );
-  });
-
-  // PV forecast area (polygon)
+  // PV forecast area (polygon) — drawn first so mode rects render on top
   if (pvs.some(v => v > 0)) {
     const baseY = PAD_T + chartH;
     let pts = `${PAD_L},${baseY}`;
@@ -315,6 +305,16 @@ function renderSvg(slots) {
     pts += ` ${(PAD_L + chartW).toFixed(1)},${baseY}`;
     svgParts.push(`<polygon points="${pts}" fill="#FFD700" opacity="0.30"/>`);
   }
+
+  // Background mode rectangles — drawn after PV polygon so colors stay visible
+  shown.forEach((s, i) => {
+    const x = PAD_L + i * slotW;
+    const col = MODE_COLORS[s.mode] || '#546e7a';
+    const isPast = s.ts < now;
+    svgParts.push(
+      `<rect x="${x.toFixed(1)}" y="${PAD_T}" width="${slotW.toFixed(1)}" height="${chartH}" fill="${col}" opacity="${isPast ? 0.07 : 0.15}"/>`
+    );
+  });
 
   // Price step line
   let pricePath = '';
