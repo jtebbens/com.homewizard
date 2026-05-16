@@ -2003,9 +2003,9 @@
             `Tijdstip:       ${fmt(d.ts)}`,
             `Prijs:          ${fmtE(d.price)}    SoC: ${fmt(d.soc)}%    Huidig verbruik: ${d.currentLoad != null ? d.currentLoad + 'W' : '—'}`,
             `Scores:         laden=${fmt(d.scores?.charge)}  ontladen=${fmt(d.scores?.discharge)}  behoud=${fmt(d.scores?.preserve)}`,
-            `Beslissing:     ${fmt(d.policyMode)}  →  ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
+            `Beslissing:     ${fmt(d.policyMode)}  →  ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}${d.lowSocGridTopUp ? '  ⚡lowSocTopUp' : ''}`,
             `Break-even:     ${fmtE(d.breakEven)}    Gem. kostprijs: ${fmtE(d.avgCost)}`,
-            `Optimizer:      ${fmt(d.optimizer)}`,
+            `Optimizer:      ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
           );
         } else {
@@ -2505,9 +2505,9 @@
             '--- Actieve slot (laatste policy run) ---',
             `Tijdstip:      ${fmt(d.ts)}`,
             `Prijs:         ${fmtE(d.price)}  SoC ${fmt(d.soc)}%  huidig verbruik ${d.houseConsumption != null ? d.houseConsumption + 'W' : (d.currentLoad != null ? d.currentLoad + 'W' : '—')}  live PV ${d.pvEstimate != null ? d.pvEstimate + 'W' : '—'}`,
-            `Beslissing:    ${fmt(d.policyMode)} → ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}`,
+            `Beslissing:    ${fmt(d.policyMode)} → ${fmt(d.hwMode)}${d.delayCharge ? '  [delay-charge actief]' : ''}${d.lowSocGridTopUp ? '  ⚡lowSocTopUp' : ''}`,
             `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
-            `Optimizer:     ${fmt(d.optimizer)}`,
+            `Optimizer:     ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
           );
         }

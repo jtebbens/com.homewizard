@@ -2488,6 +2488,10 @@ if (debug) this.log(
     if (pvKwhTomorrowRaw > 0 && pvKwhTomorrow !== pvKwhTomorrowRaw) {
       this.log(`☀️ pvKwhTomorrow smoothed: raw=${pvKwhTomorrowRaw}kWh → min3=${pvKwhTomorrow}kWh (history=[${this._pvKwhTomorrowHistory.map(v=>v.toFixed(2)).join(',')}])`);
     }
+    if (this.learningEngine && pvKwhTomorrow > 0) {
+      const tomorrowStr = new Date(Date.now() + 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      this.learningEngine.savePvNetSurplusPrediction(tomorrowStr, pvKwhTomorrow);
+    }
     if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0 && pvForecast) {
       const effectiveRte = learnedRte ?? 0.75;
       const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;
@@ -2570,13 +2574,17 @@ if (debug) this.log(
       ? capacityKwh * 2
       : pvKwhTomorrow;
 
-    if (effectivePvKwhTomorrow > 0) {
-      const pvRefill = Math.min(1, effectivePvKwhTomorrow / capacityKwh);
+    const _netFactor = this.learningEngine?.getPvNetSurplusAccuracyFactor() ?? 1.0;
+    const adjustedPvKwhTomorrow = effectivePvKwhTomorrow * _netFactor;
+
+    if (adjustedPvKwhTomorrow > 0) {
+      const pvRefill = Math.min(1, adjustedPvKwhTomorrow / capacityKwh);
       const terminalFactor = pvRefill >= 0.8 ? 0 : Math.max(0, 1 - pvRefill / 0.8);
       const negNote = _negativeCharge ? ` (→ ${effectivePvKwhTomorrow.toFixed(1)}kWh: negatief geladen €${_avgCost.toFixed(3)}, terminal=0)` : '';
-      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
+      const factorNote = _netFactor !== 1.0 ? ` [netFactor=${_netFactor.toFixed(2)}→adj=${adjustedPvKwhTomorrow.toFixed(1)}kWh]` : '';
+      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh${factorNote}, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow);
 
     // Compact planning summary — always visible in user diagnostics.
     {
@@ -2899,6 +2907,19 @@ if (debug) this.log(
           counts: saved.counts || new Array(24).fill(0),
         };
       } else {
+        if (this._pvActualHourly && this.learningEngine) {
+          const yDate = new Date(Date.now() - 24 * 3600_000);
+          let actualNetKwh = 0;
+          for (let h = 0; h < 24; h++) {
+            const pvW = this._pvActualHourly.hourly[h] ?? 0;
+            if (pvW <= 0) continue;
+            const slotDate = new Date(yDate);
+            slotDate.setHours(h, 0, 0, 0);
+            const consW = this.learningEngine.getPredictedConsumption(slotDate) ?? 0;
+            actualNetKwh += Math.max(0, pvW - consW) / 1000;
+          }
+          this.learningEngine.settlePvNetSurplusAccuracy(this._pvActualHourly.date, actualNetKwh);
+        }
         this._pvActualHourly = {
           date:   todayStr,
           hourly: new Array(24).fill(null),
