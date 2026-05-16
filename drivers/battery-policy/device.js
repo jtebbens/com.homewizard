@@ -2301,11 +2301,22 @@ if (debug) this.log(
         : todayAvgCloud;
       _pvBiasCloud = effectiveCloud;
       const dailyBias = this.learningEngine.getDailyPvBiasFactor(effectiveCloud);
-      _pvDailyBiasFactor = dailyBias;
-      if (dailyBias !== 1.0) {
-        pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * dailyBias) }));
-        const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
-        this.log(`[PV daily bias] factor=${dailyBias.toFixed(3)} applied${cloudLabel}`);
+      // On overcast days (>75% cloud), upward bias adds planning uncertainty: forecast errors
+      // inflate remaining PV estimates and cause the DP to stop grid-charging prematurely.
+      // Linearly reduce any upward bias back to 1.0 between 75% and 100% cloud cover.
+      let cappedDailyBias = dailyBias;
+      if (dailyBias > 1.0 && effectiveCloud != null && effectiveCloud > 75) {
+        const cloudFrac = Math.min(1, (effectiveCloud - 75) / 25);
+        cappedDailyBias = Math.max(1.0, 1.0 + (dailyBias - 1.0) * (1 - cloudFrac));
+      }
+      _pvDailyBiasFactor = cappedDailyBias;
+      if (cappedDailyBias !== 1.0) {
+        pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) }));
+      }
+      const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
+      const capLabel   = cappedDailyBias !== dailyBias ? ` (capped from ${dailyBias.toFixed(3)})` : '';
+      if (cappedDailyBias !== 1.0 || dailyBias !== 1.0) {
+        this.log(`[PV daily bias] factor=${cappedDailyBias.toFixed(3)} applied${cloudLabel}${capLabel}`);
       }
     }
 

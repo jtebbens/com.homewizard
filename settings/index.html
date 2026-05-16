@@ -1963,7 +1963,8 @@
       const maxChgW = policyState?.maxChargePowerW || 800;
       const capKwh = policyState?.totalCapacityKwh || (policyState?.batteryCount ?? 1) * 2.688;
       const pvCapW = deviceSettings['pv_capacity_w'] || 3000;
-      const pvEnabled = !!(deviceSettings['pv_estimation_enabled']) && pvCapW > 0;
+      const pvHasForecast = Object.keys(pvForecastByDay[0] ?? {}).length > 0 || Object.keys(pvForecastByDay[1] ?? {}).length > 0;
+      const pvEnabled = (pvHasForecast || !!(deviceSettings['pv_estimation_enabled'])) && pvCapW > 0;
       const pvPR = deviceSettings['pv_performance_ratio'] || 0.75;
 
       /* ── Support diagnostic snapshot ── */
