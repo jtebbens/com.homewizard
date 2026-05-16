@@ -51,7 +51,13 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.77)
+## 📝 Latest Updates (v3.15.63–v3.15.78)
+
+### Diagnostics & PV Accuracy (v3.15.78)
+
+* **Policy run debug: dynamicMaxChargePrice + lowSocGridTopUp (v3.15.78)** — The `policy_last_run_debug` snapshot now stores `dynamicMaxChargePrice` (the effective charge price ceiling at the time of the run) and `lowSocGridTopUp` (whether the low-SoC grid top-up path was triggered). Both are shown in the diagnostic output. Previously, post-hoc diagnosis of unexpected `to_full` decisions was impossible because only the current dynamic max was available, not the value from the actual run
+* **PV net surplus accuracy tracking (v3.15.78)** — Learning engine now tracks predicted vs actual net PV surplus (PV minus consumption during solar hours). An EMA correction factor `pv_net_surplus_factor` [0.4–1.1] adjusts the terminal value calculation in the DP optimizer so next-day battery dispatch is planned on realistic rather than idealised surplus
+* **Optimizer terminal value uses adjusted PV tomorrow (v3.15.78)** — `terminalPvKwhTomorrow` passes the surplus-accuracy-corrected PV estimate to the DP forward pass, preventing the optimizer from over-discharging today when tomorrow's PV was historically over-predicted
 
 ### Battery Policy — Night Behaviour Fixes (v3.15.77)
 
