@@ -1459,5 +1459,8 @@
   },
   "3.15.76": {
     "en": "Battery mode condition card bug"
+  },
+  "3.15.77": {
+    "en": "BMS homewizard battery calibration detection added, false pv flag during sunrise - night (bug fix)"
   }
 }
