@@ -1160,11 +1160,20 @@ if (debug) this.log(
                   settings.solcast_resource_id,
                 );
                 if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
+                  // Persist day-start Solcast snapshot once per Amsterdam calendar day.
+                  // Survives restarts; provides past-hour SC data for the chart green line.
+                  const _scSnapKey  = 'policy_sc_daystart';
+                  const _scSnap     = this.homey.settings.get(_scSnapKey);
+                  if (!_scSnap || _scSnap.date !== nowAmsDate) {
+                    this.homey.settings.set(_scSnapKey, { date: nowAmsDate, data: solcastForecast });
+                    this.log(`[Solcast] Day-start snapshot saved for ${nowAmsDate} (${solcastForecast.length} slots)`);
+                  }
+
                   const { wOM: baseWom, wSC: baseWsc } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+                  const nowAmsHour  = parseInt(nowFc.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
                   const scByDayHour = [{}, {}];
                   for (const s of solcastForecast) {
-                    const st = new Date(s.timestamp);
-                    if (st <= nowFc) continue;
+                    const st    = new Date(s.timestamp);
                     const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
                     const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
                     if (sIdx < 0) continue;
@@ -1173,9 +1182,11 @@ if (debug) this.log(
                     scByDayHour[sIdx][sHour].push(s.pvPowerW);
                   }
                   // Divergence correction: when SC exceeds OM for today, reduce SC weight.
+                  // Use future hours only — past SC is irrelevant for remaining planning.
                   let omTodayWh = 0, scTodayWh = 0;
                   for (const [hour, values] of Object.entries(scByDayHour[0])) {
                     if (!Array.isArray(values) || values.length === 0) continue;
+                    if (parseInt(hour) < nowAmsHour) continue; // future only
                     const omW = pvFcByDay[0][hour];
                     if (typeof omW !== 'number') continue;
                     omTodayWh += omW;
@@ -1199,6 +1210,7 @@ if (debug) this.log(
                   for (let d = 0; d < 2; d++) {
                     for (const [hour, values] of Object.entries(scByDayHour[d])) {
                       if (!Array.isArray(values) || values.length === 0) continue;
+                      if (d === 0 && parseInt(hour) < nowAmsHour) continue; // past hours: in scFcByDay for chart only
                       const scAvg = Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
                       const omW = pvFcByDay[d][hour];
                       pvFcByDay[d][hour] = typeof omW === 'number'
@@ -1646,7 +1658,10 @@ if (debug) this.log(
           const modeHistory = this.homey.settings.get('policy_mode_history') || [];
           const currentPrice = result.debug?.price ?? inputs.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
-          const battW        = inputs.p1?.battery_power ?? this._lastBatteryTargetW ?? null;
+          const _rtBatt      = this.p1Device?._getRealtimePluginBatteryData?.() ?? [];
+          const battW        = _rtBatt.length > 0
+            ? _rtBatt.reduce((sum, b) => sum + (b.power ?? 0), 0)
+            : (inputs.p1?.battery_power ?? this._lastBatteryTargetW ?? null);
           const gridW        = inputs.p1?.resolved_gridPower ?? 0;
           const socDropped   = this._lastHistorySoc != null && currentSoc != null && currentSoc < this._lastHistorySoc - 1;
           const sensorLag    = socDropped && battW !== null && Math.abs(battW) < 10;
@@ -1654,6 +1669,17 @@ if (debug) this.log(
           const _hwModeNow     = this.p1Device?.getCapabilityValue('battery_group_charge_mode') ?? '';
           const _inDischarge   = _hwModeNow.includes('discharge');
           const zeroOnMeterLag = _inDischarge && Math.abs(battW ?? 0) < 10 && Math.abs(gridW) < 30;
+          const _calSunset   = inputs.weather?.todaySunset;
+          const _calSunrise  = inputs.weather?.todaySunrise;
+          const _afterSunsetNow = !_calSunset
+            || (Date.now() > _calSunset.getTime() + 30 * 60 * 1000)
+            || (_calSunrise instanceof Date && Date.now() < _calSunrise.getTime());
+          const bmsCalibration = (currentSoc ?? 0) <= 0
+            && Math.abs(battW ?? 0) < 50
+            && gridW > 700
+            && _afterSunsetNow
+            && !applyMode.includes('charge')
+            && !applyMode.includes('discharge');
           const p1Available  = this.p1Device?.getAvailable() !== false;
           this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
@@ -1674,7 +1700,7 @@ if (debug) this.log(
             battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
             policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
             dpAction: typeof dpAction === 'string' ? dpAction : (dpAction?.action ?? null),
-            exception: !p1Available ? 'p1_unavailable' : (sensorLag || zeroOnMeterLag) ? 'battery_sensor_lag' : (result.debug?.exception ?? null),
+            exception: !p1Available ? 'p1_unavailable' : (sensorLag || zeroOnMeterLag) ? 'battery_sensor_lag' : bmsCalibration ? 'bms_calibration' : (result.debug?.exception ?? null),
           };
           if (existing >= 0) {
             // Update existing bucket — keep best SoC (non-null wins)
@@ -3081,6 +3107,9 @@ if (debug) this.log(
         weatherData = this._applyWeatherOverride(weatherData, weatherOverride);
       }
     }
+    if (this.p1Device?._updateBatteryGroup) {
+      await this.p1Device._updateBatteryGroup().catch(e => this.error('Battery group refresh failed:', e.message));
+    }
     const batteryState = await this._getBatteryState();
     const tariffInfo = this.tariffManager.getCurrentTariff(batteryState.gridPower);
 
@@ -3845,8 +3874,9 @@ if (debug) this.log(
       const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
       const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
+      const pvScDayStart = this.homey.settings.get('policy_sc_daystart') ?? null;
 
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
         await this._initPvCamera();
@@ -4017,7 +4047,7 @@ if (debug) this.log(
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       try {
-        await this._streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW });
+        await this._streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
       } catch (e) {
         this.error('PV chart stream error:', e.message);
         if (!stream.destroyed) stream.end();
@@ -4034,7 +4064,7 @@ if (debug) this.log(
     const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
     const pvCapW       = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
       await this.planningImagePv.update();
     }
   }
@@ -4264,11 +4294,34 @@ if (debug) this.log(
   }
 
   _buildPvChartConfig(pvData) {
-    const { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvCapacityW } = pvData || {};
+    const { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart, pvScDayStart, pvCapacityW } = pvData || {};
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
     const pvHourly = (pvActual?.date === todayStr && Array.isArray(pvActual?.hourly)) ? pvActual.hourly : [];
-    const forecastToday    = pvForecast?.[0] || {};
+
     const forecastTomorrow = pvForecast?.[1] || {};
+
+    // OM forecast — set by _updateWeather from dailyProfiles which includes all 24h.
+    const omTodayFull  = pvForecastOM?.[0] || {};
+
+    // Build full-day SC hourly dict from day-start snapshot (persisted in settings).
+    // pvScDayStart.data = raw Solcast array [{timestamp, pvPowerW}] saved at first fetch of day.
+    const scTodaySnap = (() => {
+      if (!pvScDayStart?.data || pvScDayStart.date !== todayStr) return null;
+      const sums = {}, cnts = {};
+      for (const slot of pvScDayStart.data) {
+        const h = parseInt(new Date(slot.timestamp).toLocaleString('en-US', {
+          hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam'
+        }), 10);
+        sums[h] = (sums[h] ?? 0) + slot.pvPowerW;
+        cnts[h] = (cnts[h] ?? 0) + 1;
+      }
+      const result = {};
+      for (const h of Object.keys(sums)) result[parseInt(h)] = Math.round(sums[h] / cnts[h]);
+      return Object.keys(result).length > 0 ? result : null;
+    })();
+
+    // SC forecast for today: day-start snapshot preferred (all hours), falls back to live SC
+    const scTodayFull  = scTodaySnap ?? pvForecastSC?.[0] ?? {};
 
     const fLg = 22;
     const fMd = 19;
@@ -4301,16 +4354,23 @@ if (debug) this.log(
       return pvHourly[h] ?? null;
     });
 
-    // Forecast PV data (full today + tomorrow) — use 0 for missing hours so line stays continuous
+    // Blended forecast (orange line) — full today + tomorrow.
+    // Past hours: blend OM + SC where both available, else OM alone. Distinct from blue (OM-only).
+    // Future hours: use stored blended value (pvForecast[0]).
     const forecastData = hours.map(h => {
-      if (h < 24) return forecastToday[h] ?? 0;
-      return forecastTomorrow[h - 24] ?? 0;
+      if (h >= 24) return forecastTomorrow[h - 24] ?? 0;
+      if (h < nowAmsHour) {
+        const om = omTodayFull[h] ?? 0;
+        const sc = scTodayFull[h];
+        return sc != null ? Math.round((om + sc) / 2) : om;
+      }
+      return (pvForecast?.[0]?.[h]) ?? 0;
     });
 
     // OM-only and SC-only forecast lines (today + tomorrow)
-    const omToday    = pvForecastOM?.[0] || {};
+    const omToday    = omTodayFull;  // already computed above
     const omTomorrow = pvForecastOM?.[1] || {};
-    const scToday    = pvForecastSC?.[0] || {};
+    const scToday    = scTodayFull;  // already computed above
     const scTomorrow = pvForecastSC?.[1] || {};
     const hasOM = Object.keys(omToday).length > 0 || Object.keys(omTomorrow).length > 0;
     const hasSC = Object.keys(scToday).length > 0 || Object.keys(scTomorrow).length > 0;
@@ -4326,12 +4386,12 @@ if (debug) this.log(
 
     // Compute daily totals (kWh)
     const actualTodayKwh = pvHourly.reduce((sum, w) => sum + (w || 0), 0) / 1000;
-    const forecastTodayKwh = Object.values(forecastToday).reduce((sum, w) => sum + (w || 0), 0) / 1000;
+    const forecastTodayKwh = forecastData.slice(0, 24).reduce((sum, w) => sum + (w || 0), 0) / 1000;
     const forecastTomorrowKwh = Object.values(forecastTomorrow).reduce((sum, w) => sum + (w || 0), 0) / 1000;
 
     const pvMax = Math.max(
       ...pvHourly.filter(v => v != null).map(v => v),
-      ...Object.values(forecastToday).map(v => v || 0),
+      ...forecastData.map(v => v || 0),
       ...Object.values(forecastTomorrow).map(v => v || 0),
       ...Object.values(omToday).map(v => v || 0),
       ...Object.values(omTomorrow).map(v => v || 0),
@@ -4363,8 +4423,8 @@ if (debug) this.log(
             label: 'PV Werkelijk',
             data: actualData,
             borderColor: '#FCD34D',
-            backgroundColor: 'rgba(252,211,77,0.25)',
-            fill: true,
+            backgroundColor: 'transparent',
+            fill: false,
             borderWidth: 4,
             pointRadius: 0,
             tension: 0.4,
@@ -4375,7 +4435,7 @@ if (debug) this.log(
             label: 'PV Verwachting',
             data: forecastData,
             borderColor: '#F97316',
-            backgroundColor: 'rgba(249,115,22,0.10)',
+            backgroundColor: 'rgba(249,115,22,0.08)',
             fill: true,
             borderWidth: 3,
             borderDash: [6, 3],
@@ -4403,7 +4463,7 @@ if (debug) this.log(
             borderColor: '#34D399',
             backgroundColor: 'transparent',
             fill: false,
-            borderWidth: 2,
+            borderWidth: 2.5,
             borderDash: [4, 4],
             pointRadius: 0,
             tension: 0.4,

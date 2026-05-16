@@ -1202,8 +1202,7 @@ async setBatteryGroupMode(targetMode) {
       return false;
     }
 
-    // api.getMode returns a string, so normalize it directly
-    const normalized = modeResponse;
+    const normalized = normalizeBatteryMode(modeResponse);
 
     // --- Update cache ---
     this._cacheSet('last_battery_mode', normalized);
