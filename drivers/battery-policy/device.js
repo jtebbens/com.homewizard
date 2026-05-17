@@ -2147,7 +2147,7 @@ if (debug) this.log(
           if (mSlots.length > 0) this._pvForecastPerModel[m] = mSlots;
         }
         const slotCounts = Object.entries(this._pvForecastPerModel).map(([m, fc]) =>
-          `${m.replace('_seamless','').replace('knmi_harmonie_arome_netherlands','knmi').replace('ecmwf_ifs04','ecmwf')}=${fc.length}`).join(' ');
+          `${m.replace('meteofrance_arpege_europe','mf').replace('_seamless','').replace('knmi_harmonie_arome_netherlands','knmi')}=${fc.length}`).join(' ');
         this.log(`[PV perModel] slots: ${slotCounts || 'none'}`);
       }
 
