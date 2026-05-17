@@ -2755,6 +2755,7 @@
     let _pvModelChart    = null;
     let _pvAccuracyDays  = [];
     let _pvAccuracyDayIdx = 0;
+    let _pvModelAcc      = null;
 
     function _pvPill(label, value, unit, lo, hi) {
       const color = value == null ? 'var(--dim)'
@@ -2779,6 +2780,7 @@
       if (!section || !st) return;
 
       const { pvPredictions, accOM, accSC, wOM, wSC, pvAccuracy, modelAcc } = st;
+      _pvModelAcc = modelAcc ?? null;
       if (!pvPredictions || pvPredictions.length === 0) return;
 
       section.style.display = '';
@@ -2881,13 +2883,13 @@
 
       // Per-model overall accuracy pills
       const modelPillsEl = document.getElementById('pv-model-acc-pills');
-      if (modelPillsEl && modelAcc) {
-        const hasModelData = Object.values(modelAcc).some(v => v != null);
+      if (modelPillsEl && _pvModelAcc) {
+        const hasModelData = Object.values(_pvModelAcc).some(v => v != null);
         modelPillsEl.innerHTML = hasModelData
-          ? _pvPill('ECMWF', modelAcc?.ecmwf, '%', 70, 85) +
-            _pvPill('GFS',   modelAcc?.gfs,   '%', 70, 85) +
-            _pvPill('ICON',  modelAcc?.icon,  '%', 70, 85) +
-            _pvPill('KNMI',  modelAcc?.knmi,  '%', 70, 85)
+          ? _pvPill('ECMWF', _pvModelAcc.ecmwf, '%', 70, 85) +
+            _pvPill('GFS',   _pvModelAcc.gfs,   '%', 70, 85) +
+            _pvPill('ICON',  _pvModelAcc.icon,  '%', 70, 85) +
+            _pvPill('KNMI',  _pvModelAcc.knmi,  '%', 70, 85)
           : '<span style="font-size:11px;color:var(--muted);">Per-model nauwkeurigheid beschikbaar na eerste volledige dag</span>';
       }
 
