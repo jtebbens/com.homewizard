@@ -2122,6 +2122,36 @@ if (debug) this.log(
         this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
       }
 
+      // Per-model pvForecast (ECMWF/GFS/ICON/KNMI) for per-model accuracy tracking.
+      // Uses same yield factor as main pvForecast; stored for lookup in _recordPvAccuracySample.
+      const _ensData = this.weatherForecaster?._lastEnsembleData;
+      this._pvForecastPerModel = null;
+      if (_ensData && yfs) {
+        const MODELS_OM = ['ecmwf_ifs04', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands'];
+        const ensTimeMap = new Map(_ensData.hourly.time.map((t, i) => [t, i]));
+        this._pvForecastPerModel = {};
+        for (const m of MODELS_OM) {
+          const mSlots = inputs.weather.hourlyForecast
+            .filter(h => typeof h.radiationWm2 === 'number')
+            .map(h => {
+              const d = h.time instanceof Date ? h.time : new Date(h.time);
+              const ensIdx = ensTimeMap.get(d.toISOString().slice(0, 16));
+              if (ensIdx == null) return null;
+              const rad = _ensData.hourly[`shortwave_radiation_${m}`]?.[ensIdx];
+              if (typeof rad !== 'number') return null;
+              const s0 = d.getUTCHours() * 4;
+              const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
+              const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
+              const pvW = learnedSlots >= 10 && yf > 0
+                ? Math.round(rad * yf)
+                : Math.round(pvCapacityW * pvPR * (rad / 1000));
+              return { timestamp: d.toISOString(), pvPowerW: Math.max(0, pvCapacityW > 0 ? Math.min(pvW, pvCapacityW) : pvW) };
+            })
+            .filter(s => s != null);
+          if (mSlots.length > 0) this._pvForecastPerModel[m] = mSlots;
+        }
+      }
+
     }
 
     // Blend external PV forecasts into Open-Meteo pvForecast.
@@ -3024,7 +3054,15 @@ if (debug) this.log(
       ? Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length)
       : null;
 
-    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW).catch(e =>
+    const perModelW = {};
+    if (this._pvForecastPerModel) {
+      for (const [m, fc] of Object.entries(this._pvForecastPerModel)) {
+        const mIdx = this.optimizationEngine._buildPvIndex(fc);
+        const mW = mIdx ? this.optimizationEngine._getPvForSlot(mIdx, nowMs) : null;
+        if (mW != null && mW > 0) perModelW[m] = mW;
+      }
+    }
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
   }
@@ -3197,6 +3235,13 @@ if (debug) this.log(
     const accOM = this.learningEngine?.data?.pv_accuracy_om ?? null;
     const accSC = this.learningEngine?.data?.pv_accuracy_sc ?? null;
     const pvPredictions = this.learningEngine?.data?.pv_predictions?.slice(-864) ?? [];
+    const _mAcc = this.learningEngine?.data?.pv_model_accuracy ?? {};
+    const modelAcc = {
+      ecmwf: _mAcc['ecmwf_ifs04']                         != null ? +(_mAcc['ecmwf_ifs04'] * 100).toFixed(1)                         : null,
+      gfs:   _mAcc['gfs_seamless']                        != null ? +(_mAcc['gfs_seamless'] * 100).toFixed(1)                        : null,
+      icon:  _mAcc['icon_seamless']                        != null ? +(_mAcc['icon_seamless'] * 100).toFixed(1)                        : null,
+      knmi:  _mAcc['knmi_harmonie_arome_netherlands']      != null ? +(_mAcc['knmi_harmonie_arome_netherlands'] * 100).toFixed(1)      : null,
+    };
     this._setLive('learning_status', {
       days:           learningStats.days_tracking,
       samples:        learningStats.total_samples,
@@ -3209,6 +3254,7 @@ if (debug) this.log(
       wOM:            +(wOM * 100).toFixed(0),
       wSC:            +(wSC * 100).toFixed(0),
       pvPredictions,
+      modelAcc,
       updatedAt:      new Date().toISOString(),
     });
     
