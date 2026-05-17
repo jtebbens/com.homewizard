@@ -2331,10 +2331,19 @@ if (debug) this.log(
         this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism factor=${factor.toFixed(2)} applied`);
       }
     }
+    // Cloud uncertainty discount for DP pvCoverage projection: when cloud cover is high,
+    // the DP should not rely on uncertain PV recharge to justify early discharge.
+    // Kicks in above 70% cloud, reduces pvCoverage by up to 40% at full overcast.
+    let _pvCloudFactor = 1.0;
+    if (_pvBiasCloud != null && _pvBiasCloud > 70) {
+      _pvCloudFactor = Math.max(0.6, 1.0 - 0.5 * Math.min(1, (_pvBiasCloud - 70) / 30));
+      this.log(`[PV cloud uncertainty] cloud=${Math.round(_pvBiasCloud)}% → pvCoverageFactor=${_pvCloudFactor.toFixed(2)}`);
+    }
     this._setLive('policy_pv_bias', {
       dailyBias: _pvDailyBiasFactor,
       accFactor: _pvAccFactor,
       cloud: _pvBiasCloud != null ? Math.round(_pvBiasCloud) : null,
+      cloudFactor: _pvCloudFactor !== 1.0 ? Math.round(_pvCloudFactor * 100) / 100 : null,
       net: Math.round(_pvDailyBiasFactor * _pvAccFactor * 1000) / 1000,
     });
 
@@ -2595,7 +2604,7 @@ if (debug) this.log(
       const factorNote = _netFactor !== 1.0 ? ` [netFactor=${_netFactor.toFixed(2)}→adj=${adjustedPvKwhTomorrow.toFixed(1)}kWh]` : '';
       this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh${factorNote}, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor);
 
     // Compact planning summary — always visible in user diagnostics.
     {

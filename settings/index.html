@@ -2494,7 +2494,8 @@
             const b = settings['policy_pv_bias'];
             if (!b) return 'PV bias:       —';
             const cloudStr = b.cloud != null ? `  bewolking=${b.cloud}%` : '';
-            return `PV bias:       ×${b.dailyBias?.toFixed(3) ?? '—'} (dag)  ×${b.accFactor?.toFixed(2) ?? '—'} (acc)  netto ×${b.net?.toFixed(3) ?? '—'}${cloudStr}`;
+            const cfStr    = b.cloudFactor != null ? `  ×${b.cloudFactor.toFixed(2)} (pv-onzekerheid)` : '';
+            return `PV bias:       ×${b.dailyBias?.toFixed(3) ?? '—'} (dag)  ×${b.accFactor?.toFixed(2) ?? '—'} (acc)  netto ×${b.net?.toFixed(3) ?? '—'}${cloudStr}${cfStr}`;
           })(),
           `Morgen prijzen: ${hasTomorrowPrices ? 'ja' : 'nee'}`,
         ];
