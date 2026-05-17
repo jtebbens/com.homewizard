@@ -2150,6 +2150,9 @@ if (debug) this.log(
             .filter(s => s != null);
           if (mSlots.length > 0) this._pvForecastPerModel[m] = mSlots;
         }
+        const slotCounts = Object.entries(this._pvForecastPerModel).map(([m, fc]) =>
+          `${m.replace('_seamless','').replace('knmi_harmonie_arome_netherlands','knmi').replace('ecmwf_ifs04','ecmwf')}=${fc.length}`).join(' ');
+        this.log(`[PV perModel] slots: ${slotCounts || 'none'}`);
       }
 
     }
@@ -3059,7 +3062,7 @@ if (debug) this.log(
       for (const [m, fc] of Object.entries(this._pvForecastPerModel)) {
         const mIdx = this.optimizationEngine._buildPvIndex(fc);
         const mW = mIdx ? this.optimizationEngine._getPvForSlot(mIdx, nowMs) : null;
-        if (mW != null && mW > 0) perModelW[m] = mW;
+        if (mW != null) perModelW[m] = mW;
       }
     }
     this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
