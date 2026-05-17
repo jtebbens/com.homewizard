@@ -1465,5 +1465,8 @@
   },
   "3.15.78": {
     "en": "Terminal value correction factor, extra diag debug info column added"
+  },
+  "3.15.79": {
+    "en": "Fix: topup battery only when cheapest prices, else postpone"
   }
 }
