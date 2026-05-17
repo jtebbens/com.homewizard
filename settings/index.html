@@ -574,7 +574,7 @@
           <canvas id="pvModelChart"></canvas>
         </div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
-          <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>ECMWF</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>Météo-France</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>GFS</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>ICON</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#fb7185;vertical-align:middle;margin-right:4px;"></span>KNMI</span>
@@ -2886,10 +2886,10 @@
       if (modelPillsEl && _pvModelAcc) {
         const hasModelData = Object.values(_pvModelAcc).some(v => v != null);
         modelPillsEl.innerHTML = hasModelData
-          ? _pvPill('ECMWF', _pvModelAcc.ecmwf, '%', 70, 85) +
-            _pvPill('GFS',   _pvModelAcc.gfs,   '%', 70, 85) +
-            _pvPill('ICON',  _pvModelAcc.icon,  '%', 70, 85) +
-            _pvPill('KNMI',  _pvModelAcc.knmi,  '%', 70, 85)
+          ? _pvPill('Météo-France', _pvModelAcc.mf,   '%', 70, 85) +
+            _pvPill('GFS',         _pvModelAcc.gfs,  '%', 70, 85) +
+            _pvPill('ICON',        _pvModelAcc.icon, '%', 70, 85) +
+            _pvPill('KNMI',        _pvModelAcc.knmi, '%', 70, 85)
           : '<span style="font-size:11px;color:var(--muted);">Per-model nauwkeurigheid beschikbaar na eerste volledige dag</span>';
       }
 
@@ -2945,17 +2945,17 @@
         },
       });
 
-      // Per-model chart (ECMWF / GFS / ICON / KNMI + Werkelijk)
+      // Per-model chart (Météo-France / GFS / ICON / KNMI + Werkelijk)
       const modelCanvas = document.getElementById('pvModelChart');
       if (modelCanvas) {
-        const ecmwfData = [], gfsData = [], iconData = [], knmiData = [];
+        const mfData = [], gfsData = [], iconData = [], knmiData = [];
         for (const p of entries) {
-          ecmwfData.push(p.ecmwf ?? null);
-          gfsData.push(p.gfs   ?? null);
-          iconData.push(p.icon  ?? null);
-          knmiData.push(p.knmi  ?? null);
+          mfData.push(p.mf    ?? null);
+          gfsData.push(p.gfs  ?? null);
+          iconData.push(p.icon ?? null);
+          knmiData.push(p.knmi ?? null);
         }
-        const hasModelCurves = ecmwfData.some(v => v != null) || gfsData.some(v => v != null)
+        const hasModelCurves = mfData.some(v => v != null) || gfsData.some(v => v != null)
           || iconData.some(v => v != null) || knmiData.some(v => v != null);
         if (_pvModelChart) { _pvModelChart.destroy(); _pvModelChart = null; }
         if (hasModelCurves) {
@@ -2964,11 +2964,11 @@
             data: {
               labels,
               datasets: [
-                mkDataset('ECMWF',    ecmwfData, '#60a5fa', [4, 2]),
-                mkDataset('GFS',      gfsData,   '#f59e0b', [4, 2]),
-                mkDataset('ICON',     iconData,  '#a78bfa', [4, 2]),
-                mkDataset('KNMI',     knmiData,  '#fb7185', [4, 2]),
-                mkDataset('Werkelijk',actualData,'#20F29B'),
+                mkDataset('Météo-France', mfData,    '#60a5fa', [4, 2]),
+                mkDataset('GFS',          gfsData,   '#f59e0b', [4, 2]),
+                mkDataset('ICON',         iconData,  '#a78bfa', [4, 2]),
+                mkDataset('KNMI',         knmiData,  '#fb7185', [4, 2]),
+                mkDataset('Werkelijk',    actualData,'#20F29B'),
               ],
             },
             options: {
