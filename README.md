@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.78)
+## 📝 Latest Updates (v3.15.63–v3.15.79)
+
+### Battery Policy — Grid Top-Up Timing (v3.15.79)
+
+* **Low-SoC top-up deferred to cheapest upcoming slot (v3.15.79)** — `lowSocGridTopUp` now only fires when the current price is the minimum price in the next 8 hours. Previously, the top-up could trigger at any price below `dynamicMaxChargePrice`, causing premature grid charging when a cheaper DP-planned slot existed shortly ahead. With two batteries (1600 W charge rate), charging at a sub-optimal price erases the efficiency margin entirely
 
 ### Diagnostics & PV Accuracy (v3.15.78)
 
