@@ -2126,7 +2126,7 @@ if (debug) this.log(
       // Uses perModelWm2 from hourlyForecast (aligned to standardData indices, no time-map lookup).
       this._pvForecastPerModel = null;
       if (yfs) {
-        const MODELS_OM = ['ecmwf_ifs04', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands'];
+        const MODELS_OM = ['meteofrance_arpege_europe', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands'];
         this._pvForecastPerModel = {};
         for (const m of MODELS_OM) {
           const mSlots = inputs.weather.hourlyForecast
@@ -3236,7 +3236,7 @@ if (debug) this.log(
     const pvPredictions = this.learningEngine?.data?.pv_predictions?.slice(-864) ?? [];
     const _mAcc = this.learningEngine?.data?.pv_model_accuracy ?? {};
     const modelAcc = {
-      ecmwf: _mAcc['ecmwf_ifs04']                         != null ? +(_mAcc['ecmwf_ifs04'] * 100).toFixed(1)                         : null,
+      mf:    _mAcc['meteofrance_arpege_europe']            != null ? +(_mAcc['meteofrance_arpege_europe'] * 100).toFixed(1)            : null,
       gfs:   _mAcc['gfs_seamless']                        != null ? +(_mAcc['gfs_seamless'] * 100).toFixed(1)                        : null,
       icon:  _mAcc['icon_seamless']                        != null ? +(_mAcc['icon_seamless'] * 100).toFixed(1)                        : null,
       knmi:  _mAcc['knmi_harmonie_arome_netherlands']      != null ? +(_mAcc['knmi_harmonie_arome_netherlands'] * 100).toFixed(1)      : null,
