@@ -2123,22 +2123,18 @@ if (debug) this.log(
       }
 
       // Per-model pvForecast (ECMWF/GFS/ICON/KNMI) for per-model accuracy tracking.
-      // Uses same yield factor as main pvForecast; stored for lookup in _recordPvAccuracySample.
-      const _ensData = this.weatherForecaster?._lastEnsembleData;
+      // Uses perModelWm2 from hourlyForecast (aligned to standardData indices, no time-map lookup).
       this._pvForecastPerModel = null;
-      if (_ensData && yfs) {
+      if (yfs) {
         const MODELS_OM = ['ecmwf_ifs04', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands'];
-        const ensTimeMap = new Map(_ensData.hourly.time.map((t, i) => [t, i]));
         this._pvForecastPerModel = {};
         for (const m of MODELS_OM) {
           const mSlots = inputs.weather.hourlyForecast
             .filter(h => typeof h.radiationWm2 === 'number')
             .map(h => {
-              const d = h.time instanceof Date ? h.time : new Date(h.time);
-              const ensIdx = ensTimeMap.get(d.toISOString().slice(0, 16));
-              if (ensIdx == null) return null;
-              const rad = _ensData.hourly[`shortwave_radiation_${m}`]?.[ensIdx];
+              const rad = h.perModelWm2?.[m];
               if (typeof rad !== 'number') return null;
+              const d = h.time instanceof Date ? h.time : new Date(h.time);
               const s0 = d.getUTCHours() * 4;
               const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
               const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
