@@ -568,6 +568,18 @@
           <span><span style="display:inline-block;width:12px;height:2px;background:#e879f9;vertical-align:middle;margin-right:4px;"></span>Blended</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
         </div>
+        <!-- Per-model OM chart -->
+        <div id="pv-model-acc-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;"></div>
+        <div style="position:relative;height:140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:10px;">
+          <canvas id="pvModelChart"></canvas>
+        </div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
+          <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>ECMWF</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>GFS</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>ICON</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#fb7185;vertical-align:middle;margin-right:4px;"></span>KNMI</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
+        </div>
       </details>
     </div>
 
@@ -2740,6 +2752,7 @@
        PV FORECAST ACCURACY CHART
     ══════════════════════════════════════════════════════════ */
     let _pvAccuracyChart = null;
+    let _pvModelChart    = null;
     let _pvAccuracyDays  = [];
     let _pvAccuracyDayIdx = 0;
 
@@ -2765,7 +2778,7 @@
       const section = document.getElementById('pv-accuracy-section');
       if (!section || !st) return;
 
-      const { pvPredictions, accOM, accSC, wOM, wSC, pvAccuracy } = st;
+      const { pvPredictions, accOM, accSC, wOM, wSC, pvAccuracy, modelAcc } = st;
       if (!pvPredictions || pvPredictions.length === 0) return;
 
       section.style.display = '';
@@ -2866,6 +2879,18 @@
       }
       const step = Math.max(1, Math.floor(labels.length / 8));
 
+      // Per-model overall accuracy pills
+      const modelPillsEl = document.getElementById('pv-model-acc-pills');
+      if (modelPillsEl && modelAcc) {
+        const hasModelData = Object.values(modelAcc).some(v => v != null);
+        modelPillsEl.innerHTML = hasModelData
+          ? _pvPill('ECMWF', modelAcc?.ecmwf, '%', 70, 85) +
+            _pvPill('GFS',   modelAcc?.gfs,   '%', 70, 85) +
+            _pvPill('ICON',  modelAcc?.icon,  '%', 70, 85) +
+            _pvPill('KNMI',  modelAcc?.knmi,  '%', 70, 85)
+          : '<span style="font-size:11px;color:var(--muted);">Per-model nauwkeurigheid beschikbaar na eerste volledige dag</span>';
+      }
+
       if (_pvAccuracyChart) { _pvAccuracyChart.destroy(); _pvAccuracyChart = null; }
 
       const mkDataset = (label, data, color, dash = []) => ({
@@ -2917,6 +2942,55 @@
           },
         },
       });
+
+      // Per-model chart (ECMWF / GFS / ICON / KNMI + Werkelijk)
+      const modelCanvas = document.getElementById('pvModelChart');
+      if (modelCanvas) {
+        const ecmwfData = [], gfsData = [], iconData = [], knmiData = [];
+        for (const p of entries) {
+          ecmwfData.push(p.ecmwf ?? null);
+          gfsData.push(p.gfs   ?? null);
+          iconData.push(p.icon  ?? null);
+          knmiData.push(p.knmi  ?? null);
+        }
+        const hasModelCurves = ecmwfData.some(v => v != null) || gfsData.some(v => v != null)
+          || iconData.some(v => v != null) || knmiData.some(v => v != null);
+        if (_pvModelChart) { _pvModelChart.destroy(); _pvModelChart = null; }
+        if (hasModelCurves) {
+          _pvModelChart = new Chart(modelCanvas, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                mkDataset('ECMWF',    ecmwfData, '#60a5fa', [4, 2]),
+                mkDataset('GFS',      gfsData,   '#f59e0b', [4, 2]),
+                mkDataset('ICON',     iconData,  '#a78bfa', [4, 2]),
+                mkDataset('KNMI',     knmiData,  '#fb7185', [4, 2]),
+                mkDataset('Werkelijk',actualData,'#20F29B'),
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false,
+              plugins: { legend: { display: false }, tooltip: {
+                callbacks: { label: item => `${item.dataset.label}: ${Math.round(item.parsed.y)} W` },
+              }},
+              scales: {
+                x: {
+                  ticks: { color: '#808080', font: { size: 10 }, callback: (val, i) => i % step === 0 ? labels[i] : '', maxRotation: 0 },
+                  grid: { color: 'rgba(255,255,255,0.05)' },
+                },
+                y: {
+                  ticks: { color: '#808080', font: { size: 10 }, callback: v => `${v}W` },
+                  grid: { color: 'rgba(255,255,255,0.05)' },
+                  min: 0,
+                },
+              },
+            },
+          });
+        }
+      }
     }
 
     /* ══════════════════════════════════════════════════════════
