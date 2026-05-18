@@ -1468,5 +1468,8 @@
   },
   "3.15.79": {
     "en": "Fix: topup battery only when cheapest prices, else postpone"
+  },
+  "3.15.80": {
+    "en": "Solcast adjustment being to optimistic on PV expectation"
   }
 }
