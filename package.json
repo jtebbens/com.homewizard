@@ -5,7 +5,6 @@
   "main": "app.js",
   "dependencies": {
     "abort-controller": "^3.0.0",
-    "h5wasm": "^0.10.1",
     "node-fetch": "^2.7.0",
     "ws": "^8.18.3"
   },
