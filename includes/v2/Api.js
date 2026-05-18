@@ -37,17 +37,13 @@ module.exports = (function () {
   // IDENTIFY
   // -------------------------
   api.identify = async function (url, token) {
-    const data = await fetchJSON(`${url}/api/system/identify`, {
+    await fetchJSON(`${url}/api/system/identify`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       }
     });
-
-    if (typeof data !== 'object') {
-      throw new Error('Invalid response format');
-    }
   };
 
   // -------------------------
