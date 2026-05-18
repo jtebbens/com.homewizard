@@ -2177,8 +2177,9 @@ if (debug) this.log(
             for (const s of solcastForecast) {
               const t = new Date(s.timestamp);
               const hourMs = t.getTime() - (t.getUTCMinutes() * 60_000) - (t.getUTCSeconds() * 1_000) - t.getUTCMilliseconds();
-              if (!solcastByHourMs.has(hourMs)) solcastByHourMs.set(hourMs, []);
-              solcastByHourMs.get(hourMs).push(s.pvPowerW);
+              if (!solcastByHourMs.has(hourMs)) solcastByHourMs.set(hourMs, { p50: [], p10: [] });
+              solcastByHourMs.get(hourMs).p50.push(s.pvPowerW);
+              solcastByHourMs.get(hourMs).p10.push(s.pvPowerW10 ?? s.pvPowerW);
             }
           }
         } catch (err) {
@@ -2208,9 +2209,9 @@ if (debug) this.log(
           const dk = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
           if (!dayTotals[dk]) continue;
           const scSlots = solcastByHourMs.get(new Date(slot.timestamp).getTime());
-          if (scSlots?.length > 0) {
+          if (scSlots?.p50?.length > 0) {
             dayTotals[dk].om += slot.pvPowerW;
-            dayTotals[dk].sc += scSlots.reduce((a, b) => a + b, 0) / scSlots.length;
+            dayTotals[dk].sc += scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length;
           }
         }
         const getDayWeights = (dk, applyDivergence = true) => {
@@ -2237,10 +2238,15 @@ if (debug) this.log(
 
           const scSlots = solcastByHourMs.get(slotMs);
           let blendedW;
-          if (scSlots?.length > 0) {
-            const scAvg = Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length);
+          if (scSlots?.p50?.length > 0) {
+            const scP50 = Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length);
+            const scP10 = Math.round(scSlots.p10.reduce((a, b) => a + b, 0) / scSlots.p10.length);
+            // OM already sees cloud cover via NWP; when SC p50 is ≥10% above OM for this slot,
+            // SC is likely missing the cloud → use pessimistic p10 instead.
+            const useP10 = scP50 > 0 && scP10 > 0 && scP50 > slot.pvPowerW * 1.10;
+            const scAvg = useP10 ? scP10 : scP50;
             blendedW = Math.round(wOM * slot.pvPowerW + wSC * scAvg);
-            if (byDay[dayKey]) byDay[dayKey].sc += scAvg;
+            if (byDay[dayKey]) { byDay[dayKey].sc += scAvg; if (useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
           } else {
             blendedW = slot.pvPowerW;
           }
@@ -2252,8 +2258,8 @@ if (debug) this.log(
         const fmt = wh => (wh / 1000).toFixed(1);
         const pct = (v, base) => (base > 0 ? `${v >= base ? '+' : ''}${((v - base) / base * 100).toFixed(0)}%` : '—');
         const td = byDay[todayNLDate], tm = byDay[tomorrowNLDate];
-        const scToday    = td.sc > 0 ? ` SC=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})` : '';
-        const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})` : '';
+        const scToday    = td.sc > 0 ? ` SC=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})${td.p10slots ? ` p10=${td.p10slots}slots` : ''}` : '';
+        const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})${tm.p10slots ? ` p10=${tm.p10slots}slots` : ''}` : '';
         const accOM = this.learningEngine?.data?.pv_accuracy_om;
         const accSC = this.learningEngine?.data?.pv_accuracy_sc;
         const accLog = accOM != null && accSC != null ? ` acc: om=${(accOM*100).toFixed(0)}% sc=${(accSC*100).toFixed(0)}%` : ' learning';
@@ -3049,8 +3055,8 @@ if (debug) this.log(
       - (now.getUTCSeconds() * 1_000)
       - now.getUTCMilliseconds();
     const scSlots = this._pvForecastSC?.get(hourMs);
-    const scW = scSlots?.length > 0
-      ? Math.round(scSlots.reduce((a, b) => a + b, 0) / scSlots.length)
+    const scW = scSlots?.p50?.length > 0
+      ? Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length)
       : null;
 
     const perModelW = {};
