@@ -21,6 +21,13 @@ function _memMB(label) {
   }
 }
 
+// NOCT temperature derating for fallback (non-learned) PV path only.
+// Learned yf already captures temperature empirically — do not apply there.
+function _pvTempFactor(airTempC, radiationWm2) {
+  const cellTemp = (airTempC ?? 20) + (radiationWm2 / 1000) * 25;
+  return Math.max(0.80, Math.min(1.05, 1 - 0.004 * (cellTemp - 25)));
+}
+
 function _settingsFootprintKB(settings) {
   try {
     const all = settings.getAll();
@@ -1080,9 +1087,9 @@ if (debug) this.log(
           }, 0) / 1000;
           this.log(`☀️ PV forecast (learned, ${learnedSlots} slots): ${todayKwh.toFixed(1)} kWh today, ${remainingKwh.toFixed(1)} kWh remaining`);
         } else if (pvCapW > 0) {
-          // Fallback: configured capacity × performance ratio
-          todayKwh     = todayProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
-          remainingKwh = futureProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000), 0) / 1000;
+          // Fallback: configured capacity × performance ratio × temperature derating
+          todayKwh     = todayProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2), 0) / 1000;
+          remainingKwh = futureProfiles.reduce((sum, h) => sum + pvCapW * PR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2), 0) / 1000;
           this.log(`☀️ PV forecast (fallback PR=${PR}, ${learnedSlots} slots learned): ${todayKwh.toFixed(1)} kWh today, ${remainingKwh.toFixed(1)} kWh remaining`);
         } else {
           todayKwh = null;
@@ -1133,7 +1140,7 @@ if (debug) this.log(
               const raw = Math.round(h.radiationWm2 * yf);
               pvPowerW  = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
             } else {
-              pvPowerW  = pvCapW > 0 ? Math.min(pvCapW, Math.round(pvCapW * PR * (h.radiationWm2 / 1000))) : 0;
+              pvPowerW  = pvCapW > 0 ? Math.min(pvCapW, Math.round(pvCapW * PR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2))) : 0;
             }
             pvFcByDay[dayIdx][hHour] = pvPowerW;
           }
@@ -2093,7 +2100,7 @@ if (debug) this.log(
           const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
           let rawPvW = learnedSlots >= 10
             ? Math.round(h.radiationWm2 * yf)
-            : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000)) : 0;
+            : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2)) : 0;
 
           // Clear-sky ceiling: EMA converges toward average, not peak — on clear days after
           // cloudy periods yield factors are biased low. When current radiation is near the
