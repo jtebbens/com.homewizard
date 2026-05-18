@@ -53,7 +53,9 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.15.80)
 
-### PV Forecast — Cloud Uncertainty & Per-Model Accuracy (v3.15.80)
+### PV Forecast — Cloud Uncertainty, Solcast p10 & Per-Model Accuracy (v3.15.80)
+
+* **Solcast p10 cloud-aware selection (v3.15.80)** — When Solcast's `pv_estimate` (p50) exceeds the Open-Meteo NWP forecast by ≥10% for a given slot, the optimizer switches to `pv_estimate10` (pessimistic 10th-percentile) for that slot. On clear days both models agree and p50 is used; on overcast days where Solcast's satellite/ML lags a weather front, OM sees the cloud cover first and the p10 switch prevents over-reliance on PV that won't arrive. Logged as `p10=Xslots` per day in `[PV blend]`
 
 * **Cloud uncertainty discount in DP (v3.15.80)** — When cloud cover exceeds 70%, `pvCoverage` in the DP forward and backward passes is discounted by up to 40% (factor 0.6–1.0). Prevents the optimizer from discharging at break-even prices early in the day by relying on uncertain PV recharge that may not materialise on overcast days. Shown in the PV bias line as `×0.87 (pv-onzekerheid)` and logged as `[PV cloud uncertainty]`
 * **Per-model OM radiation curves in PV accuracy chart (v3.15.80)** — The PV forecast accuracy section now shows a second chart with individual Open-Meteo model curves (Météo-France ARPEGE, GFS, ICON, KNMI) alongside actual measured production. Per-model Watt estimates are recorded per 15-min accuracy sample and stored in `pv_predictions`. Per-model EMA accuracy scores are shown as pills once a full day of data has accumulated
