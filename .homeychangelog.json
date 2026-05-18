@@ -1471,5 +1471,8 @@
   },
   "3.15.80": {
     "en": "Solcast adjustment being to optimistic on PV expectation"
+  },
+  "3.15.81": {
+    "en": "p1 identify bug fix. error invalid response format."
   }
 }
