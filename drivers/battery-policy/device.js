@@ -1044,6 +1044,7 @@ if (debug) this.log(
       const pvTilt = devSettings.pv_estimation_enabled && typeof devSettings.pv_tilt === 'number' ? devSettings.pv_tilt : null;
       const pvAzimuth = devSettings.pv_estimation_enabled && typeof devSettings.pv_azimuth === 'number' ? devSettings.pv_azimuth : null;
 
+      this.weatherForecaster.knmiApiKey = devSettings.knmi_api_key || null;
       this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude, pvTilt, pvAzimuth);
 
       // Buienradar: 5-min precipitation radar for next 2 hours (fire-and-forget, non-critical)

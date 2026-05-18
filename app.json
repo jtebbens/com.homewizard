@@ -4128,6 +4128,28 @@
         {
           "type": "group",
           "label": {
+            "en": "KNMI Station Data",
+            "nl": "KNMI Stationsdata"
+          },
+          "children": [
+            {
+              "id": "knmi_api_key",
+              "type": "text",
+              "label": {
+                "en": "KNMI API Key",
+                "nl": "KNMI API-sleutel"
+              },
+              "hint": {
+                "en": "Optional. KNMI Data Platform API key for ground-truth solar radiation from nearest weather station. Register at dataplatform.knmi.nl.",
+                "nl": "Optioneel. KNMI Data Platform API-sleutel voor gemeten zonnestraling van dichtstbijzijnde weerstation. Registreer op dataplatform.knmi.nl."
+              },
+              "value": ""
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
             "en": "Advanced",
             "nl": "Geavanceerd"
           },
