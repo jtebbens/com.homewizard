@@ -51,7 +51,13 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.79)
+## 📝 Latest Updates (v3.15.63–v3.15.80)
+
+### PV Forecast — Cloud Uncertainty & Per-Model Accuracy (v3.15.80)
+
+* **Cloud uncertainty discount in DP (v3.15.80)** — When cloud cover exceeds 70%, `pvCoverage` in the DP forward and backward passes is discounted by up to 40% (factor 0.6–1.0). Prevents the optimizer from discharging at break-even prices early in the day by relying on uncertain PV recharge that may not materialise on overcast days. Shown in the PV bias line as `×0.87 (pv-onzekerheid)` and logged as `[PV cloud uncertainty]`
+* **Per-model OM radiation curves in PV accuracy chart (v3.15.80)** — The PV forecast accuracy section now shows a second chart with individual Open-Meteo model curves (Météo-France ARPEGE, GFS, ICON, KNMI) alongside actual measured production. Per-model Watt estimates are recorded per 15-min accuracy sample and stored in `pv_predictions`. Per-model EMA accuracy scores are shown as pills once a full day of data has accumulated
+* **Météo-France ARPEGE Europe replaces ECMWF IFS04 in ensemble blend (v3.15.80)** — ECMWF IFS04 returned null `shortwave_radiation` for all hourly slots via the Open-Meteo ensemble endpoint and contributed nothing to the blend or accuracy tracking. Replaced with Météo-France ARPEGE Europe (10 km, West-European coverage), which provides full hourly radiation data. Accuracy prior set to 0.82
 
 ### Battery Policy — Grid Top-Up Timing (v3.15.79)
 
