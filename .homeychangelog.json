@@ -1477,5 +1477,8 @@
   },
   "3.15.82": {
     "en": "error uploading"
+  },
+  "3.15.83": {
+    "en": "With beta testing slimladen from Homewizard the PV Opwek chart stayed empty - fix"
   }
 }
