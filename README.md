@@ -51,7 +51,15 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.80)
+## 📝 Latest Updates (v3.15.63–v3.15.82)
+
+### PV Forecast — KNMI Ground-Truth & Fixes (v3.15.81–v3.15.82)
+
+* **KNMI station ground-truth for model accuracy (v3.15.81)** — PV forecast accuracy tracking now uses independent in-situ radiation measurements from the nearest KNMI automatic weather station (e.g. Cabauw) as the daily actual, instead of Open-Meteo's own historical data. Open-Meteo used its own archived data as the "actual" reference, creating circular validation that could not detect systematic model bias. KNMI station data is fetched hourly via the EDR API and accumulated into a daily average used as ground-truth in the nightly learning step. Falls back to Open-Meteo if fewer than 4 daylight readings were collected or if no API key is configured. Requires a KNMI EDR API key configured in device settings (register at dataplatform.knmi.nl)
+
+* **NOCT temperature derating for fallback PV forecast (v3.15.81)** — The pre-learning fallback PV forecast (used before sufficient yield data has accumulated) now applies a thermal derating factor for high ambient temperatures. Silicon PV panels lose approximately 0.4%/°C above 25°C cell temperature; on hot summer days the flat-PR fallback overpredicted by up to 10%. The correction uses ambient temperature from the Open-Meteo forecast and the standard NOCT model. Panels with a learned yield factor already embed temperature effects empirically — correction applies only to the fallback path
+
+* **P1 meter identify accepts empty response body (v3.15.82)** — The P1 meter returns an empty HTTP body on `/api/system/identify`; the strict JSON object-type check caused a false "Invalid response format" error. HTTP status code alone is now used to detect failure
 
 ### PV Forecast — Cloud Uncertainty, Solcast p10 & Per-Model Accuracy (v3.15.80)
 
