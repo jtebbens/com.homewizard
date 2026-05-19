@@ -2688,6 +2688,9 @@
       } else if (hasGridCharge) {
         icon = '⚡'; color = '#FCD34D';
         msg = `PV-surplus beperkt (${netPvKwh.toFixed(1)} kWh, ~${pct}% van restcapaciteit). Laden via net gepland: ${chargeSlots} slot${chargeSlots > 1 ? 's' : ''}.`;
+      } else if (pct >= 15) {
+        icon = '🌤️'; color = '#FCD34D';
+        msg = `Batterij laadt ~${pct}% bij via zonnepanelen (${netPvKwh.toFixed(1)} kWh surplus, ruimte ${remainingKwh.toFixed(1)} kWh). Geen goedkope netlaadslots.`;
       } else {
         icon = '☁️'; color = 'var(--muted)';
         msg = `PV-surplus beperkt: ${netPvKwh.toFixed(1)} kWh verwacht (~${pct}% van restcapaciteit ${remainingKwh.toFixed(1)} kWh). Geen goedkope laadslots gevonden.`;
