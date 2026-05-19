@@ -3938,7 +3938,12 @@ if (debug) this.log(
           if (!this._chartToday || !this._chartToday.slots?.length) { stream.end(); return; }
           let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
           if (_h > 38) { this.log(`[MEM] Today chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
-          await this._streamQuickChart(stream, this._chartToday);
+          try {
+            await this._streamQuickChart(stream, this._chartToday);
+          } catch (e) {
+            this.error('[Chart] Today stream failed:', e.message);
+            if (!stream.destroyed) stream.end();
+          }
         });
         await this.setCameraImage('planning_today', 'Batterij Vandaag', this.planningImageToday);
         this._chartHashToday = null; // force first update
@@ -3948,21 +3953,27 @@ if (debug) this.log(
         this._chartHashToday = hashToday;
       }
 
-      // Tomorrow image — always registered so the webcam shows up in Homey even before
-      // tomorrow's prices arrive (before ~14:00). Stream returns empty when no slots yet.
-      if (!this.planningImageTomorrow) {
+      // Tomorrow image — only register once slots are available (after ~14:00 when DAP prices arrive).
+      // Registering with an empty stream causes Homey to cache an empty response and hide the tile
+      // permanently until the next app restart, even after subsequent .update() calls.
+      if (!this.planningImageTomorrow && tomorrowSlots.length > 0) {
         this.planningImageTomorrow = await this.homey.images.createImage();
         this.planningImageTomorrow.setStream(async (stream) => {
-          if (this._isPredictiveMode) { stream.end(); return; }
-          if (!this._chartTomorrow || !this._chartTomorrow.slots?.length) { stream.end(); return; }
+          if (this._isPredictiveMode) { this.log('[Chart] Tomorrow stream: predictive mode → empty'); stream.end(); return; }
+          if (!this._chartTomorrow || !this._chartTomorrow.slots?.length) { this.log('[Chart] Tomorrow stream: no slots → empty'); stream.end(); return; }
           let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
           if (_h > 38) { this.log(`[MEM] Tomorrow chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
-          await this._streamQuickChart(stream, this._chartTomorrow);
+          try {
+            await this._streamQuickChart(stream, this._chartTomorrow);
+          } catch (e) {
+            this.error('[Chart] Tomorrow stream failed:', e.message);
+            if (!stream.destroyed) stream.end();
+          }
         });
         await this.setCameraImage('planning_tomorrow', 'Batterij Morgen', this.planningImageTomorrow);
         this._chartHashTomorrow = null; // force first update
       }
-      if (tomorrowSlots.length > 0 && hashTomorrow !== this._chartHashTomorrow) {
+      if (this.planningImageTomorrow && tomorrowSlots.length > 0 && hashTomorrow !== this._chartHashTomorrow) {
         await this.planningImageTomorrow.update();
         this._chartHashTomorrow = hashTomorrow;
       }
@@ -4201,7 +4212,12 @@ if (debug) this.log(
         stream.end();
         return;
       }
-      await this._streamModeChart(stream);
+      try {
+        await this._streamModeChart(stream);
+      } catch (e) {
+        this.error('[Chart] Mode history stream failed:', e.message);
+        if (!stream.destroyed) stream.end();
+      }
     });
 
     // Pre-build body so the initial setCameraImage fetch has content
