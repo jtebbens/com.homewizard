@@ -4140,8 +4140,8 @@
                 "nl": "KNMI API-sleutel"
               },
               "hint": {
-                "en": "Optional. KNMI Data Platform API key for ground-truth solar radiation from nearest weather station. Register at dataplatform.knmi.nl.",
-                "nl": "Optioneel. KNMI Data Platform API-sleutel voor gemeten zonnestraling van dichtstbijzijnde weerstation. Registreer op dataplatform.knmi.nl."
+                "en": "Optional. KNMI EDR API key for ground-truth solar radiation from nearest weather station. Register at dataplatform.knmi.nl.",
+                "nl": "Optioneel. KNMI EDR API-sleutel voor gemeten zonnestraling van dichtstbijzijnde weerstation. Registreer op dataplatform.knmi.nl."
               },
               "value": ""
             }
