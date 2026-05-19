@@ -1281,9 +1281,19 @@ if (debug) this.log(
       }
 
       if (this._isPredictiveMode) {
-        // Predictive mode: alleen PV camera verversen, optimizer niet aanraken
-        if (!this.planningImagePv) this._initPvCamera().catch(() => {});
-        else this.planningImagePv.update().catch(() => {});
+        // Predictive mode: alleen PV camera verversen, optimizer niet aanraken.
+        // Als forecast ontbreekt (bijv. na versiesprong), eerst weather fetchen.
+        const hasForecast = !!(this._liveState.policy_pv_forecast_hourly
+          ?? this.homey.settings.get('policy_pv_forecast_hourly'));
+        const doUpdate = async () => {
+          if (!this.planningImagePv) await this._initPvCamera().catch(() => {});
+          else await this.planningImagePv.update().catch(() => {});
+        };
+        if (!hasForecast) {
+          this._maybeRefreshWeatherOnly().catch(() => {}).then(doUpdate).catch(() => {});
+        } else {
+          doUpdate().catch(() => {});
+        }
         return;
       }
 
@@ -1292,8 +1302,17 @@ if (debug) this.log(
       // only runs after a policy run). Call _initPvCamera so the camera is registered with Homey
       // and shows the correct today forecast rather than a stale cached image.
       if (!this.getCapabilityValue('policy_enabled')) {
-        if (!this.planningImagePv) this._initPvCamera().catch(() => {});
-        else this.planningImagePv.update().catch(() => {});
+        const hasForecast2 = !!(this._liveState.policy_pv_forecast_hourly
+          ?? this.homey.settings.get('policy_pv_forecast_hourly'));
+        const doUpdate2 = async () => {
+          if (!this.planningImagePv) await this._initPvCamera().catch(() => {});
+          else await this.planningImagePv.update().catch(() => {});
+        };
+        if (!hasForecast2) {
+          this._maybeRefreshWeatherOnly().catch(() => {}).then(doUpdate2).catch(() => {});
+        } else {
+          doUpdate2().catch(() => {});
+        }
       }
 
       // Invalidate optimizer — new PV forecast may change the optimal charge schedule.
@@ -3050,7 +3069,7 @@ if (debug) this.log(
     const pvDayIdx   = this.optimizationEngine._buildPvIndex(this._pvDayStartForecast);
     const predictedW = this.optimizationEngine._getPvForSlot(pvDayIdx, nowMs) || 0;
     const actualW = this._pvProductionW;
-    if (predictedW <= 50 || actualW <= 50) return;
+    if (predictedW <= 50 || actualW <= 100) return;
 
     const bucketMs = Math.floor(nowMs / (15 * 60 * 1000)) * (15 * 60 * 1000);
     if (this._lastPvAccuracyBucket === bucketMs) return;

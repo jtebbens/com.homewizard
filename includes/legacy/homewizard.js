@@ -56,8 +56,8 @@ module.exports = (function() {
         failures: 0,
         lastFailure: 0,
         openUntil: 0,
-        threshold: 3,
-        cooldownMs: 300000
+        threshold: 5,
+        cooldownMs: 60000
       };
     }
   }
@@ -84,7 +84,7 @@ module.exports = (function() {
           openUntil: c.openUntil
         });
 
-        if (debug) console.log(`Circuit breaker OPEN for device (cooldown ${c.cooldownMs}ms)`);
+        console.log(`[HW] circuit breaker OPEN for ${device.settings?.homewizard_id || device.settings?.homewizard_ip || 'unknown'} (${c.failures} failures, cooldown ${c.cooldownMs / 1000}s)`);
       }
 
   }
@@ -128,7 +128,7 @@ module.exports = (function() {
       const adaptive = avg * 2.5;
 
       // Hard min/max
-      return Math.min(Math.max(adaptive, 7000), 12000);
+      return Math.min(Math.max(adaptive, 7000), 20000);
     }
 
 
@@ -340,7 +340,7 @@ module.exports = (function() {
         ms: duration,
         timeout: timeoutDuration
       });
-      // keine "user aborted" log, keine dubbele entry
+      console.log(`[HW] timeout after ${duration}ms (limit=${timeoutDuration}ms): ${uri_part}`);
       return safeCallback('timeout', []);
     }
 
