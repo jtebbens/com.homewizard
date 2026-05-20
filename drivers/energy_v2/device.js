@@ -1923,10 +1923,6 @@ async _handleBatteries(data) {
       ? { ...data, mode: battery, permissions: [] }
       : battery;
 
-    if (debug && payload.battery_count != 0) {
-      this.log('⚡ Battery event payload:', payload);
-    }
-
     // --- Normalize mode ---
     const normalizedMode = normalizeBatteryMode(payload);
     const lastBatteryMode = this._cacheGet('last_battery_mode');

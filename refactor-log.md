@@ -2692,3 +2692,96 @@ PASS — 1000 scenarios, no counterexample.
 - Passed: 15
 - Failed: 0
 
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
