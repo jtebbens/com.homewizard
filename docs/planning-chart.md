@@ -2,14 +2,22 @@
 
 Two camera images are registered on the battery-policy device: **"Batterij Vandaag"** and **"Batterij Morgen"** (`planning_today` / `planning_tomorrow`). Generated via [quickchart.io](https://quickchart.io) POST API after every `_saveWidgetData()` call.
 
-**Architecture (`device.js`):**
+**Architecture:**
 
-- `_saveWidgetData()` → builds `compact` (slots = past + future) → calls `_updatePlanningChart(compact)`
+- `_saveWidgetData()` in `device.js` → builds `compact` (slots = past + future) → calls `_updatePlanningChart(compact)`
 - `_updatePlanningChart()` splits slots by Amsterdam calendar day → stores as `_chartToday` / `_chartTomorrow`
-- `image.setStream()` callback calls `_streamQuickChart()` when Homey UI requests the image
+- `image.setStream()` callback calls `ChartRenderer.streamPlanningChart()` (in `lib/chart-renderer.js`) when Homey UI requests the image
 - `image.update()` signals new data available; stream fires lazily on next UI request
 
-**`_configToJs(val)`** — custom serializer that preserves JS function values (unlike `JSON.stringify` which drops them). Required because quickchart.io evaluates the `chart` field as a JS expression string, not JSON. Pass `chart: this._configToJs(chartCfg)` in the POST body.
+**`ChartRenderer` module** (`lib/chart-renderer.js`) holds all pure builders + HTTP helpers:
+
+- `buildPlanningChartConfig(compact)` → planning bars + SoC + PV chart config
+- `buildPvChartConfig(pvData)` → PV forecast vs actual (today + tomorrow)
+- `buildModeChartBody(modeHistory)` → 24h stacked-bar mode timeline (returns JSON body string)
+- `streamPlanningChart(stream, compact)` / `streamPvChart(stream, pvData)` / `streamModeChart(stream, body)` → POST to quickchart.io, pipe response to stream
+- `configToJs(val)` — custom serializer that preserves JS function values (unlike `JSON.stringify` which drops them). Required because quickchart.io evaluates the `chart` field as a JS expression string, not JSON.
+
+Device.js keeps camera-lifecycle methods only (`_initPvCamera`, `_initModeHistoryCamera`, `_updatePlanningChart`, `_updateModeChart`, `_buildModeChartBody` thin wrapper).
 
 - **Do NOT use `generateLabels`** in legend config — `Chart.defaults` is not available in quickchart.io's eval context and breaks rendering entirely. Use `filter: function(item) { ... }` instead.
 
