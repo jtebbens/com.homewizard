@@ -17,7 +17,6 @@ const api = require('../../includes/v2/Api');
 const WebSocketManager = require('../../includes/v2/Ws');
 const wsDebug = require('../../includes/v2/wsDebug');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
-const debug = false; // Legacy constant — use this._debugLogging at runtime (toggle via device settings)
 
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err);
@@ -1081,17 +1080,6 @@ this.homey.flow
     }
     _memE('onInit-done');
 
-    if (debug) this._debugInterval = setInterval(() => {
-      this.log(
-        'CPU diag:',
-        'ws=', this.wsManager?.isConnected(),
-        'poll=', this.pollingEnabled,
-        'batteryGroup=', this._phaseOverloadNotificationsEnabled,
-        'external=', !!this._cache.external_last_payload,
-        'lastWS=', Date.now() - (this.wsManager?.lastMeasurementAt || 0)
-      );
-    }, 60000);  // Reduced frequency: every 60s instead of 10s
-
 
     // 🕒 Driver-side watchdog
     // 🕒 Driver-side watchdog (ORIGINEEL)
@@ -1368,7 +1356,6 @@ async _updateBatteryGroup() {
 
   // --- Only remove capabilities if ALL sources agree there is no battery ---
   if (vendorCount === 0 && realtimeCount === 0 && fallbackCount === 0) {
-    if (debug) this.log('🔋 No battery detected — removing battery capabilities');
 
     const caps = [
       'measure_power.battery_group_power_w',
@@ -1449,8 +1436,6 @@ async _updateBatteryGroup() {
 
       // Flow triggeren
       this.flowTriggerBatteryMode(this, { mode: normalized });
-
-      if (debug) this.log(`🔋 Updated battery_group_charge_mode → ${normalized}`);
     }
   }
 }
@@ -1925,7 +1910,6 @@ async _ensureBatteryCapabilities() {
 
 async _handleBatteries(data) {
   try {
-    if (debug) this.log('⚡ Battery event data:', data);
 
     // --- Device existence guard ---
     // ✅ CPU FIX: Removed pointless getDriver/getDevice lookup — _handleBatteries

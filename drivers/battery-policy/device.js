@@ -1159,7 +1159,6 @@ if (debug) this.log(
             let scFcByDay = null;
             if (settings.solcast_enabled && settings.solcast_api_key && settings.solcast_resource_id) {
               if (!this._solcastProvider) {
-                // eslint-disable-next-line global-require
                 const SolcastProvider = require('../../lib/solcast-provider');
                 this._solcastProvider = new SolcastProvider(this.homey);
               }
