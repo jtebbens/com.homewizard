@@ -580,6 +580,7 @@
           <span><span style="display:inline-block;width:12px;height:2px;background:#fb7185;vertical-align:middle;margin-right:4px;"></span>KNMI</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
         </div>
+        <div id="pv-model-day-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
       </details>
     </div>
 
@@ -2867,6 +2868,21 @@
           _pvPill('Solcast', daySC, '%', 70, 85);
       }
 
+      // Per-model daily accuracy (MF/GFS/ICON/KNMI) from day's entries
+      const dayModelPillsEl = document.getElementById('pv-model-day-pills');
+      if (dayModelPillsEl) {
+        const _dayAcc = (key) => {
+          const ent = entries.filter(p => p[key] != null && p.actual > 20);
+          if (!ent.length) return null;
+          return Math.round(ent.reduce((s,p) => s + (1 - Math.min(Math.abs(p.actual - p[key]) / Math.max(p.actual, p[key], 1), 1)), 0) / ent.length * 100);
+        };
+        dayModelPillsEl.innerHTML =
+          _pvPill('Météo-France', _dayAcc('mf'),   '%', 70, 85) +
+          _pvPill('GFS',          _dayAcc('gfs'),  '%', 70, 85) +
+          _pvPill('ICON',         _dayAcc('icon'), '%', 70, 85) +
+          _pvPill('KNMI',         _dayAcc('knmi'), '%', 70, 85);
+      }
+
       // Chart
       const canvas = document.getElementById('pvAccuracyChart');
       if (!canvas) return;
@@ -2996,6 +3012,7 @@
           });
         }
       }
+
     }
 
     /* ══════════════════════════════════════════════════════════
