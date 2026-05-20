@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check *)",
+      "Bash(node -c *)",
+      "Bash(npm run test-unit)",
+      "Bash(npm run lint-check)"
+    ]
+  }
+}
