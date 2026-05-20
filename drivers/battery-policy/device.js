@@ -793,8 +793,10 @@ if (debug) this.log(
         
         if (this._pvState) {
           // Currently ON: Use wider thresholds to stay ON (prevent false OFF)
+          // Skip sun_score check when already ON — virtual grid balance is sufficient.
+          // Prevents false OFF during cloudy-but-producing conditions (e.g. 15% sun_score, 600W PV).
           hasExport = virtualGridPower < PV_EXPORT_OFF;
-          hasActivePVConsumption = isDaylight && hasSunlight && 
+          hasActivePVConsumption = isDaylight &&
                                    virtualGridPower >= PV_GRID_MIN_OFF && virtualGridPower <= PV_GRID_MAX_OFF;
         } else {
           // Currently OFF: Use stricter thresholds to turn ON (prevent false ON)

@@ -92,6 +92,12 @@ class HomeWizardApp extends Homey.App {
     const lastVersion = this.homey.settings.get('_hw_app_version');
     if (lastVersion !== currentVersion) {
       this.log(`[MIGRATE] Version change: ${lastVersion || 'new install'} → ${currentVersion}`);
+      // Write immediately so a short-lived dev session still persists the version.
+      // Only write forward (never downgrade) so dev builds don't get overwritten by older installed app.
+      const isNewer = !lastVersion || currentVersion.localeCompare(lastVersion, undefined, { numeric: true }) > 0;
+      if (isNewer) {
+        try { this.homey.settings.set('_hw_app_version', currentVersion); } catch (_) {}
+      }
       setTimeout(() => this._runSettingsMigration(currentVersion), 30_000);
     }
   }
@@ -115,7 +121,6 @@ class HomeWizardApp extends Homey.App {
     } catch (e) {
       this.error('[MIGRATE] Settings migration failed:', e.message);
     }
-    try { this.homey.settings.set('_hw_app_version', currentVersion); } catch (_) {}
   }
 
   _setupGlobalErrorHandlers() {
