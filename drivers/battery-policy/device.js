@@ -2258,6 +2258,7 @@ if (debug) this.log(
         const weightsToday    = getDayWeights(todayNLDate, true);
         const weightsTomorrow = getDayWeights(tomorrowNLDate, false);
 
+        const scEffectiveSlots = []; // collect effective SC per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
           const dayKey = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2274,6 +2275,7 @@ if (debug) this.log(
             const scAvg = useP10 ? scP10 : scP50;
             blendedW = Math.round(wOM * slot.pvPowerW + wSC * scAvg);
             if (byDay[dayKey]) { byDay[dayKey].sc += scAvg; if (useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
+            scEffectiveSlots.push({ ts: slot.timestamp, w: scAvg, dayKey });
           } else {
             blendedW = slot.pvPowerW;
           }
@@ -2281,6 +2283,23 @@ if (debug) this.log(
           if (byDay[dayKey]) { byDay[dayKey].om += slot.pvPowerW; byDay[dayKey].bl += blendedW; }
           return { ...slot, pvPowerW: blendedW };
         });
+
+        // Aggregate effective SC to hourly for chart (shows p10 where actually used)
+        const scEffByDay = [{}, {}];
+        const scEffBuckets = [{}, {}];
+        for (const { ts, w, dayKey } of scEffectiveSlots) {
+          const dIdx = dayKey === todayNLDate ? 0 : dayKey === tomorrowNLDate ? 1 : -1;
+          if (dIdx < 0) continue;
+          const hour = parseInt(new Date(ts).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+          if (!scEffBuckets[dIdx][hour]) scEffBuckets[dIdx][hour] = [];
+          scEffBuckets[dIdx][hour].push(w);
+        }
+        for (let d = 0; d < 2; d++) {
+          for (const [hour, vals] of Object.entries(scEffBuckets[d])) {
+            scEffByDay[d][hour] = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+          }
+        }
+        this._setLive('policy_pv_forecast_sc_effective', scEffByDay);
 
         const fmt = wh => (wh / 1000).toFixed(1);
         const pct = (v, base) => (base > 0 ? `${v >= base ? '+' : ''}${((v - base) / base * 100).toFixed(0)}%` : '—');
@@ -2501,6 +2520,29 @@ if (debug) this.log(
       if (omCorrCount > 0) {
         this.log(`🌧️ OM precipitatie: PV correctie op ${omCorrCount} slots`);
       }
+    }
+
+    // Sync chart orange line with the fully-corrected DP forecast (bias+conservatism+coverage applied)
+    if (Array.isArray(pvForecast) && pvForecast.length > 0) {
+      const _todayNL    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const _tomorrowNL = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const _dpBuckets  = [{ key: _todayNL, h: {} }, { key: _tomorrowNL, h: {} }];
+      for (const slot of pvForecast) {
+        const dk = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const bucket = _dpBuckets.find(b => b.key === dk);
+        if (!bucket) continue;
+        const hr = parseInt(new Date(slot.timestamp).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        if (!bucket.h[hr]) bucket.h[hr] = [];
+        bucket.h[hr].push(slot.pvPowerW);
+      }
+      const _dpHourly = _dpBuckets.map(b => {
+        const result = {};
+        for (const [hr, vals] of Object.entries(b.h)) {
+          result[parseInt(hr)] = Math.round(vals.reduce((a, v) => a + v, 0) / vals.length);
+        }
+        return result;
+      });
+      this._setLive('policy_pv_forecast_hourly', _dpHourly);
     }
 
     // Learned round-trip efficiency from efficiencyEstimator
@@ -3323,9 +3365,11 @@ if (debug) this.log(
     // Zero out sunScore until the sun has actually risen.
     const _nowMs = Date.now();
     const _sunrise = weatherData?.todaySunrise;
+    const _sunset  = weatherData?.todaySunset;
     const _beforeSunrise = _sunrise instanceof Date && _nowMs < _sunrise.getTime();
-    if (_beforeSunrise) this._lastPvEstimateW = 0; // reset EMA — sun not up yet
-    const sunScore = (weatherData && !_beforeSunrise)
+    const _afterSunset   = _sunset instanceof Date && _nowMs > _sunset.getTime() + 30 * 60 * 1000;
+    if (_beforeSunrise || _afterSunset) this._lastPvEstimateW = 0; // reset EMA — no sun
+    const sunScore = (weatherData && !_beforeSunrise && !_afterSunset)
       ? Math.min(100, Math.round((weatherData.sunshineNext4Hours / 4) * 100))
       : 0;
     const sun = { gfs: sunScore, harmonie: sunScore };
@@ -4003,10 +4047,11 @@ if (debug) this.log(
         ?? this.homey.settings.get('policy_pv_forecast_hourly');
       const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
       const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+      const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       const pvScDayStart = this.homey.settings.get('policy_sc_daystart') ?? null;
 
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
         await this._initPvCamera();
@@ -4172,12 +4217,13 @@ if (debug) this.log(
         ?? this.homey.settings.get('policy_pv_forecast_hourly');
       const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
       const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+      const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       try {
-        await this._streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
+        await this._streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
       } catch (e) {
         this.error('PV chart stream error:', e.message);
         if (!stream.destroyed) stream.end();
@@ -4192,9 +4238,10 @@ if (debug) this.log(
       ?? this.homey.settings.get('policy_pv_forecast_hourly');
     const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
     const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
+    const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
     const pvCapW       = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
       await this.planningImagePv.update();
     }
   }
@@ -4429,7 +4476,7 @@ if (debug) this.log(
   }
 
   _buildPvChartConfig(pvData) {
-    const { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastDayStart, pvScDayStart, pvCapacityW } = pvData || {};
+    const { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart, pvScDayStart, pvCapacityW } = pvData || {};
     const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
     const pvHourly = (pvActual?.date === todayStr && Array.isArray(pvActual?.hourly)) ? pvActual.hourly : [];
 
@@ -4505,8 +4552,11 @@ if (debug) this.log(
     // OM-only and SC-only forecast lines (today + tomorrow)
     const omToday    = omTodayFull;  // already computed above
     const omTomorrow = pvForecastOM?.[1] || {};
-    const scToday    = scTodayFull;  // already computed above
-    const scTomorrow = pvForecastSC?.[1] || {};
+    // Use effective SC (p50 or p10 per slot, as actually used in DP blend) when available
+    const scEffToday    = pvForecastSCEffective?.[0] ?? null;
+    const scEffTomorrow = pvForecastSCEffective?.[1] ?? null;
+    const scToday    = scEffToday    ? { ...scTodayFull,  ...scEffToday }    : scTodayFull;
+    const scTomorrow = scEffTomorrow ? { ...(pvForecastSC?.[1] || {}), ...scEffTomorrow } : (pvForecastSC?.[1] || {});
     const hasOM = Object.keys(omToday).length > 0 || Object.keys(omTomorrow).length > 0;
     const hasSC = Object.keys(scToday).length > 0 || Object.keys(scTomorrow).length > 0;
 
