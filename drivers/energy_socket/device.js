@@ -192,6 +192,39 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     _memSock(`onInit-done (device ${safeIndex + 1}/${allDevices.length})`);
   }
 
+  _tcpPing(ip, port, timeoutMs) {
+    const net = require('net');
+    return new Promise((resolve) => {
+      const socket = net.createConnection({ host: ip, port, timeout: timeoutMs });
+      socket.on('connect', () => { socket.destroy(); resolve(true); });
+      socket.on('timeout', () => { socket.destroy(); resolve(false); });
+      socket.on('error', (err) => { resolve(err.code === 'ECONNREFUSED'); });
+    });
+  }
+
+  _startRecoveryPoller() {
+    if (this._recoveryInterval) return;
+    const match = this.url && this.url.match(/https?:\/\/([^/:]+)/);
+    if (!match) return;
+    const ip = match[1];
+    this._recoveryInterval = setInterval(async () => {
+      if (this.__deleted) return this._stopRecoveryPoller();
+      const online = await this._tcpPing(ip, 80, 1000);
+      if (online) {
+        this.log(`🌐 TCP ping ${ip} ok — resetting failure counter`);
+        this._consecutiveFailures = 0;
+        this._stopRecoveryPoller();
+      }
+    }, 10000);
+  }
+
+  _stopRecoveryPoller() {
+    if (this._recoveryInterval) {
+      clearInterval(this._recoveryInterval);
+      this._recoveryInterval = null;
+    }
+  }
+
   onUninit() {
     // Cleanup intervals and timers when app stops/crashes
     this.__deleted = true;
@@ -208,6 +241,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       clearInterval(this._statsFlushTimer);
       this._statsFlushTimer = null;
     }
+    this._stopRecoveryPoller();
     this._flushFetchStats();
     // Gedeelde agent NIET destroyen — die wordt gebruikt door alle energy socket devices
     this.agent = null;
@@ -240,9 +274,9 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   onDiscoveryAvailable(discoveryResult) {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._trackDiscovery('available');
-    // ✅ FIX: Reset failure counters on rediscovery
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses = 0;
+    this._stopRecoveryPoller();
     this.setAvailable();
     this._isMarkedUnavailable = false;
   }
@@ -251,9 +285,9 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._trackDiscovery('address_changed');
     this._debugLog(`Discovery address changed: ${this.url}`);
-    // ✅ FIX: Reset failure counters on address change
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses = 0;
+    this._stopRecoveryPoller();
     this.setAvailable();
     this._isMarkedUnavailable = false;
   }
@@ -465,18 +499,29 @@ _flushFetchStats() {
 
     // Only mark unavailable after 3 consecutive failures AND 90 seconds since last success
     // This prevents flapping on temporary WiFi glitches
-    if (this._consecutiveFailures >= 3 && timeSinceLastSuccess > 90000) {
+    if (this._consecutiveFailures >= 5 && timeSinceLastSuccess > 120000) {
+      const dr = this.getDiscoveryResult();
+      if (dr && dr.address) {
+        const freshUrl = `http://${dr.address}:${dr.port}${dr.txt.path}`;
+        if (freshUrl !== this.url) {
+          this.log(`🌐 Discovery IP refresh: ${this.url} → ${freshUrl}`);
+          this.url = freshUrl;
+          this._consecutiveFailures = 0;
+          return;
+        }
+      }
       if (!this._isMarkedUnavailable) {
         this.log(`❌ Connection lost after ${this._consecutiveFailures} failures (${Math.round(timeSinceLastSuccess/1000)}s since last success)`);
         this.setUnavailable(err.message || 'Polling error').catch(this.error);
         this._isMarkedUnavailable = true;
+        this._startRecoveryPoller();
       }
       updateCapability(this, 'connection_error', err.message || 'Polling error').catch(this.error);
       updateCapability(this, 'alarm_connectivity', true).catch(this.error);
     } else {
       // Still trying - just log the error but don't mark unavailable yet
-      this._debugLog(`Poll failed (${this._consecutiveFailures}/3): ${err.message}`);
-      updateCapability(this, 'connection_error', `Retrying (${this._consecutiveFailures}/3): ${err.message}`).catch(this.error);
+      this._debugLog(`Poll failed (${this._consecutiveFailures}/5): ${err.message}`);
+      updateCapability(this, 'connection_error', `Retrying (${this._consecutiveFailures}/5): ${err.message}`).catch(this.error);
     }
   }
 

@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const http = require('http');
+const net = require('net');
 const FetchLegacyDebug = require('./fetchLegacyDebug');
 const fetch = require('node-fetch');
 
@@ -85,15 +86,49 @@ module.exports = (function() {
         });
 
         console.log(`[HW] circuit breaker OPEN for ${device.settings?.homewizard_id || device.settings?.homewizard_ip || 'unknown'} (${c.failures} failures, cooldown ${c.cooldownMs / 1000}s)`);
+        device.deviceInstance?.setUnavailable('Connection lost').catch(() => {});
+        startRecoveryPoller(device);
       }
 
+  }
+
+  function tcpPing(ip, port, timeoutMs) {
+    return new Promise((resolve) => {
+      const socket = net.createConnection({ host: ip, port, timeout: timeoutMs });
+      socket.on('connect', () => { socket.destroy(); resolve(true); });
+      socket.on('timeout', () => { socket.destroy(); resolve(false); });
+      socket.on('error', (err) => {
+        // ECONNREFUSED = device reachable, port closed — still online
+        resolve(err.code === 'ECONNREFUSED');
+      });
+    });
+  }
+
+  function startRecoveryPoller(device) {
+    const c = device.circuit;
+    if (c.recoveryInterval) return;
+    const ip = device.settings?.homewizard_ip;
+    if (!ip) return;
+
+    c.recoveryInterval = setInterval(async () => {
+      const online = await tcpPing(ip, 80, 1000);
+      if (online) {
+        console.log(`[HW] TCP ping ${ip} ok — circuit breaker reset`);
+        circuitBreakerSuccess(device);
+      }
+    }, 10000);
   }
 
   function circuitBreakerSuccess(device) {
     initCircuitBreaker(device);
     const c = device.circuit;
+    if (c.recoveryInterval) {
+      clearInterval(c.recoveryInterval);
+      c.recoveryInterval = null;
+    }
     c.failures = 0;
     c.openUntil = 0;
+    device.deviceInstance?.setAvailable().catch(() => {});
   }
 
   function recordResponseTime(device, durationMs) {
@@ -176,6 +211,10 @@ module.exports = (function() {
 
     // Clear circuit breaker
     if (device.circuit) {
+      if (device.circuit.recoveryInterval) {
+        clearInterval(device.circuit.recoveryInterval);
+        device.circuit.recoveryInterval = null;
+      }
       device.circuit = null;
     }
 
