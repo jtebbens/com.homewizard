@@ -1480,5 +1480,8 @@
   },
   "3.15.83": {
     "en": "With beta testing slimladen from Homewizard the PV Opwek chart stayed empty - fix"
+  },
+  "3.15.84": {
+    "en": "Force check during night, check price slots and mark them for discharge if enough PV later that day"
   }
 }
