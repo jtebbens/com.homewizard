@@ -35,6 +35,7 @@
 - In dynamic mode (`respect_minmax=false` or `policy_mode='balanced-dynamic'`): DP uses `opportunistic_discharge_floor` (default €0.20).
 - `buildPlanningSchedule` uses the same effective floor so the planning display matches the DP schedule.
 - **`opportunistic_discharge_floor` tuning:** the default €0.20 allows marginal overnight slots (e.g. €0.22) that add ~€0.002/slot while consuming battery cycles before a better morning peak. Raise to €0.25–0.27 to suppress these.
+- **Per-SoC flattening (overnight multi-cycle):** In `_runBackwardDP`, the dp array is flattened per SoC level: if `pvKwhFromT[t+1] >= (maxSoc - socG) / 100 × capacityKwh`, then `dp[socG] = dpMax`. This lets the DP discharge at all profitable overnight slots and rely on daytime PV to recharge, instead of hoarding for a single "best" night slot. Guards: positive price, `pvKwhTomorrow >= 0.8 × cap`, non-PV slot, next slot not PV-strong. **Do NOT revert to `dp.fill(dpMax)` with `_betterSlotAhead` gate** — that caused overnight standby when pre-dawn prices rose into a PV-covered morning peak.
 
 ## `_selectMode` Confidence Calculation
 

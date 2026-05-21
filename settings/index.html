@@ -2021,6 +2021,7 @@
             `Break-even:     ${fmtE(d.breakEven)}    Gem. kostprijs: ${fmtE(d.avgCost)}`,
             `Optimizer:      ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
+            `PV morgen:      ${d.pvKwhTomorrow != null ? d.pvKwhTomorrow + ' kWh' : '—'}    Capaciteit: ${d.battCapKwh != null ? d.battCapKwh + ' kWh' : '—'}    Terminal factor: ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`,
           );
         } else {
           lines.push('', '--- Laatste policy run ---', '(nog geen data)');
@@ -2524,6 +2525,7 @@
             `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
             `Optimizer:     ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
+            `PV morgen:     ${d.pvKwhTomorrow != null ? d.pvKwhTomorrow + ' kWh' : '—'}  cap ${d.battCapKwh != null ? d.battCapKwh + ' kWh' : '—'}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`,
           );
         }
 
@@ -2605,13 +2607,13 @@
           if (groupIv) pushSlotRow(groupIv, groupCount);
         }
 
-        // Event history — last 8h of policy_mode_history entries with extended fields
+        // Event history — last 24h of policy_mode_history entries with extended fields
         const evHistory = (settings['policy_mode_history'] || [])
           .filter(h => h.pvW != null || h.consumW != null || h.gridW != null)
-          .filter(h => Date.now() - new Date(h.ts).getTime() <= 8 * 3600 * 1000)
-          .slice(-32);
+          .filter(h => Date.now() - new Date(h.ts).getTime() <= 24 * 3600 * 1000)
+          .slice(-96);
         if (evHistory.length > 0) {
-          lines.push('', '--- Event History (laatste 8 uur) ---');
+          lines.push('', '--- Event History (laatste 24 uur) ---');
           lines.push(
             `${'Tijd'.padEnd(6)}  ${'HWMode'.padEnd(20)}  ${'Policy→DP'.padEnd(20)}  ${'Prijs'.padEnd(7)}  ${'SoC'.padStart(4)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Grid(W)'.padStart(7)}  ${'Batt(W)'.padStart(7)}  Exception`
           );
