@@ -29,12 +29,7 @@ class HomeWizardDriver extends Homey.Driver {
     // 1. Try to read the unit first
     //
     try {
-      const response = await new Promise((resolve, reject) => {
-        homewizard.callnew(device.getData().id, '/get-status', (err, res) => {
-          if (err) return reject(err);
-          resolve(res);
-        });
-      });
+      const response = await device.callnewAsyncBound(device.getData().id, '/get-status', { retries: 1, timeout: 7500, retryDelay: 1000 });
 
       const hwPreset = response?.preset ?? response?.response?.preset;
 
@@ -80,28 +75,16 @@ class HomeWizardDriver extends Homey.Driver {
     try {
       this.log(`ActionCard set_preset: setting preset ${presetId} on HW device ${id}`);
 
-      // 1. HomeWizard aansturen
-      await new Promise((resolve, reject) => {
-        homewizard.callnew(id, `/preset/${presetId}`, (err, response) => {
-          if (err) {
-            return reject(new Error(err?.message || String(err) || 'Unknown HW error'));
-          }
-          resolve(response);
-        });
-      });
+      // 1. HomeWizard aansturen (1 retry bij timeout)
+      await device.callnewAsyncBound(id, `/preset/${presetId}`, { retries: 1, timeout: 8000 });
 
-      // 2. Verification
+      // 2. Verification (2 retries bij timeout — HW unit is traag)
       let hwPreset = null;
       try {
-        const status = await new Promise((resolve, reject) => {
-          homewizard.callnew(id, '/get-status', (err, res) => {
-            if (err) return reject(new Error(err?.message || String(err) || 'Unknown HW error'));
-            resolve(res);
-          });
-        });
-        hwPreset = status?.response?.preset;
+        const status = await device.callnewAsyncBound(id, '/get-status', { retries: 2, timeout: 7500, retryDelay: 1000 });
+        hwPreset = status?.preset ?? status?.response?.preset;
       } catch (err) {
-        this.log(`WARN: set_preset → HW verification failed (${err.message}). Falling back to Homey state.`);
+        this.log(`WARN: set_preset → HW verification failed after retries (${err.message}). Falling back to Homey state.`);
       }
 
       // 3. Logging mismatch
