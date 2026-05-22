@@ -2798,11 +2798,13 @@
     }
 
     function renderPvAccuracy(settings) {
-      const st = settings['learning_status'];
+      const st  = settings['learning_status'];
+      const pvc = settings['learning_pv_chart_data'];
       const section = document.getElementById('pv-accuracy-section');
       if (!section || !st) return;
 
-      const { pvPredictions, accOM, accSC, wOM, wSC, pvAccuracy, modelAcc } = st;
+      const { accOM, accSC, wOM, wSC, pvAccuracy } = st;
+      const { pvPredictions, modelAcc } = pvc ?? {};
       _pvModelAcc = modelAcc ?? null;
       if (!pvPredictions || pvPredictions.length === 0) return;
 
