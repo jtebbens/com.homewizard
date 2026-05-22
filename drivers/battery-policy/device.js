@@ -30,16 +30,25 @@ function _pvTempFactor(airTempC, radiationWm2) {
 }
 
 function _settingsFootprintKB(settings) {
+  const KNOWN_KEYS = [
+    'learning_status', 'learning_pv_chart_data', 'policy_mode_history',
+    'policy_optimizer_schedule', 'policy_all_prices', 'policy_all_prices_15min',
+    'policy_pv_forecast_hourly', 'policy_pv_forecast_om', 'policy_pv_forecast_sc',
+    'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
+    'weather_forecast_cache', 'battery_expansion_analysis', 'policy_daily_profit',
+    'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
+    'battery_policy_state', 'device_settings',
+  ];
   try {
-    const all = settings.getAll();
-    const entries = Object.entries(all)
-      .map(([k, v]) => ({ k, bytes: JSON.stringify(v).length }))
+    const entries = KNOWN_KEYS
+      .map(k => ({ k, bytes: JSON.stringify(settings.get(k) ?? null).length }))
+      .filter(e => e.bytes > 5)
       .sort((a, b) => b.bytes - a.bytes);
     const totalKB = (entries.reduce((s, e) => s + e.bytes, 0) / 1024).toFixed(1);
     const top = entries.slice(0, 8).map(e => `${e.k}=${(e.bytes / 1024).toFixed(1)}kB`).join(' | ');
     return `${totalKB}kB total | ${top}`;
-  } catch (_) {
-    return 'unavailable';
+  } catch (e) {
+    return `unavailable: ${e.message}`;
   }
 }
 
@@ -1269,7 +1278,9 @@ if (debug) this.log(
         const bF  = this.learningEngine.data?.radiation_bias_factor ?? 1.0;
         const yfs = this.learningEngine.getSolarLearnedSlotCount();
         this.log(`[Learning] days=${ls.days_tracking} samples=${ls.total_samples} coverage=${ls.pattern_coverage}% pv_acc=${ls.pv_accuracy}% | yield=${yfs}/96 slots bias=${bF.toFixed(3)}`);
-        // Keep learning_status fresh even when policy/optimizer isn't running
+        // Keep learning_status fresh even when policy/optimizer isn't running.
+        // pvPredictions/modelAcc live in learning_pv_chart_data (written by _gatherInputs)
+        // so this lightweight write stays small.
         const rte = this.efficiencyEstimator?.getEfficiency();
         this._setLive('learning_status', {
           days:       ls.days_tracking,
@@ -2385,7 +2396,8 @@ if (debug) this.log(
         ? Math.min(100, Math.max(todayAvgCloud, todayAvgCloudLow * 1.2))
         : todayAvgCloud;
       _pvBiasCloud = effectiveCloud;
-      const dailyBias = this.learningEngine.getDailyPvBiasFactor(effectiveCloud);
+      const todayKt   = this.weatherForecaster?.getTodayKt() ?? null;
+      const dailyBias = this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
       // On overcast days (>75% cloud), upward bias adds planning uncertainty: forecast errors
       // inflate remaining PV estimates and cause the DP to stop grid-charging prematurely.
       // Linearly reduce any upward bias back to 1.0 between 75% and 100% cloud cover.
@@ -3339,10 +3351,11 @@ if (debug) this.log(
       accSC:          accSC != null ? +(accSC * 100).toFixed(1) : null,
       wOM:            +(wOM * 100).toFixed(0),
       wSC:            +(wSC * 100).toFixed(0),
-      pvPredictions,
-      modelAcc,
       updatedAt:      new Date().toISOString(),
     });
+    // Chart data (large: pvPredictions + modelAcc) written separately so the
+    // lightweight _updateWeather write above doesn't overwrite it.
+    this._setLive('learning_pv_chart_data', { pvPredictions, modelAcc });
     
     // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
     // — no need to duplicate here
@@ -3948,6 +3961,7 @@ if (debug) this.log(
       'policy_consumption_profile',
       'battery_cycle_history',
       'learning_status',
+      'learning_pv_chart_data',
       'pv_surplus_forecast',
       'policy_pv_forecast_hourly',
       'policy_pv_actual_today',
