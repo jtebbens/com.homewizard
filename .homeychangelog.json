@@ -1483,5 +1483,8 @@
   },
   "3.15.84": {
     "en": "Force check during night, check price slots and mark them for discharge if enough PV later that day"
+  },
+  "3.15.85": {
+    "en": "Lowered factor from 0.8 to 0.6 for policy engine to fully discharge during night"
   }
 }
