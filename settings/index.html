@@ -2525,7 +2525,21 @@
             `Break-even:    ${fmtE(d.breakEven)}  gem kostprijs ${fmtE(d.avgCost)}`,
             `Optimizer:     ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
-            `PV morgen:     ${d.pvKwhTomorrow != null ? d.pvKwhTomorrow + ' kWh' : '—'}  cap ${d.battCapKwh != null ? d.battCapKwh + ' kWh' : '—'}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`,
+            (() => {
+              const pv  = d.pvKwhTomorrow;
+              const cap = d.battCapKwh;
+              const thresh    = cap != null ? Math.round(cap * 0.6 * 10) / 10 : null;
+              const flatOk    = pv != null && thresh != null && pv >= thresh;
+              // Clear-sky gross: pvCapW × PR × 5h peak-sun (May NL rough average)
+              const clearSky  = pvCapW != null && pvPR != null
+                ? Math.round(pvCapW * pvPR * 5.0 / 100) / 10 : null;
+              const pct       = clearSky && pv != null
+                ? Math.round(pv / clearSky * 100) : null;
+              const threshStr = thresh != null ? `  drempel ${thresh} kWh ${flatOk ? '✓' : '✗'}` : '';
+              const csStr     = clearSky != null ? `  helder ~${clearSky} kWh bruto` : '';
+              const pctStr    = pct != null ? ` (netto=${pct}% van helder)` : '';
+              return `PV morgen:     ${pv != null ? pv + ' kWh' : '—'}${threshStr}${csStr}${pctStr}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`;
+            })(),
           );
         }
 
@@ -2615,15 +2629,18 @@
         if (evHistory.length > 0) {
           lines.push('', '--- Event History (laatste 24 uur) ---');
           lines.push(
-            `${'Tijd'.padEnd(6)}  ${'HWMode'.padEnd(20)}  ${'Policy→DP'.padEnd(20)}  ${'Prijs'.padEnd(7)}  ${'SoC'.padStart(4)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Grid(W)'.padStart(7)}  ${'Batt(W)'.padStart(7)}  Exception`
+            `${'Tijd'.padEnd(11)}  ${'HWMode'.padEnd(20)}  ${'Policy→DP'.padEnd(20)}  ${'Prijs'.padEnd(7)}  ${'SoC'.padStart(4)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Grid(W)'.padStart(7)}  ${'Batt(W)'.padStart(7)}  Exception`
           );
-          lines.push('─'.repeat(115));
+          lines.push('─'.repeat(120));
           for (const h of evHistory) {
-            const ts   = new Date(h.ts).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
+            const _d   = new Date(h.ts);
+            const _fmt = new Intl.DateTimeFormat('nl-NL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' }).formatToParts(_d);
+            const _get = type => _fmt.find(p => p.type === type)?.value ?? '??';
+            const ts   = `${_get('day')}-${_get('month')} ${_get('hour')}:${_get('minute')}`;
             const p = (s, n, r) => { s = String(s ?? '—'); return r ? s.padStart(n) : s.padEnd(n); };
             const policyDp = `${h.policyMode ?? '—'}→${h.dpAction ?? '—'}`;
             lines.push(
-              `${ts.padEnd(6)}  ` +
+              `${ts.padEnd(11)}  ` +
               `${p(h.hwMode, 20)}  ` +
               `${p(policyDp, 20)}  ` +
               `${h.price != null ? `€${Number(h.price).toFixed(3)}` : '—'.padEnd(7)}  ` +
