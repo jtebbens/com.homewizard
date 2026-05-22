@@ -2163,6 +2163,8 @@ if (debug) this.log(
             .map(h => {
               const rad = h.perModelWm2?.[m];
               if (typeof rad !== 'number') return null;
+              // perModelWm2 is GTI when tilt/azimuth configured (via transposition in weather-forecaster),
+              // GHI otherwise. Either way apply yield factors directly.
               const d = h.time instanceof Date ? h.time : new Date(h.time);
               const s0 = d.getUTCHours() * 4;
               const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
@@ -2450,13 +2452,21 @@ if (debug) this.log(
         const sampleRatios = todayPreds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
         const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
 
+        // p.predicted is the pre-bias day-start forecast; pvForecast here is post-bias.
+        // ratio_needed = actual / post_bias = (pre_bias × meanRatio) / (pre_bias × biasCorrFactor)
+        //              = meanRatio / biasCorrFactor
+        // Example: actual=3000W, pre-bias=2000W, biasCorrFactor=0.826 →
+        //   meanRatio=1.5, post_bias=1652W, corrected=1.5/0.826=1.816 → 1652×1.816=2999W ✓
+        const biasCorrFactor = _pvDailyBiasFactor * _pvAccFactor;
+        const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
+
         // Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
         // followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data.
         const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
         const cv        = Math.sqrt(variance) / meanRatio;
         // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
         const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
-        const ratio     = 1.0 + (meanRatio - 1.0) * cvWeight;
+        const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight;
 
         this._lastIntradayPvRatio = ratio;
         if (Math.abs(ratio - 1.0) > 0.10) {
@@ -2467,9 +2477,9 @@ if (debug) this.log(
             if (slotDate !== todayNLDate) return slot;
             return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
           });
-          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
         } else {
-          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
         }
       }
     }
