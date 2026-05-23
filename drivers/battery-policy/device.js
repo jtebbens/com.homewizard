@@ -339,7 +339,11 @@ class BatteryPolicyDevice extends Homey.Device {
       active_mode: 'unknown',
       override_until: null,
       weather_override: 'auto',
-      presence_mode: this.learningEngine.isPaused() ? '🏖️ Away' : '🏠 Home'
+      presence_mode: this.learningEngine.isPaused() ? '🏖️ Away' : '🏠 Home',
+      policy_profit_eur: 0,
+      pv_forecast_kwh: 0,
+      bias_factor: 1,
+      plan_summary: '-'
     };
 
     for (const [capability, defaultValue] of Object.entries(defaults)) {
@@ -1131,6 +1135,9 @@ if (debug) this.log(
         }
         this.weatherData.pvKwhToday     = todayKwh     !== null ? Math.round(todayKwh     * 10) / 10 : null;
         this.weatherData.pvKwhRemaining = remainingKwh !== null ? Math.round(remainingKwh * 10) / 10 : null;
+        if (this.weatherData.pvKwhToday !== null) {
+          this.setCapabilityValue('pv_forecast_kwh', this.weatherData.pvKwhToday).catch(this.error);
+        }
 
         // Net surplus = PV remaining minus expected consumption during PV hours.
         // Prevents delay-charge on low-PV days where household load consumes most of the yield.
@@ -2502,6 +2509,7 @@ if (debug) this.log(
         const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight;
 
         this._lastIntradayPvRatio = ratio;
+        this.setCapabilityValue('bias_factor', parseFloat(ratio.toFixed(2))).catch(this.error);
         if (Math.abs(ratio - 1.0) > 0.10) {
           const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
           pvForecast = pvForecast.map(slot => {
@@ -2766,6 +2774,8 @@ if (debug) this.log(
       }
       const _profit = this.optimizationEngine._schedule?.todayProjectedProfit ?? this.optimizationEngine._schedule?.projectedProfit ?? 0;
       this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
+      this.setCapabilityValue('policy_profit_eur', parseFloat(_profit.toFixed(2))).catch(this.error);
+      this.setCapabilityValue('plan_summary', `${_cnt.charge}↑ ${_cnt.discharge}↓ ${_cnt.preserve}=`).catch(this.error);
     }
 
     // Persist planning schedule for the settings UI (single source of truth).

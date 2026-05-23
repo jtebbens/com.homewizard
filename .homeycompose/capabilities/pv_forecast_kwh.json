@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "PV Forecast Today",
+    "nl": "PV Voorspelling Vandaag"
+  },
+  "desc": {
+    "en": "Blended PV yield forecast for today",
+    "nl": "Gecombineerde PV opbrengst voor vandaag"
+  },
+  "units": {
+    "en": "kWh",
+    "nl": "kWh"
+  },
+  "decimals": 1,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "assets/icon.svg"
+}

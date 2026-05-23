@@ -1,0 +1,17 @@
+{
+  "type": "number",
+  "title": {
+    "en": "PV Intraday Bias",
+    "nl": "PV Intradag Bias"
+  },
+  "desc": {
+    "en": "Intraday PV correction ratio (actual/forecast)",
+    "nl": "Intradag PV-correctiefactor (actueel/voorspeld)"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/icon.svg"
+}

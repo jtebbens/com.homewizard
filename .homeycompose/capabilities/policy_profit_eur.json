@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Expected Profit",
+    "nl": "Verwachte Winst"
+  },
+  "desc": {
+    "en": "Projected daily profit from today's optimizer plan",
+    "nl": "Verwachte dagwinst van het optimizerplan"
+  },
+  "units": {
+    "en": "€",
+    "nl": "€"
+  },
+  "decimals": 2,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "assets/icon.svg"
+}

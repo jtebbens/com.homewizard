@@ -25,7 +25,11 @@
     "last_update",
     "override_until",
     "weather_override",
-    "presence_mode"
+    "presence_mode",
+    "policy_profit_eur",
+    "pv_forecast_kwh",
+    "bias_factor",
+    "plan_summary"
   ],
   "pair": [
     {
