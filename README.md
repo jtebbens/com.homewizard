@@ -51,7 +51,17 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.82)
+## 📝 Latest Updates (v3.15.63–v3.15.86)
+
+### PV Forecast, Optimizer & Battery Policy Fixes (v3.15.83–v3.15.86)
+
+* **Per-model GTI via solar transposition + KNMI kt bias classification (v3.15.83)** — PV forecast accuracy per Open-Meteo model now uses Global Tilted Irradiance (GTI) computed via the Perez transposition model rather than GHI. This ensures the per-model radiation error is evaluated on the same tilted plane as the actual panel yield. Simultaneously, the daily radiation bias factor is now selected based on the KNMI clearness index (kt) rather than Open-Meteo cloud cover fraction — OM systematically over-estimates cloud cover (42% vs 15% measured), causing the wrong bias tier to be selected on partially-cloudy days
+
+* **PV chart data key separated + kt-based bias apply + memory reduction (v3.15.84)** — The PV chart now uses a dedicated data key independent of the forecast pipeline, preventing stale forecast values from persisting across recomputes. kt-based bias is applied earlier in the forecast chain so downstream models see the corrected irradiance. Internal forecast buffers reduced to lower heap usage during ensemble fetches
+
+* **Chart midnight rollover fix + ensemble fetch timeout 10→15s (v3.15.85)** — The planning chart camera image swapped tomorrow's chart for today's after midnight due to a day-boundary comparison error; fixed. The Open-Meteo ensemble fetch timeout was extended from 10s to 15s to reduce spurious timeout failures on slow upstream responses. Battery policy capabilities now expose projected profit, PV forecast, bias factor, and current DP plan summary as Homey capability values
+
+* **Optimizer: smooth isolated preserve islands in discharge sequences (v3.15.86)** — A single `preserve` slot flanked by `discharge` on both sides with a price delta below 1 ct is a DP numerical edge case (floating-point score tie at a local price minimum). Such slots are now overridden to `discharge` in a post-DP smoothing pass; projected SoC is propagated forward accordingly. Observed impact: one 15-min standby at €0.273 between €0.281 and €0.274 discharge slots
 
 ### PV Forecast — KNMI Ground-Truth & Fixes (v3.15.81–v3.15.82)
 
