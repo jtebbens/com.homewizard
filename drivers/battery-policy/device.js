@@ -94,6 +94,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._modeHistory = this.homey.settings.get(`batt_mode_hist_${this.getData().id}`) || [];
     this._isPredictiveMode = false;
     this._policyEnabledBeforePredictive = null; // saved state for auto-restore when predictive ends
+    this._lastChartRolloverDay = null; // tracks last midnight rollover to avoid repeated swaps
     this._modeChartBody = null;
     this._modeChartImage = null;
 
@@ -882,6 +883,26 @@ if (debug) this.log(
             if (this._policyEnabledBeforePredictive !== null) {
               await this.setCapabilityValue('policy_enabled', this._policyEnabledBeforePredictive).catch(this.error);
               this._policyEnabledBeforePredictive = null;
+            }
+          }
+        }
+
+        // Midnight day rollover: swap _chartTomorrow → _chartToday when Amsterdam date changes.
+        // Prevents camera from showing yesterday's chart during SlimLaden/predictive pause overnight.
+        {
+          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          if (this._lastChartRolloverDay !== todayKey && this._chartToday?.slots?.length > 0) {
+            const firstSlotDay = new Date(this._chartToday.slots[0].ts)
+              .toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            if (firstSlotDay !== todayKey) {
+              this._lastChartRolloverDay = todayKey;
+              this.log('[Chart] Day rollover — swapping tomorrow chart to today camera');
+              this._chartToday        = this._chartTomorrow ?? null;
+              this._chartTomorrow     = null;
+              this._chartHashToday    = null;
+              this._chartHashTomorrow = null;
+              this.planningImageToday?.update().catch(() => {});
+              this.planningImageTomorrow?.update().catch(() => {});
             }
           }
         }
