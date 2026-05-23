@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.15.85",
+  "version": "3.15.86",
   "platforms": [
     "local"
   ],
@@ -3446,7 +3446,11 @@
         "last_update",
         "override_until",
         "weather_override",
-        "presence_mode"
+        "presence_mode",
+        "policy_profit_eur",
+        "pv_forecast_kwh",
+        "bias_factor",
+        "plan_summary"
       ],
       "pair": [
         {
@@ -6847,6 +6851,23 @@
       "uiComponent": "sensor",
       "icon": "assets/icon.svg"
     },
+    "bias_factor": {
+      "type": "number",
+      "title": {
+        "en": "PV Intraday Bias",
+        "nl": "PV Intradag Bias"
+      },
+      "desc": {
+        "en": "Intraday PV correction ratio (actual/forecast)",
+        "nl": "Intradag PV-correctiefactor (actueel/voorspeld)"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/icon.svg"
+    },
     "central_heating_flame": {
       "type": "boolean",
       "title": {
@@ -7244,6 +7265,22 @@
       "uiComponent": "sensor",
       "icon": "assets/icon.svg"
     },
+    "plan_summary": {
+      "type": "string",
+      "title": {
+        "en": "Plan Summary",
+        "nl": "Plan Samenvatting"
+      },
+      "desc": {
+        "en": "Today's optimizer plan in compact form",
+        "nl": "Compact overzicht van het optimizerplan"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/icon.svg"
+    },
     "policy_debug": {
       "id": "policy_debug",
       "type": "string",
@@ -7409,6 +7446,27 @@
       "uiComponent": "picker",
       "icon": "assets/icon.svg"
     },
+    "policy_profit_eur": {
+      "type": "number",
+      "title": {
+        "en": "Expected Profit",
+        "nl": "Verwachte Winst"
+      },
+      "desc": {
+        "en": "Projected daily profit from today's optimizer plan",
+        "nl": "Verwachte dagwinst van het optimizerplan"
+      },
+      "units": {
+        "en": "€",
+        "nl": "€"
+      },
+      "decimals": 2,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/icon.svg"
+    },
     "predicted_sun_hours": {
       "type": "number",
       "title": {
@@ -7485,6 +7543,27 @@
           }
         }
       ]
+    },
+    "pv_forecast_kwh": {
+      "type": "number",
+      "title": {
+        "en": "PV Forecast Today",
+        "nl": "PV Voorspelling Vandaag"
+      },
+      "desc": {
+        "en": "Blended PV yield forecast for today",
+        "nl": "Gecombineerde PV opbrengst voor vandaag"
+      },
+      "units": {
+        "en": "kWh",
+        "nl": "kWh"
+      },
+      "decimals": 1,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/icon.svg"
     },
     "recommended_mode": {
       "type": "string",

@@ -1486,5 +1486,8 @@
   },
   "3.15.85": {
     "en": "Lowered factor from 0.8 to 0.6 for policy engine to fully discharge during night"
+  },
+  "3.15.86": {
+    "en": "open meteo now takes solar orientation, planning fix with 15min slot issue affecting battery mode"
   }
 }
