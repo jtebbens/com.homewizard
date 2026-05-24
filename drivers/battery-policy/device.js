@@ -1008,18 +1008,13 @@ if (debug) this.log(
 
       this.priceRefreshTimeout = this.homey.setTimeout(
         async () => {
-          if (this._isPredictiveMode) {
-            this.log('🔄 Price refresh skipped — predictive mode active');
-            scheduleNext();
-            return;
-          }
-
           const settings = this.getSettings();
 
           if (settings.enable_dynamic_pricing && this.tariffManager.dynamicProvider) {
             const now = new Date();
             const nowAms = now.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam' });
-            this.log(`🔄 Refreshing prices... (${nowAms} Amsterdam)`);
+            const predictiveSuffix = this._isPredictiveMode ? ' (predictive — prices only)' : '';
+            this.log(`🔄 Refreshing prices... (${nowAms} Amsterdam)${predictiveSuffix}`);
 
             try {
               // Force-refresh the merged provider (fetches Xadi + KwhPrice concurrently)
@@ -1029,7 +1024,7 @@ if (debug) this.log(
               const days       = priceCount > 24 ? 'today + tomorrow' : 'today only';
               this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources})`);
 
-              if (priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
+              if (!this._isPredictiveMode && priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
                 // When tomorrow's prices arrive for the first time today, refresh weather
                 // so pvKwhTomorrow in the terminal value uses an up-to-date PV forecast.
                 const todayDate = new Date().toDateString();
