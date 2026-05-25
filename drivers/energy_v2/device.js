@@ -459,6 +459,7 @@ async reconnectWithManualIP(ip) {
     // Add rate limiting state to onInit() - place near the top of onInit()
     this._lastBatteryModeChange = 0;
     this._batteryModeChangeCooldown = 5000; // 5 seconds minimum between changes
+    this._liveMode = null;
 
 
     this._cache = {
@@ -497,6 +498,20 @@ async reconnectWithManualIP(ip) {
     _memE('after-registerCapabilityListeners');
     await this._ensureBatteryCapabilities();
     _memE('after-ensureBatteryCapabilities');
+
+    // Sync mode setting from persisted capability — P1 capability is source of truth.
+    // Avoids stale advanced-settings panel after restart/update without sending hardware commands.
+    {
+      const capMode = this.getCapabilityValue('battery_group_charge_mode');
+      if (capMode) {
+        this._liveMode = capMode;
+        const settingMode = this.getSetting('mode');
+        if (settingMode !== capMode) {
+          this.log(`[energy_v2] Startup mode sync: setting ${settingMode} → ${capMode} (from capability)`);
+          this._queueSettingsPersist('__settings__', { mode: capMode });
+        }
+      }
+    }
 
     // Register with baseload monitor
     const app = this.homey.app;
