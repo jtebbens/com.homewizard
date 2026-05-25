@@ -1192,17 +1192,20 @@ async setBatteryGroupMode(targetMode) {
 
     const normalized = normalizeBatteryMode(modeResponse);
 
-    // --- Update cache ---
-    this._cacheSet('last_battery_mode', normalized);
-
-    // --- Update capability ---
-    await updateCapability(this, 'battery_group_charge_mode', normalized);
-
-    // --- Trigger flow if changed ---
+    // --- Trigger flow and sync settings if mode actually changed ---
     const prev = this._cacheGet('last_battery_mode');
     if (normalized !== prev) {
       this.flowTriggerBatteryMode(this, { mode: normalized });
       this._cacheSet('last_battery_mode', normalized);
+    }
+
+    // --- Update capability ---
+    await updateCapability(this, 'battery_group_charge_mode', normalized);
+
+    // --- Sync advanced settings so tile and settings panel stay consistent ---
+    if (this._liveMode !== normalized) {
+      this._liveMode = normalized;
+      this._queueSettingsPersist('__settings__', { mode: normalized });
     }
 
     this.log(`✅ Battery group mode applied: ${normalized}`);

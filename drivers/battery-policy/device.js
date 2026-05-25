@@ -509,14 +509,22 @@ class BatteryPolicyDevice extends Homey.Device {
 
       // Restore last known mode immediately so the battery doesn't sit in firmware
       // default (zero_charge_only) during the gap between restart and first policy run.
+      // Skip if policy is disabled or auto_apply is off — those are explicit user overrides
+      // that must survive a restart.
       try {
-        const modeHistory = this.homey.settings.get('policy_mode_history');
-        if (Array.isArray(modeHistory) && modeHistory.length > 0) {
-          const lastEntry = modeHistory[modeHistory.length - 1];
-          const lastMode  = lastEntry?.hwMode;
-          if (lastMode) {
-            this.log(`🔄 Restoring last known mode on startup: ${lastMode}`);
-            await this._applyRecommendation(lastMode, 100);
+        const policyEnabled = this.getCapabilityValue('policy_enabled');
+        const autoApply     = this.getCapabilityValue('auto_apply');
+        if (policyEnabled === false || autoApply === false) {
+          this.log(`🔄 Skipping mode restore on startup — policy_enabled=${policyEnabled} auto_apply=${autoApply}`);
+        } else {
+          const modeHistory = this.homey.settings.get('policy_mode_history');
+          if (Array.isArray(modeHistory) && modeHistory.length > 0) {
+            const lastEntry = modeHistory[modeHistory.length - 1];
+            const lastMode  = lastEntry?.hwMode;
+            if (lastMode) {
+              this.log(`🔄 Restoring last known mode on startup: ${lastMode}`);
+              await this._applyRecommendation(lastMode, 100);
+            }
           }
         }
       } catch (e) {
