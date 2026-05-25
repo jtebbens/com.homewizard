@@ -1489,5 +1489,8 @@
   },
   "3.15.86": {
     "en": "open meteo now takes solar orientation, planning fix with 15min slot issue affecting battery mode"
+  },
+  "3.15.87": {
+    "en": "Policy fix night time discharge got blocked"
   }
 }
