@@ -1435,6 +1435,11 @@ if (debug) this.log(
         return;
       }
 
+      if (!skipEnabledCheck && this.getCapabilityValue('policy_mode') === 'off') {
+        this.log('Policy mode is off, skipping check');
+        return;
+      }
+
       const overrideUntil = this.getStoreValue('override_until');
       if (overrideUntil && new Date(overrideUntil) > new Date()) {
         this.log('Manual override active, skipping policy check');
