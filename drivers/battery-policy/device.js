@@ -356,12 +356,7 @@ class BatteryPolicyDevice extends Homey.Device {
 
       const current = this.getCapabilityValue(capability);
 
-      if (capability === 'auto_apply' && current === false) {
-        this.log('ℹ️ Forcing auto_apply to true (was false)');
-        await this.setCapabilityValue(capability, true).catch(err =>
-          this.error(`Failed to set ${capability}:`, err)
-        );
-      } else if (capability === 'policy_mode' && current === 'balanced') {
+      if (capability === 'policy_mode' && current === 'balanced') {
         // Migrate old 'balanced' to type-specific mode
         const newMode = tariffType === 'dynamic' ? 'balanced' : 'balanced-fixed';
         this.log(`ℹ️ Migrating policy_mode 'balanced' to '${newMode}' based on tariff type`);
