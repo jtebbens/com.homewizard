@@ -1498,5 +1498,8 @@
   },
   "3.15.89": {
     "en": "Bugfix, battery groups also patched"
+  },
+  "3.15.90": {
+    "en": "Bugfix battery mode"
   }
 }
