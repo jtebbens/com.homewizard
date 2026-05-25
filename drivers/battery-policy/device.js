@@ -507,29 +507,11 @@ class BatteryPolicyDevice extends Homey.Device {
         }
       } catch (e) { /* driver not available yet */ }
 
-      // Restore last known mode immediately so the battery doesn't sit in firmware
-      // default (zero_charge_only) during the gap between restart and first policy run.
-      // Only restore when the hardware is currently at the firmware default — if the
-      // persisted capability shows any other mode the user set it intentionally and we
-      // must not overwrite it.
-      try {
-        const currentHwMode = this.p1Device?.getCapabilityValue('battery_group_charge_mode');
-        if (currentHwMode !== 'zero_charge_only') {
-          this.log(`🔄 Skipping mode restore on startup — HW already in ${currentHwMode}`);
-        } else {
-          const modeHistory = this.homey.settings.get('policy_mode_history');
-          if (Array.isArray(modeHistory) && modeHistory.length > 0) {
-            const lastEntry = modeHistory[modeHistory.length - 1];
-            const lastMode  = lastEntry?.hwMode;
-            if (lastMode) {
-              this.log(`🔄 Restoring last known mode on startup: ${lastMode}`);
-              await this._applyRecommendation(lastMode, 100);
-            }
-          }
-        }
-      } catch (e) {
-        this.log('Could not restore last mode on startup:', e.message);
-      }
+      // Startup mode restore removed: no reliable way to distinguish firmware default
+      // from a user-set or policy-set mode. The policy runs at T+45s and will apply
+      // the correct mode then. Restoring from history risked overwriting manual user
+      // changes made just before a restart or update.
+      this.log('🔄 Skipping startup mode restore — policy will apply correct mode at T+45s');
 
       // Restore policy_enabled if predictive ended before this restart.
       // The in-memory flag is lost on restart; if policy_enabled is false but
