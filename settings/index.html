@@ -2143,13 +2143,6 @@
         for (let i = curIdx; i < intervals.length; i++) {
           const interval = intervals[i];
 
-          if (interval.isCurrent && policyState?.currentMode) {
-            interval.hwMode     = policyState.currentMode;
-            interval.policyMode = policyState.dpAction || policyState.policyMode || 'preserve';
-            interval.soc        = currentSOC;
-            continue;
-          }
-
           const key  = makePriceKey(interval.timestamp);
           const slot = scheduleMap[key];
           if (slot) {
@@ -2161,6 +2154,12 @@
             interval.sampleCount  = slot.sampleCount  ?? null;
             interval.reason       = slot.reason       ?? null;
             interval.pvCoverage   = slot.pvCoverage   ?? null;
+          }
+          // Live HW state overrides hwMode/policyMode/soc for the current slot
+          if (interval.isCurrent && policyState?.currentMode) {
+            interval.hwMode     = policyState.currentMode;
+            interval.policyMode = policyState.dpAction || policyState.policyMode || interval.policyMode || 'preserve';
+            interval.soc        = currentSOC;
           }
         }
       }
