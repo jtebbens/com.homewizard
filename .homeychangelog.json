@@ -1495,5 +1495,8 @@
   },
   "3.15.88": {
     "en": "Bugfix P1 stale mode state."
+  },
+  "3.15.89": {
+    "en": "Bugfix, battery groups also patched"
   }
 }
