@@ -403,7 +403,14 @@ class BatteryPolicyDevice extends Homey.Device {
 
       this.log(`Policy mode changed to: ${value}`);
       this.policyEngine.updateSettings({ policy_mode: value });
-      await this._runPolicyCheck();
+
+      if (value === 'off' && this.p1Device) {
+        const userMode = this.p1Device.getSetting('mode') || 'zero';
+        this.log(`Policy mode set to off — restoring hardware to user-configured mode: ${userMode}`);
+        await this.p1Device.setBatteryGroupMode(userMode);
+      } else {
+        await this._runPolicyCheck();
+      }
       return value;
     });
 
