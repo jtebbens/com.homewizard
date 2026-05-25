@@ -2156,10 +2156,11 @@
             interval.hwMode     = slot.hwMode;
             interval.policyMode = slot.action;   // 'charge' | 'discharge' | 'preserve'
             interval.soc        = slot.socProjected ?? currentSOC;
-            interval.pvW          = slot.pvW ?? 0;
+            interval.pvW          = slot.pvW          ?? 0;
             interval.consumptionW = slot.consumptionW ?? null;
             interval.sampleCount  = slot.sampleCount  ?? null;
             interval.reason       = slot.reason       ?? null;
+            interval.pvCoverage   = slot.pvCoverage   ?? null;
           }
         }
       }
@@ -2550,9 +2551,9 @@
         if (futureSlots.length > 0) {
           lines.push('', '--- Planning per slot (huidig → einde) ---');
           lines.push(
-            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'PVchart'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'Batt(W)'.padStart(7)}  ${'SoC%'.padEnd(5)}  Reden`
+            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'PVchart'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'Batt(W)'.padStart(7)}  ${'SoC%'.padEnd(5)}  ${'pvCov'.padStart(5)}  Reden`
           );
-          lines.push('─'.repeat(124));
+          lines.push('─'.repeat(132));
 
           const capacityKwh = ps.totalCapacityKwh ?? 2.69;
           const slotMinutes = 15;
@@ -2582,6 +2583,7 @@
             const battW = (iv.soc != null && nextSoc != null)
               ? Math.round(((nextSoc - iv.soc) / 100) * capacityKwh * 1000 / durH)
               : null;
+            const pvCovStr = iv.pvCoverage != null ? iv.pvCoverage.toFixed(2) : '—';
 
             lines.push(
               `${dayMark}${timeStr.padEnd(5)}${curMark} ` +
@@ -2593,7 +2595,7 @@
               `${pad(consW   != null ? consW   : '—',  8, true)}  ` +
               `${pad(nettoW  != null ? nettoW  : '—',  8, true)}  ` +
               `${pad(battW   != null ? battW   : '—',  7, true)}  ` +
-              `${socStr.padEnd(5)}  ${reason}${countStr}`
+              `${socStr.padEnd(5)}  ${pvCovStr.padStart(5)}  ${reason}${countStr}`
             );
           };
 
@@ -2601,10 +2603,11 @@
           const slotKey = iv => {
             const pvW   = iv.pvW          != null ? Math.round(iv.pvW)          : null;
             const consW = iv.consumptionW  != null ? Math.round(iv.consumptionW) : null;
+            const pvc   = iv.pvCoverage    != null ? iv.pvCoverage.toFixed(2)    : null;
             return [iv.policyMode, iv.hwMode, pvW, consW,
                     iv.soc != null ? Math.round(iv.soc) : null,
                     iv.reason, iv.priceKnown ? iv.price.toFixed(3) : '?',
-                    iv.day].join('|');
+                    iv.day, pvc].join('|');
           };
 
           for (const iv of futureSlots) {
