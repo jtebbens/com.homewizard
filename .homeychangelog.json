@@ -1504,5 +1504,8 @@
   },
   "3.15.91": {
     "en": "P1 as source of truth after app restart"
+  },
+  "3.15.92": {
+    "en": "Forced early exit policy mode off checks"
   }
 }
