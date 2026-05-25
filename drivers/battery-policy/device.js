@@ -523,6 +523,22 @@ class BatteryPolicyDevice extends Homey.Device {
         this.log('Could not restore last mode on startup:', e.message);
       }
 
+      // Restore policy_enabled if predictive ended before this restart.
+      // The in-memory flag is lost on restart; if policy_enabled is false but
+      // the hardware is no longer in predictive, the policy would stay permanently
+      // disabled until the user manually re-enables it.
+      {
+        const savedPrePredictive = this.homey.settings.get('policy_enabled_before_predictive');
+        if (savedPrePredictive !== null && savedPrePredictive !== undefined) {
+          const hwModeAtStart = this.p1Device.getCapabilityValue('battery_group_charge_mode');
+          if (hwModeAtStart !== 'predictive') {
+            this.log(`[Policy] Restoring policy_enabled=${savedPrePredictive} — predictive ended before restart`);
+            await this.setCapabilityValue('policy_enabled', savedPrePredictive).catch(this.error);
+            this.homey.settings.unset('policy_enabled_before_predictive');
+          }
+        }
+      }
+
       // Defer the initial policy check past the startup cascade (T+45s).
       // Reason: at this point the device cascade is still settling — 8 socket polls,
       // WS authorizations (energy_v2 + 2× plugin_battery on some setups), price/weather
@@ -884,10 +900,15 @@ if (debug) this.log(
             // Predictive mode just ended
             this._isPredictiveMode = false;
             this.log('[Policy] Predictive mode beëindigd — battery-policy hersteld');
-            if (this._policyEnabledBeforePredictive !== null) {
-              await this.setCapabilityValue('policy_enabled', this._policyEnabledBeforePredictive).catch(this.error);
-              this._policyEnabledBeforePredictive = null;
-            }
+            // After a restart during predictive mode, _policyEnabledBeforePredictive is null
+            // (in-memory state lost). Fall back to persisted settings key, then true.
+            const restoreEnabled = this._policyEnabledBeforePredictive
+              ?? this.homey.settings.get('policy_enabled_before_predictive')
+              ?? true;
+            await this.setCapabilityValue('policy_enabled', restoreEnabled).catch(this.error);
+            this._policyEnabledBeforePredictive = null;
+            this.homey.settings.unset('policy_enabled_before_predictive');
+            this._runPolicyCheck().catch(err => this.error('Post-predictive policy check failed:', err));
           }
         }
 
@@ -1450,6 +1471,7 @@ if (debug) this.log(
             this._isPredictiveMode = true;
             // Save current policy_enabled state and disable — the P1 poll restores it when predictive ends
             this._policyEnabledBeforePredictive = this.getCapabilityValue('policy_enabled') ?? false;
+            this.homey.settings.set('policy_enabled_before_predictive', this._policyEnabledBeforePredictive);
             await this.setCapabilityValue('policy_enabled', false).catch(this.error);
             this.log('🤖 HW Slim laden (predictive) actief — battery-policy uitgeschakeld');
             // Planning-webcams invalideren zodat ze leeg tonen

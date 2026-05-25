@@ -51,15 +51,19 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.86)
+## 📝 Latest Updates (v3.15.63–v3.15.87)
 
-### PV Forecast, Optimizer & Battery Policy Fixes (v3.15.83–v3.15.86)
+### PV Forecast, Optimizer & Battery Policy Fixes (v3.15.83–v3.15.87)
 
 * **Per-model GTI via solar transposition + KNMI kt bias classification (v3.15.83)** — PV forecast accuracy per Open-Meteo model now uses Global Tilted Irradiance (GTI) computed via the Perez transposition model rather than GHI. This ensures the per-model radiation error is evaluated on the same tilted plane as the actual panel yield. Simultaneously, the daily radiation bias factor is now selected based on the KNMI clearness index (kt) rather than Open-Meteo cloud cover fraction — OM systematically over-estimates cloud cover (42% vs 15% measured), causing the wrong bias tier to be selected on partially-cloudy days
 
 * **PV chart data key separated + kt-based bias apply + memory reduction (v3.15.84)** — The PV chart now uses a dedicated data key independent of the forecast pipeline, preventing stale forecast values from persisting across recomputes. kt-based bias is applied earlier in the forecast chain so downstream models see the corrected irradiance. Internal forecast buffers reduced to lower heap usage during ensemble fetches
 
 * **Chart midnight rollover fix + ensemble fetch timeout 10→15s (v3.15.85)** — The planning chart camera image swapped tomorrow's chart for today's after midnight due to a day-boundary comparison error; fixed. The Open-Meteo ensemble fetch timeout was extended from 10s to 15s to reduce spurious timeout failures on slow upstream responses. Battery policy capabilities now expose projected profit, PV forecast, bias factor, and current DP plan summary as Homey capability values
+
+* **Policy: fix policy_enabled permanently stuck after predictive interaction with restart (v3.15.87)** — Two related bugs that left `policy_enabled = false` after HW Slim laden (predictive) ended: (1) Restart DURING predictive: `_policyEnabledBeforePredictive` was in-memory only and lost on restart; the restore guard (`!== null`) skipped the restore, blocking all policy runs until the next restart. Fixed: persist the value to settings at predictive-start; fall back to persisted value (then `true`) when restoring. (2) Restart AFTER predictive ended before restore ran: `_isPredictiveMode` was `false` on init, so neither the restore branch nor the P1 poll path fired; policy stayed disabled. Fixed: at startup, if `policy_enabled_before_predictive` is present in settings and the hardware is no longer in predictive mode, restore `policy_enabled` immediately. Both paths now trigger an immediate policy check on predictive end instead of waiting up to 15 minutes for the next slot boundary
+
+* **Policy: min-price discharge override for DP preserve at night (v3.15.87)** — The DP optimizer could choose `preserve` at night to protect opportunity value for next-day PV recharge, even when the current price exceeded the user's configured minimum discharge price. This occurred when the SoC was near the PV absorption cliff: one discharge step would drop SoC below the refillable threshold, so the DP correctly valued the future state but violated the user's price floor intent. Added a policy-layer override that forces `discharge` when DP says preserve, price ≥ configured minimum, SoC > min_soc, and no PV is active. Observed: 3-hour discharge gap at SoC 32%, price €0.268–0.281, minimum €0.180
 
 * **Optimizer: smooth isolated preserve islands in discharge sequences (v3.15.86)** — A single `preserve` slot flanked by `discharge` on both sides with a price delta below 1 ct is a DP numerical edge case (floating-point score tie at a local price minimum). Such slots are now overridden to `discharge` in a post-DP smoothing pass; projected SoC is propagated forward accordingly. Observed impact: one 15-min standby at €0.273 between €0.281 and €0.274 discharge slots
 
