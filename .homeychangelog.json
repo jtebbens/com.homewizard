@@ -1507,5 +1507,8 @@
   },
   "3.15.92": {
     "en": "Forced early exit policy mode off checks"
+  },
+  "3.15.93": {
+    "en": "Energy socket tuning, memory improvements, tcp connect check to Homewizard legacy as fallback"
   }
 }
