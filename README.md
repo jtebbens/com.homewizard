@@ -51,7 +51,18 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.87)
+## 📝 Latest Updates (v3.15.63–v3.15.93)
+
+### Connectivity, Memory & Provider Reliability (v3.15.93)
+
+* **TCP ping socket-destroy on error path (v3.15.93)** — `tcpPing` in both `includes/legacy/homewizard.js` and `drivers/energy_socket/device.js` previously closed the socket only on `connect` and `timeout` events, not on `error`. While Node usually auto-closes sockets on error, edge cases (e.g. EHOSTUNREACH with retained native references) could accumulate file descriptors over days. Error handler now calls `socket.destroy()` explicitly
+* **SHARED_SOCKET_AGENT.maxSockets scales with device count (v3.15.93)** — The shared HTTP agent for `energy_socket` devices was hard-capped at `maxSockets: 4`. With 15+ devices the agent became a bottleneck: failing devices held slots up to ~17s on the timeout/retry path, starving healthy devices. `maxSockets` is now set to `max(4, ceil(deviceCount / 3))` on each device init (idempotent — last writer wins). A user with 19 energy sockets now gets 7 slots instead of 4
+* **Recovery poller jitter (v3.15.93)** — When multiple energy_socket devices go offline simultaneously (e.g. WiFi access-point hiccup), all their 10-second TCP-ping recovery pollers would fire in lockstep, producing a thundering herd on the AP during recovery. Each recovery poller now starts after a random 0-10s delay before its `setInterval` begins, spreading the load
+* **EHOSTUNREACH / ENETUNREACH backoff (v3.15.93)** — On hard network errors (host unreachable / route down), the device now skips polling for 60 seconds instead of retrying every 10s. The backoff is reset on successful poll or any discovery callback (available, address-changed, last-seen). Saves CPU and log noise when a device is genuinely offline
+* **Open-Meteo retry on transient failures (v3.15.93)** — `weather-forecaster.js` now uses `fetchWithRetry` for the three Open-Meteo endpoints (ensemble radiation, standard hourly, tilted irradiance). On TIMEOUT or 5xx response the request is retried once after 3s. Open-Meteo overloads at peak times occasionally caused stale weather cache for up to an hour; the retry catches most transient failures
+* **Xadi price endpoints fetched in parallel (v3.15.93)** — The Xadi provider previously fetched `/today`, `/next24h`, and `/day/tomorrow` sequentially (each with a 10s timeout, worst case ~30s). Now all three are fetched in parallel via `Promise.allSettled`, reducing worst case to ~10s. Deduplication via `seenTimestamps` Set is preserved
+* **kWhPrice page-structure-change detection (v3.15.93)** — When the kwhprice.eu HTML scraper returned 0 slots, the provider silently returned an empty array — even if the HTML was large (indicating the page loaded but the CSS selector no longer matched). The provider now throws an explicit "page structure may have changed" error when `html.length > 2000` and 0 slots are parsed, engaging the stale-cache fallback and surfacing the issue in the logs
+* **Drop [MEM][socket] init log spam (v3.15.93)** — Each `energy_socket` device wrote two `[MEM][socket]` heap-stats log lines on init. With 19 devices that's 38 noise lines per app restart with no operational value. Removed
 
 ### PV Forecast, Optimizer & Battery Policy Fixes (v3.15.83–v3.15.87)
 
