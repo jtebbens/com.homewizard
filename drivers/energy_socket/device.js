@@ -68,8 +68,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
   async onInit() {
     this.homey.app.bumpDeviceCount?.('energy_socket');
-    const _memSock = (label) => { try { const h = require('v8').getHeapStatistics(); this.log(`[MEM][socket] ${label}: heap=${(h.used_heap_size/1048576).toFixed(1)}/${(h.total_heap_size/1048576).toFixed(1)}MB`); } catch(_){} };
-    _memSock('onInit-start');
 
     this._lastStatePoll = 0;
     this._debugLogs = [];
@@ -107,6 +105,17 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._statsFlushTimer = null; // set after safeIndex is known
 
     this.agent = SHARED_SOCKET_AGENT;
+
+    // Scale agent maxSockets with device count: 4 slots are too few for 15+ devices.
+    // Idempotent — last device wins, all converge to same value.
+    {
+      const allDevs = this.driver.getDevices();
+      const target = Math.max(4, Math.ceil(allDevs.length / 3));
+      if (SHARED_SOCKET_AGENT.maxSockets !== target) {
+        SHARED_SOCKET_AGENT.maxSockets = target;
+        this.log(`🔧 SHARED_SOCKET_AGENT.maxSockets=${target} (devices=${allDevs.length})`);
+      }
+    }
 
     await updateCapability(this, 'connection_error', 'No errors');
     await updateCapability(this, 'alarm_connectivity', false);
@@ -188,8 +197,6 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._applianceActiveStart = 0;
     this._applianceFinishedAt = 0;
     this._flowTriggerApplianceFinished = this.homey.flow.getDeviceTriggerCard('appliance_finished');
-
-    _memSock(`onInit-done (device ${safeIndex + 1}/${allDevices.length})`);
   }
 
   _tcpPing(ip, port, timeoutMs) {
@@ -198,7 +205,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
       const socket = net.createConnection({ host: ip, port, timeout: timeoutMs });
       socket.on('connect', () => { socket.destroy(); resolve(true); });
       socket.on('timeout', () => { socket.destroy(); resolve(false); });
-      socket.on('error', (err) => { resolve(err.code === 'ECONNREFUSED'); });
+      socket.on('error', (err) => { socket.destroy(); resolve(err.code === 'ECONNREFUSED'); });
     });
   }
 
@@ -207,18 +214,27 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     const match = this.url && this.url.match(/https?:\/\/([^/:]+)/);
     if (!match) return;
     const ip = match[1];
-    this._recoveryInterval = setInterval(async () => {
-      if (this.__deleted) return this._stopRecoveryPoller();
-      const online = await this._tcpPing(ip, 80, 1000);
-      if (online) {
-        this.log(`🌐 TCP ping ${ip} ok — resetting failure counter`);
-        this._consecutiveFailures = 0;
-        this._stopRecoveryPoller();
-      }
-    }, 10000);
+    // Jitter: stagger recovery pings 0-10s so N offline devices don't all hit the AP simultaneously
+    const jitter = Math.floor(Math.random() * 10000);
+    this._recoveryTimeout = setTimeout(() => {
+      if (this.__deleted) return;
+      this._recoveryInterval = setInterval(async () => {
+        if (this.__deleted) return this._stopRecoveryPoller();
+        const online = await this._tcpPing(ip, 80, 1000);
+        if (online) {
+          this.log(`🌐 TCP ping ${ip} ok — resetting failure counter`);
+          this._consecutiveFailures = 0;
+          this._stopRecoveryPoller();
+        }
+      }, 10000);
+    }, jitter);
   }
 
   _stopRecoveryPoller() {
+    if (this._recoveryTimeout) {
+      clearTimeout(this._recoveryTimeout);
+      this._recoveryTimeout = null;
+    }
     if (this._recoveryInterval) {
       clearInterval(this._recoveryInterval);
       this._recoveryInterval = null;
@@ -277,6 +293,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses = 0;
     this._stopRecoveryPoller();
+    this._skipPollsUntil = 0;
     this.setAvailable();
     this._isMarkedUnavailable = false;
   }
@@ -288,6 +305,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses = 0;
     this._stopRecoveryPoller();
+    this._skipPollsUntil = 0;
     this.setAvailable();
     this._isMarkedUnavailable = false;
   }
@@ -454,6 +472,7 @@ _flushFetchStats() {
     this._consecutiveFailures = 0;
     this._consecutiveSuccesses++;
     this._lastSuccessfulPoll = Date.now();
+    this._skipPollsUntil = 0;
 
     // Update fetch stats
     const s = this._fetchStats;
@@ -495,6 +514,12 @@ _flushFetchStats() {
     s.lastError = err ? (err.message || String(err)) : 'unknown';
     s.lastErrorAt = new Date().toISOString();
 
+    // Backoff on hard network errors (host gone / route down): skip next polls for 60s.
+    // Recovery poller + discovery callbacks reset _skipPollsUntil on recovery.
+    if (err && (err.code === 'EHOSTUNREACH' || err.code === 'ENETUNREACH')) {
+      this._skipPollsUntil = Date.now() + 60000;
+    }
+
     const timeSinceLastSuccess = Date.now() - this._lastSuccessfulPoll;
 
     // Only mark unavailable after 3 consecutive failures AND 90 seconds since last success
@@ -530,6 +555,9 @@ _flushFetchStats() {
    */
   async onPoll() {
   if (this.__deleted) return;
+
+  // Backoff window after hard network error (EHOSTUNREACH etc.): skip until window passes
+  if (this._skipPollsUntil && Date.now() < this._skipPollsUntil) return;
 
   // ✅ CPU FIX: Guard against concurrent polls — setInterval fires regardless
   // of whether the previous poll completed. Without this, a failing device

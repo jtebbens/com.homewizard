@@ -99,6 +99,7 @@ module.exports = (function() {
       socket.on('timeout', () => { socket.destroy(); resolve(false); });
       socket.on('error', (err) => {
         // ECONNREFUSED = device reachable, port closed — still online
+        socket.destroy();
         resolve(err.code === 'ECONNREFUSED');
       });
     });
