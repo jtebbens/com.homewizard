@@ -4,19 +4,34 @@
     "en": "Phase 1 load",
     "nl": "Fase 1 belasting",
     "de": "Last Phase 1",
-    "da": "Belastning fase 1"
+    "da": "Belastning fase 1",
+    "fr": "Charge phase 1",
+    "sv": "Last fas 1",
+    "no": "Last fase 1",
+    "fi": "Vaiheen 1 kuorma",
+    "hu": "1. fázis terhelés"
   },
   "titleFormatted": {
     "en": "Phase 1 load",
     "nl": "Fase 1 belasting",
     "de": "Last Phase 1",
-    "da": "Belastning fase 1"
+    "da": "Belastning fase 1",
+    "fr": "Charge phase 1",
+    "sv": "Last fas 1",
+    "no": "Last fase 1",
+    "fi": "Vaiheen 1 kuorma",
+    "hu": "1. fázis terhelés"
   },
   "desc": {
     "en": "Phase 1 load",
     "nl": "Fase 1 belasting",
     "de": "Last Phase 1",
-    "da": "Belastning fase 1"
+    "da": "Belastning fase 1",
+    "fr": "Charge phase 1",
+    "sv": "Last fas 1",
+    "no": "Last fase 1",
+    "fi": "Vaiheen 1 kuorma",
+    "hu": "1. fázis terhelés"
   },
   "decimals": 0,
   "getable": true,
@@ -27,7 +42,12 @@
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   },
   "icon": "assets/icon.svg"
 }

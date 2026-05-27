@@ -5,13 +5,23 @@
     "en": "Policy Sun",
     "nl": "Policy Zon",
     "de": "Richtlinie Sonne",
-    "da": "Politik sol"
+    "da": "Politik sol",
+    "fr": "Soleil politique",
+    "sv": "Policy-sol",
+    "no": "Politikk-sol",
+    "fi": "Politiikan aurinko",
+    "hu": "Irányvonal nap"
   },
   "desc": {
     "en": "Sunshine forecast inputs used by the policy",
     "nl": "Zon-voorspelling gebruikt door de policy",
     "de": "Von der Richtlinie genutzte Sonnenscheinprognose",
-    "da": "Solskinsprognoseinputs brugt af politik"
+    "da": "Solskinsprognoseinputs brugt af politik",
+    "fr": "Données de prévision solaire utilisées par la politique",
+    "sv": "Solprognosindata använd av policyn",
+    "no": "Solinngangsdata brukt av politikken",
+    "fi": "Politiikan käyttämät aurinkoennustedatat",
+    "hu": "Az irányvonal által használt napfényprognózis"
   },
   "getable": true,
   "setable": false,

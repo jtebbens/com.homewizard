@@ -4,7 +4,12 @@
     "en": "Active tariff",
     "nl": "Tarief actief",
     "de": "Aktiver Tarif",
-    "da": "Aktiv takst"
+    "da": "Aktiv takst",
+    "fr": "Tarif actif",
+    "sv": "Aktiv tariff",
+    "no": "Aktiv tariff",
+    "fi": "Aktiivinen tariffi",
+    "hu": "Aktív tarifa"
   },
   "getable": true,
   "setable": false,
@@ -13,6 +18,11 @@
   "icon": "assets/tariff.svg",
   "units": {
     "en": "Tariff",
-    "nl": "Tarief"
+    "nl": "Tarief",
+    "fr": "Tarif",
+    "sv": "Tariff",
+    "no": "Tariff",
+    "fi": "Tariffi",
+    "hu": "Tarifa"
   }
 }

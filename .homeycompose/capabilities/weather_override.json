@@ -5,13 +5,23 @@
     "en": "Weather Override",
     "nl": "Weer Overschrijven",
     "de": "Wetterüberschreibung",
-    "da": "Vejr-tilsidesættelse"
+    "da": "Vejr-tilsidesættelse",
+    "fr": "Remplacement météo",
+    "sv": "Väderåsidosättning",
+    "no": "Vær-overstyring",
+    "fi": "Sääohitus",
+    "hu": "Időjárás felülírás"
   },
   "desc": {
     "en": "Override weather forecast for policy decisions",
     "nl": "Overschrijf weersverwachting voor beleidsbeslissingen",
     "de": "Wetterprognose für Richtlinienentscheidungen überschreiben",
-    "da": "Tilsidesæt vejrprognose for politikbeslutninger"
+    "da": "Tilsidesæt vejrprognose for politikbeslutninger",
+    "fr": "Remplacer les prévisions météo pour les décisions de politique",
+    "sv": "Åsidosätt väderprognos för policybeslut",
+    "no": "Overstyr værvarselet for politikkbeslutninger",
+    "fi": "Ohita sääennuste politiikkapäätöksiä varten",
+    "hu": "Időjárás-prognózis felülírása az irányvonal döntésekhez"
   },
   "values": [
     {
@@ -20,7 +30,12 @@
         "en": "Auto (use forecast)",
         "nl": "Auto (gebruik voorspelling)",
         "de": "Auto (Prognose nutzen)",
-        "da": "Auto (brug prognose)"
+        "da": "Auto (brug prognose)",
+        "fr": "Auto (utiliser les prévisions)",
+        "sv": "Auto (använd prognos)",
+        "no": "Auto (bruk prognose)",
+        "fi": "Auto (käytä ennustetta)",
+        "hu": "Auto (prognózis alapján)"
       }
     },
     {
@@ -29,7 +44,12 @@
         "en": "Sunny",
         "nl": "Zonnig",
         "de": "Sonnig",
-        "da": "Solrigt"
+        "da": "Solrigt",
+        "fr": "Ensoleillé",
+        "sv": "Soligt",
+        "no": "Solrikt",
+        "fi": "Aurinkoinen",
+        "hu": "Napos"
       }
     },
     {
@@ -38,7 +58,12 @@
         "en": "Cloudy",
         "nl": "Bewolkt",
         "de": "Bewölkt",
-        "da": "Overskyet"
+        "da": "Overskyet",
+        "fr": "Nuageux",
+        "sv": "Molnigt",
+        "no": "Overskyet",
+        "fi": "Pilvinen",
+        "hu": "Felhős"
       }
     },
     {
@@ -47,7 +72,12 @@
         "en": "Rainy",
         "nl": "Regenachtig",
         "de": "Regnerisch",
-        "da": "Regnvejr"
+        "da": "Regnvejr",
+        "fr": "Pluvieux",
+        "sv": "Regnigt",
+        "no": "Regnvær",
+        "fi": "Sateinen",
+        "hu": "Esős"
       }
     }
   ],

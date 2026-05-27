@@ -4,7 +4,12 @@
     "en": "Power failures",
     "nl": "Stroomstoringen",
     "de": "Stromausfälle",
-    "da": "Strømudfald"
+    "da": "Strømudfald",
+    "fr": "Pannes de courant",
+    "sv": "Strömavbrott",
+    "no": "Strømfeil",
+    "fi": "Sähkökatkot",
+    "hu": "Áramkimaradások"
   },
   "getable": true,
   "setable": false,

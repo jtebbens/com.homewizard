@@ -4,7 +4,12 @@
     "en": "Current gas usage",
     "nl": "Huidig gasverbruik",
     "de": "Aktueller Gasverbrauch",
-    "da": "Aktuelt gasforbrug"
+    "da": "Aktuelt gasforbrug",
+    "fr": "Consommation de gaz actuelle",
+    "sv": "Aktuell gasförbrukning",
+    "no": "Aktuelt gasforbruk",
+    "fi": "Nykyinen kaasunkulutus",
+    "hu": "Aktuális gázfogyasztás"
   },
   "getable": true,
   "setable": false,
@@ -15,7 +20,12 @@
     "en": "m3",
     "nl": "m3",
     "de": "m³",
-    "da": "m³"
+    "da": "m³",
+    "fr": "m³",
+    "sv": "m³",
+    "no": "m³",
+    "fi": "m³",
+    "hu": "m³"
   },
   "icon": "assets/icon.svg"
 }

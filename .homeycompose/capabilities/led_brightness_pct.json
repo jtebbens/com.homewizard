@@ -4,7 +4,12 @@
     "en": "LED Brightness",
     "nl": "LED Helderheid",
     "de": "LED-Helligkeit",
-    "da": "LED-lysstyrke"
+    "da": "LED-lysstyrke",
+    "fr": "Luminosité LED",
+    "sv": "LED-ljusstyrka",
+    "no": "LED-lysstyrke",
+    "fi": "LED-kirkkaus",
+    "hu": "LED-fényerő"
   },
   "getable": true,
   "setable": true,
@@ -17,6 +22,11 @@
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   }
 }

@@ -4,7 +4,12 @@
     "en": "Net peak L3",
     "nl": "Net piek L3",
     "de": "Netzspitze L3",
-    "da": "Nettopspids L3"
+    "da": "Nettopspids L3",
+    "fr": "Pic réseau L3",
+    "sv": "Nätspets L3",
+    "no": "Netttopp L3",
+    "fi": "Verkon huippu L3",
+    "hu": "Hálózati csúcs L3"
   },
   "getable": true,
   "setable": false,

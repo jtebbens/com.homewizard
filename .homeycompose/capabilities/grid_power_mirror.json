@@ -4,19 +4,34 @@
     "en": "Grid Power",
     "nl": "Netvermogen",
     "de": "Netzleistung",
-    "da": "Neteffekt"
+    "da": "Neteffekt",
+    "fr": "Puissance réseau",
+    "sv": "Näteffekt",
+    "no": "Netteffekt",
+    "fi": "Verkkoteho",
+    "hu": "Hálózati teljesítmény"
   },
   "desc": {
     "en": "Current grid import/export power",
     "nl": "Huidig net import/export vermogen",
     "de": "Aktuelle Netzeinspeisung/-bezug",
-    "da": "Aktuel netimport/-eksporteffekt"
+    "da": "Aktuel netimport/-eksporteffekt",
+    "fr": "Puissance import/export réseau",
+    "sv": "Aktuell nätimport/-export",
+    "no": "Aktuell nettimport/-eksport",
+    "fi": "Verkon tuonti/vienti",
+    "hu": "Aktuális hálózati import/export"
   },
   "units": {
     "en": "W",
     "nl": "W",
     "de": "W",
-    "da": "W"
+    "da": "W",
+    "fr": "W",
+    "sv": "W",
+    "no": "W",
+    "fi": "W",
+    "hu": "W"
   },
   "decimals": 0,
   "getable": true,

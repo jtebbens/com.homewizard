@@ -4,13 +4,23 @@
     "en": "Policy Enabled",
     "nl": "Beleid Ingeschakeld",
     "de": "Richtlinie aktiviert",
-    "da": "Politik aktiveret"
+    "da": "Politik aktiveret",
+    "fr": "Politique activée",
+    "sv": "Policy aktiverad",
+    "no": "Politikk aktivert",
+    "fi": "Politiikka käytössä",
+    "hu": "Irányvonal engedélyezve"
   },
   "desc": {
     "en": "Enable or disable the battery policy automation",
     "nl": "Schakel batterijbeleid automatisering in of uit",
     "de": "Batterie-Richtlinienautomation aktivieren oder deaktivieren",
-    "da": "Aktivér eller deaktivér batteriautomatisering"
+    "da": "Aktivér eller deaktivér batteriautomatisering",
+    "fr": "Activer ou désactiver l'automatisation de la politique de batterie",
+    "sv": "Aktivera eller inaktivera batteripolityautomatisering",
+    "no": "Aktiver eller deaktiver batteriautomatisering",
+    "fi": "Ota akkupolitiikan automaatio käyttöön tai poista se käytöstä",
+    "hu": "Akkumulátor irányvonal automatizálás engedélyezése/letiltása"
   },
   "getable": true,
   "setable": true,

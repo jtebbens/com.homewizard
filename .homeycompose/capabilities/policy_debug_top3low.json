@@ -5,13 +5,23 @@
     "en": "Policy Top3 Low",
     "nl": "Policy Top3 Laag",
     "de": "Richtlinie Top3 Niedrig",
-    "da": "Politik Top3 Lav"
+    "da": "Politik Top3 Lav",
+    "fr": "Politique Top3 Bas",
+    "sv": "Policy Top3 Låg",
+    "no": "Politikk Top3 Lav",
+    "fi": "Politiikka Top3 Matala",
+    "hu": "Irányvonal Top3 Alacsony"
   },
   "desc": {
     "en": "Top 3 cheapest DAP hours",
     "nl": "Top 3 goedkoopste DAP-uren",
     "de": "Die 3 günstigsten DAP-Stunden",
-    "da": "Top 3 billigste DAP-timer"
+    "da": "Top 3 billigste DAP-timer",
+    "fr": "Les 3 heures DAP les moins chères",
+    "sv": "De 3 billigaste DAP-timmarna",
+    "no": "De 3 billigste DAP-timene",
+    "fi": "3 halvinta DAP-tuntia",
+    "hu": "3 legolcsóbb DAP-óra"
   },
   "getable": true,
   "setable": false,

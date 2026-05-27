@@ -4,7 +4,12 @@
     "en": "Battery Group Charge Mode",
     "nl": "Battery Groep Oplaadmodus",
     "de": "Gruppen-Lademodus",
-    "da": "Gruppe-ladetilstand"
+    "da": "Gruppe-ladetilstand",
+    "fr": "Mode de charge du groupe",
+    "sv": "Gruppladdningsläge",
+    "no": "Gruppeladetilstand",
+    "fi": "Akkuryhmän lataustila",
+    "hu": "Akkucsoport töltési mód"
   },
   "getable": true,
   "setable": true,
@@ -18,7 +23,12 @@
         "en": "Zero (Net Zero)",
         "nl": "Nul op de meter",
         "de": "Nulleinspeisung",
-        "da": "Nul på måleren"
+        "da": "Nul på måleren",
+        "fr": "Zéro (Net Zéro)",
+        "sv": "Noll (Netto Noll)",
+        "no": "Null på måleren",
+        "fi": "Nolla (netto nolla)",
+        "hu": "Nulla (nettó nulla)"
       }
     },
     {
@@ -27,7 +37,12 @@
         "en": "Zero – Charge Only",
         "nl": "NOM – Alleen laden",
         "de": "Nulleinspeisung – Nur laden",
-        "da": "Nul – kun opladning"
+        "da": "Nul – kun opladning",
+        "fr": "Zéro – Charge uniquement",
+        "sv": "Noll – Endast laddning",
+        "no": "Null – Kun lading",
+        "fi": "Nolla – vain lataus",
+        "hu": "Nulla – csak töltés"
       }
     },
     {
@@ -36,7 +51,12 @@
         "en": "Zero – Discharge Only",
         "nl": "NOM – Alleen ontladen",
         "de": "Nulleinspeisung – Nur entladen",
-        "da": "Nul – kun afladning"
+        "da": "Nul – kun afladning",
+        "fr": "Zéro – Décharge uniquement",
+        "sv": "Noll – Endast urladdning",
+        "no": "Null – Kun utlading",
+        "fi": "Nolla – vain purkaus",
+        "hu": "Nulla – csak töltésleadás"
       }
     },
     {
@@ -45,7 +65,12 @@
         "en": "Standby",
         "nl": "Stand‑by",
         "de": "Bereitschaft",
-        "da": "Standby"
+        "da": "Standby",
+        "fr": "Veille",
+        "sv": "Standby",
+        "no": "Standby",
+        "fi": "Valmiustila",
+        "hu": "Készenlét"
       }
     },
     {
@@ -54,7 +79,12 @@
         "en": "Full Charge",
         "nl": "Volledig laden",
         "de": "Vollladen",
-        "da": "Fuld opladning"
+        "da": "Fuld opladning",
+        "fr": "Charge complète",
+        "sv": "Fulladdning",
+        "no": "Full lading",
+        "fi": "Täysi lataus",
+        "hu": "Teljes töltés"
       }
     },
     {
@@ -63,7 +93,12 @@
         "en": "Predictive (HW Smart Charging)",
         "nl": "Slim laden (HomeWizard)",
         "de": "Prädiktiv (HW Smart Charging)",
-        "da": "Prædiktiv (HW Smart Charging)"
+        "da": "Prædiktiv (HW Smart Charging)",
+        "fr": "Prédictif (HW Smart Charging)",
+        "sv": "Prediktiv (HW Smart Charging)",
+        "no": "Prediktiv (HW Smart Charging)",
+        "fi": "Ennakoiva (HW Smart Charging)",
+        "hu": "Prediktív (HW Smart Charging)"
       }
     }
   ]

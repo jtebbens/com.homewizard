@@ -4,19 +4,34 @@
     "en": "PV Forecast Today",
     "nl": "PV Voorspelling Vandaag",
     "de": "PV-Prognose heute",
-    "da": "PV-prognose i dag"
+    "da": "PV-prognose i dag",
+    "fr": "Prévision PV aujourd'hui",
+    "sv": "PV-prognos idag",
+    "no": "PV-prognose i dag",
+    "fi": "PV-ennuste tänään",
+    "hu": "Mai PV-prognózis"
   },
   "desc": {
     "en": "Blended PV yield forecast for today",
     "nl": "Gecombineerde PV opbrengst voor vandaag",
     "de": "Gemischte PV-Ertragsprognose für heute",
-    "da": "Blandet PV-udbytteprog. for i dag"
+    "da": "Blandet PV-udbytteprog. for i dag",
+    "fr": "Prévision rendement PV mixte pour aujourd'hui",
+    "sv": "Blandad PV-prognos för idag",
+    "no": "Blandet PV-prognose for i dag",
+    "fi": "Yhdistetty PV-tuottoennuste tänään",
+    "hu": "Vegyes PV-hozamprognózis mára"
   },
   "units": {
     "en": "kWh",
     "nl": "kWh",
     "de": "kWh",
-    "da": "kWh"
+    "da": "kWh",
+    "fr": "kWh",
+    "sv": "kWh",
+    "no": "kWh",
+    "fi": "kWh",
+    "hu": "kWh"
   },
   "decimals": 1,
   "getable": true,

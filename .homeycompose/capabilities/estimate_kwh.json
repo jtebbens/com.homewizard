@@ -4,7 +4,12 @@
     "en": "Estimate kWh in battery",
     "nl": "Geschatte kWh in batterij",
     "de": "Geschätzte kWh in Batterie",
-    "da": "Estimeret kWh i batteri"
+    "da": "Estimeret kWh i batteri",
+    "fr": "Estimation kWh en batterie",
+    "sv": "Uppskattad kWh i batteri",
+    "no": "Estimert kWh i batteri",
+    "fi": "Arvioitu kWh akussa",
+    "hu": "Becsült kWh az akkuban"
   },
   "getable": true,
   "setable": true,
@@ -15,6 +20,11 @@
     "en": "kWh",
     "nl": "kWh",
     "de": "kWh",
-    "da": "kWh"
+    "da": "kWh",
+    "fr": "kWh",
+    "sv": "kWh",
+    "no": "kWh",
+    "fi": "kWh",
+    "hu": "kWh"
   }
 }

@@ -4,7 +4,12 @@
     "en": "Net dip L1",
     "nl": "Net dip L1",
     "de": "Netzeinbruch L1",
-    "da": "Netdyk L1"
+    "da": "Netdyk L1",
+    "fr": "Creux réseau L1",
+    "sv": "Nätdipp L1",
+    "no": "Netdyk L1",
+    "fi": "Verkon notkahdus L1",
+    "hu": "Hálózati mélypont L1"
   },
   "getable": true,
   "setable": false,

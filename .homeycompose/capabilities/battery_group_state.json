@@ -4,7 +4,12 @@
     "en": "Battery Group Charge state",
     "nl": "Battery Groep Laadt status",
     "de": "Gruppen-Ladezustand",
-    "da": "Gruppe-ladetilstand"
+    "da": "Gruppe-ladetilstand",
+    "fr": "État de charge du groupe",
+    "sv": "Gruppladdningstillstånd",
+    "no": "Gruppeladestatus",
+    "fi": "Akkuryhmän latausaste",
+    "hu": "Akkucsoport töltési állapot"
   },
   "getable": true,
   "setable": false,

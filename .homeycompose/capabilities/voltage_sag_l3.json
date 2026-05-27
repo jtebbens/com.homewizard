@@ -4,7 +4,12 @@
     "en": "Net dip L3",
     "nl": "Net dip L3",
     "de": "Netzeinbruch L3",
-    "da": "Netdyk L3"
+    "da": "Netdyk L3",
+    "fr": "Creux réseau L3",
+    "sv": "Nätdipp L3",
+    "no": "Netdyk L3",
+    "fi": "Verkon notkahdus L3",
+    "hu": "Hálózati mélypont L3"
   },
   "getable": true,
   "setable": false,

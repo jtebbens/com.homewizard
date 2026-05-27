@@ -4,7 +4,12 @@
     "en": "WiFi Signal",
     "nl": "WiFi signaal",
     "de": "WLAN-Signal",
-    "da": "WiFi-signal"
+    "da": "WiFi-signal",
+    "fr": "Signal WiFi",
+    "sv": "WiFi-signal",
+    "no": "WiFi-signal",
+    "fi": "WiFi-signaali",
+    "hu": "WiFi-jel"
   },
   "getable": true,
   "setable": false,
@@ -15,6 +20,11 @@
     "en": "RSSI",
     "nl": "RSSI",
     "de": "RSSI",
-    "da": "RSSI"
+    "da": "RSSI",
+    "fr": "RSSI",
+    "sv": "RSSI",
+    "no": "RSSI",
+    "fi": "RSSI",
+    "hu": "RSSI"
   }
 }

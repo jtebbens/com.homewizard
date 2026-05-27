@@ -4,19 +4,34 @@
     "en": "Predicted Sun (4h)",
     "nl": "Voorspelde Zon (4u)",
     "de": "Vorhergesagte Sonne (4h)",
-    "da": "Forudsagt sol (4h)"
+    "da": "Forudsagt sol (4h)",
+    "fr": "Soleil prévu (4h)",
+    "sv": "Förutsagd sol (4h)",
+    "no": "Forutsagt sol (4h)",
+    "fi": "Ennustettu aurinko (4h)",
+    "hu": "Előrejelzett nap (4h)"
   },
   "desc": {
     "en": "Expected sunshine hours in next 4 hours",
     "nl": "Verwachte zonuren in komende 4 uur",
     "de": "Erwartete Sonnenstunden in den nächsten 4 Stunden",
-    "da": "Forventede soltimer de næste 4 timer"
+    "da": "Forventede soltimer de næste 4 timer",
+    "fr": "Heures d'ensoleillement prévues dans les 4 prochaines heures",
+    "sv": "Förväntade soltimmar de nästa 4 timmarna",
+    "no": "Forventede soltimer de neste 4 timene",
+    "fi": "Odotetut aurinkotunnit seuraavan 4 tunnin aikana",
+    "hu": "Várható napsütéses órák a következő 4 órában"
   },
   "units": {
     "en": "h",
     "nl": "u",
     "de": "h",
-    "da": "h"
+    "da": "h",
+    "fr": "h",
+    "sv": "h",
+    "no": "t",
+    "fi": "h",
+    "hu": "ó"
   },
   "min": 0,
   "max": 4,

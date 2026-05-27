@@ -4,19 +4,34 @@
     "en": "Expected Profit",
     "nl": "Verwachte Winst",
     "de": "Erwarteter Gewinn",
-    "da": "Forventet profit"
+    "da": "Forventet profit",
+    "fr": "Bénéfice attendu",
+    "sv": "Förväntad vinst",
+    "no": "Forventet fortjeneste",
+    "fi": "Odotettu tuotto",
+    "hu": "Várható nyereség"
   },
   "desc": {
     "en": "Projected daily profit from today's optimizer plan",
     "nl": "Verwachte dagwinst van het optimizerplan",
     "de": "Prognostizierter Tagesgewinn aus dem heutigen Optimierungsplan",
-    "da": "Forventet daglig profit fra dagens optimeringsplan"
+    "da": "Forventet daglig profit fra dagens optimeringsplan",
+    "fr": "Bénéfice journalier projeté du plan d'optimisation",
+    "sv": "Projekterad daglig vinst från dagens optimeringsplan",
+    "no": "Forventet daglig fortjeneste fra dagens optimeringsplan",
+    "fi": "Päivän optimointisuunnitelman ennakoitu päivätuotto",
+    "hu": "Mai optimalizálási terv szerinti várható napi nyereség"
   },
   "units": {
     "en": "€",
     "nl": "€",
     "de": "€",
-    "da": "€"
+    "da": "€",
+    "fr": "€",
+    "sv": "€",
+    "no": "€",
+    "fi": "€",
+    "hu": "€"
   },
   "decimals": 2,
   "getable": true,

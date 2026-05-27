@@ -2,7 +2,12 @@
   "name": {
     "en": "Energy Socket",
     "de": "Energiesteckdose",
-    "da": "Energistik"
+    "da": "Energistik",
+    "fr": "Prise connectée",
+    "sv": "Energiuttag",
+    "no": "Energikontakt",
+    "fi": "Energiapistoke",
+    "hu": "Okos konnektor"
   },
   "images": {
     "large": "drivers/energy_socket/assets/images/large.png",
@@ -37,7 +42,12 @@
         "en": "Current usage",
         "nl": "Huidig vermogen",
         "de": "Aktueller Verbrauch",
-        "da": "Aktuelt forbrug"
+        "da": "Aktuelt forbrug",
+        "fr": "Consommation actuelle",
+        "sv": "Aktuell förbrukning",
+        "no": "Aktuelt forbruk",
+        "fi": "Nykyinen kulutus",
+        "hu": "Jelenlegi fogyasztás"
       },
       "insights": true
     },
@@ -46,7 +56,12 @@
         "en": "Current usage phase 1",
         "nl": "Huidig gebruik fase 1",
         "de": "Aktueller Verbrauch Phase 1",
-        "da": "Aktuelt forbrug fase 1"
+        "da": "Aktuelt forbrug fase 1",
+        "fr": "Consommation phase 1",
+        "sv": "Aktuell förbrukning fas 1",
+        "no": "Aktuelt forbruk fase 1",
+        "fi": "Nykyinen kulutus vaihe 1",
+        "hu": "1. fázis fogyasztás"
       }
     },
     "meter_power.consumed.t1": {
@@ -55,7 +70,12 @@
         "en": "Total t1 usage",
         "nl": "Totaal t1 gebruik",
         "de": "Gesamt T1 Verbrauch",
-        "da": "Samlet T1 forbrug"
+        "da": "Samlet T1 forbrug",
+        "fr": "Total utilisation T1",
+        "sv": "Total förbrukning T1",
+        "no": "Totalt forbruk T1",
+        "fi": "Kokonaiskulutus T1",
+        "hu": "Összes T1 fogyasztás"
       }
     },
     "meter_power.produced.t1": {
@@ -64,7 +84,12 @@
         "en": "Total t1 deliver",
         "nl": "Totaal t1 teruglevering",
         "de": "Gesamt T1 Einspeisung",
-        "da": "Samlet T1 levering"
+        "da": "Samlet T1 levering",
+        "fr": "Total injection T1",
+        "sv": "Total inmatning T1",
+        "no": "Total innmating T1",
+        "fi": "Kokonaisinjektio T1",
+        "hu": "Összes T1 visszatáplálás"
       }
     },
     "meter_power": {
@@ -73,7 +98,12 @@
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh",
         "de": "Gesamtverbrauch kWh",
-        "da": "Samlet forbrug kWh"
+        "da": "Samlet forbrug kWh",
+        "fr": "Consommation totale kWh",
+        "sv": "Total förbrukning kWh",
+        "no": "Totalt forbruk kWh",
+        "fi": "Kokonaiskulutus kWh",
+        "hu": "Összfogyasztás kWh"
       }
     },
     "measure_voltage.l1": {
@@ -81,7 +111,12 @@
         "en": "Current Voltage phase 1",
         "nl": "Huidig Voltage fase 1",
         "de": "Aktuelle Spannung Phase 1",
-        "da": "Aktuel Spænding fase 1"
+        "da": "Aktuel Spænding fase 1",
+        "fr": "Tension phase 1",
+        "sv": "Spänning fas 1",
+        "no": "Spenning fase 1",
+        "fi": "Jännite vaihe 1",
+        "hu": "1. fázis feszültség"
       },
       "insights": true
     }
@@ -93,7 +128,12 @@
         "en": "Energy Socket settings",
         "nl": "Energy Socket instellingen",
         "de": "Energiesteckdosen-Einstellungen",
-        "da": "Energistik indstillinger"
+        "da": "Energistik indstillinger",
+        "fr": "Paramètres de la prise",
+        "sv": "Energiuttag inställningar",
+        "no": "Energikontakt innstillinger",
+        "fi": "Energiapistoke asetukset",
+        "hu": "Okos konnektor beállítások"
       },
       "children": [
         {
@@ -103,14 +143,24 @@
             "en": "Offset Watt usage",
             "nl": "Compensatie watt gebruik",
             "de": "Versatz Watt-Verbrauch",
-            "da": "Forskydning Watt forbrug"
+            "da": "Forskydning Watt forbrug",
+            "fr": "Décalage consommation Watt",
+            "sv": "Offset för wattförbrukning",
+            "no": "Forskyvning watt-forbruk",
+            "fi": "Watin käytön siirtymä",
+            "hu": "Watt fogyasztás eltolás"
           },
           "value": 0,
           "unit": {
             "en": "watt",
             "nl": "watt",
             "de": "Watt",
-            "da": "Watt"
+            "da": "Watt",
+            "fr": "watt",
+            "sv": "watt",
+            "no": "watt",
+            "fi": "watti",
+            "hu": "watt"
           }
         },
         {
@@ -120,7 +170,12 @@
             "en": "Polling in seconds",
             "nl": "Interval in seconden",
             "de": "Abfrage in Sekunden",
-            "da": "Afspørgning i sekunder"
+            "da": "Afspørgning i sekunder",
+            "fr": "Interrogation en secondes",
+            "sv": "Uppfrågning i sekunder",
+            "no": "Avspørring i sekunder",
+            "fi": "Kyselyväli sekunneissa",
+            "hu": "Lekérdezés másodpercekben"
           },
           "value": 10,
           "min": 2
@@ -132,7 +187,12 @@
             "en": "Cloud connection 1=on 0=off",
             "nl": "Cloud verbinding 1=actief 0=uit",
             "de": "Cloud-Verbindung 1=ein 0=aus",
-            "da": "Sky-forbindelse 1=til 0=fra"
+            "da": "Sky-forbindelse 1=til 0=fra",
+            "fr": "Connexion cloud 1=activé 0=désactivé",
+            "sv": "Molnanslutning 1=på 0=av",
+            "no": "Skytilkobling 1=på 0=av",
+            "fi": "Pilviyhteystila 1=päällä 0=pois",
+            "hu": "Felhőkapcsolat 1=be 0=ki"
           },
           "value": 1
         }
@@ -144,7 +204,12 @@
         "en": "Appliance detection",
         "nl": "Apparaat detectie",
         "de": "Geräteerkennung",
-        "da": "Apparatgenkendelse"
+        "da": "Apparatgenkendelse",
+        "fr": "Détection d'appareils",
+        "sv": "Apparatdetektering",
+        "no": "Apparatdetektering",
+        "fi": "Laitekynnyksen tunnistus",
+        "hu": "Készülékfelismerés"
       },
       "children": [
         {
@@ -154,7 +219,12 @@
             "en": "Enable appliance detection",
             "nl": "Apparaat detectie inschakelen",
             "de": "Geräteerkennung aktivieren",
-            "da": "Aktiver apparatgenkendelse"
+            "da": "Aktiver apparatgenkendelse",
+            "fr": "Activer la détection d'appareils",
+            "sv": "Aktivera apparatdetektering",
+            "no": "Aktiver apparatdetektering",
+            "fi": "Ota laitekynnyksen tunnistus käyttöön",
+            "hu": "Készülékfelismerés engedélyezése"
           },
           "value": false
         },
@@ -165,7 +235,12 @@
             "en": "Active threshold (W)",
             "nl": "Actief-drempel (W)",
             "de": "Aktiv-Schwelle (W)",
-            "da": "Aktiv grænse (W)"
+            "da": "Aktiv grænse (W)",
+            "fr": "Seuil actif (W)",
+            "sv": "Aktiv gräns (W)",
+            "no": "Aktiv terskel (W)",
+            "fi": "Aktiivinen kynnys (W)",
+            "hu": "Aktív küszöbszint (W)"
           },
           "value": 50,
           "min": 1
@@ -177,7 +252,12 @@
             "en": "Standby threshold (W)",
             "nl": "Stand-by drempel (W)",
             "de": "Standby-Schwelle (W)",
-            "da": "Standby-grænse (W)"
+            "da": "Standby-grænse (W)",
+            "fr": "Seuil veille (W)",
+            "sv": "Standbygräns (W)",
+            "no": "Standbyterskel (W)",
+            "fi": "Valmiustilan kynnys (W)",
+            "hu": "Készenlét küszöbszint (W)"
           },
           "value": 5,
           "min": 0
@@ -189,7 +269,12 @@
             "en": "Min active duration (min)",
             "nl": "Min actieve duur (min)",
             "de": "Min. aktive Dauer (min)",
-            "da": "Min. aktiv varighed (min)"
+            "da": "Min. aktiv varighed (min)",
+            "fr": "Durée active min (min)",
+            "sv": "Min aktiv varaktighet (min)",
+            "no": "Min aktiv varighet (min)",
+            "fi": "Min aktiivinen kesto (min)",
+            "hu": "Min. aktív időtartam (perc)"
           },
           "value": 5,
           "min": 0
@@ -201,7 +286,12 @@
             "en": "Also trigger on power-off (0W)",
             "nl": "Ook triggeren bij volledige uitschakeling (0W)",
             "de": "Auch bei Abschaltung auslösen (0W)",
-            "da": "Udløs også ved slukning (0W)"
+            "da": "Udløs også ved slukning (0W)",
+            "fr": "Aussi déclencher à l'arrêt (0W)",
+            "sv": "Utlös även vid strömavstängning (0W)",
+            "no": "Utløs også ved strømavbrudd (0W)",
+            "fi": "Käynnistä myös virrankatkaisulla (0W)",
+            "hu": "Legyen kiváltás kikapcsoláskor is (0W)"
           },
           "value": true
         }

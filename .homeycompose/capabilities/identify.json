@@ -4,7 +4,12 @@
     "en": "Identify",
     "nl": "Identificeren",
     "de": "Identifizieren",
-    "da": "Identificer"
+    "da": "Identificer",
+    "fr": "Identifier",
+    "sv": "Identifiera",
+    "no": "Identifiser",
+    "fi": "Tunnista",
+    "hu": "Azonosítás"
   },
   "getable": false,
   "setable": true,

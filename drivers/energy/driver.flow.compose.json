@@ -6,7 +6,12 @@
         "en": "Peak / Normal Tariff changed",
         "nl": "Dal / Normaal Tarief veranderd",
         "de": "Hoch-/Normaltarif geändert",
-        "da": "Høj-/Normaltarif ændret"
+        "da": "Høj-/Normaltarif ændret",
+        "fr": "Tarif pointe/normal modifié",
+        "sv": "Hög-/normaltariff ändrad",
+        "no": "Topp-/normaltariff endret",
+        "fi": "Huippu-/normaalitariffi muuttui",
+        "hu": "Csúcs/normál tarifa változott"
       },
       "args": [],
       "tokens": [
@@ -17,7 +22,12 @@
             "en": "tariff",
             "nl": "tarief",
             "de": "Tarif",
-            "da": "Tarif"
+            "da": "Tarif",
+            "fr": "tarif",
+            "sv": "tariff",
+            "no": "tariff",
+            "fi": "tariffi",
+            "hu": "tarifa"
           },
           "example": 1
         }
@@ -29,7 +39,12 @@
         "en": "Total used changed",
         "nl": "Som gebruik veranderd",
         "de": "Gesamtbezug geändert",
-        "da": "Samlet forbrug ændret"
+        "da": "Samlet forbrug ændret",
+        "fr": "Total utilisé modifié",
+        "sv": "Totalt förbrukat ändrat",
+        "no": "Totalt forbrukt endret",
+        "fi": "Kokonaiskulutus muuttui",
+        "hu": "Összes felhasznált változott"
       },
       "args": [],
       "tokens": [
@@ -40,7 +55,12 @@
             "en": "import",
             "nl": "import",
             "de": "Bezug",
-            "da": "Import"
+            "da": "Import",
+            "fr": "import",
+            "sv": "import",
+            "no": "import",
+            "fi": "tuonti",
+            "hu": "import"
           },
           "example": 1
         }
@@ -52,7 +72,12 @@
         "en": "Total delivered changed",
         "nl": "Som teruglevering veranderd",
         "de": "Gesamteinspeisung geändert",
-        "da": "Samlet levering ændret"
+        "da": "Samlet levering ændret",
+        "fr": "Total injecté modifié",
+        "sv": "Totalt inmatat ändrat",
+        "no": "Totalt innmatet endret",
+        "fi": "Kokonaisinjektio muuttui",
+        "hu": "Összes visszatáplált változott"
       },
       "args": [],
       "tokens": [
@@ -63,7 +88,12 @@
             "en": "export",
             "nl": "export",
             "de": "Einspeisung",
-            "da": "Eksport"
+            "da": "Eksport",
+            "fr": "export",
+            "sv": "export",
+            "no": "eksport",
+            "fi": "vienti",
+            "hu": "export"
           },
           "example": 1
         }
@@ -75,13 +105,23 @@
         "en": "Voltage sag detected",
         "nl": "Spanningsdip gedetecteerd",
         "de": "Spannungseinbruch erkannt",
-        "da": "Spændingsdyk opdaget"
+        "da": "Spændingsdyk opdaget",
+        "fr": "Creux de tension détecté",
+        "sv": "Spänningsdipp detekterat",
+        "no": "Spenningsdyk oppdaget",
+        "fi": "Jännitteen notkahdus havaittu",
+        "hu": "Feszültségesés észlelve"
       },
       "hint": {
         "en": "Triggered when a voltage sag is detected on any phase",
         "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase",
         "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
-        "da": "Udløses når et spændingsdyk registreres på en fase"
+        "da": "Udløses når et spændingsdyk registreres på en fase",
+        "fr": "Déclenché lors d'un creux de tension sur une phase",
+        "sv": "Utlöst när en spänningsdipp detekteras på någon fas",
+        "no": "Utløst når spenningsdyk oppdages på en fase",
+        "fi": "Käynnistyy kun jännitteen lasku havaitaan millä tahansa vaiheella",
+        "hu": "Feszültségesés észlelésekor aktiválódik"
       },
       "tokens": [
         {
@@ -91,7 +131,12 @@
             "en": "Phase L1 count",
             "nl": "Fase L1 aantal",
             "de": "Phase L1 Anzahl",
-            "da": "Fase L1 antal"
+            "da": "Fase L1 antal",
+            "fr": "Comptage phase L1",
+            "sv": "Fas L1 antal",
+            "no": "Fase L1 antall",
+            "fi": "Vaihe L1 määrä",
+            "hu": "L1 fázis szám"
           },
           "example": 5
         },
@@ -102,7 +147,12 @@
             "en": "Phase L2 count",
             "nl": "Fase L2 aantal",
             "de": "Phase L2 Anzahl",
-            "da": "Fase L2 antal"
+            "da": "Fase L2 antal",
+            "fr": "Comptage phase L2",
+            "sv": "Fas L2 antal",
+            "no": "Fase L2 antall",
+            "fi": "Vaihe L2 määrä",
+            "hu": "L2 fázis szám"
           },
           "example": 3
         },
@@ -113,7 +163,12 @@
             "en": "Phase L3 count",
             "nl": "Fase L3 aantal",
             "de": "Phase L3 Anzahl",
-            "da": "Fase L3 antal"
+            "da": "Fase L3 antal",
+            "fr": "Comptage phase L3",
+            "sv": "Fas L3 antal",
+            "no": "Fase L3 antall",
+            "fi": "Vaihe L3 määrä",
+            "hu": "L3 fázis szám"
           },
           "example": 2
         }
@@ -125,13 +180,23 @@
         "en": "Voltage swell detected",
         "nl": "Spanningspiek gedetecteerd",
         "de": "Spannungsüberhöhung erkannt",
-        "da": "Spændingsstigning opdaget"
+        "da": "Spændingsstigning opdaget",
+        "fr": "Surtension détectée",
+        "sv": "Spänningssväll detekterat",
+        "no": "Spenningsstige oppdaget",
+        "fi": "Jännitteen nousu havaittu",
+        "hu": "Feszültségnövekedés észlelve"
       },
       "hint": {
         "en": "Triggered when a voltage swell is detected on any phase",
         "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase",
         "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
-        "da": "Udløses når en spændingsstigning registreres på en fase"
+        "da": "Udløses når en spændingsstigning registreres på en fase",
+        "fr": "Déclenché lors d'une surtension sur une phase",
+        "sv": "Utlöst när ett spänningssväll detekteras på någon fas",
+        "no": "Utløst når spenningsstigning oppdages på en fase",
+        "fi": "Käynnistyy kun jännitteen nousu havaitaan millä tahansa vaiheella",
+        "hu": "Feszültségnövekedés észlelésekor aktiválódik"
       },
       "tokens": [
         {
@@ -141,7 +206,12 @@
             "en": "Phase L1 count",
             "nl": "Fase L1 aantal",
             "de": "Phase L1 Anzahl",
-            "da": "Fase L1 antal"
+            "da": "Fase L1 antal",
+            "fr": "Comptage phase L1",
+            "sv": "Fas L1 antal",
+            "no": "Fase L1 antall",
+            "fi": "Vaihe L1 määrä",
+            "hu": "L1 fázis szám"
           },
           "example": 2
         },
@@ -152,7 +222,12 @@
             "en": "Phase L2 count",
             "nl": "Fase L2 aantal",
             "de": "Phase L2 Anzahl",
-            "da": "Fase L2 antal"
+            "da": "Fase L2 antal",
+            "fr": "Comptage phase L2",
+            "sv": "Fas L2 antal",
+            "no": "Fase L2 antall",
+            "fi": "Vaihe L2 määrä",
+            "hu": "L2 fázis szám"
           },
           "example": 1
         },
@@ -163,7 +238,12 @@
             "en": "Phase L3 count",
             "nl": "Fase L3 aantal",
             "de": "Phase L3 Anzahl",
-            "da": "Fase L3 antal"
+            "da": "Fase L3 antal",
+            "fr": "Comptage phase L3",
+            "sv": "Fas L3 antal",
+            "no": "Fase L3 antall",
+            "fi": "Vaihe L3 määrä",
+            "hu": "L3 fázis szám"
           },
           "example": 0
         }
@@ -175,13 +255,23 @@
         "en": "Long power failure detected",
         "nl": "Lange stroomstoring gedetecteerd",
         "de": "Langer Stromausfall erkannt",
-        "da": "Lang strømafbrydelse opdaget"
+        "da": "Lang strømafbrydelse opdaget",
+        "fr": "Panne longue détectée",
+        "sv": "Lång strömavbrott detekterat",
+        "no": "Lang strømsvikt oppdaget",
+        "fi": "Pitkä sähkökatko havaittu",
+        "hu": "Hosszú áramkimaradás észlelve"
       },
       "hint": {
         "en": "Triggered when a long power failure is detected",
         "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd",
         "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird",
-        "da": "Udløses når en lang strømafbrydelse registreres"
+        "da": "Udløses når en lang strømafbrydelse registreres",
+        "fr": "Déclenché lors d'une panne de courant prolongée",
+        "sv": "Utlöst när ett långt strömavbrott detekteras",
+        "no": "Utløst når et langvarig strømbrudd oppdages",
+        "fi": "Käynnistyy pitkän sähkökatkon havaitsemisesta",
+        "hu": "Hosszú áramkimaradás észlelésekor aktiválódik"
       },
       "tokens": [
         {
@@ -191,7 +281,12 @@
             "en": "Failure count",
             "nl": "Storing aantal",
             "de": "Ausfallanzahl",
-            "da": "Fejlantal"
+            "da": "Fejlantal",
+            "fr": "Nombre de pannes",
+            "sv": "Antal fel",
+            "no": "Antall feil",
+            "fi": "Vikojen määrä",
+            "hu": "Hibák száma"
           },
           "example": 1
         }
@@ -203,13 +298,23 @@
         "en": "Voltage restored to normal",
         "nl": "Spanning hersteld naar normaal",
         "de": "Spannung wieder normal",
-        "da": "Spænding genoprettet til normalt"
+        "da": "Spænding genoprettet til normalt",
+        "fr": "Tension revenue à la normale",
+        "sv": "Spänning återställd till normal",
+        "no": "Spenning tilbake til normal",
+        "fi": "Jännite palautunut normaaliksi",
+        "hu": "Feszültség visszaállt normálra"
       },
       "hint": {
         "en": "Triggers when voltage returns to normal range after a sag or swell",
         "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
         "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
-        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning"
+        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning",
+        "fr": "Se déclenche quand la tension revient à la normale",
+        "sv": "Utlöses när spänningen återvänder till normalt område",
+        "no": "Utløses når spenning returnerer til normalt område",
+        "fi": "Käynnistyy kun jännite palaa normaalialueelle notkahduksen tai nousun jälkeen",
+        "hu": "A feszültség normalizálódásakor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -220,7 +325,12 @@
             "en": "Phase",
             "nl": "Fase",
             "de": "Phase",
-            "da": "Fase"
+            "da": "Fase",
+            "fr": "Phase",
+            "sv": "Fas",
+            "no": "Fase",
+            "fi": "Vaihe",
+            "hu": "Fázis"
           },
           "example": "L1"
         },
@@ -231,7 +341,12 @@
             "en": "Voltage (V)",
             "nl": "Spanning (V)",
             "de": "Spannung (V)",
-            "da": "Spænding (V)"
+            "da": "Spænding (V)",
+            "fr": "Tension (V)",
+            "sv": "Spänning (V)",
+            "no": "Spenning (V)",
+            "fi": "Jännite (V)",
+            "hu": "Feszültség (V)"
           },
           "example": 230
         }
@@ -243,13 +358,23 @@
         "en": "Power restored",
         "nl": "Stroom hersteld",
         "de": "Strom wiederhergestellt",
-        "da": "Strøm genoprettet"
+        "da": "Strøm genoprettet",
+        "fr": "Alimentation rétablie",
+        "sv": "Ström återställd",
+        "no": "Strøm gjenopprettet",
+        "fi": "Virta palautettu",
+        "hu": "Áramellátás visszaállt"
       },
       "hint": {
         "en": "Triggers when power is restored after being offline",
         "nl": "Triggert wanneer stroom is hersteld na een uitval",
         "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
-        "da": "Udløses når strøm gendannes efter en afbrydelse"
+        "da": "Udløses når strøm gendannes efter en afbrydelse",
+        "fr": "Se déclenche quand l'alimentation est rétablie",
+        "sv": "Utlöses när strömmen återställs efter att ha varit offline",
+        "no": "Utløses når strøm er gjenopprettet etter frakobling",
+        "fi": "Käynnistyy kun virransyöttö palautuu katkon jälkeen",
+        "hu": "Az áramellátás visszaállításakor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -260,7 +385,12 @@
             "en": "Offline duration (seconds)",
             "nl": "Offline duur (seconden)",
             "de": "Ausfallzeit (Sekunden)",
-            "da": "Offline varighed (sekunder)"
+            "da": "Offline varighed (sekunder)",
+            "fr": "Durée hors ligne (secondes)",
+            "sv": "Offlinesida (sekunder)",
+            "no": "Frakoblet varighet (sekunder)",
+            "fi": "Offline-kesto (sekunnit)",
+            "hu": "Offline időtartam (másodperc)"
           },
           "example": 120
         }

@@ -4,7 +4,12 @@
     "en": "Time until full charge",
     "nl": "Tijd tot vol geladen",
     "de": "Zeit bis Vollladung",
-    "da": "Tid til fuld opladning"
+    "da": "Tid til fuld opladning",
+    "fr": "Temps avant charge complète",
+    "sv": "Tid till fulladdning",
+    "no": "Tid til full lading",
+    "fi": "Aika täyteen lataukseen",
+    "hu": "Idő teljes töltésig"
   },
   "getable": true,
   "setable": false,
@@ -15,6 +20,11 @@
     "en": "min",
     "nl": "min",
     "de": "min",
-    "da": "min"
+    "da": "min",
+    "fr": "min",
+    "sv": "min",
+    "no": "min",
+    "fi": "min",
+    "hu": "perc"
   }
 }

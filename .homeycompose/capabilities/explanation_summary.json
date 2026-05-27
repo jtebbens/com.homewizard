@@ -4,13 +4,23 @@
     "en": "Decision Reason",
     "nl": "Beslissingsreden",
     "de": "Entscheidungsgrund",
-    "da": "Beslutningsårsag"
+    "da": "Beslutningsårsag",
+    "fr": "Raison de décision",
+    "sv": "Beslutsorsak",
+    "no": "Beslutningsårsak",
+    "fi": "Päätöksen syy",
+    "hu": "Döntés indoka"
   },
   "desc": {
     "en": "Explanation of current policy decision",
     "nl": "Uitleg van huidige beleidsbeslissing",
     "de": "Erläuterung der aktuellen Richtlinienentscheidung",
-    "da": "Forklaring af aktuel politikbeslutning"
+    "da": "Forklaring af aktuel politikbeslutning",
+    "fr": "Explication de la décision de politique actuelle",
+    "sv": "Förklaring av aktuellt policybeslut",
+    "no": "Forklaring av gjeldende politikkbeslutning",
+    "fi": "Nykyisen politiikkapäätöksen selitys",
+    "hu": "Az aktuális irányvonal döntés magyarázata"
   },
   "getable": true,
   "setable": false,

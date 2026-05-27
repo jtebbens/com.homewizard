@@ -4,13 +4,23 @@
     "en": "Active Mode",
     "nl": "Actieve Modus",
     "de": "Aktiver Modus",
-    "da": "Aktiv tilstand"
+    "da": "Aktiv tilstand",
+    "fr": "Mode actif",
+    "sv": "Aktivt läge",
+    "no": "Aktiv modus",
+    "fi": "Aktiivinen tila",
+    "hu": "Aktív mód"
   },
   "desc": {
     "en": "The battery mode that is currently active on the hardware. May differ from the recommended mode when the confidence score is below the threshold, auto-apply is off, or a manual override is active.",
     "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is.",
     "de": "Der aktuell auf der Hardware aktive Batteriemodus. Kann vom empfohlenen Modus abweichen, wenn der Konfidenzwert unter dem Schwellenwert liegt, Auto-Apply deaktiviert ist oder eine manuelle Überschreibung aktiv ist.",
-    "da": "Den batteritilstand, der aktuelt er aktiv på hardwaren. Kan afvige fra den anbefalede tilstand, når konfidensscore er under tærsklen, auto-anvend er slået fra, eller en manuel tilsidesættelse er aktiv."
+    "da": "Den batteritilstand, der aktuelt er aktiv på hardwaren. Kan afvige fra den anbefalede tilstand, når konfidensscore er under tærsklen, auto-anvend er slået fra, eller en manuel tilsidesættelse er aktiv.",
+    "fr": "Le mode batterie actuellement actif sur le matériel. Peut différer du mode recommandé lorsque le score de confiance est en dessous du seuil, l'application automatique est désactivée ou un remplacement manuel est actif.",
+    "sv": "Det batterilåge som för närvarande är aktivt på hårdvaran. Kan skilja sig från det rekommenderade läget när konfidenspoängen är under tröskeln, auto-apply är av, eller en manuell åsidosättning är aktiv.",
+    "no": "Batterimodus som for øyeblikket er aktivt på maskinvaren. Kan avvike fra anbefalt modus når konfidensscore er under terskelen, auto-apply er av, eller manuell overstyring er aktiv.",
+    "fi": "Akkutila, joka on tällä hetkellä aktiivinen laitteistossa. Voi poiketa suositellusta tilasta, kun luottamuspisteet ovat kynnyksen alapuolella, automaattinen käyttö on pois tai manuaalinen ohitus on aktiivinen.",
+    "hu": "Az akkumód, amely jelenleg aktív a hardveren. Eltérhet az ajánlott módtól, ha a megbízhatósági pontszám a küszöb alá esik, az automatikus alkalmazás ki van kapcsolva, vagy manuális felülírás aktív."
   },
   "getable": true,
   "setable": false,

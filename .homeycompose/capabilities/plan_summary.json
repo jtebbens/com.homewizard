@@ -4,13 +4,23 @@
     "en": "Plan Summary",
     "nl": "Plan Samenvatting",
     "de": "Planzusammenfassung",
-    "da": "Planresumé"
+    "da": "Planresumé",
+    "fr": "Résumé du plan",
+    "sv": "Plansammanfattning",
+    "no": "Plansammendrag",
+    "fi": "Suunnitelmayhteenveto",
+    "hu": "Terv összefoglaló"
   },
   "desc": {
     "en": "Today's optimizer plan in compact form",
     "nl": "Compact overzicht van het optimizerplan",
     "de": "Heutiger Optimierungsplan in kompakter Form",
-    "da": "Dagens optimeringsplan i kompakt form"
+    "da": "Dagens optimeringsplan i kompakt form",
+    "fr": "Plan d'optimisation d'aujourd'hui en forme compacte",
+    "sv": "Dagens optimeringsplan i kompakt form",
+    "no": "Dagens optimeringsplan i kompakt form",
+    "fi": "Tämän päivän optimointisuunnitelma tiiviissä muodossa",
+    "hu": "Mai optimalizálási terv tömör formában"
   },
   "getable": true,
   "setable": false,

@@ -4,13 +4,23 @@
     "en": "Presence",
     "nl": "Aanwezigheid",
     "de": "Anwesenheit",
-    "da": "Tilstedeværelse"
+    "da": "Tilstedeværelse",
+    "fr": "Présence",
+    "sv": "Närvaro",
+    "no": "Tilstedeværelse",
+    "fi": "Läsnäolo",
+    "hu": "Jelenlét"
   },
   "desc": {
     "en": "Indicates whether someone is home. Away mode pauses consumption learning so vacation patterns do not corrupt learned profiles.",
     "nl": "Geeft aan of iemand thuis is. Afwezigheidsmodus pauzeert het verbruikspatroon zodat vakantiegedrag de geleerde profielen niet verstoort.",
     "de": "Zeigt an, ob jemand zu Hause ist. Der Abwesenheitsmodus pausiert das Verbrauchslernen, damit Urlaubsmuster die erlernten Profile nicht verfälschen.",
-    "da": "Angiver om nogen er hjemme. Væk-tilstand pauser forbrugslæring, så ferietilstande ikke ødelægger lærte profiler."
+    "da": "Angiver om nogen er hjemme. Væk-tilstand pauser forbrugslæring, så ferietilstande ikke ødelægger lærte profiler.",
+    "fr": "Indique si quelqu'un est à la maison. Le mode Absent met en pause l'apprentissage de la consommation afin que les habitudes de vacances ne corrompent pas les profils appris.",
+    "sv": "Anger om någon är hemma. Bortaläge pausar konsumtionsinlärning så att semestermönster inte korrumperar inlärda profiler.",
+    "no": "Angir om noen er hjemme. Borte-modus setter forbrukslæring på pause slik at ferietilstander ikke ødelegger lærte profiler.",
+    "fi": "Ilmaisee, onko joku kotona. Poissa-tila keskeyttää kulutuksen oppimisen niin, että lomakaavat eivät pilaa opittuja profiileja.",
+    "hu": "Jelzi, hogy van-e valaki otthon. A Távol mód szünetelteti a fogyasztás tanulását, hogy a nyaralási minták ne rontsák el a tanult profilokat."
   },
   "getable": true,
   "setable": false,

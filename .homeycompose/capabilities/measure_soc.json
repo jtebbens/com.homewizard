@@ -4,19 +4,34 @@
     "en": "Battery Level",
     "nl": "Batterijniveau",
     "de": "Batteriestand",
-    "da": "Batteriniveau"
+    "da": "Batteriniveau",
+    "fr": "Niveau de batterie",
+    "sv": "Batterinivå",
+    "no": "Batterinivå",
+    "fi": "Akun taso",
+    "hu": "Akkuszint"
   },
   "desc": {
     "en": "Current battery state of charge",
     "nl": "Huidige batterij laadstatus",
     "de": "Aktueller Batterieladezustand",
-    "da": "Aktuel batteriladestatus"
+    "da": "Aktuel batteriladestatus",
+    "fr": "État de charge actuel de la batterie",
+    "sv": "Aktuellt batteriladdningstillstånd",
+    "no": "Aktuell batteriladestatus",
+    "fi": "Akun nykyinen varausaste",
+    "hu": "Az akku aktuális töltöttségi állapota"
   },
   "units": {
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   },
   "min": 0,
   "max": 100,

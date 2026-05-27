@@ -5,13 +5,23 @@
     "en": "Policy Learning",
     "nl": "Policy Leren",
     "de": "Richtlinien-Lernen",
-    "da": "Politik-læring"
+    "da": "Politik-læring",
+    "fr": "Apprentissage politique",
+    "sv": "Policy-inlärning",
+    "no": "Politikk-læring",
+    "fi": "Politiikan oppiminen",
+    "hu": "Irányvonal tanulás"
   },
   "desc": {
     "en": "Historical learning statistics and pattern coverage",
     "nl": "Historische leerstatistieken en patroonbedekking",
     "de": "Historische Lernstatistiken und Musterabdeckung",
-    "da": "Historiske læringsstatistikker og mønstertækning"
+    "da": "Historiske læringsstatistikker og mønstertækning",
+    "fr": "Statistiques d'apprentissage historiques et couverture des modèles",
+    "sv": "Historiska inlärningsstatistik och mönsterkäckning",
+    "no": "Historiske læringsstatistikker og mønsterdekning",
+    "fi": "Historialliset oppimistilastot ja kaavakattavuus",
+    "hu": "Historikus tanulási statisztikák és mintafedettség"
   },
   "getable": true,
   "setable": false,

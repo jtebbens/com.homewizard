@@ -4,7 +4,12 @@
     "en": "Number of battery cycles",
     "nl": "Aantal battery laadcycli",
     "de": "Anzahl Batteriezyklen",
-    "da": "Antal battericyklusser"
+    "da": "Antal battericyklusser",
+    "fr": "Nombre de cycles de batterie",
+    "sv": "Antal batteriladdningscykler",
+    "no": "Antall batterisykler",
+    "fi": "Akkusyklit",
+    "hu": "Akkuciklusok száma"
   },
   "getable": true,
   "setable": false,
@@ -15,6 +20,11 @@
     "en": "cycles",
     "nl": "cycli",
     "de": "Zyklen",
-    "da": "cyklusser"
+    "da": "cyklusser",
+    "fr": "cycles",
+    "sv": "cykler",
+    "no": "sykler",
+    "fi": "syklit",
+    "hu": "ciklusok"
   }
 }
