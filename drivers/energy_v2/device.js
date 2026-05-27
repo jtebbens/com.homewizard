@@ -1982,7 +1982,7 @@ async _handleBatteries(data) {
         this.homey.settings.set(extKey, stored);
       }
 
-      this.flowTriggerBatteryMode(this);
+      this.flowTriggerBatteryMode(this, { mode: normalizedMode });
       this._cacheSet('last_battery_mode', normalizedMode);
 
       // Batched persist — setSettings allocates ~30 MB V8 heap per call. Only
@@ -2669,6 +2669,7 @@ async _setCapabilityValue(capability, value) {
 
         if (!this.wsManager) {
           this.wsManager = new WebSocketManager({
+            device: this,
             url: this.url,
             token: this.token,
             log: this._boundLog,
@@ -2775,7 +2776,7 @@ async _setCapabilityValue(capability, value) {
     if (!this._powerState || !this._flowTriggerPowerRestored) return;
     
     // Consider online if we have active power reading or any voltage
-    const hasActivePower = m.active_power_w != null && m.active_power_w !== 0;
+    const hasActivePower = m.power_w != null && m.power_w !== 0;
     const hasVoltage = m.voltage_l1_v != null || m.voltage_l2_v != null || m.voltage_l3_v != null;
     const isOnline = hasActivePower || hasVoltage;
     
