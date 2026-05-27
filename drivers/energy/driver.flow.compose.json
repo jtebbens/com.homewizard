@@ -4,7 +4,9 @@
       "id": "tariff_changed",
       "title": {
         "en": "Peak / Normal Tariff changed",
-        "nl": "Dal / Normaal Tarief veranderd"
+        "nl": "Dal / Normaal Tarief veranderd",
+        "de": "Hoch-/Normaltarif geändert",
+        "da": "Høj-/Normaltarif ændret"
       },
       "args": [],
       "tokens": [
@@ -13,7 +15,9 @@
           "type": "number",
           "title": {
             "en": "tariff",
-            "nl": "tarief"
+            "nl": "tarief",
+            "de": "Tarif",
+            "da": "Tarif"
           },
           "example": 1
         }
@@ -23,7 +27,9 @@
       "id": "import_changed",
       "title": {
         "en": "Total used changed",
-        "nl": "Som gebruik veranderd"
+        "nl": "Som gebruik veranderd",
+        "de": "Gesamtbezug geändert",
+        "da": "Samlet forbrug ændret"
       },
       "args": [],
       "tokens": [
@@ -32,7 +38,9 @@
           "type": "number",
           "title": {
             "en": "import",
-            "nl": "import"
+            "nl": "import",
+            "de": "Bezug",
+            "da": "Import"
           },
           "example": 1
         }
@@ -42,7 +50,9 @@
       "id": "export_changed",
       "title": {
         "en": "Total delivered changed",
-        "nl": "Som teruglevering veranderd"
+        "nl": "Som teruglevering veranderd",
+        "de": "Gesamteinspeisung geändert",
+        "da": "Samlet levering ændret"
       },
       "args": [],
       "tokens": [
@@ -51,7 +61,9 @@
           "type": "number",
           "title": {
             "en": "export",
-            "nl": "export"
+            "nl": "export",
+            "de": "Einspeisung",
+            "da": "Eksport"
           },
           "example": 1
         }
@@ -61,11 +73,15 @@
       "id": "voltage_sag_detected_v1",
       "title": {
         "en": "Voltage sag detected",
-        "nl": "Spanningsdip gedetecteerd"
+        "nl": "Spanningsdip gedetecteerd",
+        "de": "Spannungseinbruch erkannt",
+        "da": "Spændingsdyk opdaget"
       },
       "hint": {
         "en": "Triggered when a voltage sag is detected on any phase",
-        "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase"
+        "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase",
+        "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
+        "da": "Udløses når et spændingsdyk registreres på en fase"
       },
       "tokens": [
         {
@@ -73,7 +89,9 @@
           "type": "number",
           "title": {
             "en": "Phase L1 count",
-            "nl": "Fase L1 aantal"
+            "nl": "Fase L1 aantal",
+            "de": "Phase L1 Anzahl",
+            "da": "Fase L1 antal"
           },
           "example": 5
         },
@@ -82,7 +100,9 @@
           "type": "number",
           "title": {
             "en": "Phase L2 count",
-            "nl": "Fase L2 aantal"
+            "nl": "Fase L2 aantal",
+            "de": "Phase L2 Anzahl",
+            "da": "Fase L2 antal"
           },
           "example": 3
         },
@@ -91,7 +111,9 @@
           "type": "number",
           "title": {
             "en": "Phase L3 count",
-            "nl": "Fase L3 aantal"
+            "nl": "Fase L3 aantal",
+            "de": "Phase L3 Anzahl",
+            "da": "Fase L3 antal"
           },
           "example": 2
         }
@@ -101,11 +123,15 @@
       "id": "voltage_swell_detected_v1",
       "title": {
         "en": "Voltage swell detected",
-        "nl": "Spanningspiek gedetecteerd"
+        "nl": "Spanningspiek gedetecteerd",
+        "de": "Spannungsüberhöhung erkannt",
+        "da": "Spændingsstigning opdaget"
       },
       "hint": {
         "en": "Triggered when a voltage swell is detected on any phase",
-        "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase"
+        "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase",
+        "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
+        "da": "Udløses når en spændingsstigning registreres på en fase"
       },
       "tokens": [
         {
@@ -113,7 +139,9 @@
           "type": "number",
           "title": {
             "en": "Phase L1 count",
-            "nl": "Fase L1 aantal"
+            "nl": "Fase L1 aantal",
+            "de": "Phase L1 Anzahl",
+            "da": "Fase L1 antal"
           },
           "example": 2
         },
@@ -122,7 +150,9 @@
           "type": "number",
           "title": {
             "en": "Phase L2 count",
-            "nl": "Fase L2 aantal"
+            "nl": "Fase L2 aantal",
+            "de": "Phase L2 Anzahl",
+            "da": "Fase L2 antal"
           },
           "example": 1
         },
@@ -131,7 +161,9 @@
           "type": "number",
           "title": {
             "en": "Phase L3 count",
-            "nl": "Fase L3 aantal"
+            "nl": "Fase L3 aantal",
+            "de": "Phase L3 Anzahl",
+            "da": "Fase L3 antal"
           },
           "example": 0
         }
@@ -141,11 +173,15 @@
       "id": "long_power_fail_detected_v1",
       "title": {
         "en": "Long power failure detected",
-        "nl": "Lange stroomstoring gedetecteerd"
+        "nl": "Lange stroomstoring gedetecteerd",
+        "de": "Langer Stromausfall erkannt",
+        "da": "Lang strømafbrydelse opdaget"
       },
       "hint": {
         "en": "Triggered when a long power failure is detected",
-        "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd"
+        "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd",
+        "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird",
+        "da": "Udløses når en lang strømafbrydelse registreres"
       },
       "tokens": [
         {
@@ -153,7 +189,9 @@
           "type": "number",
           "title": {
             "en": "Failure count",
-            "nl": "Storing aantal"
+            "nl": "Storing aantal",
+            "de": "Ausfallanzahl",
+            "da": "Fejlantal"
           },
           "example": 1
         }
@@ -163,11 +201,15 @@
       "id": "voltage_restored_v1",
       "title": {
         "en": "Voltage restored to normal",
-        "nl": "Spanning hersteld naar normaal"
+        "nl": "Spanning hersteld naar normaal",
+        "de": "Spannung wieder normal",
+        "da": "Spænding genoprettet til normalt"
       },
       "hint": {
         "en": "Triggers when voltage returns to normal range after a sag or swell",
-        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
+        "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
+        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning"
       },
       "args": [],
       "tokens": [
@@ -176,7 +218,9 @@
           "type": "string",
           "title": {
             "en": "Phase",
-            "nl": "Fase"
+            "nl": "Fase",
+            "de": "Phase",
+            "da": "Fase"
           },
           "example": "L1"
         },
@@ -185,7 +229,9 @@
           "type": "number",
           "title": {
             "en": "Voltage (V)",
-            "nl": "Spanning (V)"
+            "nl": "Spanning (V)",
+            "de": "Spannung (V)",
+            "da": "Spænding (V)"
           },
           "example": 230
         }
@@ -195,11 +241,15 @@
       "id": "power_restored_v1",
       "title": {
         "en": "Power restored",
-        "nl": "Stroom hersteld"
+        "nl": "Stroom hersteld",
+        "de": "Strom wiederhergestellt",
+        "da": "Strøm genoprettet"
       },
       "hint": {
         "en": "Triggers when power is restored after being offline",
-        "nl": "Triggert wanneer stroom is hersteld na een uitval"
+        "nl": "Triggert wanneer stroom is hersteld na een uitval",
+        "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
+        "da": "Udløses når strøm gendannes efter en afbrydelse"
       },
       "args": [],
       "tokens": [
@@ -208,7 +258,9 @@
           "type": "number",
           "title": {
             "en": "Offline duration (seconds)",
-            "nl": "Offline duur (seconden)"
+            "nl": "Offline duur (seconden)",
+            "de": "Ausfallzeit (Sekunden)",
+            "da": "Offline varighed (sekunder)"
           },
           "example": 120
         }

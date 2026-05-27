@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Battery Group Average SoC",
-    "nl": "Batterij Groep Lading"
+    "nl": "Batterij Groep Lading",
+    "de": "Durchschn. Gruppen-SoC",
+    "da": "Gns. gruppe-SoC"
   },
   "getable": true,
   "setable": false,
@@ -11,6 +13,8 @@
   "icon": "assets/battery.svg",
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   }
 }

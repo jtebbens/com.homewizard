@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Battery Level",
-    "nl": "Batterijniveau"
+    "nl": "Batterijniveau",
+    "de": "Batteriestand",
+    "da": "Batteriniveau"
   },
   "desc": {
     "en": "Current battery state of charge",
-    "nl": "Huidige batterij laadstatus"
+    "nl": "Huidige batterij laadstatus",
+    "de": "Aktueller Batterieladezustand",
+    "da": "Aktuel batteriladestatus"
   },
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "min": 0,
   "max": 100,

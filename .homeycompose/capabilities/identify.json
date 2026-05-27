@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Identify",
-    "nl": "Identificeren"
+    "nl": "Identificeren",
+    "de": "Identifizieren",
+    "da": "Identificer"
   },
   "getable": false,
   "setable": true,

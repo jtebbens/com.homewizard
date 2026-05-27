@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "WiFi Signal",
-    "nl": "WiFi signaal"
+    "nl": "WiFi signaal",
+    "de": "WLAN-Signal",
+    "da": "WiFi-signal"
   },
   "getable": true,
   "setable": false,
@@ -11,6 +13,8 @@
   "icon": "assets/rssi.svg",
   "units": {
     "en": "RSSI",
-    "nl": "RSSI"
+    "nl": "RSSI",
+    "de": "RSSI",
+    "da": "RSSI"
   }
 }

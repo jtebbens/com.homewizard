@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Sunshine Score",
-    "nl": "Zonneschijn Score"
+    "nl": "Zonneschijn Score",
+    "de": "Sonneneinstrahlung",
+    "da": "Solscore"
   },
   "desc": {
     "en": "Predicted sunshine availability (0-100%)",
-    "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)"
+    "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)",
+    "de": "Vorhergesagte Sonnenstrahlung (0-100%)",
+    "da": "Forudsagt soltilgængelighed (0-100%)"
   },
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "min": 0,
   "max": 100,

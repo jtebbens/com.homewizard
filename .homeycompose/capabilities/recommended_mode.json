@@ -2,11 +2,15 @@
   "type": "string",
   "title": {
     "en": "Recommended Mode",
-    "nl": "Aanbevolen Modus"
+    "nl": "Aanbevolen Modus",
+    "de": "Empfohlener Modus",
+    "da": "Anbefalet tilstand"
   },
   "desc": {
     "en": "Current battery mode recommendation",
-    "nl": "Huidige batterij modus aanbeveling"
+    "nl": "Huidige batterij modus aanbeveling",
+    "de": "Aktuelle Batteriemodus-Empfehlung",
+    "da": "Aktuel batterimodusanbefaling"
   },
   "getable": true,
   "setable": false,

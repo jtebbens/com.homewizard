@@ -3,39 +3,51 @@
   "type": "enum",
   "title": {
     "en": "Weather Override",
-    "nl": "Weer Overschrijven"
+    "nl": "Weer Overschrijven",
+    "de": "Wetterüberschreibung",
+    "da": "Vejr-tilsidesættelse"
   },
   "desc": {
     "en": "Override weather forecast for policy decisions",
-    "nl": "Overschrijf weersverwachting voor beleidsbeslissingen"
+    "nl": "Overschrijf weersverwachting voor beleidsbeslissingen",
+    "de": "Wetterprognose für Richtlinienentscheidungen überschreiben",
+    "da": "Tilsidesæt vejrprognose for politikbeslutninger"
   },
   "values": [
     {
       "id": "auto",
       "title": {
         "en": "Auto (use forecast)",
-        "nl": "Auto (gebruik voorspelling)"
+        "nl": "Auto (gebruik voorspelling)",
+        "de": "Auto (Prognose nutzen)",
+        "da": "Auto (brug prognose)"
       }
     },
     {
       "id": "sunny",
       "title": {
         "en": "Sunny",
-        "nl": "Zonnig"
+        "nl": "Zonnig",
+        "de": "Sonnig",
+        "da": "Solrigt"
       }
     },
     {
       "id": "cloudy",
       "title": {
         "en": "Cloudy",
-        "nl": "Bewolkt"
+        "nl": "Bewolkt",
+        "de": "Bewölkt",
+        "da": "Overskyet"
       }
     },
     {
       "id": "rainy",
       "title": {
         "en": "Rainy",
-        "nl": "Regenachtig"
+        "nl": "Regenachtig",
+        "de": "Regnerisch",
+        "da": "Regnvejr"
       }
     }
   ],

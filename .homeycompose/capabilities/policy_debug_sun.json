@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Sun",
-    "nl": "Policy Zon"
+    "nl": "Policy Zon",
+    "de": "Richtlinie Sonne",
+    "da": "Politik sol"
   },
   "desc": {
     "en": "Sunshine forecast inputs used by the policy",
-    "nl": "Zon-voorspelling gebruikt door de policy"
+    "nl": "Zon-voorspelling gebruikt door de policy",
+    "de": "Von der Richtlinie genutzte Sonnenscheinprognose",
+    "da": "Solskinsprognoseinputs brugt af politik"
   },
   "getable": true,
   "setable": false,

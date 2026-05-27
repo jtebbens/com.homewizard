@@ -2,11 +2,15 @@
   "type": "string",
   "title": {
     "en": "Decision Reason",
-    "nl": "Beslissingsreden"
+    "nl": "Beslissingsreden",
+    "de": "Entscheidungsgrund",
+    "da": "Beslutningsårsag"
   },
   "desc": {
     "en": "Explanation of current policy decision",
-    "nl": "Uitleg van huidige beleidsbeslissing"
+    "nl": "Uitleg van huidige beleidsbeslissing",
+    "de": "Erläuterung der aktuellen Richtlinienentscheidung",
+    "da": "Forklaring af aktuel politikbeslutning"
   },
   "getable": true,
   "setable": false,

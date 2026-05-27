@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Central Heating",
-    "nl": "Central Verwarming"
+    "nl": "Central Verwarming",
+    "de": "Zentralheizung",
+    "da": "Centralvarme"
   },
   "getable": true,
   "setable": false,

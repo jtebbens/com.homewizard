@@ -2,11 +2,15 @@
   "type": "string",
   "title": {
     "en": "Last Update",
-    "nl": "Laatste Update"
+    "nl": "Laatste Update",
+    "de": "Letzte Aktualisierung",
+    "da": "Seneste opdatering"
   },
   "desc": {
     "en": "Timestamp of last policy check",
-    "nl": "Tijdstempel van laatste beleidscontrole"
+    "nl": "Tijdstempel van laatste beleidscontrole",
+    "de": "Zeitstempel der letzten Richtlinienprüfung",
+    "da": "Tidsstempel for seneste politikkontrol"
   },
   "getable": true,
   "setable": false,

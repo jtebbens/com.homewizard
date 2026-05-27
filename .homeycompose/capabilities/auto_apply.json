@@ -2,11 +2,15 @@
   "type": "boolean",
   "title": {
     "en": "Auto-Apply",
-    "nl": "Automatisch Toepassen"
+    "nl": "Automatisch Toepassen",
+    "de": "Automatisch anwenden",
+    "da": "Anvend automatisk"
   },
   "desc": {
     "en": "Automatically apply policy recommendations to battery",
-    "nl": "Pas beleidsaanbevelingen automatisch toe op batterij"
+    "nl": "Pas beleidsaanbevelingen automatisch toe op batterij",
+    "de": "Richtlinienempfehlungen automatisch auf Batterie anwenden",
+    "da": "Anvend automatisk politikanbefalinger på batteri"
   },
   "getable": true,
   "setable": true,

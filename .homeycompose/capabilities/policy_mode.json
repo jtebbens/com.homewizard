@@ -3,14 +3,56 @@
   "type": "enum",
   "title": {
     "en": "Policy Mode",
-    "nl": "Beleidsmodus"
+    "nl": "Beleidsmodus",
+    "de": "Richtlinienmodus",
+    "da": "Politiktilstand"
   },
   "values": [
-    { "id": "off", "title": { "en": "Off", "nl": "Uit" } },
-    { "id": "balanced", "title": { "en": "Dynamic Pricing", "nl": "Dynamisch Tarief" } },
-    { "id": "balanced-fixed", "title": { "en": "Fixed Pricing", "nl": "Vast Tarief" } },
-    { "id": "balanced-dynamic", "title": { "en": "Dynamic Pricing (V2 — post-saldering)", "nl": "Dynamisch Tarief (V2 — na salderen)" } },
-    { "id": "zero", "title": { "en": "Peak Shaving", "nl": "Peak Shaving" } }
+    {
+      "id": "off",
+      "title": {
+        "en": "Off",
+        "nl": "Uit",
+        "de": "Aus",
+        "da": "Fra"
+      }
+    },
+    {
+      "id": "balanced",
+      "title": {
+        "en": "Dynamic Pricing",
+        "nl": "Dynamisch Tarief",
+        "de": "Dynamische Preisgestaltung",
+        "da": "Dynamisk prissætning"
+      }
+    },
+    {
+      "id": "balanced-fixed",
+      "title": {
+        "en": "Fixed Pricing",
+        "nl": "Vast Tarief",
+        "de": "Fester Preis",
+        "da": "Fast pris"
+      }
+    },
+    {
+      "id": "balanced-dynamic",
+      "title": {
+        "en": "Dynamic Pricing (V2 — post-saldering)",
+        "nl": "Dynamisch Tarief (V2 — na salderen)",
+        "de": "Dynamische Preisgestaltung (V2 — post-saldering)",
+        "da": "Dynamisk prissætning (V2 — post-saldering)"
+      }
+    },
+    {
+      "id": "zero",
+      "title": {
+        "en": "Peak Shaving",
+        "nl": "Peak Shaving",
+        "de": "Lastspitzenkappung",
+        "da": "Spidslastbegrænsning"
+      }
+    }
   ],
   "getable": true,
   "setable": true,

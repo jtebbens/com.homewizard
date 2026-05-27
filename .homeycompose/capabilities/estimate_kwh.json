@@ -1,17 +1,20 @@
 {
-"type": "number",
-      "title": {
-        "en": "Estimate kWh in battery",
-        "nl": "Geschatte kWh in batterij"
-      },
-      "getable": true,
-      "setable": true,
-      "insights": true,
-      "uiComponent": "sensor",
-      "icon": "assets/tariff.svg",
-      "units": {
-        "en": "kWh",
-        "nl": "kWh"
-      }
+  "type": "number",
+  "title": {
+    "en": "Estimate kWh in battery",
+    "nl": "Geschatte kWh in batterij",
+    "de": "Geschätzte kWh in Batterie",
+    "da": "Estimeret kWh i batteri"
+  },
+  "getable": true,
+  "setable": true,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "assets/tariff.svg",
+  "units": {
+    "en": "kWh",
+    "nl": "kWh",
+    "de": "kWh",
+    "da": "kWh"
+  }
 }
-        

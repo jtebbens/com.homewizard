@@ -2,7 +2,9 @@
   "type": "string",
   "title": {
     "en": "Connection Error",
-    "nl": "Verbindingsfout"
+    "nl": "Verbindingsfout",
+    "de": "Verbindungsfehler",
+    "da": "Forbindelsesfejl"
   },
   "getable": true,
   "setable": false,

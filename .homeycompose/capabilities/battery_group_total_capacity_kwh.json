@@ -1,10 +1,14 @@
 {
   "type": "number",
   "title": {
-    "en": "Battery Group Total Capacity"
+    "en": "Battery Group Total Capacity",
+    "de": "Gesamtkapazität der Gruppe",
+    "da": "Gruppens samlede kapacitet"
   },
   "units": {
-    "en": "kWh"
+    "en": "kWh",
+    "de": "kWh",
+    "da": "kWh"
   },
   "getable": true,
   "setable": false,

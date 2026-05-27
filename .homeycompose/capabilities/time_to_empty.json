@@ -1,16 +1,20 @@
 {
-          "type": "number",
-          "title": {
-            "en": "Time until discharged",
-            "nl": "Tijd tot ontladen"
-          },
-          "getable": true,
-          "setable": false,
-          "insights": true,
-          "uiComponent": "sensor",
-          "icon": "assets/clock.svg",
-          "units": {
-            "en": "min",
-            "nl": "min"
-          }
-        }
+  "type": "number",
+  "title": {
+    "en": "Time until discharged",
+    "nl": "Tijd tot ontladen",
+    "de": "Zeit bis Entladung",
+    "da": "Tid til afladning"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "assets/clock.svg",
+  "units": {
+    "en": "min",
+    "nl": "min",
+    "de": "min",
+    "da": "min"
+  }
+}

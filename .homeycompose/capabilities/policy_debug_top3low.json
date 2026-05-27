@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Top3 Low",
-    "nl": "Policy Top3 Laag"
+    "nl": "Policy Top3 Laag",
+    "de": "Richtlinie Top3 Niedrig",
+    "da": "Politik Top3 Lav"
   },
   "desc": {
     "en": "Top 3 cheapest DAP hours",
-    "nl": "Top 3 goedkoopste DAP-uren"
+    "nl": "Top 3 goedkoopste DAP-uren",
+    "de": "Die 3 günstigsten DAP-Stunden",
+    "da": "Top 3 billigste DAP-timer"
   },
   "getable": true,
   "setable": false,

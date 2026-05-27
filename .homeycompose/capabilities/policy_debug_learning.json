@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Learning",
-    "nl": "Policy Leren"
+    "nl": "Policy Leren",
+    "de": "Richtlinien-Lernen",
+    "da": "Politik-læring"
   },
   "desc": {
     "en": "Historical learning statistics and pattern coverage",
-    "nl": "Historische leerstatistieken en patroonbedekking"
+    "nl": "Historische leerstatistieken en patroonbedekking",
+    "de": "Historische Lernstatistiken und Musterabdeckung",
+    "da": "Historiske læringsstatistikker og mønstertækning"
   },
   "getable": true,
   "setable": false,

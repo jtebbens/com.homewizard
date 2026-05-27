@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Grid Power",
-    "nl": "Netvermogen"
+    "nl": "Netvermogen",
+    "de": "Netzleistung",
+    "da": "Neteffekt"
   },
   "desc": {
     "en": "Current grid import/export power",
-    "nl": "Huidig net import/export vermogen"
+    "nl": "Huidig net import/export vermogen",
+    "de": "Aktuelle Netzeinspeisung/-bezug",
+    "da": "Aktuel netimport/-eksporteffekt"
   },
   "units": {
     "en": "W",
-    "nl": "W"
+    "nl": "W",
+    "de": "W",
+    "da": "W"
   },
   "decimals": 0,
   "getable": true,

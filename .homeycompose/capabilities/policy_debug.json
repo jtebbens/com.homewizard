@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Debug",
-    "nl": "Policy Debug"
+    "nl": "Policy Debug",
+    "de": "Richtlinien-Debug",
+    "da": "Politik-debug"
   },
   "desc": {
     "en": "Current tariff and weather inputs used by the policy engine",
-    "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine"
+    "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine",
+    "de": "Aktuelle Tarif- und Wettereingaben für die Richtlinien-Engine",
+    "da": "Aktuelle tarif- og vejrinput brugt af politik-motoren"
   },
   "getable": true,
   "setable": false,
