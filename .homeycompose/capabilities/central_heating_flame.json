@@ -4,7 +4,12 @@
     "en": "Central Heating Burner",
     "nl": "CV brander",
     "de": "Zentralheizungsbrenner",
-    "da": "Centralvarmefyr"
+    "da": "Centralvarmefyr",
+    "fr": "Brûleur de chauffage central",
+    "sv": "Centralvärmepanna",
+    "no": "Sentralvarmefyr",
+    "fi": "Kaukolämpöpolttin",
+    "hu": "Központi fűtési égő"
   },
   "getable": true,
   "setable": false,

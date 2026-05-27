@@ -4,19 +4,34 @@
     "en": "Phase 3 load",
     "nl": "Fase 3 belasting",
     "de": "Last Phase 3",
-    "da": "Belastning fase 3"
+    "da": "Belastning fase 3",
+    "fr": "Charge phase 3",
+    "sv": "Last fas 3",
+    "no": "Last fase 3",
+    "fi": "Vaiheen 3 kuorma",
+    "hu": "3. fázis terhelés"
   },
   "titleFormatted": {
     "en": "Phase 3 load",
     "nl": "Fase 3 belasting",
     "de": "Last Phase 3",
-    "da": "Belastning fase 3"
+    "da": "Belastning fase 3",
+    "fr": "Charge phase 3",
+    "sv": "Last fas 3",
+    "no": "Last fase 3",
+    "fi": "Vaiheen 3 kuorma",
+    "hu": "3. fázis terhelés"
   },
   "desc": {
     "en": "Phase 3 load",
     "nl": "Fase 3 belasting",
     "de": "Last Phase 3",
-    "da": "Belastning fase 3"
+    "da": "Belastning fase 3",
+    "fr": "Charge phase 3",
+    "sv": "Last fas 3",
+    "no": "Last fase 3",
+    "fi": "Vaiheen 3 kuorma",
+    "hu": "3. fázis terhelés"
   },
   "decimals": 0,
   "getable": true,
@@ -27,7 +42,12 @@
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   },
   "icon": "assets/icon.svg"
 }

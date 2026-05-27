@@ -4,7 +4,12 @@
     "en": "WiFi State",
     "nl": "WiFi Status",
     "de": "WLAN-Status",
-    "da": "WiFi-tilstand"
+    "da": "WiFi-tilstand",
+    "fr": "État WiFi",
+    "sv": "WiFi-status",
+    "no": "WiFi-tilstand",
+    "fi": "WiFi-tila",
+    "hu": "WiFi-állapot"
   },
   "getable": true,
   "setable": false,

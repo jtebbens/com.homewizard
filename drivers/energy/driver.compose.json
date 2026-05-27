@@ -2,7 +2,12 @@
   "name": {
     "en": "P1 Meter",
     "de": "P1 Zähler",
-    "da": "P1 Måler"
+    "da": "P1 Måler",
+    "fr": "Compteur P1",
+    "sv": "P1-mätare",
+    "no": "P1-måler",
+    "fi": "P1-mittari",
+    "hu": "P1 mérő"
   },
   "images": {
     "large": "drivers/energy/assets/images/large.png",
@@ -70,7 +75,12 @@
         "en": "Current usage",
         "nl": "Huidig vermogen",
         "de": "Aktueller Verbrauch",
-        "da": "Aktuelt forbrug"
+        "da": "Aktuelt forbrug",
+        "fr": "Consommation actuelle",
+        "sv": "Aktuell förbrukning",
+        "no": "Aktuelt forbruk",
+        "fi": "Nykyinen kulutus",
+        "hu": "Jelenlegi fogyasztás"
       }
     },
     "meter_gas": {
@@ -79,7 +89,12 @@
         "en": "Gasmeter",
         "nl": "Gasmeter",
         "de": "Gaszähler",
-        "da": "Gasmåler"
+        "da": "Gasmåler",
+        "fr": "Compteur de gaz",
+        "sv": "Gasmätare",
+        "no": "Gassmåler",
+        "fi": "Kaasumittari",
+        "hu": "Gázmérő"
       }
     },
     "meter_gas.daily": {
@@ -88,7 +103,12 @@
         "en": "Day Usage Gas",
         "nl": "Dag verbruik Gas",
         "de": "Tagesverbrauch Gas",
-        "da": "Dagligt gasforbrug"
+        "da": "Dagligt gasforbrug",
+        "fr": "Consommation de gaz du jour",
+        "sv": "Daglig gasförbrukning",
+        "no": "Daglig gassforbruk",
+        "fi": "Päivän kaasunkulutus",
+        "hu": "Napi gázfogyasztás"
       }
     },
     "meter_water": {
@@ -97,7 +117,12 @@
         "en": "Watermeter",
         "nl": "Watermeter",
         "de": "Wasserzähler",
-        "da": "Vandmåler"
+        "da": "Vandmåler",
+        "fr": "Compteur d'eau",
+        "sv": "Vattenmätare",
+        "no": "Vannmåler",
+        "fi": "Vesimittari",
+        "hu": "Vízórán"
       }
     },
     "measure_power.l1": {
@@ -105,7 +130,12 @@
         "en": "Current usage phase 1",
         "nl": "Huidig gebruik fase 1",
         "de": "Aktueller Verbrauch Phase 1",
-        "da": "Aktuelt forbrug fase 1"
+        "da": "Aktuelt forbrug fase 1",
+        "fr": "Consommation phase 1",
+        "sv": "Aktuell förbrukning fas 1",
+        "no": "Aktuelt forbruk fase 1",
+        "fi": "Nykyinen kulutus vaihe 1",
+        "hu": "1. fázis fogyasztás"
       }
     },
     "measure_power.l2": {
@@ -113,7 +143,12 @@
         "en": "Current usage phase 2",
         "nl": "Huidig gebruik fase 2",
         "de": "Aktueller Verbrauch Phase 2",
-        "da": "Aktuelt forbrug fase 2"
+        "da": "Aktuelt forbrug fase 2",
+        "fr": "Consommation phase 2",
+        "sv": "Aktuell förbrukning fas 2",
+        "no": "Aktuelt forbruk fase 2",
+        "fi": "Nykyinen kulutus vaihe 2",
+        "hu": "2. fázis fogyasztás"
       }
     },
     "measure_power.l3": {
@@ -121,7 +156,12 @@
         "en": "Current usage phase 3",
         "nl": "Huidig gebruik fase 3",
         "de": "Aktueller Verbrauch Phase 3",
-        "da": "Aktuelt forbrug fase 3"
+        "da": "Aktuelt forbrug fase 3",
+        "fr": "Consommation phase 3",
+        "sv": "Aktuell förbrukning fas 3",
+        "no": "Aktuelt forbruk fase 3",
+        "fi": "Nykyinen kulutus vaihe 3",
+        "hu": "3. fázis fogyasztás"
       }
     },
     "measure_current.l1": {
@@ -129,7 +169,12 @@
         "en": "Current Amp phase 1",
         "nl": "Huidig Amp fase 1",
         "de": "Aktuelles Ampere Phase 1",
-        "da": "Aktuel Ampere fase 1"
+        "da": "Aktuel Ampere fase 1",
+        "fr": "Ampérage phase 1",
+        "sv": "Ström fas 1",
+        "no": "Strøm fase 1",
+        "fi": "Virta vaihe 1",
+        "hu": "1. fázis áramerősség"
       }
     },
     "measure_current.l2": {
@@ -137,7 +182,12 @@
         "en": "Current Amp phase 2",
         "nl": "Huidig Amp fase 2",
         "de": "Aktuelles Ampere Phase 2",
-        "da": "Aktuel Ampere fase 2"
+        "da": "Aktuel Ampere fase 2",
+        "fr": "Ampérage phase 2",
+        "sv": "Ström fas 2",
+        "no": "Strøm fase 2",
+        "fi": "Virta vaihe 2",
+        "hu": "2. fázis áramerősség"
       }
     },
     "measure_current.l3": {
@@ -145,7 +195,12 @@
         "en": "Current Amp phase 3",
         "nl": "Huidig Amp fase 3",
         "de": "Aktuelles Ampere Phase 3",
-        "da": "Aktuel Ampere fase 3"
+        "da": "Aktuel Ampere fase 3",
+        "fr": "Ampérage phase 3",
+        "sv": "Ström fas 3",
+        "no": "Strøm fase 3",
+        "fi": "Virta vaihe 3",
+        "hu": "3. fázis áramerősség"
       }
     },
     "net_load_phase1_pct": {
@@ -153,7 +208,12 @@
         "en": "Phase 1 load %",
         "nl": "Fase 1 belasting %",
         "de": "Phase 1 Auslastung %",
-        "da": "Fase 1 belastning %"
+        "da": "Fase 1 belastning %",
+        "fr": "Charge phase 1 %",
+        "sv": "Last fas 1 %",
+        "no": "Last fase 1 %",
+        "fi": "Vaiheen 1 kuorma %",
+        "hu": "1. fázis terhelés %"
       }
     },
     "net_load_phase2_pct": {
@@ -161,7 +221,12 @@
         "en": "Phase 2 load %",
         "nl": "Fase 2 belasting %",
         "de": "Phase 2 Auslastung %",
-        "da": "Fase 2 belastning %"
+        "da": "Fase 2 belastning %",
+        "fr": "Charge phase 2 %",
+        "sv": "Last fas 2 %",
+        "no": "Last fase 2 %",
+        "fi": "Vaiheen 2 kuorma %",
+        "hu": "2. fázis terhelés %"
       }
     },
     "net_load_phase3_pct": {
@@ -169,7 +234,12 @@
         "en": "Phase 3 load %",
         "nl": "Fase 3 belasting %",
         "de": "Phase 3 Auslastung %",
-        "da": "Fase 3 belastning %"
+        "da": "Fase 3 belastning %",
+        "fr": "Charge phase 3 %",
+        "sv": "Last fas 3 %",
+        "no": "Last fase 3 %",
+        "fi": "Vaiheen 3 kuorma %",
+        "hu": "3. fázis terhelés %"
       }
     },
     "measure_voltage.l1": {
@@ -177,7 +247,12 @@
         "en": "Current Voltage phase 1",
         "nl": "Huidig Voltage fase 1",
         "de": "Aktuelle Spannung Phase 1",
-        "da": "Aktuel Spænding fase 1"
+        "da": "Aktuel Spænding fase 1",
+        "fr": "Tension phase 1",
+        "sv": "Spänning fas 1",
+        "no": "Spenning fase 1",
+        "fi": "Jännite vaihe 1",
+        "hu": "1. fázis feszültség"
       }
     },
     "measure_voltage.l2": {
@@ -185,7 +260,12 @@
         "en": "Current Voltage phase 2",
         "nl": "Huidig Voltage fase 2",
         "de": "Aktuelle Spannung Phase 2",
-        "da": "Aktuel Spænding fase 2"
+        "da": "Aktuel Spænding fase 2",
+        "fr": "Tension phase 2",
+        "sv": "Spänning fas 2",
+        "no": "Spenning fase 2",
+        "fi": "Jännite vaihe 2",
+        "hu": "2. fázis feszültség"
       }
     },
     "measure_voltage.l3": {
@@ -193,7 +273,12 @@
         "en": "Current Voltage phase 3",
         "nl": "Huidig Voltage fase 3",
         "de": "Aktuelle Spannung Phase 3",
-        "da": "Aktuel Spænding fase 3"
+        "da": "Aktuel Spænding fase 3",
+        "fr": "Tension phase 3",
+        "sv": "Spänning fas 3",
+        "no": "Spenning fase 3",
+        "fi": "Jännite vaihe 3",
+        "hu": "3. fázis feszültség"
       }
     },
     "meter_power.consumed.t1": {
@@ -202,7 +287,12 @@
         "en": "Total t1 usage",
         "nl": "Totaal t1 gebruik",
         "de": "Gesamt T1 Verbrauch",
-        "da": "Samlet T1 forbrug"
+        "da": "Samlet T1 forbrug",
+        "fr": "Total utilisation T1",
+        "sv": "Total förbrukning T1",
+        "no": "Totalt forbruk T1",
+        "fi": "Kokonaiskulutus T1",
+        "hu": "Összes T1 fogyasztás"
       }
     },
     "meter_power.produced.t1": {
@@ -211,7 +301,12 @@
         "en": "Total t1 deliver",
         "nl": "Totaal t1 teruglevering",
         "de": "Gesamt T1 Einspeisung",
-        "da": "Samlet T1 levering"
+        "da": "Samlet T1 levering",
+        "fr": "Total injection T1",
+        "sv": "Total inmatning T1",
+        "no": "Total innmating T1",
+        "fi": "Kokonaisinjektio T1",
+        "hu": "Összes T1 visszatáplálás"
       }
     },
     "meter_power.consumed.t2": {
@@ -220,7 +315,12 @@
         "en": "Total t2 usage",
         "nl": "Totaal t2 gebruik",
         "de": "Gesamt T2 Verbrauch",
-        "da": "Samlet T2 forbrug"
+        "da": "Samlet T2 forbrug",
+        "fr": "Total utilisation T2",
+        "sv": "Total förbrukning T2",
+        "no": "Totalt forbruk T2",
+        "fi": "Kokonaiskulutus T2",
+        "hu": "Összes T2 fogyasztás"
       }
     },
     "meter_power.produced.t2": {
@@ -229,7 +329,12 @@
         "en": "Total t2 deliver",
         "nl": "Totaal t2 teruglevering",
         "de": "Gesamt T2 Einspeisung",
-        "da": "Samlet T2 levering"
+        "da": "Samlet T2 levering",
+        "fr": "Total injection T2",
+        "sv": "Total inmatning T2",
+        "no": "Total innmating T2",
+        "fi": "Kokonaisinjektio T2",
+        "hu": "Összes T2 visszatáplálás"
       }
     },
     "meter_power.consumed.t3": {
@@ -238,7 +343,12 @@
         "en": "Total t3 usage",
         "nl": "Totaal t3 gebruik",
         "de": "Gesamt T3 Verbrauch",
-        "da": "Samlet T3 forbrug"
+        "da": "Samlet T3 forbrug",
+        "fr": "Total utilisation T3",
+        "sv": "Total förbrukning T3",
+        "no": "Totalt forbruk T3",
+        "fi": "Kokonaiskulutus T3",
+        "hu": "Összes T3 fogyasztás"
       }
     },
     "meter_power.produced.t3": {
@@ -247,7 +357,12 @@
         "en": "Total t3 deliver",
         "nl": "Totaal t3 teruglevering",
         "de": "Gesamt T3 Einspeisung",
-        "da": "Samlet T3 levering"
+        "da": "Samlet T3 levering",
+        "fr": "Total injection T3",
+        "sv": "Total inmatning T3",
+        "no": "Total innmating T3",
+        "fi": "Kokonaisinjektio T3",
+        "hu": "Összes T3 visszatáplálás"
       }
     },
     "meter_power.consumed": {
@@ -256,7 +371,12 @@
         "en": "Sum Consumed",
         "nl": "Som gebruik",
         "de": "Gesamt Bezug",
-        "da": "Samlet forbrug"
+        "da": "Samlet forbrug",
+        "fr": "Total consommé",
+        "sv": "Totalt förbrukat",
+        "no": "Totalt forbrukt",
+        "fi": "Yhteensä kulutettu",
+        "hu": "Összesen felhasznált"
       }
     },
     "meter_power.returned": {
@@ -265,7 +385,12 @@
         "en": "Sum returned",
         "nl": "Som teruglevering",
         "de": "Gesamt Einspeisung",
-        "da": "Samlet levering"
+        "da": "Samlet levering",
+        "fr": "Total retourné",
+        "sv": "Totalt returnerat",
+        "no": "Totalt returnert",
+        "fi": "Yhteensä palautettu",
+        "hu": "Összesen visszatáplált"
       }
     },
     "meter_power.daily": {
@@ -274,7 +399,12 @@
         "en": "Daily usage",
         "nl": "Dag verbruik",
         "de": "Tagesverbrauch",
-        "da": "Dagligt forbrug"
+        "da": "Dagligt forbrug",
+        "fr": "Consommation journalière",
+        "sv": "Daglig förbrukning",
+        "no": "Daglig forbruk",
+        "fi": "Päivittäinen kulutus",
+        "hu": "Napi fogyasztás"
       }
     },
     "meter_power": {
@@ -283,7 +413,12 @@
         "en": "Total usage KWh",
         "nl": "Totaal verbruik KWh",
         "de": "Gesamtverbrauch kWh",
-        "da": "Samlet forbrug kWh"
+        "da": "Samlet forbrug kWh",
+        "fr": "Consommation totale kWh",
+        "sv": "Total förbrukning kWh",
+        "no": "Totalt forbruk kWh",
+        "fi": "Kokonaiskulutus kWh",
+        "hu": "Összfogyasztás kWh"
       }
     },
     "measure_frequency": {
@@ -292,7 +427,12 @@
         "en": "Current Frequency",
         "nl": "Huidige Frequentie",
         "de": "Aktuelle Frequenz",
-        "da": "Aktuel Frekvens"
+        "da": "Aktuel Frekvens",
+        "fr": "Fréquence actuelle",
+        "sv": "Aktuell frekvens",
+        "no": "Aktuell frekvens",
+        "fi": "Nykyinen taajuus",
+        "hu": "Aktuális frekvencia"
       }
     },
     "measure_power.montly_power_peak": {
@@ -300,7 +440,12 @@
         "en": "Monthly Power Peak",
         "nl": "Maandelijks piekvermogen",
         "de": "Monatliche Spitzenleistung",
-        "da": "Månedlig spidsbelastning"
+        "da": "Månedlig spidsbelastning",
+        "fr": "Pic de puissance mensuel",
+        "sv": "Månatlig effekttopp",
+        "no": "Månedlig effekttopp",
+        "fi": "Kuukausittainen tehohuippu",
+        "hu": "Havi teljesítménycsúcs"
       }
     }
   },

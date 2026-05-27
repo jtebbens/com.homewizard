@@ -4,7 +4,12 @@
     "en": "Connection Error",
     "nl": "Verbindingsfout",
     "de": "Verbindungsfehler",
-    "da": "Forbindelsesfejl"
+    "da": "Forbindelsesfejl",
+    "fr": "Erreur de connexion",
+    "sv": "Anslutningsfel",
+    "no": "Tilkoblingsfeil",
+    "fi": "Yhteysvirhe",
+    "hu": "Kapcsolódási hiba"
   },
   "getable": true,
   "setable": false,

@@ -4,7 +4,12 @@
     "en": "Net peak L1",
     "nl": "Net piek L1",
     "de": "Netzspitze L1",
-    "da": "Nettopspids L1"
+    "da": "Nettopspids L1",
+    "fr": "Pic réseau L1",
+    "sv": "Nätspets L1",
+    "no": "Netttopp L1",
+    "fi": "Verkon huippu L1",
+    "hu": "Hálózati csúcs L1"
   },
   "getable": true,
   "setable": false,

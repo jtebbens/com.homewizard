@@ -4,19 +4,34 @@
     "en": "Confidence",
     "nl": "Vertrouwen",
     "de": "Konfidenz",
-    "da": "Tillid"
+    "da": "Tillid",
+    "fr": "Confiance",
+    "sv": "Förtroende",
+    "no": "Tillit",
+    "fi": "Luottamus",
+    "hu": "Megbízhatóság"
   },
   "desc": {
     "en": "Confidence in current recommendation (0-100%)",
     "nl": "Vertrouwen in huidige aanbeveling (0-100%)",
     "de": "Konfidenz der aktuellen Empfehlung (0-100%)",
-    "da": "Tillid til aktuel anbefaling (0-100%)"
+    "da": "Tillid til aktuel anbefaling (0-100%)",
+    "fr": "Confiance dans la recommandation actuelle (0-100%)",
+    "sv": "Förtroende för aktuell rekommendation (0-100%)",
+    "no": "Tillit til gjeldende anbefaling (0-100%)",
+    "fi": "Luottamus nykyiseen suositukseen (0-100%)",
+    "hu": "Megbízhatóság az aktuális ajánlásban (0-100%)"
   },
   "units": {
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   },
   "min": 0,
   "max": 100,

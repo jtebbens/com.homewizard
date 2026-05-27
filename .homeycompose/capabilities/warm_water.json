@@ -4,7 +4,12 @@
     "en": "Warm water",
     "nl": "Warm water",
     "de": "Warmwasser",
-    "da": "Varmt vand"
+    "da": "Varmt vand",
+    "fr": "Eau chaude",
+    "sv": "Varmvatten",
+    "no": "Varmtvann",
+    "fi": "Lämmin vesi",
+    "hu": "Melegvíz"
   },
   "getable": true,
   "setable": false,

@@ -4,13 +4,23 @@
     "en": "PV Intraday Bias",
     "nl": "PV Intradag Bias",
     "de": "PV-Intraday-Bias",
-    "da": "PV intradag bias"
+    "da": "PV intradag bias",
+    "fr": "Biais intraday PV",
+    "sv": "PV intradag-bias",
+    "no": "PV intradag-bias",
+    "fi": "PV-päivänsisäinen bias",
+    "hu": "PV napközbeni torzítás"
   },
   "desc": {
     "en": "Intraday PV correction ratio (actual/forecast)",
     "nl": "Intradag PV-correctiefactor (actueel/voorspeld)",
     "de": "Intraday-PV-Korrekturfaktor (Ist/Prognose)",
-    "da": "Intradag PV-korrektionsforhold (faktisk/prognose)"
+    "da": "Intradag PV-korrektionsforhold (faktisk/prognose)",
+    "fr": "Ratio correction PV intraday (réel/prévision)",
+    "sv": "Intradag PV-korrektionsfaktor (faktisk/prognos)",
+    "no": "Intradag PV-korreksjonsforhold (faktisk/prognose)",
+    "fi": "Päivänsisäinen PV-korjaussuhde (todellinen/ennuste)",
+    "hu": "Napközbeni PV-korrekciós arány"
   },
   "decimals": 2,
   "getable": true,

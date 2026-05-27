@@ -6,7 +6,12 @@
         "en": "Appliance finished",
         "nl": "Apparaat klaar",
         "de": "Gerät fertig",
-        "da": "Apparat færdigt"
+        "da": "Apparat færdigt",
+        "fr": "Appareil terminé",
+        "sv": "Apparat klar",
+        "no": "Apparat ferdig",
+        "fi": "Laite valmis",
+        "hu": "Készülék kész"
       },
       "args": [],
       "tokens": [
@@ -17,7 +22,12 @@
             "en": "Active duration (min)",
             "nl": "Actieve duur (min)",
             "de": "Aktive Dauer (min)",
-            "da": "Aktiv varighed (min)"
+            "da": "Aktiv varighed (min)",
+            "fr": "Durée active (min)",
+            "sv": "Aktiv varaktighet (min)",
+            "no": "Aktiv varighet (min)",
+            "fi": "Aktiivinen kesto (min)",
+            "hu": "Aktív időtartam (perc)"
           },
           "example": 45
         }

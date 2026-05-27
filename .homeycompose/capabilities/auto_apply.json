@@ -4,13 +4,23 @@
     "en": "Auto-Apply",
     "nl": "Automatisch Toepassen",
     "de": "Automatisch anwenden",
-    "da": "Anvend automatisk"
+    "da": "Anvend automatisk",
+    "fr": "Application automatique",
+    "sv": "Automatisk tillämpning",
+    "no": "Automatisk bruk",
+    "fi": "Automaattinen käyttö",
+    "hu": "Automatikus alkalmazás"
   },
   "desc": {
     "en": "Automatically apply policy recommendations to battery",
     "nl": "Pas beleidsaanbevelingen automatisch toe op batterij",
     "de": "Richtlinienempfehlungen automatisch auf Batterie anwenden",
-    "da": "Anvend automatisk politikanbefalinger på batteri"
+    "da": "Anvend automatisk politikanbefalinger på batteri",
+    "fr": "Appliquer automatiquement les recommandations de politique à la batterie",
+    "sv": "Tillämpa automatiskt policyrekommendationer på batteri",
+    "no": "Bruk automatisk politikkanbefalinger på batteri",
+    "fi": "Käytä politiikkasuosituksia akkuun automaattisesti",
+    "hu": "Automatikusan alkalmazza az irányvonal ajánlásait az akkura"
   },
   "getable": true,
   "setable": true,

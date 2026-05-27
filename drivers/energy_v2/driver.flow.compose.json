@@ -6,13 +6,23 @@
         "en": "Set battery to Full Charge mode",
         "nl": "Zet batterij in Volledig Oplaad modus",
         "de": "Batterie in Vollladung-Modus setzen",
-        "da": "Sæt batteri til fuld opladning"
+        "da": "Sæt batteri til fuld opladning",
+        "fr": "Mettre batterie en mode Charge complète",
+        "sv": "Sätt batteri i Fulladdning-läge",
+        "no": "Sett batteri til full lading-modus",
+        "fi": "Aseta akku täysi lataus -tilaan",
+        "hu": "Akkumulátor teljes töltés módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Full Charge mode",
         "nl": "Zet batterij in Volledig Oplaad modus",
         "de": "Batterie in Vollladung-Modus setzen",
-        "da": "Sæt batteri til fuld opladning"
+        "da": "Sæt batteri til fuld opladning",
+        "fr": "Mettre batterie en mode Charge complète",
+        "sv": "Sätt batteri i Fulladdning-läge",
+        "no": "Sett batteri til full lading-modus",
+        "fi": "Aseta akku täysi lataus -tilaan",
+        "hu": "Akkumulátor teljes töltés módba állítása"
       },
       "args": []
     },
@@ -22,13 +32,23 @@
         "en": "Set battery to Zero mode",
         "nl": "Zet batterij in Zero modus",
         "de": "Batterie in Nulleinspeisung-Modus setzen",
-        "da": "Sæt batteri til nul på måleren"
+        "da": "Sæt batteri til nul på måleren",
+        "fr": "Mettre batterie en mode Zéro",
+        "sv": "Sätt batteri i Noll-läge",
+        "no": "Sett batteri til nullmodus",
+        "fi": "Aseta akku nollatilaan",
+        "hu": "Akkumulátor nulla módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Zero mode",
         "nl": "Zet batterij in Nul op de meter modus",
         "de": "Batterie in Nulleinspeisung-Modus setzen",
-        "da": "Sæt batteri til nul på måleren"
+        "da": "Sæt batteri til nul på måleren",
+        "fr": "Mettre batterie en mode Zéro",
+        "sv": "Sätt batteri i Noll-läge",
+        "no": "Sett batteri til nullmodus",
+        "fi": "Aseta akku nollatilaan",
+        "hu": "Akkumulátor nulla módba állítása"
       },
       "args": []
     },
@@ -38,13 +58,23 @@
         "en": "Set battery to Standby mode",
         "nl": "Zet batterij in Standby modus",
         "de": "Batterie in Standby-Modus setzen",
-        "da": "Sæt batteri til standby"
+        "da": "Sæt batteri til standby",
+        "fr": "Mettre batterie en mode Veille",
+        "sv": "Sätt batteri i Standby-läge",
+        "no": "Sett batteri til standby-modus",
+        "fi": "Aseta akku valmiustilaan",
+        "hu": "Akkumulátor készenléti módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Standby mode",
         "nl": "Zet batterij in Standby modus",
         "de": "Batterie in Standby-Modus setzen",
-        "da": "Sæt batteri til standby"
+        "da": "Sæt batteri til standby",
+        "fr": "Mettre batterie en mode Veille",
+        "sv": "Sätt batteri i Standby-läge",
+        "no": "Sett batteri til standby-modus",
+        "fi": "Aseta akku valmiustilaan",
+        "hu": "Akkumulátor készenléti módba állítása"
       },
       "args": []
     },
@@ -54,13 +84,23 @@
         "en": "Set battery to Zero Charge Only mode",
         "nl": "Zet batterij in Nul op de meter alleen opladen modus",
         "de": "Batterie in Nulleinspeisung, nur Laden",
-        "da": "Sæt batteri til nul på måleren, kun opladning"
+        "da": "Sæt batteri til nul på måleren, kun opladning",
+        "fr": "Mettre batterie en mode Zéro – Charge uniquement",
+        "sv": "Sätt batteri i Noll – Endast laddning-läge",
+        "no": "Sett batteri til null – kun lading-modus",
+        "fi": "Aseta akku nolla – vain lataus -tilaan",
+        "hu": "Akkumulátor nulla – csak töltés módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Charge Only mode",
         "nl": "Zet batterij in Nul op de meter alleen opladen modus",
         "de": "Batterie in Nulleinspeisung, nur Laden",
-        "da": "Sæt batteri til nul på måleren, kun opladning"
+        "da": "Sæt batteri til nul på måleren, kun opladning",
+        "fr": "Mettre batterie en mode Zéro – Charge uniquement",
+        "sv": "Sätt batteri i Noll – Endast laddning-läge",
+        "no": "Sett batteri til null – kun lading-modus",
+        "fi": "Aseta akku nolla – vain lataus -tilaan",
+        "hu": "Akkumulátor nulla – csak töltés módba állítása"
       },
       "args": []
     },
@@ -70,13 +110,23 @@
         "en": "Set battery to Zero Discharge Only mode",
         "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
         "de": "Batterie in Nulleinspeisung, nur Entladen",
-        "da": "Sæt batteri til nul på måleren, kun afladning"
+        "da": "Sæt batteri til nul på måleren, kun afladning",
+        "fr": "Mettre batterie en mode Zéro – Décharge uniquement",
+        "sv": "Sätt batteri i Noll – Endast urladdning-läge",
+        "no": "Sett batteri til null – kun utlading-modus",
+        "fi": "Aseta akku nolla – vain purkaus -tilaan",
+        "hu": "Akkumulátor nulla – csak töltésleadás módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Discharge Only mode",
         "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
         "de": "Batterie in Nulleinspeisung, nur Entladen",
-        "da": "Sæt batteri til nul på måleren, kun afladning"
+        "da": "Sæt batteri til nul på måleren, kun afladning",
+        "fr": "Mettre batterie en mode Zéro – Décharge uniquement",
+        "sv": "Sätt batteri i Noll – Endast urladdning-läge",
+        "no": "Sett batteri til null – kun utlading-modus",
+        "fi": "Aseta akku nolla – vain purkaus -tilaan",
+        "hu": "Akkumulátor nulla – csak töltésleadás módba állítása"
       },
       "args": []
     },
@@ -86,13 +136,23 @@
         "en": "Set battery to Predictive (Smart Charging) mode",
         "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
         "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
-        "da": "Sæt batteri til prædiktiv (smart opladning)"
+        "da": "Sæt batteri til prædiktiv (smart opladning)",
+        "fr": "Mettre batterie en mode Prédictif",
+        "sv": "Sätt batteri i prediktivt läge",
+        "no": "Sett batteri til prediktiv modus",
+        "fi": "Aseta akku ennakoivaan tilaan",
+        "hu": "Akkumulátor prediktív módba állítása"
       },
       "titleFormatted": {
         "en": "Set battery to Predictive (Smart Charging) mode",
         "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
         "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
-        "da": "Sæt batteri til prædiktiv (smart opladning)"
+        "da": "Sæt batteri til prædiktiv (smart opladning)",
+        "fr": "Mettre batterie en mode Prédictif",
+        "sv": "Sätt batteri i prediktivt läge",
+        "no": "Sett batteri til prediktiv modus",
+        "fi": "Aseta akku ennakoivaan tilaan",
+        "hu": "Akkumulátor prediktív módba állítása"
       },
       "args": []
     }
@@ -103,12 +163,22 @@
       "title": {
         "en": "Battery mode changed",
         "de": "Batteriemodus geändert",
-        "da": "Batteritilstand ændret"
+        "da": "Batteritilstand ændret",
+        "fr": "Mode batterie modifié",
+        "sv": "Batteriläge ändrat",
+        "no": "Batterimodus endret",
+        "fi": "Akkutila muuttui",
+        "hu": "Akkumód megváltozott"
       },
       "titleFormatted": {
         "en": "Battery mode changed",
         "de": "Batteriemodus geändert",
-        "da": "Batteritilstand ændret"
+        "da": "Batteritilstand ændret",
+        "fr": "Mode batterie modifié",
+        "sv": "Batteriläge ändrat",
+        "no": "Batterimodus endret",
+        "fi": "Akkutila muuttui",
+        "hu": "Akkumód megváltozott"
       },
       "args": [],
       "tokens": []
@@ -118,7 +188,12 @@
       "title": {
         "en": "Battery error detected",
         "de": "Batteriefehler erkannt",
-        "da": "Batterifejl opdaget"
+        "da": "Batterifejl opdaget",
+        "fr": "Erreur batterie détectée",
+        "sv": "Batterifel detekterat",
+        "no": "Batterifeil oppdaget",
+        "fi": "Akkuvirhe havaittu",
+        "hu": "Akkumulátor hiba észlelve"
       },
       "args": []
     },
@@ -127,7 +202,12 @@
       "title": {
         "en": "Battery group state changed",
         "de": "Batteriegruppe Zustand geändert",
-        "da": "Batteri gruppe tilstand ændret"
+        "da": "Batteri gruppe tilstand ændret",
+        "fr": "État du groupe de batteries modifié",
+        "sv": "Batterigrupptillstånd ändrat",
+        "no": "Batterigrupptilstand endret",
+        "fi": "Akkuryhmän tila muuttui",
+        "hu": "Akkucsoport állapot változott"
       }
     },
     {
@@ -136,7 +216,12 @@
         "en": "Peak / Normal Tariff changed",
         "nl": "Dal / Normaal Tarief veranderd",
         "de": "Hoch-/Normaltarif geändert",
-        "da": "Høj-/Normaltarif ændret"
+        "da": "Høj-/Normaltarif ændret",
+        "fr": "Tarif pointe/normal modifié",
+        "sv": "Hög-/normaltariff ändrad",
+        "no": "Topp-/normaltariff endret",
+        "fi": "Huippu-/normaalitariffi muuttui",
+        "hu": "Csúcs/normál tarifa változott"
       },
       "args": [],
       "tokens": [
@@ -147,7 +232,12 @@
             "en": "tariff",
             "nl": "tarief",
             "de": "Tarif",
-            "da": "Tarif"
+            "da": "Tarif",
+            "fr": "tarif",
+            "sv": "tariff",
+            "no": "tariff",
+            "fi": "tariffi",
+            "hu": "tarifa"
           },
           "example": 1
         }
@@ -159,7 +249,12 @@
         "en": "Total used changed",
         "nl": "Som gebruik veranderd",
         "de": "Gesamtbezug geändert",
-        "da": "Samlet forbrug ændret"
+        "da": "Samlet forbrug ændret",
+        "fr": "Total utilisé modifié",
+        "sv": "Totalt förbrukat ändrat",
+        "no": "Totalt forbrukt endret",
+        "fi": "Kokonaiskulutus muuttui",
+        "hu": "Összes felhasznált változott"
       },
       "args": [],
       "tokens": [
@@ -170,7 +265,12 @@
             "en": "import",
             "nl": "import",
             "de": "Bezug",
-            "da": "Import"
+            "da": "Import",
+            "fr": "import",
+            "sv": "import",
+            "no": "import",
+            "fi": "tuonti",
+            "hu": "import"
           },
           "example": 1
         }
@@ -182,7 +282,12 @@
         "en": "Total delivered changed",
         "nl": "Som teruglevering veranderd",
         "de": "Gesamteinspeisung geändert",
-        "da": "Samlet levering ændret"
+        "da": "Samlet levering ændret",
+        "fr": "Total injecté modifié",
+        "sv": "Totalt inmatat ändrat",
+        "no": "Totalt innmatet endret",
+        "fi": "Kokonaisinjektio muuttui",
+        "hu": "Összes visszatáplált változott"
       },
       "args": [],
       "tokens": [
@@ -193,7 +298,12 @@
             "en": "export",
             "nl": "export",
             "de": "Einspeisung",
-            "da": "Eksport"
+            "da": "Eksport",
+            "fr": "export",
+            "sv": "export",
+            "no": "eksport",
+            "fi": "vienti",
+            "hu": "export"
           },
           "example": 1
         }
@@ -205,13 +315,23 @@
         "en": "Voltage sag detected",
         "nl": "Spanningsdip gedetecteerd",
         "de": "Spannungseinbruch erkannt",
-        "da": "Spændingsdyk opdaget"
+        "da": "Spændingsdyk opdaget",
+        "fr": "Creux de tension détecté",
+        "sv": "Spänningsdipp detekterat",
+        "no": "Spenningsdyk oppdaget",
+        "fi": "Jännitteen notkahdus havaittu",
+        "hu": "Feszültségesés észlelve"
       },
       "hint": {
         "en": "Triggers when a voltage sag (dip) is detected on any phase",
         "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase",
         "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
-        "da": "Udløses når et spændingsdyk registreres på en fase"
+        "da": "Udløses når et spændingsdyk registreres på en fase",
+        "fr": "Se déclenche lors d'un creux de tension sur une phase",
+        "sv": "Utlöses vid spänningsdipp på någon fas",
+        "no": "Utløses ved spenningsdyk på en fase",
+        "fi": "Käynnistyy kun jännitteen lasku (notkahdus) havaitaan millä tahansa vaiheella",
+        "hu": "Feszültségesés (mélyedés) észlelésekor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -222,7 +342,12 @@
             "en": "Phase",
             "nl": "Fase",
             "de": "Phase",
-            "da": "Fase"
+            "da": "Fase",
+            "fr": "Phase",
+            "sv": "Fas",
+            "no": "Fase",
+            "fi": "Vaihe",
+            "hu": "Fázis"
           },
           "example": "L1"
         },
@@ -233,7 +358,12 @@
             "en": "Total count",
             "nl": "Totaal aantal",
             "de": "Gesamtanzahl",
-            "da": "Samlet antal"
+            "da": "Samlet antal",
+            "fr": "Nombre total",
+            "sv": "Totalt antal",
+            "no": "Totalt antall",
+            "fi": "Yhteensä määrä",
+            "hu": "Összes darab"
           },
           "example": 1
         }
@@ -245,13 +375,23 @@
         "en": "Voltage swell detected",
         "nl": "Spanningspiek gedetecteerd",
         "de": "Spannungsüberhöhung erkannt",
-        "da": "Spændingsstigning opdaget"
+        "da": "Spændingsstigning opdaget",
+        "fr": "Surtension détectée",
+        "sv": "Spänningssväll detekterat",
+        "no": "Spenningsstige oppdaget",
+        "fi": "Jännitteen nousu havaittu",
+        "hu": "Feszültségnövekedés észlelve"
       },
       "hint": {
         "en": "Triggers when a voltage swell (surge) is detected on any phase",
         "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase",
         "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
-        "da": "Udløses når en spændingsstigning registreres på en fase"
+        "da": "Udløses når en spændingsstigning registreres på en fase",
+        "fr": "Se déclenche lors d'une surtension sur une phase",
+        "sv": "Utlöses vid spänningssväll på någon fas",
+        "no": "Utløses ved spenningsstige på en fase",
+        "fi": "Käynnistyy kun jännitteen nousu (piikki) havaitaan millä tahansa vaiheella",
+        "hu": "Feszültségcsúcs észlelésekor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -262,7 +402,12 @@
             "en": "Phase",
             "nl": "Fase",
             "de": "Phase",
-            "da": "Fase"
+            "da": "Fase",
+            "fr": "Phase",
+            "sv": "Fas",
+            "no": "Fase",
+            "fi": "Vaihe",
+            "hu": "Fázis"
           },
           "example": "L1"
         },
@@ -273,7 +418,12 @@
             "en": "Total count",
             "nl": "Totaal aantal",
             "de": "Gesamtanzahl",
-            "da": "Samlet antal"
+            "da": "Samlet antal",
+            "fr": "Nombre total",
+            "sv": "Totalt antal",
+            "no": "Totalt antall",
+            "fi": "Yhteensä määrä",
+            "hu": "Összes darab"
           },
           "example": 1
         }
@@ -285,13 +435,23 @@
         "en": "Long power failure detected",
         "nl": "Lange stroomuitval gedetecteerd",
         "de": "Langer Stromausfall erkannt",
-        "da": "Lang strømafbrydelse opdaget"
+        "da": "Lang strømafbrydelse opdaget",
+        "fr": "Panne longue détectée",
+        "sv": "Lång strömavbrott detekterat",
+        "no": "Lang strømsvikt oppdaget",
+        "fi": "Pitkä sähkökatko havaittu",
+        "hu": "Hosszú áramkimaradás észlelve"
       },
       "hint": {
         "en": "Triggers when a long power failure is detected (>1 minute)",
         "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)",
         "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird (>1 Minute)",
-        "da": "Udløses når en lang strømafbrydelse registreres (>1 minut)"
+        "da": "Udløses når en lang strømafbrydelse registreres (>1 minut)",
+        "fr": "Se déclenche lors d'une panne >1 minute",
+        "sv": "Utlöses vid strömavbrott längre än 1 minut",
+        "no": "Utløses ved strømbrudd lengre enn 1 minutt",
+        "fi": "Käynnistyy kun sähkökatko kestää yli 1 minuutin",
+        "hu": "1 percnél hosszabb áramkimaradáskor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -302,7 +462,12 @@
             "en": "Total count",
             "nl": "Totaal aantal",
             "de": "Gesamtanzahl",
-            "da": "Samlet antal"
+            "da": "Samlet antal",
+            "fr": "Nombre total",
+            "sv": "Totalt antal",
+            "no": "Totalt antall",
+            "fi": "Yhteensä määrä",
+            "hu": "Összes darab"
           },
           "example": 1
         }
@@ -314,13 +479,23 @@
         "en": "Voltage restored to normal",
         "nl": "Spanning hersteld naar normaal",
         "de": "Spannung wieder normal",
-        "da": "Spænding genoprettet til normalt"
+        "da": "Spænding genoprettet til normalt",
+        "fr": "Tension revenue à la normale",
+        "sv": "Spänning återställd till normal",
+        "no": "Spenning tilbake til normal",
+        "fi": "Jännite palautunut normaaliksi",
+        "hu": "Feszültség visszaállt normálra"
       },
       "hint": {
         "en": "Triggers when voltage returns to normal range after a sag or swell",
         "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
         "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
-        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning"
+        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning",
+        "fr": "Se déclenche quand la tension revient à la normale",
+        "sv": "Utlöses när spänningen återvänder till normalt område",
+        "no": "Utløses når spenning returnerer til normalt område",
+        "fi": "Käynnistyy kun jännite palaa normaalialueelle notkahduksen tai nousun jälkeen",
+        "hu": "A feszültség normalizálódásakor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -331,7 +506,12 @@
             "en": "Phase",
             "nl": "Fase",
             "de": "Phase",
-            "da": "Fase"
+            "da": "Fase",
+            "fr": "Phase",
+            "sv": "Fas",
+            "no": "Fase",
+            "fi": "Vaihe",
+            "hu": "Fázis"
           },
           "example": "L1"
         },
@@ -342,7 +522,12 @@
             "en": "Voltage (V)",
             "nl": "Spanning (V)",
             "de": "Spannung (V)",
-            "da": "Spænding (V)"
+            "da": "Spænding (V)",
+            "fr": "Tension (V)",
+            "sv": "Spänning (V)",
+            "no": "Spenning (V)",
+            "fi": "Jännite (V)",
+            "hu": "Feszültség (V)"
           },
           "example": 230
         }
@@ -354,13 +539,23 @@
         "en": "Power restored",
         "nl": "Stroom hersteld",
         "de": "Strom wiederhergestellt",
-        "da": "Strøm genoprettet"
+        "da": "Strøm genoprettet",
+        "fr": "Alimentation rétablie",
+        "sv": "Ström återställd",
+        "no": "Strøm gjenopprettet",
+        "fi": "Virta palautettu",
+        "hu": "Áramellátás visszaállt"
       },
       "hint": {
         "en": "Triggers when power is restored after being offline",
         "nl": "Triggert wanneer stroom is hersteld na een uitval",
         "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
-        "da": "Udløses når strøm gendannes efter en afbrydelse"
+        "da": "Udløses når strøm gendannes efter en afbrydelse",
+        "fr": "Se déclenche quand l'alimentation est rétablie",
+        "sv": "Utlöses när strömmen återställs efter att ha varit offline",
+        "no": "Utløses når strøm er gjenopprettet etter frakobling",
+        "fi": "Käynnistyy kun virransyöttö palautuu katkon jälkeen",
+        "hu": "Az áramellátás visszaállításakor aktiválódik"
       },
       "args": [],
       "tokens": [
@@ -371,7 +566,12 @@
             "en": "Offline duration (seconds)",
             "nl": "Offline duur (seconden)",
             "de": "Ausfallzeit (Sekunden)",
-            "da": "Offline varighed (sekunder)"
+            "da": "Offline varighed (sekunder)",
+            "fr": "Durée hors ligne (secondes)",
+            "sv": "Offlinesida (sekunder)",
+            "no": "Frakoblet varighet (sekunder)",
+            "fi": "Offline-kesto (sekunnit)",
+            "hu": "Offline időtartam (másodperc)"
           },
           "example": 120
         }

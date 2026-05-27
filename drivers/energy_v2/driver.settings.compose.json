@@ -7,7 +7,12 @@
       "en": "Plugin Battery mode",
       "nl": "Plugin‑batterijmodus",
       "de": "Plugin-Batteriemodus",
-      "da": "Plugin-batteritilstand"
+      "da": "Plugin-batteritilstand",
+      "fr": "Mode batterie plugin",
+      "sv": "Plugin-batteriläge",
+      "no": "Plugin-batterimodus",
+      "fi": "Plugin-akkutila",
+      "hu": "Plugin akkumód"
     },
     "values": [
       {
@@ -16,7 +21,12 @@
           "en": "Zero mode",
           "nl": "Nul op de meter",
           "de": "Nulleinspeisung",
-          "da": "Nul på måleren"
+          "da": "Nul på måleren",
+          "fr": "Mode zéro",
+          "sv": "Nollläge",
+          "no": "Nullmodus",
+          "fi": "Nollatila",
+          "hu": "Nulla mód"
         }
       },
       {
@@ -25,7 +35,12 @@
           "en": "Full charge",
           "nl": "Volledig opladen",
           "de": "Vollladung",
-          "da": "Fuld opladning"
+          "da": "Fuld opladning",
+          "fr": "Charge complète",
+          "sv": "Fulladdning",
+          "no": "Full lading",
+          "fi": "Täysi lataus",
+          "hu": "Teljes töltés"
         }
       },
       {
@@ -34,7 +49,12 @@
           "en": "Standby",
           "nl": "Stand‑by",
           "de": "Standby",
-          "da": "Standby"
+          "da": "Standby",
+          "fr": "Veille",
+          "sv": "Standby",
+          "no": "Standby",
+          "fi": "Valmiustila",
+          "hu": "Készenlét"
         }
       },
       {
@@ -43,7 +63,12 @@
           "en": "Zero mode, Charge allowed",
           "nl": "Nul op de meter, laden toegestaan",
           "de": "Nulleinspeisung, Laden erlaubt",
-          "da": "Nul på måleren, opladning tilladt"
+          "da": "Nul på måleren, opladning tilladt",
+          "fr": "Mode zéro, charge autorisée",
+          "sv": "Nollläge, laddning tillåten",
+          "no": "Nullmodus, lading tillatt",
+          "fi": "Nollatila, lataus sallittu",
+          "hu": "Nulla mód, töltés engedélyezve"
         }
       },
       {
@@ -52,7 +77,12 @@
           "en": "Zero mode, Discharge allowed",
           "nl": "Nul op de meter, ontladen toegestaan",
           "de": "Nulleinspeisung, Entladen erlaubt",
-          "da": "Nul på måleren, afladning tilladt"
+          "da": "Nul på måleren, afladning tilladt",
+          "fr": "Mode zéro, décharge autorisée",
+          "sv": "Nollläge, urladdning tillåten",
+          "no": "Nullmodus, utlading tillatt",
+          "fi": "Nollatila, purkaus sallittu",
+          "hu": "Nulla mód, töltésleadás engedélyezve"
         }
       },
       {
@@ -61,7 +91,12 @@
           "en": "Predictive (HW Smart Charging)",
           "nl": "Slim laden (HomeWizard)",
           "de": "Prädiktiv (HW Smart Charging)",
-          "da": "Prædiktiv (HW Smart Opladning)"
+          "da": "Prædiktiv (HW Smart Opladning)",
+          "fr": "Prédictif (HW Smart Charging)",
+          "sv": "Prediktiv (HW Smart Charging)",
+          "no": "Prediktiv (HW Smart Charging)",
+          "fi": "Ennakoiva (HW Smart Charging)",
+          "hu": "Prediktív (HW Smart Charging)"
         }
       }
     ]
@@ -72,14 +107,24 @@
     "label": {
       "en": "Polling interval",
       "de": "Abfrageintervall",
-      "da": "Afspøringsinterval"
+      "da": "Afspøringsinterval",
+      "fr": "Intervalle d'interrogation",
+      "sv": "Uppfrågningsintervall",
+      "no": "Avspørringsintervall",
+      "fi": "Kyselyväli",
+      "hu": "Lekérdezési időköz"
     },
     "value": 10,
     "min": 1,
     "unit": {
       "en": "s",
       "de": "s",
-      "da": "s"
+      "da": "s",
+      "fr": "s",
+      "sv": "s",
+      "no": "s",
+      "fi": "s",
+      "hu": "mp"
     }
   },
   {
@@ -89,14 +134,24 @@
       "en": "Grid phase Amps",
       "nl": "Net fase aansluiting",
       "de": "Netzphase Ampere",
-      "da": "Netfase Ampere"
+      "da": "Netfase Ampere",
+      "fr": "Ampérage phase réseau",
+      "sv": "Nätfas ampere",
+      "no": "Nettfase ampere",
+      "fi": "Verkkofaasin virta",
+      "hu": "Hálózati fázis ampere"
     },
     "value": 40,
     "unit": {
       "en": "A",
       "nl": "A",
       "de": "A",
-      "da": "A"
+      "da": "A",
+      "fr": "A",
+      "sv": "A",
+      "no": "A",
+      "fi": "A",
+      "hu": "A"
     }
   },
   {
@@ -106,7 +161,12 @@
       "en": "Cloud connection 1=on 0=off",
       "nl": "Cloud verbinding 1=actief 0=uit",
       "de": "Cloud-Verbindung 1=ein 0=aus",
-      "da": "Sky-forbindelse 1=til 0=fra"
+      "da": "Sky-forbindelse 1=til 0=fra",
+      "fr": "Connexion cloud 1=activé 0=désactivé",
+      "sv": "Molnanslutning 1=på 0=av",
+      "no": "Skytilkobling 1=på 0=av",
+      "fi": "Pilviyhteystila 1=päällä 0=pois",
+      "hu": "Felhőkapcsolat 1=be 0=ki"
     },
     "value": 1
   },
@@ -117,7 +177,12 @@
       "en": "url",
       "nl": "url",
       "de": "url",
-      "da": "url"
+      "da": "url",
+      "fr": "url",
+      "sv": "url",
+      "no": "url",
+      "fi": "url",
+      "hu": "url"
     }
   },
   {
@@ -127,7 +192,12 @@
       "en": "Use polling instead of WebSocket",
       "nl": "Gebruik polling in plaats van WebSocket",
       "de": "Abfrage statt WebSocket verwenden",
-      "da": "Brug polling i stedet for WebSocket"
+      "da": "Brug polling i stedet for WebSocket",
+      "fr": "Utiliser l'interrogation au lieu du WebSocket",
+      "sv": "Använd avfråga istället för WebSocket",
+      "no": "Bruk avspørring i stedet for WebSocket",
+      "fi": "Käytä kyselyä WebSocketin sijaan",
+      "hu": "Lekérdezés használata WebSocket helyett"
     },
     "value": true
   },
@@ -138,13 +208,23 @@
       "en": "WebSocket update interval (seconds)",
       "nl": "WebSocket update interval (seconden)",
       "de": "WebSocket-Aktualisierungsintervall (Sekunden)",
-      "da": "WebSocket opdateringsinterval (sekunder)"
+      "da": "WebSocket opdateringsinterval (sekunder)",
+      "fr": "Intervalle de mise à jour WebSocket (secondes)",
+      "sv": "WebSocket-uppdateringsintervall (sekunder)",
+      "no": "WebSocket-oppdateringsintervall (sekunder)",
+      "fi": "WebSocket-päivitysväli (sekunnit)",
+      "hu": "WebSocket frissítési időköz (másodperc)"
     },
     "hint": {
       "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
       "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2.",
       "de": "Wie oft Messungen über WebSocket verarbeitet werden. Auf 3 oder 4 erhöhen bei älteren Homey Geräten, um die CPU-Last zu reduzieren. Standard: 2.",
-      "da": "Hvor ofte målinger behandles fra WebSocket. Øg til 3 eller 4 på ældre Homey-enheder for at reducere CPU-belastningen. Standard: 2."
+      "da": "Hvor ofte målinger behandles fra WebSocket. Øg til 3 eller 4 på ældre Homey-enheder for at reducere CPU-belastningen. Standard: 2.",
+      "fr": "Fréquence de traitement des mesures depuis le WebSocket. Augmenter à 3 ou 4 sur les appareils Homey plus anciens ou plus lents pour réduire la charge CPU. Par défaut : 2.",
+      "sv": "Hur ofta mätningar bearbetas från WebSocket. Öka till 3 eller 4 på äldre eller långsammare Homey-enheter för att minska CPU-belastningen. Standard: 2.",
+      "no": "Hvor ofte målinger behandles fra WebSocket. Øk til 3 eller 4 på eldre eller tregere Homey-enheter for å redusere CPU-belastningen. Standard: 2.",
+      "fi": "Kuinka usein mittauksia käsitellään WebSocketista. Lisää 3 tai 4:ään vanhemmilla tai hitaammilla Homey-laitteilla CPU-kuorman vähentämiseksi. Oletus: 2.",
+      "hu": "Milyen gyakran dolgozzuk fel a méréseket a WebSocketből. Növelje 3-ra vagy 4-re régebbi vagy lassabb Homey eszközökön a CPU-terhelés csökkentéséhez. Alapértelmezett: 2."
     },
     "value": 2,
     "min": 2,
@@ -158,7 +238,12 @@
       "en": "Show gas meter",
       "nl": "Gas meter weergeven",
       "de": "Gaszähler anzeigen",
-      "da": "Vis gasmåler"
+      "da": "Vis gasmåler",
+      "fr": "Afficher le compteur de gaz",
+      "sv": "Visa gasmätare",
+      "no": "Vis gassmåler",
+      "fi": "Näytä kaasumittari",
+      "hu": "Gázmérő megjelenítése"
     },
     "value": true
   },
@@ -169,7 +254,12 @@
       "en": "Enable baseload notifications",
       "nl": "Sluipverbruik meldingen inschakelen",
       "de": "Grundlast-Benachrichtigungen aktivieren",
-      "da": "Aktiver grundbelastningsnotifikationer"
+      "da": "Aktiver grundbelastningsnotifikationer",
+      "fr": "Activer les notifications de charge de base",
+      "sv": "Aktivera basbelastningsaviseringar",
+      "no": "Aktiver grunnlastmeldinger",
+      "fi": "Ota perustaakan ilmoitukset käyttöön",
+      "hu": "Alapterhelés értesítések engedélyezése"
     },
     "value": true
   },
@@ -180,7 +270,12 @@
       "en": "Phase overload notifications",
       "nl": "Fase-overbelasting meldingen",
       "de": "Phasenüberlastungs-Benachrichtigungen",
-      "da": "Fase-overbelastningsnotifikationer"
+      "da": "Fase-overbelastningsnotifikationer",
+      "fr": "Notifications de surcharge de phase",
+      "sv": "Fas överlastmeddelanden",
+      "no": "Fase overbelastningsmeldinger",
+      "fi": "Faasin ylikuormitusilmoitukset",
+      "hu": "Fázis túlterhelési értesítések"
     },
     "value": true
   },
@@ -191,14 +286,24 @@
       "en": "Enable debug logging",
       "nl": "Debug logging inschakelen",
       "de": "Debug-Protokollierung aktivieren",
-      "da": "Aktiver fejlretningslogning"
+      "da": "Aktiver fejlretningslogning",
+      "fr": "Activer la journalisation de débogage",
+      "sv": "Aktivera felsökningsloggning",
+      "no": "Aktiver feilsøkingslogging",
+      "fi": "Ota virheenkorjausloki käyttöön",
+      "hu": "Hibakeresési napló engedélyezése"
     },
     "value": false,
     "hint": {
       "en": "Enables verbose logging for WebSocket and battery events. Disable after debugging to reduce CPU load.",
       "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen.",
       "de": "Aktiviert detaillierte Protokollierung für WebSocket- und Batterie-Ereignisse. Nach dem Debuggen deaktivieren, um CPU-Last zu reduzieren.",
-      "da": "Aktiverer detaljeret logning for WebSocket- og batterihændelser. Deaktiver efter fejlretning for at reducere CPU-belastningen."
+      "da": "Aktiverer detaljeret logning for WebSocket- og batterihændelser. Deaktiver efter fejlretning for at reducere CPU-belastningen.",
+      "fr": "Active la journalisation détaillée pour les événements WebSocket et batterie. Désactiver après le débogage pour réduire la charge CPU.",
+      "sv": "Aktiverar utförlig loggning för WebSocket- och batterihändelser. Inaktivera efter felsökning för att minska CPU-belastningen.",
+      "no": "Aktiverer detaljert logging for WebSocket- og batterihendelser. Deaktiver etter feilsøking for å redusere CPU-belastningen.",
+      "fi": "Ottaa käyttöön yksityiskohtaisen kirjaamisen WebSocket- ja akkutapahtumille. Poista käytöstä virheenkorjauksen jälkeen CPU-kuorman vähentämiseksi.",
+      "hu": "Részletes naplózást engedélyez WebSocket és akkumulátor eseményekhez. Kapcsolja ki a hibakeresés után a CPU-terhelés csökkentéséhez."
     }
   }
 ]

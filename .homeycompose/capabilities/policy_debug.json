@@ -5,13 +5,23 @@
     "en": "Policy Debug",
     "nl": "Policy Debug",
     "de": "Richtlinien-Debug",
-    "da": "Politik-debug"
+    "da": "Politik-debug",
+    "fr": "Débogage politique",
+    "sv": "Policy-debug",
+    "no": "Politikk-debug",
+    "fi": "Politiikkavirheenkorjaus",
+    "hu": "Irányvonal hibakeresés"
   },
   "desc": {
     "en": "Current tariff and weather inputs used by the policy engine",
     "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine",
     "de": "Aktuelle Tarif- und Wettereingaben für die Richtlinien-Engine",
-    "da": "Aktuelle tarif- og vejrinput brugt af politik-motoren"
+    "da": "Aktuelle tarif- og vejrinput brugt af politik-motoren",
+    "fr": "Tarif actuel et données météo utilisés par le moteur de politique",
+    "sv": "Aktuella tariff- och väderdata använda av policy-motorn",
+    "no": "Gjeldende tariff- og værinnganger brukt av politikkmotoren",
+    "fi": "Politiikkamoottorin käyttämät tariffin ja sään syötteet",
+    "hu": "Az irányvonal motor által használt tarifa és időjárás adatok"
   },
   "getable": true,
   "setable": false,

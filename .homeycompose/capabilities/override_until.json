@@ -4,13 +4,23 @@
     "en": "Override Until",
     "nl": "Overschrijven Tot",
     "de": "Überschreiben bis",
-    "da": "Tilsidesat indtil"
+    "da": "Tilsidesat indtil",
+    "fr": "Remplacer jusqu'à",
+    "sv": "Åsidosätt till",
+    "no": "Overstyr til",
+    "fi": "Ohita asti",
+    "hu": "Felülírás eddig"
   },
   "desc": {
     "en": "Manual override expiry time",
     "nl": "Handmatige overschrijving vervaltijd",
     "de": "Ablaufzeit der manuellen Überschreibung",
-    "da": "Udløbstid for manuel tilsidesættelse"
+    "da": "Udløbstid for manuel tilsidesættelse",
+    "fr": "Heure d'expiration du remplacement manuel",
+    "sv": "Manuell åsidosättning utgångstid",
+    "no": "Utløpstid for manuell overstyring",
+    "fi": "Manuaalisen ohituksen vanhenemisaika",
+    "hu": "Manuális felülírás lejárati ideje"
   },
   "getable": true,
   "setable": false,

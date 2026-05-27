@@ -5,13 +5,23 @@
     "en": "Policy Price",
     "nl": "Policy Prijs",
     "de": "Richtlinienpreis",
-    "da": "Politikpris"
+    "da": "Politikpris",
+    "fr": "Prix de la politique",
+    "sv": "Policy-pris",
+    "no": "Politikk-pris",
+    "fi": "Politiikan hinta",
+    "hu": "Irányvonal ár"
   },
   "desc": {
     "en": "Current DAP price and rate bucket",
     "nl": "Huidige DAP-prijs en tariefcategorie",
     "de": "Aktueller DAP-Preis und Tarifklasse",
-    "da": "Aktuel DAP-pris og takstgruppe"
+    "da": "Aktuel DAP-pris og takstgruppe",
+    "fr": "Prix DAP actuel et catégorie de tarif",
+    "sv": "Aktuellt DAP-pris och tariffkategori",
+    "no": "Gjeldende DAP-pris og takstgruppe",
+    "fi": "Nykyinen DAP-hinta ja hintaluokka",
+    "hu": "Aktuális DAP-ár és tarifacsalád"
   },
   "getable": true,
   "setable": false,

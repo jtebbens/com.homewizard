@@ -4,19 +4,34 @@
     "en": "Phase 2 load",
     "nl": "Fase 2 belasting",
     "de": "Last Phase 2",
-    "da": "Belastning fase 2"
+    "da": "Belastning fase 2",
+    "fr": "Charge phase 2",
+    "sv": "Last fas 2",
+    "no": "Last fase 2",
+    "fi": "Vaiheen 2 kuorma",
+    "hu": "2. fázis terhelés"
   },
   "titleFormatted": {
     "en": "Phase 2 load",
     "nl": "Fase 2 belasting",
     "de": "Last Phase 2",
-    "da": "Belastning fase 2"
+    "da": "Belastning fase 2",
+    "fr": "Charge phase 2",
+    "sv": "Last fas 2",
+    "no": "Last fase 2",
+    "fi": "Vaiheen 2 kuorma",
+    "hu": "2. fázis terhelés"
   },
   "desc": {
     "en": "Phase 2 load",
     "nl": "Fase 2 belasting",
     "de": "Last Phase 2",
-    "da": "Belastning fase 2"
+    "da": "Belastning fase 2",
+    "fr": "Charge phase 2",
+    "sv": "Last fas 2",
+    "no": "Last fase 2",
+    "fi": "Vaiheen 2 kuorma",
+    "hu": "2. fázis terhelés"
   },
   "min": 0,
   "max": 100,
@@ -31,7 +46,12 @@
     "en": "A",
     "nl": "A",
     "de": "A",
-    "da": "A"
+    "da": "A",
+    "fr": "A",
+    "sv": "A",
+    "no": "A",
+    "fi": "A",
+    "hu": "A"
   },
   "icon": "assets/icon.svg"
 }

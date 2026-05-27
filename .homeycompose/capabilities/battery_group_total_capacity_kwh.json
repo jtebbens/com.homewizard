@@ -3,12 +3,22 @@
   "title": {
     "en": "Battery Group Total Capacity",
     "de": "Gesamtkapazität der Gruppe",
-    "da": "Gruppens samlede kapacitet"
+    "da": "Gruppens samlede kapacitet",
+    "fr": "Capacité totale du groupe",
+    "sv": "Gruppens totala kapacitet",
+    "no": "Gruppens totale kapasitet",
+    "fi": "Akkuryhmän kokonaiskapasiteetti",
+    "hu": "Akkucsoport teljes kapacitás"
   },
   "units": {
     "en": "kWh",
     "de": "kWh",
-    "da": "kWh"
+    "da": "kWh",
+    "fr": "kWh",
+    "sv": "kWh",
+    "no": "kWh",
+    "fi": "kWh",
+    "hu": "kWh"
   },
   "getable": true,
   "setable": false,

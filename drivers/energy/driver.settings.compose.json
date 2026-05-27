@@ -5,14 +5,24 @@
     "label": {
       "en": "Polling interval",
       "de": "Abfrageintervall",
-      "da": "Afspøringsinterval"
+      "da": "Afspøringsinterval",
+      "fr": "Intervalle d'interrogation",
+      "sv": "Uppfrågningsintervall",
+      "no": "Avspørringsintervall",
+      "fi": "Kyselyväli",
+      "hu": "Lekérdezési időköz"
     },
     "value": 10,
     "min": 1,
     "unit": {
       "en": "s",
       "de": "s",
-      "da": "s"
+      "da": "s",
+      "fr": "s",
+      "sv": "s",
+      "no": "s",
+      "fi": "s",
+      "hu": "mp"
     }
   },
   {
@@ -22,7 +32,12 @@
       "en": "Amount of phase(s)",
       "nl": "Aantal fase(s)",
       "de": "Anzahl der Phase(n)",
-      "da": "Antal fase(r)"
+      "da": "Antal fase(r)",
+      "fr": "Nombre de phase(s)",
+      "sv": "Antal fas(er)",
+      "no": "Antall fase(r)",
+      "fi": "Vaiheiden määrä",
+      "hu": "Fázisok száma"
     },
     "value": 1
   },
@@ -33,13 +48,23 @@
       "en": "Phase capacity A",
       "nl": "Fase capaciteit A",
       "de": "Phasenkapazität A",
-      "da": "Fasekapacitet A"
+      "da": "Fasekapacitet A",
+      "fr": "Capacité de phase A",
+      "sv": "Faskapacitet A",
+      "no": "Fasekapasitet A",
+      "fi": "Vaiheen kapasiteetti A",
+      "hu": "Fázis kapacitás A"
     },
     "value": 40,
     "unit": {
       "en": "A",
       "de": "A",
-      "da": "A"
+      "da": "A",
+      "fr": "A",
+      "sv": "A",
+      "no": "A",
+      "fi": "A",
+      "hu": "A"
     }
   },
   {
@@ -49,7 +74,12 @@
       "en": "Cloud connection 1=on 0=off",
       "nl": "Cloud verbinding 1=actief 0=uit",
       "de": "Cloud-Verbindung 1=ein 0=aus",
-      "da": "Sky-forbindelse 1=til 0=fra"
+      "da": "Sky-forbindelse 1=til 0=fra",
+      "fr": "Connexion cloud 1=activé 0=désactivé",
+      "sv": "Molnanslutning 1=på 0=av",
+      "no": "Skytilkobling 1=på 0=av",
+      "fi": "Pilviyhteystila 1=päällä 0=pois",
+      "hu": "Felhőkapcsolat 1=be 0=ki"
     },
     "value": 1
   },
@@ -60,7 +90,12 @@
       "en": "url",
       "nl": "url",
       "de": "url",
-      "da": "url"
+      "da": "url",
+      "fr": "url",
+      "sv": "url",
+      "no": "url",
+      "fi": "url",
+      "hu": "url"
     }
   },
   {
@@ -70,7 +105,12 @@
       "en": "Show gas meter",
       "nl": "Gas meter weergeven",
       "de": "Gaszähler anzeigen",
-      "da": "Vis gasmåler"
+      "da": "Vis gasmåler",
+      "fr": "Afficher le compteur de gaz",
+      "sv": "Visa gasmätare",
+      "no": "Vis gassmåler",
+      "fi": "Näytä kaasumittari",
+      "hu": "Gázmérő megjelenítése"
     },
     "value": true
   },
@@ -81,7 +121,12 @@
       "en": "Enable baseload notifications",
       "nl": "Sluipverbruik meldingen inschakelen",
       "de": "Grundlast-Benachrichtigungen aktivieren",
-      "da": "Aktiver grundbelastningsnotifikationer"
+      "da": "Aktiver grundbelastningsnotifikationer",
+      "fr": "Activer les notifications de charge de base",
+      "sv": "Aktivera basbelastningsaviseringar",
+      "no": "Aktiver grunnlastmeldinger",
+      "fi": "Ota perustaakan ilmoitukset käyttöön",
+      "hu": "Alapterhelés értesítések engedélyezése"
     },
     "value": true
   },
@@ -92,7 +137,12 @@
       "en": "Phase overload notifications",
       "nl": "Fase-overbelasting meldingen",
       "de": "Phasenüberlastungs-Benachrichtigungen",
-      "da": "Fase-overbelastningsnotifikationer"
+      "da": "Fase-overbelastningsnotifikationer",
+      "fr": "Notifications de surcharge de phase",
+      "sv": "Fas överlastmeddelanden",
+      "no": "Fase overbelastningsmeldinger",
+      "fi": "Faasin ylikuormitusilmoitukset",
+      "hu": "Fázis túlterhelési értesítések"
     },
     "value": true
   },
@@ -103,7 +153,12 @@
       "en": "Phase overload warning threshold (%)",
       "nl": "Fase overbelasting waarschuwing (%)",
       "de": "Phasenüberlastung Warnschwelle (%)",
-      "da": "Fase-overbelastning advarselsgrænse (%)"
+      "da": "Fase-overbelastning advarselsgrænse (%)",
+      "fr": "Seuil d'avertissement de surcharge de phase (%)",
+      "sv": "Fasöverbelastningsvarningsgräns (%)",
+      "no": "Fasoverbelastningsadvarselsterskel (%)",
+      "fi": "Faasin ylikuormitusvaroituksen kynnys (%)",
+      "hu": "Fázis túlterhelési figyelmeztetési küszöb (%)"
     },
     "value": 97,
     "min": 50,
@@ -117,7 +172,12 @@
       "en": "Phase overload reset threshold (%)",
       "nl": "Fase overbelasting reset (%)",
       "de": "Phasenüberlastung Reset-Schwelle (%)",
-      "da": "Fase-overbelastning nulstillingsgrænse (%)"
+      "da": "Fase-overbelastning nulstillingsgrænse (%)",
+      "fr": "Seuil de réinitialisation de surcharge de phase (%)",
+      "sv": "Fasöverbelastningsåterställningsgräns (%)",
+      "no": "Fasoverbelastningsresetterskel (%)",
+      "fi": "Faasin ylikuormituksen nollauskynnys (%)",
+      "hu": "Fázis túlterhelési visszaállítási küszöb (%)"
     },
     "value": 85,
     "min": 20,

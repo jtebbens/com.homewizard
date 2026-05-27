@@ -4,13 +4,23 @@
     "en": "Recommended Mode",
     "nl": "Aanbevolen Modus",
     "de": "Empfohlener Modus",
-    "da": "Anbefalet tilstand"
+    "da": "Anbefalet tilstand",
+    "fr": "Mode recommandé",
+    "sv": "Rekommenderat läge",
+    "no": "Anbefalt modus",
+    "fi": "Suositeltu tila",
+    "hu": "Ajánlott mód"
   },
   "desc": {
     "en": "Current battery mode recommendation",
     "nl": "Huidige batterij modus aanbeveling",
     "de": "Aktuelle Batteriemodus-Empfehlung",
-    "da": "Aktuel batterimodusanbefaling"
+    "da": "Aktuel batterimodusanbefaling",
+    "fr": "Recommandation de mode batterie actuel",
+    "sv": "Aktuell batterilägerekommendation",
+    "no": "Aktuell batterimodusanbefaling",
+    "fi": "Nykyinen akkutilan suositus",
+    "hu": "Aktuális akkumód ajánlás"
   },
   "getable": true,
   "setable": false,

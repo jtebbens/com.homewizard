@@ -4,7 +4,12 @@
     "en": "Battery Group Average SoC",
     "nl": "Batterij Groep Lading",
     "de": "Durchschn. Gruppen-SoC",
-    "da": "Gns. gruppe-SoC"
+    "da": "Gns. gruppe-SoC",
+    "fr": "SoC moyen du groupe",
+    "sv": "Genomsnittligt grupp-SoC",
+    "no": "Gjennomsnittlig gruppe-SoC",
+    "fi": "Akkuryhmän keski-SoC",
+    "hu": "Akkucsoport átlagos SoC"
   },
   "getable": true,
   "setable": false,
@@ -15,6 +20,11 @@
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   }
 }

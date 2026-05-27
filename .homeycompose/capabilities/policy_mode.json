@@ -5,7 +5,12 @@
     "en": "Policy Mode",
     "nl": "Beleidsmodus",
     "de": "Richtlinienmodus",
-    "da": "Politiktilstand"
+    "da": "Politiktilstand",
+    "fr": "Mode de politique",
+    "sv": "Policyläge",
+    "no": "Politikkmodus",
+    "fi": "Politiikkatila",
+    "hu": "Irányvonal mód"
   },
   "values": [
     {
@@ -14,7 +19,12 @@
         "en": "Off",
         "nl": "Uit",
         "de": "Aus",
-        "da": "Fra"
+        "da": "Fra",
+        "fr": "Arrêt",
+        "sv": "Av",
+        "no": "Av",
+        "fi": "Pois",
+        "hu": "Ki"
       }
     },
     {
@@ -23,7 +33,12 @@
         "en": "Dynamic Pricing",
         "nl": "Dynamisch Tarief",
         "de": "Dynamische Preisgestaltung",
-        "da": "Dynamisk prissætning"
+        "da": "Dynamisk prissætning",
+        "fr": "Tarification dynamique",
+        "sv": "Dynamisk prissättning",
+        "no": "Dynamisk prissetting",
+        "fi": "Dynaaminen hinnoittelu",
+        "hu": "Dinamikus árazás"
       }
     },
     {
@@ -32,7 +47,12 @@
         "en": "Fixed Pricing",
         "nl": "Vast Tarief",
         "de": "Fester Preis",
-        "da": "Fast pris"
+        "da": "Fast pris",
+        "fr": "Tarification fixe",
+        "sv": "Fast prissättning",
+        "no": "Fast prissetting",
+        "fi": "Kiinteä hinnoittelu",
+        "hu": "Rögzített árazás"
       }
     },
     {
@@ -41,7 +61,12 @@
         "en": "Dynamic Pricing (V2 — post-saldering)",
         "nl": "Dynamisch Tarief (V2 — na salderen)",
         "de": "Dynamische Preisgestaltung (V2 — post-saldering)",
-        "da": "Dynamisk prissætning (V2 — post-saldering)"
+        "da": "Dynamisk prissætning (V2 — post-saldering)",
+        "fr": "Tarification dynamique (V2 — post-saldering)",
+        "sv": "Dynamisk prissättning (V2 — post-saldering)",
+        "no": "Dynamisk prissetting (V2 — post-saldering)",
+        "fi": "Dynaaminen hinnoittelu (V2 — post-saldering)",
+        "hu": "Dinamikus árazás (V2 — post-saldering)"
       }
     },
     {
@@ -50,7 +75,12 @@
         "en": "Peak Shaving",
         "nl": "Peak Shaving",
         "de": "Lastspitzenkappung",
-        "da": "Spidslastbegrænsning"
+        "da": "Spidslastbegrænsning",
+        "fr": "Écrêtage de pointe",
+        "sv": "Toppstympning",
+        "no": "Toppkapping",
+        "fi": "Huippuleikkaus",
+        "hu": "Csúcsnyesés"
       }
     }
   ],

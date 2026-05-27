@@ -4,19 +4,34 @@
     "en": "Sunshine Score",
     "nl": "Zonneschijn Score",
     "de": "Sonneneinstrahlung",
-    "da": "Solscore"
+    "da": "Solscore",
+    "fr": "Score d'ensoleillement",
+    "sv": "Solpoäng",
+    "no": "Solscore",
+    "fi": "Aurinkoinen pisteet",
+    "hu": "Napsugárzás pontszám"
   },
   "desc": {
     "en": "Predicted sunshine availability (0-100%)",
     "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)",
     "de": "Vorhergesagte Sonnenstrahlung (0-100%)",
-    "da": "Forudsagt soltilgængelighed (0-100%)"
+    "da": "Forudsagt soltilgængelighed (0-100%)",
+    "fr": "Disponibilité solaire prévue (0-100%)",
+    "sv": "Förutsagd soltillgänglighet (0-100%)",
+    "no": "Forutsagt soltilgjengelighet (0-100%)",
+    "fi": "Ennustettu auringon saatavuus (0-100%)",
+    "hu": "Előrejelzett naptartalék (0-100%)"
   },
   "units": {
     "en": "%",
     "nl": "%",
     "de": "%",
-    "da": "%"
+    "da": "%",
+    "fr": "%",
+    "sv": "%",
+    "no": "%",
+    "fi": "%",
+    "hu": "%"
   },
   "min": 0,
   "max": 100,

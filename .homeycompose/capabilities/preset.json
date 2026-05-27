@@ -4,7 +4,12 @@
     "en": "Preset",
     "nl": "Preset",
     "de": "Voreinstellung",
-    "da": "Forudindstilling"
+    "da": "Forudindstilling",
+    "fr": "Préréglage",
+    "sv": "Förinställning",
+    "no": "Forhåndsinnstilling",
+    "fi": "Esiasetus",
+    "hu": "Előbeállítás"
   },
   "getable": true,
   "setable": true,
@@ -16,7 +21,12 @@
         "nl": "Thuis",
         "en": "Home",
         "de": "Zuhause",
-        "da": "Hjemme"
+        "da": "Hjemme",
+        "fr": "Maison",
+        "sv": "Hemma",
+        "no": "Hjemme",
+        "fi": "Kotona",
+        "hu": "Otthon"
       }
     },
     {
@@ -25,7 +35,12 @@
         "nl": "Weg",
         "en": "Away",
         "de": "Abwesend",
-        "da": "Væk"
+        "da": "Væk",
+        "fr": "Absent",
+        "sv": "Borta",
+        "no": "Borte",
+        "fi": "Poissa",
+        "hu": "Távol"
       }
     },
     {
@@ -34,7 +49,12 @@
         "nl": "Slapen",
         "en": "Sleep",
         "de": "Schlaf",
-        "da": "Søvn"
+        "da": "Søvn",
+        "fr": "Sommeil",
+        "sv": "Sömn",
+        "no": "Søvn",
+        "fi": "Uni",
+        "hu": "Alvás"
       }
     },
     {
@@ -43,7 +63,12 @@
         "nl": "Vakantie",
         "en": "Holiday",
         "de": "Urlaub",
-        "da": "Ferie"
+        "da": "Ferie",
+        "fr": "Vacances",
+        "sv": "Semester",
+        "no": "Ferie",
+        "fi": "Loma",
+        "hu": "Nyaralás"
       }
     }
   ]

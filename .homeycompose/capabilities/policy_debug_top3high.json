@@ -5,13 +5,23 @@
     "en": "Policy Top3 High",
     "nl": "Policy Top3 Hoog",
     "de": "Richtlinie Top3 Hoch",
-    "da": "Politik Top3 Høj"
+    "da": "Politik Top3 Høj",
+    "fr": "Politique Top3 Haut",
+    "sv": "Policy Top3 Hög",
+    "no": "Politikk Top3 Høy",
+    "fi": "Politiikka Top3 Korkea",
+    "hu": "Irányvonal Top3 Magas"
   },
   "desc": {
     "en": "Top 3 most expensive DAP hours",
     "nl": "Top 3 duurste DAP-uren",
     "de": "Die 3 teuersten DAP-Stunden",
-    "da": "Top 3 dyreste DAP-timer"
+    "da": "Top 3 dyreste DAP-timer",
+    "fr": "Les 3 heures DAP les plus chères",
+    "sv": "De 3 dyraste DAP-timmarna",
+    "no": "De 3 dyreste DAP-timene",
+    "fi": "3 kalleinta DAP-tuntia",
+    "hu": "3 legdrágább DAP-óra"
   },
   "getable": true,
   "setable": false,

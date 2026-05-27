@@ -4,7 +4,12 @@
     "en": "Time until discharged",
     "nl": "Tijd tot ontladen",
     "de": "Zeit bis Entladung",
-    "da": "Tid til afladning"
+    "da": "Tid til afladning",
+    "fr": "Temps avant décharge",
+    "sv": "Tid till urladdning",
+    "no": "Tid til utlading",
+    "fi": "Aika purkautumiseen",
+    "hu": "Idő lemerülésig"
   },
   "getable": true,
   "setable": false,
@@ -15,6 +20,11 @@
     "en": "min",
     "nl": "min",
     "de": "min",
-    "da": "min"
+    "da": "min",
+    "fr": "min",
+    "sv": "min",
+    "no": "min",
+    "fi": "min",
+    "hu": "perc"
   }
 }

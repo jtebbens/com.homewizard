@@ -4,7 +4,12 @@
     "en": "Central Heating",
     "nl": "Central Verwarming",
     "de": "Zentralheizung",
-    "da": "Centralvarme"
+    "da": "Centralvarme",
+    "fr": "Chauffage central",
+    "sv": "Centralvärme",
+    "no": "Sentralvarme",
+    "fi": "Kaukolämpö",
+    "hu": "Központi fűtés"
   },
   "getable": true,
   "setable": false,

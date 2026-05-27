@@ -4,13 +4,23 @@
     "en": "Last Update",
     "nl": "Laatste Update",
     "de": "Letzte Aktualisierung",
-    "da": "Seneste opdatering"
+    "da": "Seneste opdatering",
+    "fr": "Dernière mise à jour",
+    "sv": "Senaste uppdatering",
+    "no": "Siste oppdatering",
+    "fi": "Viimeisin päivitys",
+    "hu": "Utolsó frissítés"
   },
   "desc": {
     "en": "Timestamp of last policy check",
     "nl": "Tijdstempel van laatste beleidscontrole",
     "de": "Zeitstempel der letzten Richtlinienprüfung",
-    "da": "Tidsstempel for seneste politikkontrol"
+    "da": "Tidsstempel for seneste politikkontrol",
+    "fr": "Horodatage de la dernière vérification de politique",
+    "sv": "Tidsstämpel för senaste policykontroll",
+    "no": "Tidsstempel for siste politikksjekk",
+    "fi": "Viimeisimmän politiikkatarkistuksen aikaleima",
+    "hu": "Az utolsó irányvonal ellenőrzés időbélyege"
   },
   "getable": true,
   "setable": false,
