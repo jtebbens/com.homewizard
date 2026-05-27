@@ -161,6 +161,13 @@ class BatteryPolicyDriver extends Homey.Driver {
         args.device.log('Learning data reset via flow card');
       });
 
+    // Action: Set EV charging state — blocks battery discharge while active
+    this.homey.flow.getActionCard('set_ev_charging')
+      .registerRunListener(async (args) => {
+        const active = args.state === 'start';
+        await args.device._setEvCharging(active);
+      });
+
     this.log('Flow cards registered');
   }
 

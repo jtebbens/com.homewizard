@@ -304,10 +304,32 @@
       "id": "reset_learning_data",
       "title": { "en": "Reset learning data", "nl": "Leergegevens resetten" },
       "titleFormatted": { "en": "Reset all learning data", "nl": "Alle leergegevens resetten" },
-      "hint": { 
+      "hint": {
         "en": "Clear all learned patterns and start fresh. Use when moving or changing your setup.",
         "nl": "Wis alle geleerde patronen en begin opnieuw. Gebruik bij verhuizing of wijziging van uw opstelling."
       }
+    },
+    {
+      "id": "set_ev_charging",
+      "title": { "en": "Set EV charging state", "nl": "Stel EV-laadstatus in" },
+      "titleFormatted": {
+        "en": "EV charging is [[state]]",
+        "nl": "EV laadt [[state]]"
+      },
+      "hint": {
+        "en": "Tell the policy that an electric vehicle is charging. While active the battery will not discharge (zero_charge_only). PV surplus can still charge the battery. Auto-clears after 8 hours as a safety net.",
+        "nl": "Geef aan dat een elektrische auto laadt. Zolang actief ontlaadt de batterij niet (zero_charge_only). PV-overschot mag wel de batterij laden. Vervalt automatisch na 8 uur als vangnet."
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "dropdown",
+          "values": [
+            { "id": "start", "label": { "en": "Started", "nl": "Gestart" } },
+            { "id": "stop",  "label": { "en": "Stopped", "nl": "Gestopt" } }
+          ]
+        }
+      ]
     }
   ]
 }

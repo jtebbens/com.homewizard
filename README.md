@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.93)
+## 📝 Latest Updates (v3.15.63–v3.15.94)
+
+### EV Charging Gate (v3.15.94)
+
+* **New flow action `Set EV charging state` (v3.15.94)** — Tell the policy engine when an electric vehicle starts or stops charging. While EV charging is active the battery is forced to `zero_charge_only` (`standby` when SoC ≥ max): the EV draws from grid and PV instead of cycling the home battery, but PV surplus may still top up the battery. The flag auto-clears after 8 hours as a safety net in case the "stop" trigger is missed, and is persisted to settings so it survives app restarts. Implemented as an early-return gate in `_mapPolicyToHwMode` so it overrides discharge for any policy mode (`balanced`, `eco`, `aggressive`, `balanced-dynamic`). Logged as `[MAPPING][EV]` for diagnostics
 
 ### Connectivity, Memory & Provider Reliability (v3.15.93)
 
