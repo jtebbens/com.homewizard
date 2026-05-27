@@ -1,53 +1,67 @@
 [
-    {
+  {
     "id": "mode",
     "type": "dropdown",
     "value": "plugin-battery",
-    "label": { 
+    "label": {
       "en": "Plugin Battery mode",
-      "nl": "Plugin‑batterijmodus"
+      "nl": "Plugin‑batterijmodus",
+      "de": "Plugin-Batteriemodus",
+      "da": "Plugin-batteritilstand"
     },
     "values": [
       {
         "id": "zero",
-        "label": { 
+        "label": {
           "en": "Zero mode",
-          "nl": "Nul op de meter"
+          "nl": "Nul op de meter",
+          "de": "Nulleinspeisung",
+          "da": "Nul på måleren"
         }
       },
       {
         "id": "to_full",
-        "label": { 
+        "label": {
           "en": "Full charge",
-          "nl": "Volledig opladen"
+          "nl": "Volledig opladen",
+          "de": "Vollladung",
+          "da": "Fuld opladning"
         }
       },
       {
         "id": "standby",
-        "label": { 
+        "label": {
           "en": "Standby",
-          "nl": "Stand‑by"
+          "nl": "Stand‑by",
+          "de": "Standby",
+          "da": "Standby"
         }
       },
       {
         "id": "zero_charge_only",
-        "label": { 
+        "label": {
           "en": "Zero mode, Charge allowed",
-          "nl": "Nul op de meter, laden toegestaan"
+          "nl": "Nul op de meter, laden toegestaan",
+          "de": "Nulleinspeisung, Laden erlaubt",
+          "da": "Nul på måleren, opladning tilladt"
         }
       },
       {
         "id": "zero_discharge_only",
-        "label": { 
+        "label": {
           "en": "Zero mode, Discharge allowed",
-          "nl": "Nul op de meter, ontladen toegestaan"
+          "nl": "Nul op de meter, ontladen toegestaan",
+          "de": "Nulleinspeisung, Entladen erlaubt",
+          "da": "Nul på måleren, afladning tilladt"
         }
       },
       {
         "id": "predictive",
-        "label": { 
+        "label": {
           "en": "Predictive (HW Smart Charging)",
-          "nl": "Slim laden (HomeWizard)"
+          "nl": "Slim laden (HomeWizard)",
+          "de": "Prädiktiv (HW Smart Charging)",
+          "da": "Prædiktiv (HW Smart Opladning)"
         }
       }
     ]
@@ -55,75 +69,107 @@
   {
     "id": "polling_interval",
     "type": "number",
-    "label": { "en": "Polling interval" },
+    "label": {
+      "en": "Polling interval",
+      "de": "Abfrageintervall",
+      "da": "Afspøringsinterval"
+    },
     "value": 10,
     "min": 1,
-    "unit": { "en": "s" }
+    "unit": {
+      "en": "s",
+      "de": "s",
+      "da": "s"
+    }
   },
   {
     "id": "grid_phase_amps",
     "type": "number",
-    "label": { "en": "Grid phase Amps",
-               "nl": "Net fase aansluiting" },
+    "label": {
+      "en": "Grid phase Amps",
+      "nl": "Net fase aansluiting",
+      "de": "Netzphase Ampere",
+      "da": "Netfase Ampere"
+    },
     "value": 40,
-    "unit" : { "en": "A",
-               "nl": "A" }
+    "unit": {
+      "en": "A",
+      "nl": "A",
+      "de": "A",
+      "da": "A"
+    }
   },
   {
     "id": "cloud",
     "type": "number",
-    "label": { "en": "Cloud connection 1=on 0=off",
-                "nl": "Cloud verbinding 1=actief 0=uit"
-   },
+    "label": {
+      "en": "Cloud connection 1=on 0=off",
+      "nl": "Cloud verbinding 1=actief 0=uit",
+      "de": "Cloud-Verbindung 1=ein 0=aus",
+      "da": "Sky-forbindelse 1=til 0=fra"
+    },
     "value": 1
   },
   {
     "id": "url",
     "type": "text",
-    "label": { "en": "url",
-                "nl": "url"
-   }
+    "label": {
+      "en": "url",
+      "nl": "url",
+      "de": "url",
+      "da": "url"
+    }
   },
   {
-  "id": "use_polling",
-  "type": "checkbox",
-  "label": {
-    "en": "Use polling instead of WebSocket",
-    "nl": "Gebruik polling in plaats van WebSocket"
+    "id": "use_polling",
+    "type": "checkbox",
+    "label": {
+      "en": "Use polling instead of WebSocket",
+      "nl": "Gebruik polling in plaats van WebSocket",
+      "de": "Abfrage statt WebSocket verwenden",
+      "da": "Brug polling i stedet for WebSocket"
+    },
+    "value": true
   },
-  "value": true
- },
- {
-  "id": "ws_throttle_ms",
-  "type": "number",
-  "label": {
-    "en": "WebSocket update interval (seconds)",
-    "nl": "WebSocket update interval (seconden)"
-  },
-  "hint": {
-    "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
-    "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2."
-  },
-  "value": 2,
-  "min": 2,
-  "max": 10,
-  "step": 1
-},
   {
-  "id": "show_gas",
-  "type": "checkbox",
-  "label": {
-    "en": "Show gas meter",
-    "nl": "Gas meter weergeven"
+    "id": "ws_throttle_ms",
+    "type": "number",
+    "label": {
+      "en": "WebSocket update interval (seconds)",
+      "nl": "WebSocket update interval (seconden)",
+      "de": "WebSocket-Aktualisierungsintervall (Sekunden)",
+      "da": "WebSocket opdateringsinterval (sekunder)"
+    },
+    "hint": {
+      "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
+      "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2.",
+      "de": "Wie oft Messungen über WebSocket verarbeitet werden. Auf 3 oder 4 erhöhen bei älteren Homey Geräten, um die CPU-Last zu reduzieren. Standard: 2.",
+      "da": "Hvor ofte målinger behandles fra WebSocket. Øg til 3 eller 4 på ældre Homey-enheder for at reducere CPU-belastningen. Standard: 2."
+    },
+    "value": 2,
+    "min": 2,
+    "max": 10,
+    "step": 1
   },
-  "value": true
+  {
+    "id": "show_gas",
+    "type": "checkbox",
+    "label": {
+      "en": "Show gas meter",
+      "nl": "Gas meter weergeven",
+      "de": "Gaszähler anzeigen",
+      "da": "Vis gasmåler"
+    },
+    "value": true
   },
   {
     "id": "baseload_notifications",
     "type": "checkbox",
     "label": {
       "en": "Enable baseload notifications",
-      "nl": "Sluipverbruik meldingen inschakelen"
+      "nl": "Sluipverbruik meldingen inschakelen",
+      "de": "Grundlast-Benachrichtigungen aktivieren",
+      "da": "Aktiver grundbelastningsnotifikationer"
     },
     "value": true
   },
@@ -132,7 +178,9 @@
     "type": "checkbox",
     "label": {
       "en": "Phase overload notifications",
-      "nl": "Fase-overbelasting meldingen"
+      "nl": "Fase-overbelasting meldingen",
+      "de": "Phasenüberlastungs-Benachrichtigungen",
+      "da": "Fase-overbelastningsnotifikationer"
     },
     "value": true
   },
@@ -141,12 +189,16 @@
     "type": "checkbox",
     "label": {
       "en": "Enable debug logging",
-      "nl": "Debug logging inschakelen"
+      "nl": "Debug logging inschakelen",
+      "de": "Debug-Protokollierung aktivieren",
+      "da": "Aktiver fejlretningslogning"
     },
     "value": false,
     "hint": {
       "en": "Enables verbose logging for WebSocket and battery events. Disable after debugging to reduce CPU load.",
-      "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen."
+      "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen.",
+      "de": "Aktiviert detaillierte Protokollierung für WebSocket- und Batterie-Ereignisse. Nach dem Debuggen deaktivieren, um CPU-Last zu reduzieren.",
+      "da": "Aktiverer detaljeret logning for WebSocket- og batterihændelser. Deaktiver efter fejlretning for at reducere CPU-belastningen."
     }
-  } 
+  }
 ]

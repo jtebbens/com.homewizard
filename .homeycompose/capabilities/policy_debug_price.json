@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Price",
-    "nl": "Policy Prijs"
+    "nl": "Policy Prijs",
+    "de": "Richtlinienpreis",
+    "da": "Politikpris"
   },
   "desc": {
     "en": "Current DAP price and rate bucket",
-    "nl": "Huidige DAP-prijs en tariefcategorie"
+    "nl": "Huidige DAP-prijs en tariefcategorie",
+    "de": "Aktueller DAP-Preis und Tarifklasse",
+    "da": "Aktuel DAP-pris og takstgruppe"
   },
   "getable": true,
   "setable": false,

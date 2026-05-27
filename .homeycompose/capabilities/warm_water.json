@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Warm water",
-    "nl": "Warm water"
+    "nl": "Warm water",
+    "de": "Warmwasser",
+    "da": "Varmt vand"
   },
   "getable": true,
   "setable": false,

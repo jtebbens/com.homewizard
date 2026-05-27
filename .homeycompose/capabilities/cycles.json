@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Number of battery cycles",
-    "nl": "Aantal battery laadcycli"
+    "nl": "Aantal battery laadcycli",
+    "de": "Anzahl Batteriezyklen",
+    "da": "Antal battericyklusser"
   },
   "getable": true,
   "setable": false,
@@ -11,6 +13,8 @@
   "icon": "assets/cycles.svg",
   "units": {
     "en": "cycles",
-    "nl": "cycli"
+    "nl": "cycli",
+    "de": "Zyklen",
+    "da": "cyklusser"
   }
 }

@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "LED Brightness",
-    "nl": "LED Helderheid"
+    "nl": "LED Helderheid",
+    "de": "LED-Helligkeit",
+    "da": "LED-lysstyrke"
   },
   "getable": true,
   "setable": true,
@@ -13,6 +15,8 @@
   "step": 1,
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   }
 }

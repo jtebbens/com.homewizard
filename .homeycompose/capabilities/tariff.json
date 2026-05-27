@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Active tariff",
-    "nl": "Tarief actief"
+    "nl": "Tarief actief",
+    "de": "Aktiver Tarif",
+    "da": "Aktiv takst"
   },
   "getable": true,
   "setable": false,

@@ -2,11 +2,15 @@
   "type": "string",
   "title": {
     "en": "Override Until",
-    "nl": "Overschrijven Tot"
+    "nl": "Overschrijven Tot",
+    "de": "Überschreiben bis",
+    "da": "Tilsidesat indtil"
   },
   "desc": {
     "en": "Manual override expiry time",
-    "nl": "Handmatige overschrijving vervaltijd"
+    "nl": "Handmatige overschrijving vervaltijd",
+    "de": "Ablaufzeit der manuellen Überschreibung",
+    "da": "Udløbstid for manuel tilsidesættelse"
   },
   "getable": true,
   "setable": false,

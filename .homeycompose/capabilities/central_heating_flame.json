@@ -2,7 +2,9 @@
   "type": "boolean",
   "title": {
     "en": "Central Heating Burner",
-    "nl": "CV brander"
+    "nl": "CV brander",
+    "de": "Zentralheizungsbrenner",
+    "da": "Centralvarmefyr"
   },
   "getable": true,
   "setable": false,

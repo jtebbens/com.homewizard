@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Phase 3 load",
-    "nl": "Fase 3 belasting"
+    "nl": "Fase 3 belasting",
+    "de": "Last Phase 3",
+    "da": "Belastning fase 3"
   },
   "titleFormatted": {
     "en": "Phase 3 load",
-    "nl": "Fase 3 belasting"
+    "nl": "Fase 3 belasting",
+    "de": "Last Phase 3",
+    "da": "Belastning fase 3"
   },
-  "desc" : {
+  "desc": {
     "en": "Phase 3 load",
-    "nl": "Fase 3 belasting"
+    "nl": "Fase 3 belasting",
+    "de": "Last Phase 3",
+    "da": "Belastning fase 3"
   },
   "decimals": 0,
   "getable": true,
@@ -19,7 +25,9 @@
   "insights": true,
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "icon": "assets/icon.svg"
 }

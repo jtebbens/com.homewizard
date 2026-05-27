@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Battery RTE",
-    "nl": "Batterij RTE"
+    "nl": "Batterij RTE",
+    "de": "Batterie-RWG",
+    "da": "Batteri-RTE"
   },
   "desc": {
     "en": "Learned round-trip efficiency of battery (0-100%)",
-    "nl": "Geleerde round-trip efficiency van batterij (0-100%)"
+    "nl": "Geleerde round-trip efficiency van batterij (0-100%)",
+    "de": "Erlernter Wirkungsgrad der Batterie (0-100%)",
+    "da": "Lært rundtur-effektivitet for batteri (0-100%)"
   },
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "min": 0,
   "max": 100,

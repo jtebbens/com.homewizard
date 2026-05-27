@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Confidence",
-    "nl": "Vertrouwen"
+    "nl": "Vertrouwen",
+    "de": "Konfidenz",
+    "da": "Tillid"
   },
   "desc": {
     "en": "Confidence in current recommendation (0-100%)",
-    "nl": "Vertrouwen in huidige aanbeveling (0-100%)"
+    "nl": "Vertrouwen in huidige aanbeveling (0-100%)",
+    "de": "Konfidenz der aktuellen Empfehlung (0-100%)",
+    "da": "Tillid til aktuel anbefaling (0-100%)"
   },
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "min": 0,
   "max": 100,

@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Current gas usage",
-    "nl": "Huidig gasverbruik"
+    "nl": "Huidig gasverbruik",
+    "de": "Aktueller Gasverbrauch",
+    "da": "Aktuelt gasforbrug"
   },
   "getable": true,
   "setable": false,
@@ -11,7 +13,9 @@
   "insights": true,
   "units": {
     "en": "m3",
-    "nl": "m3"
+    "nl": "m3",
+    "de": "m³",
+    "da": "m³"
   },
   "icon": "assets/icon.svg"
 }

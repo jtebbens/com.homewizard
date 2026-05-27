@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Net dip L1",
-    "nl": "Net dip L1"
+    "nl": "Net dip L1",
+    "de": "Netzeinbruch L1",
+    "da": "Netdyk L1"
   },
   "getable": true,
   "setable": false,

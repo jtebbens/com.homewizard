@@ -2,11 +2,15 @@
   "type": "string",
   "title": {
     "en": "Active Mode",
-    "nl": "Actieve Modus"
+    "nl": "Actieve Modus",
+    "de": "Aktiver Modus",
+    "da": "Aktiv tilstand"
   },
   "desc": {
     "en": "The battery mode that is currently active on the hardware. May differ from the recommended mode when the confidence score is below the threshold, auto-apply is off, or a manual override is active.",
-    "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is."
+    "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is.",
+    "de": "Der aktuell auf der Hardware aktive Batteriemodus. Kann vom empfohlenen Modus abweichen, wenn der Konfidenzwert unter dem Schwellenwert liegt, Auto-Apply deaktiviert ist oder eine manuelle Überschreibung aktiv ist.",
+    "da": "Den batteritilstand, der aktuelt er aktiv på hardwaren. Kan afvige fra den anbefalede tilstand, når konfidensscore er under tærsklen, auto-anvend er slået fra, eller en manuel tilsidesættelse er aktiv."
   },
   "getable": true,
   "setable": false,

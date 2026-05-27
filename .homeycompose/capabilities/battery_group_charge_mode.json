@@ -2,7 +2,9 @@
   "type": "enum",
   "title": {
     "en": "Battery Group Charge Mode",
-    "nl": "Battery Groep Oplaadmodus"
+    "nl": "Battery Groep Oplaadmodus",
+    "de": "Gruppen-Lademodus",
+    "da": "Gruppe-ladetilstand"
   },
   "getable": true,
   "setable": true,
@@ -14,42 +16,54 @@
       "id": "zero",
       "title": {
         "en": "Zero (Net Zero)",
-        "nl": "Nul op de meter"
+        "nl": "Nul op de meter",
+        "de": "Nulleinspeisung",
+        "da": "Nul på måleren"
       }
     },
     {
       "id": "zero_charge_only",
       "title": {
         "en": "Zero – Charge Only",
-        "nl": "NOM – Alleen laden"
+        "nl": "NOM – Alleen laden",
+        "de": "Nulleinspeisung – Nur laden",
+        "da": "Nul – kun opladning"
       }
     },
     {
       "id": "zero_discharge_only",
       "title": {
         "en": "Zero – Discharge Only",
-        "nl": "NOM – Alleen ontladen"
+        "nl": "NOM – Alleen ontladen",
+        "de": "Nulleinspeisung – Nur entladen",
+        "da": "Nul – kun afladning"
       }
     },
     {
       "id": "standby",
       "title": {
         "en": "Standby",
-        "nl": "Stand‑by"
+        "nl": "Stand‑by",
+        "de": "Bereitschaft",
+        "da": "Standby"
       }
     },
     {
       "id": "to_full",
       "title": {
         "en": "Full Charge",
-        "nl": "Volledig laden"
+        "nl": "Volledig laden",
+        "de": "Vollladen",
+        "da": "Fuld opladning"
       }
     },
     {
       "id": "predictive",
       "title": {
         "en": "Predictive (HW Smart Charging)",
-        "nl": "Slim laden (HomeWizard)"
+        "nl": "Slim laden (HomeWizard)",
+        "de": "Prädiktiv (HW Smart Charging)",
+        "da": "Prædiktiv (HW Smart Charging)"
       }
     }
   ]

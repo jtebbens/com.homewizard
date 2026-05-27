@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Power failures",
-    "nl": "Stroomstoringen"
+    "nl": "Stroomstoringen",
+    "de": "Stromausfälle",
+    "da": "Strømudfald"
   },
   "getable": true,
   "setable": false,

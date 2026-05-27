@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Phase 1 load",
-    "nl": "Fase 1 belasting"
+    "nl": "Fase 1 belasting",
+    "de": "Last Phase 1",
+    "da": "Belastning fase 1"
   },
   "titleFormatted": {
     "en": "Phase 1 load",
-    "nl": "Fase 1 belasting"
+    "nl": "Fase 1 belasting",
+    "de": "Last Phase 1",
+    "da": "Belastning fase 1"
   },
-  "desc" : {
+  "desc": {
     "en": "Phase 1 load",
-    "nl": "Fase 1 belasting"
+    "nl": "Fase 1 belasting",
+    "de": "Last Phase 1",
+    "da": "Belastning fase 1"
   },
   "min": 0,
   "max": 100,
@@ -23,7 +29,9 @@
   "insights": true,
   "units": {
     "en": "A",
-    "nl": "A"
+    "nl": "A",
+    "de": "A",
+    "da": "A"
   },
   "icon": "assets/icon.svg"
 }

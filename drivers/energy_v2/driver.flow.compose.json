@@ -4,11 +4,15 @@
       "id": "set-battery-to-full-charge-mode",
       "title": {
         "en": "Set battery to Full Charge mode",
-        "nl": "Zet batterij in Volledig Oplaad modus"
+        "nl": "Zet batterij in Volledig Oplaad modus",
+        "de": "Batterie in Vollladung-Modus setzen",
+        "da": "Sæt batteri til fuld opladning"
       },
       "titleFormatted": {
         "en": "Set battery to Full Charge mode",
-        "nl": "Zet batterij in Volledig Oplaad modus"
+        "nl": "Zet batterij in Volledig Oplaad modus",
+        "de": "Batterie in Vollladung-Modus setzen",
+        "da": "Sæt batteri til fuld opladning"
       },
       "args": []
     },
@@ -16,11 +20,15 @@
       "id": "set-battery-to-zero-mode",
       "title": {
         "en": "Set battery to Zero mode",
-        "nl": "Zet batterij in Zero modus"
+        "nl": "Zet batterij in Zero modus",
+        "de": "Batterie in Nulleinspeisung-Modus setzen",
+        "da": "Sæt batteri til nul på måleren"
       },
       "titleFormatted": {
         "en": "Set battery to Zero mode",
-        "nl": "Zet batterij in Nul op de meter modus"
+        "nl": "Zet batterij in Nul op de meter modus",
+        "de": "Batterie in Nulleinspeisung-Modus setzen",
+        "da": "Sæt batteri til nul på måleren"
       },
       "args": []
     },
@@ -28,11 +36,15 @@
       "id": "set-battery-to-standby-mode",
       "title": {
         "en": "Set battery to Standby mode",
-        "nl": "Zet batterij in Standby modus"
+        "nl": "Zet batterij in Standby modus",
+        "de": "Batterie in Standby-Modus setzen",
+        "da": "Sæt batteri til standby"
       },
       "titleFormatted": {
         "en": "Set battery to Standby mode",
-        "nl": "Zet batterij in Standby modus"
+        "nl": "Zet batterij in Standby modus",
+        "de": "Batterie in Standby-Modus setzen",
+        "da": "Sæt batteri til standby"
       },
       "args": []
     },
@@ -40,11 +52,15 @@
       "id": "set-battery-to-zero-charge-only-mode",
       "title": {
         "en": "Set battery to Zero Charge Only mode",
-        "nl": "Zet batterij in Nul op de meter alleen opladen modus"
+        "nl": "Zet batterij in Nul op de meter alleen opladen modus",
+        "de": "Batterie in Nulleinspeisung, nur Laden",
+        "da": "Sæt batteri til nul på måleren, kun opladning"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Charge Only mode",
-        "nl": "Zet batterij in Nul op de meter alleen opladen modus"
+        "nl": "Zet batterij in Nul op de meter alleen opladen modus",
+        "de": "Batterie in Nulleinspeisung, nur Laden",
+        "da": "Sæt batteri til nul på måleren, kun opladning"
       },
       "args": []
     },
@@ -52,11 +68,15 @@
       "id": "set-battery-to-zero-discharge-only-mode",
       "title": {
         "en": "Set battery to Zero Discharge Only mode",
-        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
+        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
+        "de": "Batterie in Nulleinspeisung, nur Entladen",
+        "da": "Sæt batteri til nul på måleren, kun afladning"
       },
       "titleFormatted": {
         "en": "Set battery to Zero Discharge Only mode",
-        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
+        "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
+        "de": "Batterie in Nulleinspeisung, nur Entladen",
+        "da": "Sæt batteri til nul på måleren, kun afladning"
       },
       "args": []
     },
@@ -64,11 +84,15 @@
       "id": "set-battery-to-predictive-mode",
       "title": {
         "en": "Set battery to Predictive (Smart Charging) mode",
-        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
+        "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
+        "da": "Sæt batteri til prædiktiv (smart opladning)"
       },
       "titleFormatted": {
         "en": "Set battery to Predictive (Smart Charging) mode",
-        "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+        "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
+        "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
+        "da": "Sæt batteri til prædiktiv (smart opladning)"
       },
       "args": []
     }
@@ -76,27 +100,43 @@
   "triggers": [
     {
       "id": "battery_mode_changed",
-      "title": { "en": "Battery mode changed" },
-      "titleFormatted": { "en": "Battery mode changed" },
+      "title": {
+        "en": "Battery mode changed",
+        "de": "Batteriemodus geändert",
+        "da": "Batteritilstand ændret"
+      },
+      "titleFormatted": {
+        "en": "Battery mode changed",
+        "de": "Batteriemodus geändert",
+        "da": "Batteritilstand ændret"
+      },
       "args": [],
       "tokens": []
     },
     {
       "id": "battery_error_detected",
       "title": {
-        "en": "Battery error detected"
+        "en": "Battery error detected",
+        "de": "Batteriefehler erkannt",
+        "da": "Batterifejl opdaget"
       },
       "args": []
     },
     {
       "id": "battery_group_state_changed",
-      "title": { "en": "Battery group state changed" }
+      "title": {
+        "en": "Battery group state changed",
+        "de": "Batteriegruppe Zustand geändert",
+        "da": "Batteri gruppe tilstand ændret"
+      }
     },
     {
       "id": "tariff_changed_v2",
       "title": {
         "en": "Peak / Normal Tariff changed",
-        "nl": "Dal / Normaal Tarief veranderd"
+        "nl": "Dal / Normaal Tarief veranderd",
+        "de": "Hoch-/Normaltarif geändert",
+        "da": "Høj-/Normaltarif ændret"
       },
       "args": [],
       "tokens": [
@@ -105,7 +145,9 @@
           "type": "number",
           "title": {
             "en": "tariff",
-            "nl": "tarief"
+            "nl": "tarief",
+            "de": "Tarif",
+            "da": "Tarif"
           },
           "example": 1
         }
@@ -115,7 +157,9 @@
       "id": "import_changed_v2",
       "title": {
         "en": "Total used changed",
-        "nl": "Som gebruik veranderd"
+        "nl": "Som gebruik veranderd",
+        "de": "Gesamtbezug geändert",
+        "da": "Samlet forbrug ændret"
       },
       "args": [],
       "tokens": [
@@ -124,7 +168,9 @@
           "type": "number",
           "title": {
             "en": "import",
-            "nl": "import"
+            "nl": "import",
+            "de": "Bezug",
+            "da": "Import"
           },
           "example": 1
         }
@@ -134,7 +180,9 @@
       "id": "export_changed_v2",
       "title": {
         "en": "Total delivered changed",
-        "nl": "Som teruglevering veranderd"
+        "nl": "Som teruglevering veranderd",
+        "de": "Gesamteinspeisung geändert",
+        "da": "Samlet levering ændret"
       },
       "args": [],
       "tokens": [
@@ -143,7 +191,9 @@
           "type": "number",
           "title": {
             "en": "export",
-            "nl": "export"
+            "nl": "export",
+            "de": "Einspeisung",
+            "da": "Eksport"
           },
           "example": 1
         }
@@ -153,11 +203,15 @@
       "id": "voltage_sag_detected",
       "title": {
         "en": "Voltage sag detected",
-        "nl": "Spanningsdip gedetecteerd"
+        "nl": "Spanningsdip gedetecteerd",
+        "de": "Spannungseinbruch erkannt",
+        "da": "Spændingsdyk opdaget"
       },
       "hint": {
         "en": "Triggers when a voltage sag (dip) is detected on any phase",
-        "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase"
+        "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase",
+        "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
+        "da": "Udløses når et spændingsdyk registreres på en fase"
       },
       "args": [],
       "tokens": [
@@ -166,7 +220,9 @@
           "type": "string",
           "title": {
             "en": "Phase",
-            "nl": "Fase"
+            "nl": "Fase",
+            "de": "Phase",
+            "da": "Fase"
           },
           "example": "L1"
         },
@@ -175,7 +231,9 @@
           "type": "number",
           "title": {
             "en": "Total count",
-            "nl": "Totaal aantal"
+            "nl": "Totaal aantal",
+            "de": "Gesamtanzahl",
+            "da": "Samlet antal"
           },
           "example": 1
         }
@@ -185,11 +243,15 @@
       "id": "voltage_swell_detected",
       "title": {
         "en": "Voltage swell detected",
-        "nl": "Spanningspiek gedetecteerd"
+        "nl": "Spanningspiek gedetecteerd",
+        "de": "Spannungsüberhöhung erkannt",
+        "da": "Spændingsstigning opdaget"
       },
       "hint": {
         "en": "Triggers when a voltage swell (surge) is detected on any phase",
-        "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase"
+        "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase",
+        "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
+        "da": "Udløses når en spændingsstigning registreres på en fase"
       },
       "args": [],
       "tokens": [
@@ -198,7 +260,9 @@
           "type": "string",
           "title": {
             "en": "Phase",
-            "nl": "Fase"
+            "nl": "Fase",
+            "de": "Phase",
+            "da": "Fase"
           },
           "example": "L1"
         },
@@ -207,7 +271,9 @@
           "type": "number",
           "title": {
             "en": "Total count",
-            "nl": "Totaal aantal"
+            "nl": "Totaal aantal",
+            "de": "Gesamtanzahl",
+            "da": "Samlet antal"
           },
           "example": 1
         }
@@ -217,11 +283,15 @@
       "id": "long_power_fail_detected",
       "title": {
         "en": "Long power failure detected",
-        "nl": "Lange stroomuitval gedetecteerd"
+        "nl": "Lange stroomuitval gedetecteerd",
+        "de": "Langer Stromausfall erkannt",
+        "da": "Lang strømafbrydelse opdaget"
       },
       "hint": {
         "en": "Triggers when a long power failure is detected (>1 minute)",
-        "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)"
+        "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)",
+        "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird (>1 Minute)",
+        "da": "Udløses når en lang strømafbrydelse registreres (>1 minut)"
       },
       "args": [],
       "tokens": [
@@ -230,7 +300,9 @@
           "type": "number",
           "title": {
             "en": "Total count",
-            "nl": "Totaal aantal"
+            "nl": "Totaal aantal",
+            "de": "Gesamtanzahl",
+            "da": "Samlet antal"
           },
           "example": 1
         }
@@ -240,11 +312,15 @@
       "id": "voltage_restored",
       "title": {
         "en": "Voltage restored to normal",
-        "nl": "Spanning hersteld naar normaal"
+        "nl": "Spanning hersteld naar normaal",
+        "de": "Spannung wieder normal",
+        "da": "Spænding genoprettet til normalt"
       },
       "hint": {
         "en": "Triggers when voltage returns to normal range after a sag or swell",
-        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+        "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
+        "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
+        "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning"
       },
       "args": [],
       "tokens": [
@@ -253,7 +329,9 @@
           "type": "string",
           "title": {
             "en": "Phase",
-            "nl": "Fase"
+            "nl": "Fase",
+            "de": "Phase",
+            "da": "Fase"
           },
           "example": "L1"
         },
@@ -262,7 +340,9 @@
           "type": "number",
           "title": {
             "en": "Voltage (V)",
-            "nl": "Spanning (V)"
+            "nl": "Spanning (V)",
+            "de": "Spannung (V)",
+            "da": "Spænding (V)"
           },
           "example": 230
         }
@@ -272,11 +352,15 @@
       "id": "power_restored",
       "title": {
         "en": "Power restored",
-        "nl": "Stroom hersteld"
+        "nl": "Stroom hersteld",
+        "de": "Strom wiederhergestellt",
+        "da": "Strøm genoprettet"
       },
       "hint": {
         "en": "Triggers when power is restored after being offline",
-        "nl": "Triggert wanneer stroom is hersteld na een uitval"
+        "nl": "Triggert wanneer stroom is hersteld na een uitval",
+        "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
+        "da": "Udløses når strøm gendannes efter en afbrydelse"
       },
       "args": [],
       "tokens": [
@@ -285,7 +369,9 @@
           "type": "number",
           "title": {
             "en": "Offline duration (seconds)",
-            "nl": "Offline duur (seconden)"
+            "nl": "Offline duur (seconden)",
+            "de": "Ausfallzeit (Sekunden)",
+            "da": "Offline varighed (sekunder)"
           },
           "example": 120
         }

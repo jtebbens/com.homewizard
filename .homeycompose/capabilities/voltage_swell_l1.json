@@ -2,7 +2,9 @@
   "type": "number",
   "title": {
     "en": "Net peak L1",
-    "nl": "Net piek L1"
+    "nl": "Net piek L1",
+    "de": "Netzspitze L1",
+    "da": "Nettopspids L1"
   },
   "getable": true,
   "setable": false,

@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Expected Profit",
-    "nl": "Verwachte Winst"
+    "nl": "Verwachte Winst",
+    "de": "Erwarteter Gewinn",
+    "da": "Forventet profit"
   },
   "desc": {
     "en": "Projected daily profit from today's optimizer plan",
-    "nl": "Verwachte dagwinst van het optimizerplan"
+    "nl": "Verwachte dagwinst van het optimizerplan",
+    "de": "Prognostizierter Tagesgewinn aus dem heutigen Optimierungsplan",
+    "da": "Forventet daglig profit fra dagens optimeringsplan"
   },
   "units": {
     "en": "€",
-    "nl": "€"
+    "nl": "€",
+    "de": "€",
+    "da": "€"
   },
   "decimals": 2,
   "getable": true,

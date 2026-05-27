@@ -1,16 +1,20 @@
 {
-      "type": "number",
-      "title": {
-        "en": "Time until full charge",
-        "nl": "Tijd tot vol geladen"
-      },
-      "getable": true,
-      "setable": false,
-      "insights": true,
-      "uiComponent": "sensor",
-      "icon": "assets/clock.svg",
-      "units": {
-        "en": "min",
-        "nl": "min"
-      }
+  "type": "number",
+  "title": {
+    "en": "Time until full charge",
+    "nl": "Tijd tot vol geladen",
+    "de": "Zeit bis Vollladung",
+    "da": "Tid til fuld opladning"
+  },
+  "getable": true,
+  "setable": false,
+  "insights": true,
+  "uiComponent": "sensor",
+  "icon": "assets/clock.svg",
+  "units": {
+    "en": "min",
+    "nl": "min",
+    "de": "min",
+    "da": "min"
+  }
 }

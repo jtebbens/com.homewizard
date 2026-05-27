@@ -3,11 +3,15 @@
   "type": "string",
   "title": {
     "en": "Policy Top3 High",
-    "nl": "Policy Top3 Hoog"
+    "nl": "Policy Top3 Hoog",
+    "de": "Richtlinie Top3 Hoch",
+    "da": "Politik Top3 Høj"
   },
   "desc": {
     "en": "Top 3 most expensive DAP hours",
-    "nl": "Top 3 duurste DAP-uren"
+    "nl": "Top 3 duurste DAP-uren",
+    "de": "Die 3 teuersten DAP-Stunden",
+    "da": "Top 3 dyreste DAP-timer"
   },
   "getable": true,
   "setable": false,

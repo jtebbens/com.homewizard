@@ -2,11 +2,15 @@
   "type": "number",
   "title": {
     "en": "PV Intraday Bias",
-    "nl": "PV Intradag Bias"
+    "nl": "PV Intradag Bias",
+    "de": "PV-Intraday-Bias",
+    "da": "PV intradag bias"
   },
   "desc": {
     "en": "Intraday PV correction ratio (actual/forecast)",
-    "nl": "Intradag PV-correctiefactor (actueel/voorspeld)"
+    "nl": "Intradag PV-correctiefactor (actueel/voorspeld)",
+    "de": "Intraday-PV-Korrekturfaktor (Ist/Prognose)",
+    "da": "Intradag PV-korrektionsforhold (faktisk/prognose)"
   },
   "decimals": 2,
   "getable": true,

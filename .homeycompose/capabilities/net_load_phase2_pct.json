@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Phase 2 load",
-    "nl": "Fase 2 belasting"
+    "nl": "Fase 2 belasting",
+    "de": "Last Phase 2",
+    "da": "Belastning fase 2"
   },
   "titleFormatted": {
     "en": "Phase 2 load",
-    "nl": "Fase 2 belasting"
+    "nl": "Fase 2 belasting",
+    "de": "Last Phase 2",
+    "da": "Belastning fase 2"
   },
-  "desc" : {
+  "desc": {
     "en": "Phase 2 load",
-    "nl": "Fase 2 belasting"
+    "nl": "Fase 2 belasting",
+    "de": "Last Phase 2",
+    "da": "Belastning fase 2"
   },
   "decimals": 0,
   "getable": true,
@@ -19,7 +25,9 @@
   "insights": true,
   "units": {
     "en": "%",
-    "nl": "%"
+    "nl": "%",
+    "de": "%",
+    "da": "%"
   },
   "icon": "assets/icon.svg"
 }

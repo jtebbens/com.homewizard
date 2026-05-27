@@ -1,6 +1,8 @@
 {
   "name": {
-    "en": "Energy Socket"
+    "en": "Energy Socket",
+    "de": "Energiesteckdose",
+    "da": "Energistik"
   },
   "images": {
     "large": "drivers/energy_socket/assets/images/large.png",
@@ -33,41 +35,53 @@
     "measure_power": {
       "title": {
         "en": "Current usage",
-        "nl": "Huidig vermogen"
+        "nl": "Huidig vermogen",
+        "de": "Aktueller Verbrauch",
+        "da": "Aktuelt forbrug"
       },
       "insights": true
     },
     "measure_power.l1": {
       "title": {
         "en": "Current usage phase 1",
-        "nl": "Huidig gebruik fase 1"
+        "nl": "Huidig gebruik fase 1",
+        "de": "Aktueller Verbrauch Phase 1",
+        "da": "Aktuelt forbrug fase 1"
       }
     },
     "meter_power.consumed.t1": {
       "decimals": 3,
       "title": {
         "en": "Total t1 usage",
-        "nl": "Totaal t1 gebruik"
+        "nl": "Totaal t1 gebruik",
+        "de": "Gesamt T1 Verbrauch",
+        "da": "Samlet T1 forbrug"
       }
     },
     "meter_power.produced.t1": {
       "decimals": 3,
       "title": {
         "en": "Total t1 deliver",
-        "nl": "Totaal t1 teruglevering"
+        "nl": "Totaal t1 teruglevering",
+        "de": "Gesamt T1 Einspeisung",
+        "da": "Samlet T1 levering"
       }
     },
     "meter_power": {
       "decimals": 3,
       "title": {
         "en": "Total usage KWh",
-        "nl": "Totaal verbruik KWh"
+        "nl": "Totaal verbruik KWh",
+        "de": "Gesamtverbrauch kWh",
+        "da": "Samlet forbrug kWh"
       }
     },
     "measure_voltage.l1": {
       "title": {
         "en": "Current Voltage phase 1",
-        "nl": "Huidig Voltage fase 1"
+        "nl": "Huidig Voltage fase 1",
+        "de": "Aktuelle Spannung Phase 1",
+        "da": "Aktuel Spænding fase 1"
       },
       "insights": true
     }
@@ -77,7 +91,9 @@
       "type": "group",
       "label": {
         "en": "Energy Socket settings",
-        "nl": "Energy Socket instellingen"
+        "nl": "Energy Socket instellingen",
+        "de": "Energiesteckdosen-Einstellungen",
+        "da": "Energistik indstillinger"
       },
       "children": [
         {
@@ -85,12 +101,16 @@
           "type": "number",
           "label": {
             "en": "Offset Watt usage",
-            "nl": "Compensatie watt gebruik"
+            "nl": "Compensatie watt gebruik",
+            "de": "Versatz Watt-Verbrauch",
+            "da": "Forskydning Watt forbrug"
           },
           "value": 0,
           "unit": {
             "en": "watt",
-            "nl": "watt"
+            "nl": "watt",
+            "de": "Watt",
+            "da": "Watt"
           }
         },
         {
@@ -98,7 +118,9 @@
           "type": "number",
           "label": {
             "en": "Polling in seconds",
-            "nl": "Interval in seconden"
+            "nl": "Interval in seconden",
+            "de": "Abfrage in Sekunden",
+            "da": "Afspørgning i sekunder"
           },
           "value": 10,
           "min": 2
@@ -106,9 +128,12 @@
         {
           "id": "cloud",
           "type": "number",
-          "label": { "en": "Cloud connection 1=on 0=off",
-                      "nl": "Cloud verbinding 1=actief 0=uit"
-        },
+          "label": {
+            "en": "Cloud connection 1=on 0=off",
+            "nl": "Cloud verbinding 1=actief 0=uit",
+            "de": "Cloud-Verbindung 1=ein 0=aus",
+            "da": "Sky-forbindelse 1=til 0=fra"
+          },
           "value": 1
         }
       ]
@@ -117,7 +142,9 @@
       "type": "group",
       "label": {
         "en": "Appliance detection",
-        "nl": "Apparaat detectie"
+        "nl": "Apparaat detectie",
+        "de": "Geräteerkennung",
+        "da": "Apparatgenkendelse"
       },
       "children": [
         {
@@ -125,7 +152,9 @@
           "type": "checkbox",
           "label": {
             "en": "Enable appliance detection",
-            "nl": "Apparaat detectie inschakelen"
+            "nl": "Apparaat detectie inschakelen",
+            "de": "Geräteerkennung aktivieren",
+            "da": "Aktiver apparatgenkendelse"
           },
           "value": false
         },
@@ -134,7 +163,9 @@
           "type": "number",
           "label": {
             "en": "Active threshold (W)",
-            "nl": "Actief-drempel (W)"
+            "nl": "Actief-drempel (W)",
+            "de": "Aktiv-Schwelle (W)",
+            "da": "Aktiv grænse (W)"
           },
           "value": 50,
           "min": 1
@@ -144,7 +175,9 @@
           "type": "number",
           "label": {
             "en": "Standby threshold (W)",
-            "nl": "Stand-by drempel (W)"
+            "nl": "Stand-by drempel (W)",
+            "de": "Standby-Schwelle (W)",
+            "da": "Standby-grænse (W)"
           },
           "value": 5,
           "min": 0
@@ -154,7 +187,9 @@
           "type": "number",
           "label": {
             "en": "Min active duration (min)",
-            "nl": "Min actieve duur (min)"
+            "nl": "Min actieve duur (min)",
+            "de": "Min. aktive Dauer (min)",
+            "da": "Min. aktiv varighed (min)"
           },
           "value": 5,
           "min": 0
@@ -164,7 +199,9 @@
           "type": "checkbox",
           "label": {
             "en": "Also trigger on power-off (0W)",
-            "nl": "Ook triggeren bij volledige uitschakeling (0W)"
+            "nl": "Ook triggeren bij volledige uitschakeling (0W)",
+            "de": "Auch bei Abschaltung auslösen (0W)",
+            "da": "Udløs også ved slukning (0W)"
           },
           "value": true
         }

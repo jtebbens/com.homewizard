@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "Predicted Sun (4h)",
-    "nl": "Voorspelde Zon (4u)"
+    "nl": "Voorspelde Zon (4u)",
+    "de": "Vorhergesagte Sonne (4h)",
+    "da": "Forudsagt sol (4h)"
   },
   "desc": {
     "en": "Expected sunshine hours in next 4 hours",
-    "nl": "Verwachte zonuren in komende 4 uur"
+    "nl": "Verwachte zonuren in komende 4 uur",
+    "de": "Erwartete Sonnenstunden in den nächsten 4 Stunden",
+    "da": "Forventede soltimer de næste 4 timer"
   },
   "units": {
     "en": "h",
-    "nl": "u"
+    "nl": "u",
+    "de": "h",
+    "da": "h"
   },
   "min": 0,
   "max": 4,

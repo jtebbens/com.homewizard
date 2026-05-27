@@ -4,7 +4,9 @@
       "id": "appliance_finished",
       "title": {
         "en": "Appliance finished",
-        "nl": "Apparaat klaar"
+        "nl": "Apparaat klaar",
+        "de": "Gerät fertig",
+        "da": "Apparat færdigt"
       },
       "args": [],
       "tokens": [
@@ -13,7 +15,9 @@
           "type": "number",
           "title": {
             "en": "Active duration (min)",
-            "nl": "Actieve duur (min)"
+            "nl": "Actieve duur (min)",
+            "de": "Aktive Dauer (min)",
+            "da": "Aktiv varighed (min)"
           },
           "example": 45
         }

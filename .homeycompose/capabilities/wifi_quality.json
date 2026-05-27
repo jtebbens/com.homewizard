@@ -2,7 +2,9 @@
   "type": "string",
   "title": {
     "en": "WiFi State",
-    "nl": "WiFi Status"
+    "nl": "WiFi Status",
+    "de": "WLAN-Status",
+    "da": "WiFi-tilstand"
   },
   "getable": true,
   "setable": false,

@@ -2,7 +2,9 @@
   "type": "string",
   "title": {
     "en": "Battery Group Charge state",
-    "nl": "Battery Groep Laadt status"
+    "nl": "Battery Groep Laadt status",
+    "de": "Gruppen-Ladezustand",
+    "da": "Gruppe-ladetilstand"
   },
   "getable": true,
   "setable": false,

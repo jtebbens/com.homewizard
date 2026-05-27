@@ -2,15 +2,21 @@
   "type": "number",
   "title": {
     "en": "PV Forecast Today",
-    "nl": "PV Voorspelling Vandaag"
+    "nl": "PV Voorspelling Vandaag",
+    "de": "PV-Prognose heute",
+    "da": "PV-prognose i dag"
   },
   "desc": {
     "en": "Blended PV yield forecast for today",
-    "nl": "Gecombineerde PV opbrengst voor vandaag"
+    "nl": "Gecombineerde PV opbrengst voor vandaag",
+    "de": "Gemischte PV-Ertragsprognose für heute",
+    "da": "Blandet PV-udbytteprog. for i dag"
   },
   "units": {
     "en": "kWh",
-    "nl": "kWh"
+    "nl": "kWh",
+    "de": "kWh",
+    "da": "kWh"
   },
   "decimals": 1,
   "getable": true,
