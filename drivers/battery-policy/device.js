@@ -98,6 +98,22 @@ class BatteryPolicyDevice extends Homey.Device {
     this._modeChartBody = null;
     this._modeChartImage = null;
 
+    // EV charging gate — set via flow card, blocks battery discharge until cleared
+    // or auto-expires. Restored from settings on restart so flag survives reboots.
+    this._evChargingUntil = 0;
+    this._evChargingTimer = null;
+    try {
+      const evUntil = Number(this.homey.settings.get('ev_charging_until') || 0);
+      if (evUntil > Date.now()) {
+        this._evChargingUntil = evUntil;
+        const minsLeft = Math.round((evUntil - Date.now()) / 60000);
+        this.log(`[EV] Restored EV charging flag — ${minsLeft} min remaining`);
+        this._scheduleEvAutoClear();
+      } else if (evUntil > 0) {
+        this.homey.settings.set('ev_charging_until', 0);
+      }
+    } catch (_) { /* ignore */ }
+
     // Restore accumulators from last save so a restart doesn't reset to 0 mid-day
     try {
       const saved = this.homey.settings.get('today_self_sufficiency');
@@ -3300,6 +3316,41 @@ if (debug) this.log(
     return Math.max(0, adjustedEstimate);
   }
 
+  _isEvCharging() {
+    return this._evChargingUntil > Date.now();
+  }
+
+  _scheduleEvAutoClear() {
+    if (this._evChargingTimer) {
+      this.homey.clearTimeout(this._evChargingTimer);
+      this._evChargingTimer = null;
+    }
+    const delay = this._evChargingUntil - Date.now();
+    if (delay <= 0) return;
+    this._evChargingTimer = this.homey.setTimeout(() => {
+      this._evChargingTimer = null;
+      if (this._isEvCharging()) return;
+      this.log('[EV] Auto-clear: 8h timeout reached, discharge gate released');
+      this._evChargingUntil = 0;
+      try { this.homey.settings.set('ev_charging_until', 0); } catch (_) {}
+      this._runPolicyCheck().catch(err => this.error('[EV] auto-clear policy run failed:', err));
+    }, delay);
+  }
+
+  async _setEvCharging(active) {
+    const EV_TTL_MS = 8 * 60 * 60 * 1000;
+    if (active) {
+      this._evChargingUntil = Date.now() + EV_TTL_MS;
+      this.log(`[EV] Charging session started — discharge blocked until ${new Date(this._evChargingUntil).toISOString()}`);
+    } else {
+      this._evChargingUntil = 0;
+      this.log('[EV] Charging session stopped — discharge gate released');
+    }
+    try { this.homey.settings.set('ev_charging_until', this._evChargingUntil); } catch (_) {}
+    this._scheduleEvAutoClear();
+    this._runPolicyCheck().catch(err => this.error('[EV] policy run after toggle failed:', err));
+  }
+
   async _gatherInputs() {
     const settings = { ...this.getSettings() };
 
@@ -3489,6 +3540,7 @@ if (debug) this.log(
       },
       previousHwMode: this.lastRecommendation?.hwMode ?? null,
       consumptionW: this.learningEngine?.getPredictedConsumption(new Date()) ?? null,
+      evCharging: this._isEvCharging(),
     };
 
   }
@@ -3968,6 +4020,11 @@ if (debug) this.log(
     if (this._settingsFlushTimer) {
       this.homey.clearTimeout(this._settingsFlushTimer);
       this._settingsFlushTimer = null;
+    }
+
+    if (this._evChargingTimer) {
+      this.homey.clearTimeout(this._evChargingTimer);
+      this._evChargingTimer = null;
     }
     // Final flush — write pending queued settings synchronously on shutdown
     // so the last policy run's state is not lost on restart.

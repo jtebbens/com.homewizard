@@ -2280,6 +2280,48 @@
         ]
       },
       {
+        "id": "set_ev_charging",
+        "title": {
+          "en": "Set EV charging state",
+          "nl": "Stel EV-laadstatus in"
+        },
+        "titleFormatted": {
+          "en": "EV charging is [[state]]",
+          "nl": "EV laadt [[state]]"
+        },
+        "hint": {
+          "en": "Tell the policy that an electric vehicle is charging. While active the battery will not discharge (zero_charge_only). PV surplus can still charge the battery. Auto-clears after 8 hours as a safety net.",
+          "nl": "Geef aan dat een elektrische auto laadt. Zolang actief ontlaadt de batterij niet (zero_charge_only). PV-overschot mag wel de batterij laden. Vervalt automatisch na 8 uur als vangnet."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          },
+          {
+            "name": "state",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "start",
+                "label": {
+                  "en": "Started",
+                  "nl": "Gestart"
+                }
+              },
+              {
+                "id": "stop",
+                "label": {
+                  "en": "Stopped",
+                  "nl": "Gestopt"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
         "id": "set-battery-to-full-charge-mode",
         "title": {
           "en": "Set battery to Full Charge mode",
