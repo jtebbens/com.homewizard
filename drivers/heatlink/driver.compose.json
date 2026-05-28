@@ -7,11 +7,9 @@
     "large": "drivers/heatlink/assets/images/large.jpg",
     "small": "drivers/heatlink/assets/images/small.jpg"
   },
-  "platforms": [
-    "local"
-  ],
   "class": "thermostat",
-  "platforms": [ "local"],
+  "platforms": ["local"],
+  "connectivity": ["lan"],
   "capabilities": [
     "measure_temperature",
     "target_temperature",

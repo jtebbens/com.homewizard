@@ -7,11 +7,9 @@
     "large": "drivers/windmeter/assets/images/large.jpg",
     "small": "drivers/windmeter/assets/images/small.jpg"
   },
-  "platforms": [
-    "local"
-  ],
   "class": "sensor",
-  "platforms": [ "local"],
+  "platforms": ["local"],
+  "connectivity": ["lan"],
   "capabilities": [
     "measure_wind_angle",
     "measure_wind_strength.cur",
