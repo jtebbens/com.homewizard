@@ -1,0 +1,124 @@
+{
+  "settings": {
+    "title": "HomeWizard-indstillinger",
+    "intro": "For at oprette forbindelse til din HomeWizard skal vi bruge nedenstående indstillinger.",
+    "heatlink_intro": "For at oprette forbindelse til dit Heatlink skal du angive, hvilken HomeWizard det tilhører.",
+    "energylink_intro": "For at oprette forbindelse til dit Energylink skal du angive, hvilken HomeWizard det tilhører.",
+    "wattcher_intro": "For at oprette forbindelse til din Wattcher skal du angive, hvilken HomeWizard den tilhører.",
+    "thermometer_intro": "For at oprette forbindelse til dit termometer skal du angive, hvilken HomeWizard det tilhører.",
+    "password": "Adgangskode",
+    "use_ledring": "Brug LED-ring",
+    "use_ledring_explain": "LED-ring lyser grønt, når forudindstilling skiftes succesfuldt, rødt hvis ikke",
+    "save": "Gem",
+    "no_ip": "Angiv HomeWizards IP-adresse",
+    "select": "Vælg HomeWizard",
+    "select_sensor": "Vælg sensor",
+    "select_thermometer": "Vælg termometer",
+    "error": "Fejl: ",
+    "selection_error": "Ugyldigt valg",
+    "notfound_error": "Sensor ikke fundet",
+    "thermometer_notfound_error": "Termometer ikke fundet",
+    "fetch_error": "Kunne ikke læse sensorer",
+    "changelog": {
+      "label": "📜 Se ændringslog"
+    },
+    "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
+    "support_label": "🛠️ Supportside",
+    "tab_baseload": "Grundlast",
+    "tab_planning": "Batteriplanlægning",
+    "tab_expansion": "Udvidelse",
+    "planning_title": "Batteriplanlægning – 48 timer",
+    "planning_subtitle": "Forventede priser, batteritilstande og SoC-projektion for i dag og i morgen",
+    "baseload_title": "Grundlast-diagram",
+    "baseload_current": "Aktuel grundlast",
+    "baseload_samples_title": "Prøver fra valgt nat",
+    "baseload_show_samples": "Vis prøver",
+    "col_time": "Tid",
+    "col_power": "Effekt (W)",
+    "col_failed": "Mislykkedes",
+    "col_total": "Total",
+    "col_avg_ms": "Gns. (ms)",
+    "col_last_error": "Seneste fejl",
+    "col_since": "Siden",
+    "btn_clear_fetch": "Ryd hentningslogge",
+    "btn_refresh": "Opdater",
+    "btn_clear_journal": "Ryd journal",
+    "learning_title": "Læringsmotorens status",
+    "consumption_profile_title": "Forbrugsprofil (lært)",
+    "day_mon": "Man", "day_tue": "Tir", "day_wed": "Ons", "day_thu": "Tor",
+    "day_fri": "Fre", "day_sat": "Lør", "day_sun": "Søn",
+    "label_policy_mode_dynamic": "Dynamisk prissætning",
+    "label_policy_mode": "Styringstilstand",
+    "label_soc": "Aktuel SoC",
+    "label_avg_price": "Gns. pris",
+    "label_max_charge": "Maks. ladepris",
+    "label_min_discharge": "Min. afladepris",
+    "label_resolution": "Opløsning",
+    "today": "I dag",
+    "tomorrow": "I morgen",
+    "weather_updated_at": "Vejr opdateret kl.",
+    "pv_slots_learned": "PV-slots lært",
+    "min_slots_note": "(min. 10 for at lære)",
+    "no_tomorrow_prices": "Priser for i morgen er endnu ikke tilgængelige – planlægning baseret på i dag",
+    "cycle_plural": "🔄 {n}× cyklus",
+    "cycle_single": "🔋 1× cyklus",
+    "self_sufficient": "selvforsynende",
+    "net_suffix": "netto"
+  },
+  "pair": {
+    "no_devices_found": "Ingen enheder fundet. Sørg for:\n• Lokal API er aktiveret i HomeWizard-appen\n• Enhed og Homey er på samme netværk\n• mDNS/Bonjour er aktiveret på din router\n• Ingen VLAN-isolation mellem netværk",
+    "authorize_title": "Autoriser",
+    "authorize_instruction": "Tryk på knappen på enheden for at fuldføre parringen",
+    "button_label_waiting": "Venter på knapaktivering...",
+    "button_label_retry": "Prøv igen",
+    "authorize_failed_no_button_pressed": "Parring mislykkedes, knappen blev ikke trykket. Sørg for, at knappen trykkes inden for 60 sekunder.",
+    "something_went_wrong": "Noget gik galt, prøv venligst igen: ",
+    "energy_v2": {
+      "authorize_instruction": "Tryk på knappen på P1-måleren for at fuldføre parringen"
+    },
+    "plugin_battery": {
+      "authorize_instruction": "Tryk på knappen på plugin-batteriet for at fuldføre parringen"
+    },
+    "SDM230_v2": {
+      "authorize_instruction": "Tryk på knappen på KWH-måleren for at fuldføre parringen"
+    },
+    "SDM630_v2": {
+      "authorize_instruction": "Tryk på knappen på KWH-måleren for at fuldføre parringen"
+    }
+  },
+  "repair": {
+    "title": "Manuel IP-tilsidesættelse",
+    "description": "Brug dette, hvis mDNS-registrering ikke virker på dit netværk (f.eks. VLAN-isolation, mesh Wi-Fi-problemer).",
+    "warning": "⚠️ Advarsel: Manuel IP opdateres ikke automatisk, hvis enheden får en ny IP-adresse via DHCP. Brug statisk IP-reservation i din router.",
+    "label_current_mode": "Aktuel tilstand:",
+    "label_discovery_ip": "Registrerings-IP:",
+    "label_manual_ip": "Manuel IP-adresse:",
+    "mode_manual": "Manuel IP",
+    "mode_discovery": "mDNS-registrering (automatisk)",
+    "unknown": "Ukendt",
+    "btn_save": "Gem og test forbindelsen",
+    "btn_clear": "Tilbage til mDNS-registrering",
+    "testing": "Tester...",
+    "invalid_ip": "Ugyldigt IP-adresseformat",
+    "connection_failed": "Kan ikke oprette forbindelse til enheden",
+    "wrong_device": "Forkert enhed – serienummeret stemmer ikke overens",
+    "ip_required": "Angiv venligst en IP-adresse",
+    "success": "✓ Manuel IP gemt",
+    "cleared": "✓ Tilbage til mDNS-registrering",
+    "save_failed": "Kunne ikke gemme manuel IP",
+    "clear_failed": "Kunne ikke rydde manuel IP",
+    "load_failed": "Kunne ikke indlæse aktuelle indstillinger",
+    "confirm_clear": "Vende tilbage til automatisk mDNS-registrering? Din manuelle IP fjernes."
+  },
+  "camera": {
+    "planning_title": "Batteriplanlægning"
+  },
+  "device": {
+    "init": "Initialiserer enhed...",
+    "unreachable": "Enhed utilgængelig"
+  },
+  "errors": {
+    "auth_failed": "Kunne ikke godkende med din HomeWizard-konto",
+    "invalid_credentials": "Ugyldige loginoplysninger"
+  }
+}

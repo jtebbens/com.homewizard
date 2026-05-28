@@ -1,0 +1,124 @@
+{
+  "settings": {
+    "title": "HomeWizard Einstellungen",
+    "intro": "Um eine Verbindung mit Ihrem HomeWizard herzustellen, benötigen wir die folgenden Einstellungen.",
+    "heatlink_intro": "Um eine Verbindung mit Ihrem Heatlink herzustellen, geben Sie bitte an, zu welchem HomeWizard er gehört.",
+    "energylink_intro": "Um eine Verbindung mit Ihrem Energylink herzustellen, geben Sie bitte an, zu welchem HomeWizard er gehört.",
+    "wattcher_intro": "Um eine Verbindung mit Ihrem Wattcher herzustellen, geben Sie bitte an, zu welchem HomeWizard er gehört.",
+    "thermometer_intro": "Um eine Verbindung mit Ihrem Thermometer herzustellen, geben Sie bitte an, zu welchem HomeWizard es gehört.",
+    "password": "Passwort",
+    "use_ledring": "LED-Ring verwenden",
+    "use_ledring_explain": "LED-Ring leuchtet grün, wenn das Preset erfolgreich gewechselt wurde, rot wenn nicht",
+    "save": "Speichern",
+    "no_ip": "Bitte geben Sie die IP-Adresse des HomeWizard ein",
+    "select": "HomeWizard auswählen",
+    "select_sensor": "Sensor auswählen",
+    "select_thermometer": "Thermometer auswählen",
+    "error": "Fehler: ",
+    "selection_error": "Ungültige Auswahl",
+    "notfound_error": "Sensor nicht gefunden",
+    "thermometer_notfound_error": "Thermometer nicht gefunden",
+    "fetch_error": "Sensoren konnten nicht ausgelesen werden",
+    "changelog": {
+      "label": "📜 Changelog anzeigen"
+    },
+    "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
+    "support_label": "🛠️ Support-Seite",
+    "tab_baseload": "Grundlast",
+    "tab_planning": "Batterieplanung",
+    "tab_expansion": "Erweiterung",
+    "planning_title": "Batterieplanung – 48 Stunden",
+    "planning_subtitle": "Erwartete Preise, Batteriemodi und SoC-Projektion für heute und morgen",
+    "baseload_title": "Grundlast-Diagramm",
+    "baseload_current": "Aktuelle Grundlast",
+    "baseload_samples_title": "Messungen der ausgewählten Nacht",
+    "baseload_show_samples": "Messungen anzeigen",
+    "col_time": "Zeit",
+    "col_power": "Leistung (W)",
+    "col_failed": "Fehlgeschlagen",
+    "col_total": "Gesamt",
+    "col_avg_ms": "Durchschn. (ms)",
+    "col_last_error": "Letzter Fehler",
+    "col_since": "Seit",
+    "btn_clear_fetch": "Abrufprotokolle löschen",
+    "btn_refresh": "Aktualisieren",
+    "btn_clear_journal": "Journal löschen",
+    "learning_title": "Lernmotor-Status",
+    "consumption_profile_title": "Verbrauchsprofil (gelernt)",
+    "day_mon": "Mo", "day_tue": "Di", "day_wed": "Mi", "day_thu": "Do",
+    "day_fri": "Fr", "day_sat": "Sa", "day_sun": "So",
+    "label_policy_mode_dynamic": "Dynamischer Tarif",
+    "label_policy_mode": "Steuerungsmodus",
+    "label_soc": "Aktueller SoC",
+    "label_avg_price": "Durchschn. Preis",
+    "label_max_charge": "Max. Ladepreis",
+    "label_min_discharge": "Min. Entladepreis",
+    "label_resolution": "Auflösung",
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "weather_updated_at": "Wetter aktualisiert um",
+    "pv_slots_learned": "PV-Slots gelernt",
+    "min_slots_note": "(mind. 10 zum Lernen)",
+    "no_tomorrow_prices": "Preise für morgen noch nicht verfügbar – Planung basiert auf heute",
+    "cycle_plural": "🔄 {n}× Zyklus",
+    "cycle_single": "🔋 1× Zyklus",
+    "self_sufficient": "autark",
+    "net_suffix": "netto"
+  },
+  "pair": {
+    "no_devices_found": "Keine Geräte gefunden. Bitte sicherstellen:\n• Lokale API ist in der HomeWizard-App aktiviert\n• Gerät und Homey sind im gleichen Netzwerk\n• mDNS/Bonjour ist auf Ihrem Router aktiviert\n• Keine VLAN-Isolation zwischen den Netzwerken",
+    "authorize_title": "Autorisieren",
+    "authorize_instruction": "Drücken Sie die Taste am Gerät, um die Kopplung abzuschließen",
+    "button_label_waiting": "Warte auf Tastendruck...",
+    "button_label_retry": "Erneut versuchen",
+    "authorize_failed_no_button_pressed": "Kopplung fehlgeschlagen, die Taste wurde nicht gedrückt. Stellen Sie sicher, dass die Taste innerhalb von 60 Sekunden gedrückt wird.",
+    "something_went_wrong": "Etwas ist schiefgelaufen, bitte erneut versuchen: ",
+    "energy_v2": {
+      "authorize_instruction": "Drücken Sie die Taste am P1-Messgerät, um die Kopplung abzuschließen"
+    },
+    "plugin_battery": {
+      "authorize_instruction": "Drücken Sie die Taste an der Plugin-Batterie, um die Kopplung abzuschließen"
+    },
+    "SDM230_v2": {
+      "authorize_instruction": "Drücken Sie die Taste am KWH-Messgerät, um die Kopplung abzuschließen"
+    },
+    "SDM630_v2": {
+      "authorize_instruction": "Drücken Sie die Taste am KWH-Messgerät, um die Kopplung abzuschließen"
+    }
+  },
+  "repair": {
+    "title": "Manuelle IP-Adresse festlegen",
+    "description": "Verwenden Sie dies, wenn mDNS-Discovery in Ihrem Netzwerk nicht funktioniert (z. B. VLAN-Isolation, Mesh-WLAN-Probleme).",
+    "warning": "⚠️ Warnung: Die manuelle IP-Adresse wird nicht automatisch aktualisiert, wenn das Gerät über DHCP eine neue IP-Adresse erhält. Verwenden Sie eine statische IP-Reservierung in Ihrem Router.",
+    "label_current_mode": "Aktueller Modus:",
+    "label_discovery_ip": "Discovery-IP:",
+    "label_manual_ip": "Manuelle IP-Adresse:",
+    "mode_manual": "Manuelle IP",
+    "mode_discovery": "mDNS Discovery (automatisch)",
+    "unknown": "Unbekannt",
+    "btn_save": "Speichern & Verbindung testen",
+    "btn_clear": "Zurück zu mDNS Discovery",
+    "testing": "Teste...",
+    "invalid_ip": "Ungültiges IP-Adressformat",
+    "connection_failed": "Keine Verbindung zum Gerät möglich",
+    "wrong_device": "Falsches Gerät – Seriennummer stimmt nicht überein",
+    "ip_required": "Bitte eine IP-Adresse eingeben",
+    "success": "✓ Manuelle IP erfolgreich gespeichert",
+    "cleared": "✓ Zurück zu mDNS Discovery",
+    "save_failed": "Manuelle IP konnte nicht gespeichert werden",
+    "clear_failed": "Manuelle IP konnte nicht gelöscht werden",
+    "load_failed": "Aktuelle Einstellungen konnten nicht geladen werden",
+    "confirm_clear": "Zur automatischen mDNS Discovery zurückkehren? Ihre manuelle IP wird entfernt."
+  },
+  "camera": {
+    "planning_title": "Batterieplanung"
+  },
+  "device": {
+    "init": "Gerät wird initialisiert...",
+    "unreachable": "Gerät nicht erreichbar"
+  },
+  "errors": {
+    "auth_failed": "Authentifizierung mit Ihrem HomeWizard-Konto fehlgeschlagen",
+    "invalid_credentials": "Ungültige Anmeldedaten"
+  }
+}

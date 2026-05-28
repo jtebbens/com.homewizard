@@ -1,0 +1,124 @@
+{
+  "settings": {
+    "title": "HomeWizard beállítások",
+    "intro": "A HomeWizardhoz való csatlakozáshoz az alábbi beállítások szükségesek.",
+    "heatlink_intro": "A Heatlink csatlakoztatásához meg kell adnia, melyik HomeWizardhoz tartozik.",
+    "energylink_intro": "Az Energylink csatlakoztatásához meg kell adnia, melyik HomeWizardhoz tartozik.",
+    "wattcher_intro": "A Wattcher csatlakoztatásához meg kell adnia, melyik HomeWizardhoz tartozik.",
+    "thermometer_intro": "A hőmérő csatlakoztatásához meg kell adnia, melyik HomeWizardhoz tartozik.",
+    "password": "Jelszó",
+    "use_ledring": "LED-gyűrű használata",
+    "use_ledring_explain": "A LED-gyűrű zölden villog, ha a beállítás sikeresen megváltozott, pirosan, ha nem",
+    "save": "Mentés",
+    "no_ip": "Adja meg a HomeWizard IP-címét",
+    "select": "HomeWizard kiválasztása",
+    "select_sensor": "Érzékelő kiválasztása",
+    "select_thermometer": "Hőmérő kiválasztása",
+    "error": "Hiba: ",
+    "selection_error": "Érvénytelen kiválasztás",
+    "notfound_error": "Az érzékelő nem található",
+    "thermometer_notfound_error": "A hőmérő nem található",
+    "fetch_error": "Az érzékelők olvasása sikertelen",
+    "changelog": {
+      "label": "📜 Változásnapló megtekintése"
+    },
+    "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
+    "support_label": "🛠️ Támogatási oldal",
+    "tab_baseload": "Alapterhelés",
+    "tab_planning": "Akkumulátor-tervezés",
+    "tab_expansion": "Bővítés",
+    "planning_title": "Akkumulátor-tervezés – 48 óra",
+    "planning_subtitle": "Várható árak, akkumulátor-módok és SoC-projekció mára és holnapra",
+    "baseload_title": "Alapterhelés diagram",
+    "baseload_current": "Jelenlegi alapterhelés",
+    "baseload_samples_title": "A kiválasztott éjszaka mintái",
+    "baseload_show_samples": "Minták megjelenítése",
+    "col_time": "Idő",
+    "col_power": "Teljesítmény (W)",
+    "col_failed": "Sikertelen",
+    "col_total": "Összesen",
+    "col_avg_ms": "Átl. (ms)",
+    "col_last_error": "Utolsó hiba",
+    "col_since": "Óta",
+    "btn_clear_fetch": "Letöltési naplók törlése",
+    "btn_refresh": "Frissítés",
+    "btn_clear_journal": "Napló törlése",
+    "learning_title": "Tanulómotor állapota",
+    "consumption_profile_title": "Fogyasztási profil (megtanult)",
+    "day_mon": "H", "day_tue": "K", "day_wed": "Sze", "day_thu": "Cs",
+    "day_fri": "P", "day_sat": "Szo", "day_sun": "V",
+    "label_policy_mode_dynamic": "Dinamikus árszabás",
+    "label_policy_mode": "Irányítási mód",
+    "label_soc": "Jelenlegi SoC",
+    "label_avg_price": "Átlagár",
+    "label_max_charge": "Max. töltési ár",
+    "label_min_discharge": "Min. kisütési ár",
+    "label_resolution": "Felbontás",
+    "today": "Ma",
+    "tomorrow": "Holnap",
+    "weather_updated_at": "Időjárás frissítve:",
+    "pv_slots_learned": "PV-időközök megtanulva",
+    "min_slots_note": "(min. 10 a tanuláshoz)",
+    "no_tomorrow_prices": "A holnapi árak még nem elérhetők – tervezés a mai adatok alapján",
+    "cycle_plural": "🔄 {n}× ciklus",
+    "cycle_single": "🔋 1× ciklus",
+    "self_sufficient": "önellátó",
+    "net_suffix": "nettó"
+  },
+  "pair": {
+    "no_devices_found": "Nem találhatók eszközök. Ellenőrizze:\n• A helyi API engedélyezve van a HomeWizard alkalmazásban\n• Az eszköz és a Homey ugyanazon a hálózaton vannak\n• Az mDNS/Bonjour engedélyezve van az útválasztón\n• Nincs VLAN-elkülönítés a hálózatok között",
+    "authorize_title": "Engedélyezés",
+    "authorize_instruction": "Nyomja meg az eszközön lévő gombot a párosítás befejezéséhez",
+    "button_label_waiting": "Gombnyomásra vár...",
+    "button_label_retry": "Próbálja újra",
+    "authorize_failed_no_button_pressed": "A párosítás sikertelen, a gombot nem nyomták meg. Győződjön meg róla, hogy a gombot 60 másodpercen belül megnyomja.",
+    "something_went_wrong": "Valami hiba történt, kérjük, próbálja újra: ",
+    "energy_v2": {
+      "authorize_instruction": "Nyomja meg a P1-mérőn lévő gombot a párosítás befejezéséhez"
+    },
+    "plugin_battery": {
+      "authorize_instruction": "Nyomja meg a dugaszolható akkumulátoron lévő gombot a párosítás befejezéséhez"
+    },
+    "SDM230_v2": {
+      "authorize_instruction": "Nyomja meg a KWH-mérőn lévő gombot a párosítás befejezéséhez"
+    },
+    "SDM630_v2": {
+      "authorize_instruction": "Nyomja meg a KWH-mérőn lévő gombot a párosítás befejezéséhez"
+    }
+  },
+  "repair": {
+    "title": "Manuális IP-felülbírálás",
+    "description": "Használja ezt, ha az mDNS-felfedezés nem működik a hálózatán (pl. VLAN-elkülönítés, mesh Wi-Fi problémák).",
+    "warning": "⚠️ Figyelmeztetés: A manuális IP-cím nem frissül automatikusan, ha az eszköz új IP-címet kap a DHCP-től. Használjon statikus IP-foglalást az útválasztón.",
+    "label_current_mode": "Jelenlegi mód:",
+    "label_discovery_ip": "Felfedező IP:",
+    "label_manual_ip": "Manuális IP-cím:",
+    "mode_manual": "Manuális IP",
+    "mode_discovery": "mDNS-felfedezés (automatikus)",
+    "unknown": "Ismeretlen",
+    "btn_save": "Mentés és kapcsolat tesztelése",
+    "btn_clear": "Visszatérés az mDNS-felfedezéshez",
+    "testing": "Tesztelés...",
+    "invalid_ip": "Érvénytelen IP-cím formátum",
+    "connection_failed": "Nem lehet csatlakozni az eszközhöz",
+    "wrong_device": "Rossz eszköz – sorozatszám nem egyezik",
+    "ip_required": "Adjon meg egy IP-címet",
+    "success": "✓ Manuális IP mentve",
+    "cleared": "✓ Visszatérve az mDNS-felfedezéshez",
+    "save_failed": "A manuális IP mentése sikertelen",
+    "clear_failed": "A manuális IP törlése sikertelen",
+    "load_failed": "Az aktuális beállítások betöltése sikertelen",
+    "confirm_clear": "Visszatérni az automatikus mDNS-felfedezéshez? Manuális IP-je törölve lesz."
+  },
+  "camera": {
+    "planning_title": "Akkumulátor-tervezés"
+  },
+  "device": {
+    "init": "Eszköz inicializálása...",
+    "unreachable": "Az eszköz nem érhető el"
+  },
+  "errors": {
+    "auth_failed": "Nem sikerült hitelesíteni a HomeWizard-fiókjával",
+    "invalid_credentials": "Érvénytelen hitelesítő adatok"
+  }
+}
