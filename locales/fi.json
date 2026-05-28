@@ -1,0 +1,124 @@
+{
+  "settings": {
+    "title": "HomeWizard-asetukset",
+    "intro": "HomeWizard-yhteyden muodostamiseen tarvitsemme alla olevat asetukset.",
+    "heatlink_intro": "Heatlink-yhteyden muodostamiseen sinun täytyy kertoa, mihin HomeWizardiin se kuuluu.",
+    "energylink_intro": "Energylink-yhteyden muodostamiseen sinun täytyy kertoa, mihin HomeWizardiin se kuuluu.",
+    "wattcher_intro": "Wattcher-yhteyden muodostamiseen sinun täytyy kertoa, mihin HomeWizardiin se kuuluu.",
+    "thermometer_intro": "Lämpömittariyhteyden muodostamiseen sinun täytyy kertoa, mihin HomeWizardiin se kuuluu.",
+    "password": "Salasana",
+    "use_ledring": "Käytä LED-rengasta",
+    "use_ledring_explain": "LED-rengas palaa vihreänä, kun esiasetuksen vaihto onnistui, punaisena jos ei",
+    "save": "Tallenna",
+    "no_ip": "Anna HomeWizardin IP-osoite",
+    "select": "Valitse HomeWizard",
+    "select_sensor": "Valitse sensori",
+    "select_thermometer": "Valitse lämpömittari",
+    "error": "Virhe: ",
+    "selection_error": "Virheellinen valinta",
+    "notfound_error": "Sensoria ei löydy",
+    "thermometer_notfound_error": "Lämpömittaria ei löydy",
+    "fetch_error": "Sensorien lukeminen epäonnistui",
+    "changelog": {
+      "label": "📜 Näytä muutosloki"
+    },
+    "support_link": "https://community.homey.app/t/app-pro-homewizard/19267",
+    "support_label": "🛠️ Tukisivu",
+    "tab_baseload": "Peruskuorma",
+    "tab_planning": "Akkusuunnittelu",
+    "tab_expansion": "Laajennus",
+    "planning_title": "Akkusuunnittelu – 48 tuntia",
+    "planning_subtitle": "Odotetut hinnat, akkutilat ja SoC-projektio tänään ja huomenna",
+    "baseload_title": "Peruskuormakaavio",
+    "baseload_current": "Nykyinen peruskuorma",
+    "baseload_samples_title": "Valitun yön näytteet",
+    "baseload_show_samples": "Näytä näytteet",
+    "col_time": "Aika",
+    "col_power": "Teho (W)",
+    "col_failed": "Epäonnistui",
+    "col_total": "Yhteensä",
+    "col_avg_ms": "Keskim. (ms)",
+    "col_last_error": "Viimeisin virhe",
+    "col_since": "Alkaen",
+    "btn_clear_fetch": "Tyhjennä hakulokit",
+    "btn_refresh": "Päivitä",
+    "btn_clear_journal": "Tyhjennä lokikirja",
+    "learning_title": "Oppimismoottorin tila",
+    "consumption_profile_title": "Kulutusprofiili (opittu)",
+    "day_mon": "Ma", "day_tue": "Ti", "day_wed": "Ke", "day_thu": "To",
+    "day_fri": "Pe", "day_sat": "La", "day_sun": "Su",
+    "label_policy_mode_dynamic": "Dynaaminen hinnoittelu",
+    "label_policy_mode": "Ohjausmoodi",
+    "label_soc": "Nykyinen SoC",
+    "label_avg_price": "Keskim. hinta",
+    "label_max_charge": "Maks. latauksen hinta",
+    "label_min_discharge": "Min. purkauksen hinta",
+    "label_resolution": "Resoluutio",
+    "today": "Tänään",
+    "tomorrow": "Huomenna",
+    "weather_updated_at": "Sää päivitetty klo",
+    "pv_slots_learned": "PV-paikkoja opittu",
+    "min_slots_note": "(väh. 10 oppimiseen)",
+    "no_tomorrow_prices": "Huomisen hinnat eivät ole vielä saatavilla – suunnittelu perustuu tähän päivään",
+    "cycle_plural": "🔄 {n}× sykli",
+    "cycle_single": "🔋 1× sykli",
+    "self_sufficient": "omavarainen",
+    "net_suffix": "netto"
+  },
+  "pair": {
+    "no_devices_found": "Laitteita ei löydy. Varmista:\n• Paikallinen API on käytössä HomeWizard-sovelluksessa\n• Laite ja Homey ovat samassa verkossa\n• mDNS/Bonjour on käytössä reitittimessäsi\n• Ei VLAN-eristystä verkkojen välillä",
+    "authorize_title": "Valtuuta",
+    "authorize_instruction": "Paina laitteen painiketta yhdistämisen viimeistelemiseksi",
+    "button_label_waiting": "Odotetaan painikkeen painamista...",
+    "button_label_retry": "Yritä uudelleen",
+    "authorize_failed_no_button_pressed": "Yhdistäminen epäonnistui, painiketta ei painettu. Varmista, että painiketta painetaan 60 sekunnin kuluessa.",
+    "something_went_wrong": "Jokin meni pieleen, yritä uudelleen: ",
+    "energy_v2": {
+      "authorize_instruction": "Paina P1-mittarin painiketta yhdistämisen viimeistelemiseksi"
+    },
+    "plugin_battery": {
+      "authorize_instruction": "Paina pistoke-akun painiketta yhdistämisen viimeistelemiseksi"
+    },
+    "SDM230_v2": {
+      "authorize_instruction": "Paina KWH-mittarin painiketta yhdistämisen viimeistelemiseksi"
+    },
+    "SDM630_v2": {
+      "authorize_instruction": "Paina KWH-mittarin painiketta yhdistämisen viimeistelemiseksi"
+    }
+  },
+  "repair": {
+    "title": "Manuaalinen IP-ohitus",
+    "description": "Käytä tätä, jos mDNS-etsintä ei toimi verkossasi (esim. VLAN-eristys, mesh-Wi-Fi-ongelmat).",
+    "warning": "⚠️ Varoitus: Manuaalinen IP ei päivity automaattisesti, jos laite saa uuden IP-osoitteen DHCP:ltä. Käytä staattista IP-varausta reitittimessäsi.",
+    "label_current_mode": "Nykyinen tila:",
+    "label_discovery_ip": "Etsintä-IP:",
+    "label_manual_ip": "Manuaalinen IP-osoite:",
+    "mode_manual": "Manuaalinen IP",
+    "mode_discovery": "mDNS-etsintä (automaattinen)",
+    "unknown": "Tuntematon",
+    "btn_save": "Tallenna ja testaa yhteys",
+    "btn_clear": "Takaisin mDNS-etsintään",
+    "testing": "Testataan...",
+    "invalid_ip": "Virheellinen IP-osoitemuoto",
+    "connection_failed": "Ei voi muodostaa yhteyttä laitteeseen",
+    "wrong_device": "Väärä laite – sarjanumero ei täsmää",
+    "ip_required": "Anna IP-osoite",
+    "success": "✓ Manuaalinen IP tallennettu",
+    "cleared": "✓ Palattu mDNS-etsintään",
+    "save_failed": "Manuaalisen IP:n tallennus epäonnistui",
+    "clear_failed": "Manuaalisen IP:n poisto epäonnistui",
+    "load_failed": "Nykyisten asetusten lataus epäonnistui",
+    "confirm_clear": "Palata automaattiseen mDNS-etsintään? Manuaalinen IP-osoitteesi poistetaan."
+  },
+  "camera": {
+    "planning_title": "Akkusuunnittelu"
+  },
+  "device": {
+    "init": "Alustetaan laitetta...",
+    "unreachable": "Laite ei tavoitettavissa"
+  },
+  "errors": {
+    "auth_failed": "HomeWizard-tilin todennus epäonnistui",
+    "invalid_credentials": "Virheelliset kirjautumistiedot"
+  }
+}
