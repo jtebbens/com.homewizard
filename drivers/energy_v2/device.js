@@ -453,6 +453,10 @@ async reconnectWithManualIP(ip) {
     this.onPollInterval = null;
     this.gridReturnStart = null;
     this.batteryErrorTriggered = false;
+    this._bmsCutoffChargingActive = false;
+    this._bmsCutoffStart = null;
+    this._bmsCutoffTriggered = false;
+    this._bmsCutoffLastDir = null;
     this._lastFullUpdate = 0;
     this._lastDiscoveryIP = null;
 
@@ -460,6 +464,7 @@ async reconnectWithManualIP(ip) {
     this._lastBatteryModeChange = 0;
     this._batteryModeChangeCooldown = 5000; // 5 seconds minimum between changes
     this._liveMode = null;
+    this._lastBatteryModeHttpCheck = 0;
 
 
     this._cache = {
@@ -1456,6 +1461,39 @@ async _updateBatteryGroup() {
       this.flowTriggerBatteryMode(this, { mode: normalized });
     }
   }
+
+  // 8. Battery mode staleness check:
+  // A battery fault can silently stop WS charge_mode updates for any mode, leaving
+  // the capability stale. The WS watchdog restarts on missing measurements, but
+  // charge_mode can go missing while other WS data keeps flowing. Poll HTTP every
+  // 2 min to catch stale modes (e.g. predictive or zero_charge_only stuck while
+  // battery is in fault/zero) within 2–3 minutes instead of hours.
+  if (this.url && this.token) {
+    const now = Date.now();
+    if (now - (this._lastBatteryModeHttpCheck ?? 0) > 120_000) {
+      this._lastBatteryModeHttpCheck = now;
+      try {
+        const resp = await api.getMode(this.url, this.token);
+        if (resp && typeof resp === 'object') {
+          const liveMode = normalizeBatteryMode(resp);
+          const currentCap = this.getCapabilityValue('battery_group_charge_mode');
+          if (liveMode !== currentCap) {
+            this.log(`🔍 Battery mode staleness check: ${currentCap} → ${liveMode}`);
+            this._cacheSet('last_battery_state', {
+              mode: resp.mode,
+              permissions: resp.permissions,
+              battery_count: resp.battery_count ?? 1,
+            });
+            await updateCapability(this, 'battery_group_charge_mode', liveMode);
+            this._cacheSet('last_battery_mode', liveMode);
+            this.flowTriggerBatteryMode(this, { mode: liveMode });
+          }
+        }
+      } catch (e) {
+        this.log(`🔍 Battery mode staleness check failed: ${e.message}`);
+      }
+    }
+  }
 }
 
 
@@ -1717,13 +1755,10 @@ _measurementPower(m, tasks) {
     }
   };
 
-  const currentPower = this.getCapabilityValue('measure_power');
-  if (currentPower !== m.power_w) {
-    cap('measure_power', m.power_w);
-    cap('measure_power.l1', m.power_l1_w);
-    cap('measure_power.l2', m.power_l2_w);
-    cap('measure_power.l3', m.power_l3_w);
-  }
+  cap('measure_power', m.power_w);
+  cap('measure_power.l1', m.power_l1_w);
+  cap('measure_power.l2', m.power_l2_w);
+  cap('measure_power.l3', m.power_l3_w);
 
   // Always feed baseload monitor, even when power unchanged.
   // If battery holds grid at 0W constantly, the value never changes but we
@@ -2059,6 +2094,67 @@ async _handleBatteries(data) {
     } else {
       this.gridReturnStart = null;
       this.batteryErrorTriggered = false;
+    }
+
+    // BMS cutoff detection — charge or discharge unexpectedly stopped:
+    // Fires when battery was active (>200W either direction) and drops to idle
+    // while the relevant permission is still set. No grid-return required.
+    // SoC guards: <90% for charge cutoff (not naturally full),
+    //             >10% for discharge cutoff (not naturally empty).
+    const batteryPowerNow = payload.power_w ?? 0;
+    const batteryIdle = Math.abs(batteryPowerNow) < 50;
+    const avgSoC = this.getCapabilityValue('battery_group_average_soc') ?? 100;
+    const perms = Array.isArray(payload.permissions)
+      ? payload.permissions.map(p => p.toLowerCase())
+      : [];
+    const chargeAllowed = perms.includes('charge_allowed') || normalizedMode === 'to_full';
+    const dischargeAllowed = perms.includes('discharge_allowed');
+
+    // Track last active direction
+    if (batteryPowerNow > 200 && chargeAllowed) {
+      this._bmsCutoffChargingActive = true;
+      this._bmsCutoffStart = null;
+      this._bmsCutoffTriggered = false;
+    } else if (batteryPowerNow < -200 && dischargeAllowed) {
+      this._bmsCutoffChargingActive = true; // reuse flag for discharge too
+      this._bmsCutoffStart = null;
+      this._bmsCutoffTriggered = false;
+    }
+
+    const socGuardOk = (batteryPowerNow > 0 || this._bmsCutoffLastDir === 'charge')
+      ? avgSoC < 90   // was charging → not naturally full
+      : avgSoC > 10;  // was discharging → not naturally empty
+
+    // Track direction for SoC guard
+    if (batteryPowerNow > 200) this._bmsCutoffLastDir = 'charge';
+    else if (batteryPowerNow < -200) this._bmsCutoffLastDir = 'discharge';
+
+    const permissionActive = chargeAllowed || dischargeAllowed;
+
+    if (permissionActive && batteriesPresent && batteryIdle && socGuardOk
+        && this._bmsCutoffChargingActive) {
+      if (!this._bmsCutoffStart) this._bmsCutoffStart = now;
+      const cutoffDuration = now - this._bmsCutoffStart;
+
+      if (cutoffDuration > 180_000 && !this._bmsCutoffTriggered) {
+        this._bmsCutoffTriggered = true;
+        this.log(`❌ BMS cutoff: battery idle ${Math.round(cutoffDuration / 1000)}s, mode=${normalizedMode}, SoC=${avgSoC}%, perms=${perms.join(',')}`);
+        this.homey.flow
+          .getDeviceTriggerCard('battery_error_detected')
+          .trigger(this, {}, {
+            power: batteryPowerNow,
+            target: payload.target_power_w ?? 0,
+            mode: normalizedMode,
+            batteryCount: batteries.length
+          })
+          .catch(this.error);
+      }
+    } else if (!permissionActive) {
+      this._bmsCutoffChargingActive = false;
+      this._bmsCutoffStart = null;
+      this._bmsCutoffTriggered = false;
+    } else if (!batteryIdle) {
+      this._bmsCutoffStart = null; // activity resumed
     }
 
   } catch (err) {
