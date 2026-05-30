@@ -166,6 +166,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     this.previousChargingState = null;
     this.previousTimeToEmpty = null;
     this.previousStateOfCharge = null;
+    this._faultAlarmActive = false;
+    this.lastMeasurementAt = Date.now(); // treat startup as first measurement
     this._prevTimeToFull = this.getCapabilityValue('time_to_full') ?? 0;
     this._prevTimeToEmpty = this.getCapabilityValue('time_to_empty') ?? 0;
     this._lastDiscoveryIP = null;
@@ -261,6 +263,19 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         if (!this.getSettings().use_polling && staleMs > 190000) {
           this.log(`🕒 WS stale >3min (${staleMs}ms), restarting`);
           this.wsManager?.restartWebSocket();
+        }
+
+        // Fault detection: if measurement data stale >5 min (restart attempts failed),
+        // battery is likely in fault/unresponsive state. Trigger alarm + flow.
+        const dataStaleSec = Date.now() - (this.lastMeasurementAt || 0);
+        if (dataStaleSec > 300_000 && !this._faultAlarmActive) {
+          this._faultAlarmActive = true;
+          this.log(`⚠️ Battery unresponsive — no data for ${Math.round(dataStaleSec / 1000)}s`);
+          this.setCapabilityValue('alarm_generic', true).catch(this.error);
+          this.homey.flow
+            .getDeviceTriggerCard('battery_unresponsive')
+            .trigger(this)
+            .catch(this.error);
         }
       }, 60000);
 
@@ -452,6 +467,13 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       const now = Date.now();
       this.lastMeasurementAt = now;
 
+      // Clear fault alarm if battery data resumes after unresponsive period
+      if (this._faultAlarmActive) {
+        this._faultAlarmActive = false;
+        this.log(`✅ Battery responsive again — clearing fault alarm`);
+        this.setCapabilityValue('alarm_generic', false).catch(this.error);
+      }
+
       const BATTERY_CAPACITY_WH = 2470;
 
       // ✅ CPU FIX: Batch all capability updates to avoid blocking event loop
@@ -533,6 +555,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
 
     if (chargingState !== this.previousChargingState) {
       capabilityUpdates.push(updateCapability(this, 'battery_charging_state', chargingState));
+
       this.previousChargingState = chargingState;
 
       this.homey.flow
@@ -739,6 +762,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   async _updateCapabilities() {
     const caps = [
       'identify',
+      'alarm_generic',
       'dim',
       'led_brightness_pct',
       'meter_power.import',

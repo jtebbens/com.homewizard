@@ -50,6 +50,18 @@
 
     },
     {
+      "id": "battery_unresponsive",
+      "title": {
+        "en": "Battery is unresponsive",
+        "nl": "Batterij reageert niet"
+      },
+      "args": [],
+      "titleFormatted": {
+        "en": "Battery stopped responding (possible fault)",
+        "nl": "Batterij reageert niet meer (mogelijke storing)"
+      }
+    },
+    {
       "id": "net_frequency_out_of_range",
       "title": {
         "en": "Network frequency out of range",

@@ -13,6 +13,7 @@
   ],
   "capabilities": [
     "identify",
+    "alarm_generic",
     "dim",
     "led_brightness_pct",
     "meter_power.import",
