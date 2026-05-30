@@ -103,6 +103,12 @@ class WebSocketManager {
     this._lastHandlerDurationMs = { measurement: 0, system: 0, batteries: 0 };
     this._maxHandlerDurationMs = { measurement: 0, system: 0, batteries: 0 };
 
+    // Ping/pong RTT tracking (rolling window of last 10 samples = ~5 min)
+    this._lastPingAt = 0;
+    this._rttSamples = [];
+    this._rttAvgMs = null;
+    this._rttMaxMs = 0;
+
     // Reconnect rate detection (ring buffer of last 20 reconnect timestamps)
     this._reconnectTimestamps = [];
 
@@ -323,6 +329,7 @@ class WebSocketManager {
         }
 
         this.pongReceived = false;
+        this._lastPingAt = Date.now();
         try { this.ws.ping(); } catch (e) { this.error('ping failed', e); }
       }, 30000);
 
@@ -351,6 +358,13 @@ class WebSocketManager {
       this.pongReceived = true;
       // Do NOT update lastMeasurementAt here — only actual measurement data should reset the idle timer.
       // Updating on pong would mask a zombie: device alive at TCP level but stopped streaming data.
+      if (this._lastPingAt > 0) {
+        const rtt = Date.now() - this._lastPingAt;
+        this._rttSamples.push(rtt);
+        if (this._rttSamples.length > 10) this._rttSamples.shift();
+        this._rttAvgMs = Math.round(this._rttSamples.reduce((a, b) => a + b, 0) / this._rttSamples.length);
+        if (rtt > this._rttMaxMs) this._rttMaxMs = rtt;
+      }
     });
 
     // ──────────────────────── message ────────────────────────
@@ -602,6 +616,11 @@ class WebSocketManager {
         max: { ...this._maxHandlerDurationMs },
       },
       reconnectRate: this._getReconnectRate(),
+      pingRtt: {
+        avgMs: this._rttAvgMs,
+        maxMs: this._rttMaxMs > 0 ? this._rttMaxMs : null,
+        samples: this._rttSamples.length,
+      },
     };
   }
 

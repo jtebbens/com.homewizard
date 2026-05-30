@@ -449,6 +449,7 @@
   <!-- TAB: FETCH -->
   <div id="fetch" class="tab-content">
     <h2>Device Fetch Stats</h2>
+    <div id="fetch-wifi-banner" style="display:none;background:#1a0e00;border:2px solid #FB923C;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;"></div>
     <table id="fetch-stats-table">
       <thead>
         <tr>
@@ -1236,10 +1237,23 @@
             const rssiColor = st.rssiAvg != null && st.rssiAvg < 30 ? 'color:#f87171'
                             : st.rssiAvg != null && st.rssiAvg < 60 ? 'color:#fb923c' : '';
 
+            const avgMs = st.avgResponseMs || null;
+            const avgMsColor = avgMs != null && avgMs > 500 ? 'color:#f87171'
+                             : avgMs != null && avgMs > 200 ? 'color:#fb923c' : '';
+            const avgMsCell = `<td style="${avgMsColor}" title="&gt;200ms = mogelijke WiFi-problemen, &gt;500ms = slecht">${avgMs != null ? avgMs : '—'}</td>`;
+
             const lastErr = st.lastError
               ? `<span title="${st.lastErrorAt || ''}">${st.lastError.substring(0, 35)}</span>`
               : '—';
-            const since = st.since ? new Date(st.since).toLocaleDateString('nl-NL') : '—';
+            let since = '—';
+            if (st.since) {
+              const sinceMs = Date.now() - new Date(st.since).getTime();
+              const sinceMin = Math.round(sinceMs / 60000);
+              if (sinceMin < 60) since = `${sinceMin}m`;
+              else if (sinceMin < 1440) since = `${Math.round(sinceMin / 60)}u`;
+              else since = `${Math.round(sinceMin / 1440)}d`;
+              since = `<span title="${st.since}">${since} geleden</span>`;
+            }
 
             let mdnsCell = '—';
             if (st.lastDiscoveryAt) {
@@ -1247,7 +1261,10 @@
               const agoStr = ago < 60 ? `${ago}m` : `${Math.round(ago/60)}u`;
               const eventLabel = { available: 'avail', address_changed: 'ip↑', last_seen: 'seen' }[st.lastDiscoveryEvent] || st.lastDiscoveryEvent;
               const mdnsColor = ago > 60 ? 'color:#f87171' : ago > 15 ? 'color:#fb923c' : '';
-              mdnsCell = `<span style="${mdnsColor}" title="${st.lastDiscoveryAt}">${eventLabel} ${agoStr} geleden</span>`;
+              const mdnsTitle = st.lastDiscoveryEvent === 'address_changed'
+                ? `IP-adres gewijzigd op ${st.lastDiscoveryAt}. Frequente IP-wijzigingen wijzen op DHCP-instabiliteit of zwakke WiFi.`
+                : st.lastDiscoveryAt;
+              mdnsCell = `<span style="${mdnsColor}" title="${mdnsTitle}">${eventLabel} ${agoStr} geleden</span>`;
             }
 
             return `<tr>
@@ -1256,13 +1273,38 @@
               ${failCell}
               ${toCell}
               <td>${st.total}</td>
-              <td>${st.avgResponseMs || '—'}</td>
+              ${avgMsCell}
               <td style="${rssiColor}">${rssi}</td>
               <td>${mdnsCell}</td>
               <td>${lastErr}</td>
               <td>${since}</td>
             </tr>`;
           }).join('');
+
+          // WiFi health banner: fire when ≥2 signals suggest bad WiFi
+          const banner = document.getElementById('fetch-wifi-banner');
+          const wifiSignals = [];
+          for (const [name, st] of entries) {
+            const ms = st.avgResponseMs || 0;
+            if (ms > 200) wifiSignals.push(`hoge latency op ${name} (${ms}ms)`);
+            if (st.timeouts > 5) wifiSignals.push(`${st.timeouts} timeouts op ${name}`);
+            if (st.rssiAvg != null && st.rssiAvg < 60) wifiSignals.push(`zwak WiFi-signaal op ${name} (${st.rssiAvg}%)`);
+          }
+          // Also check ping RTT from WS snapshots
+          const wsSnaps = s.ws_snapshots || {};
+          for (const snap of Object.values(wsSnaps)) {
+            if (snap.pingRtt?.avgMs != null && snap.pingRtt.avgMs > 100) {
+              wifiSignals.push(`hoge WebSocket RTT (${snap.pingRtt.avgMs}ms gem ping)`);
+            }
+          }
+          if (wifiSignals.length >= 2) {
+            banner.style.display = 'block';
+            banner.innerHTML = `<div style="font-weight:bold;color:#FB923C;margin-bottom:6px;">⚠ Mogelijk instabiele WiFi-verbinding</div>
+              <div style="color:#e0e0e0;margin-bottom:6px;">${wifiSignals.map(s => `• ${s}`).join('<br>')}</div>
+              <div style="color:#A0A0A0;font-size:12px;">Een trage of instabiele WiFi tussen Homey en het apparaat veroorzaakt gemiste metingen en onverwachte verbrekingen — ook als het netwerk verder normaal werkt. Controleer: signaalsterkte op locatie apparaat, gebruik een mesh-punt of bekabelde verbinding.</div>`;
+          } else {
+            banner.style.display = 'none';
+          }
         }
 
         function renderFetchDebug(s) {
@@ -1362,8 +1404,21 @@
             anomalyEl.innerHTML = '';
           }
 
-          // --- Snapshots ---
+          // --- Reconnects last 24h summary ---
+          const now24 = Date.now();
+          const reconn24 = journal.filter(e => e.type === 'reconnect' && (now24 - new Date(e.ts).getTime()) < 86400000);
+          const reconn1h = reconn24.filter(e => (now24 - new Date(e.ts).getTime()) < 3600000);
           const snapEl = document.getElementById('ws-snapshots');
+          if (reconn24.length > 0) {
+            const color = reconn1h.length >= 3 ? '#f87171' : reconn24.length >= 5 ? '#fb923c' : '#A0A0A0';
+            const hint = reconn1h.length >= 3
+              ? ' — mogelijk instabiele WiFi of router-probleem'
+              : reconn24.length >= 5 ? ' — controleer WiFi-signaal' : '';
+            snapEl.insertAdjacentHTML('beforebegin',
+              `<div style="font-size:12px;color:${color};margin-bottom:8px;">🔄 ${reconn24.length} reconnect(s) afgelopen 24u (${reconn1h.length} in laatste uur)${hint}</div>`);
+          }
+
+          // --- Snapshots ---
           const devIds = Object.keys(snapshots);
           if (devIds.length === 0) {
             snapEl.innerHTML = '<div style="color:#808080;font-size:13px;">No device snapshots yet.</div>';
@@ -1378,14 +1433,28 @@
               html += `<div style="font-size:11px;color:#A0A0A0;">Snapshot: ${snap.ts || 'unknown'} (${age}s ago)</div>`;
               if (snap.counters) {
                 const c = snap.counters;
+                const dropColor = (dropped, processed) => {
+                  const total = (dropped || 0) + (processed || 0);
+                  if (total === 0) return '';
+                  const pct = (dropped || 0) / total;
+                  return pct > 0.1 ? 'color:#f87171;font-weight:bold' : pct > 0.05 ? 'color:#fb923c' : '';
+                };
+                const measDropStyle = dropColor(c.measurementsDropped, c.measurementsProcessed);
+                const sysDropStyle = dropColor(c.systemDropped, c.systemProcessed);
                 html += `<div style="font-size:11px;color:#ffffff;margin-top:4px;">`;
-                html += `msgs: ${c.messagesReceived} | meas: ${c.measurementsProcessed}/${c.measurementsDropped} | `;
-                html += `sys: ${c.systemProcessed}/${c.systemDropped} | bat: ${c.batteriesProcessed}/${c.batteriesDeferred} | `;
+                html += `msgs: ${c.messagesReceived} | meas: ${c.measurementsProcessed}/<span style="${measDropStyle}" title="Dropped paketten — hoge waarde kan op WiFi-pakketverlies wijzen">${c.measurementsDropped}</span> | `;
+                html += `sys: ${c.systemProcessed}/<span style="${sysDropStyle}">${c.systemDropped}</span> | bat: ${c.batteriesProcessed}/${c.batteriesDeferred} | `;
                 html += `reconnects: ${c.reconnects}`;
                 html += `</div>`;
               }
               if (snap.reconnectAttempts > 0) {
                 html += `<div style="font-size:11px;color:#F87171;margin-top:2px;">⚠ ${snap.reconnectAttempts} reconnect attempts</div>`;
+              }
+              if (snap.pingRtt && snap.pingRtt.avgMs != null) {
+                const r = snap.pingRtt;
+                const rttColor = r.avgMs > 200 ? '#f87171' : r.avgMs > 100 ? '#fb923c' : r.avgMs > 50 ? '#facc15' : '#4ade80';
+                const rttHint = r.avgMs > 200 ? ' — slechte WiFi' : r.avgMs > 100 ? ' — matige WiFi' : r.avgMs > 50 ? ' — acceptabel' : '';
+                html += `<div style="font-size:11px;margin-top:2px;">ping RTT: <span style="color:${rttColor};font-weight:bold">${r.avgMs}ms gem</span> / ${r.maxMs}ms max (${r.samples} samples)${rttHint}</div>`;
               }
               if (snap.handlerTiming) {
                 const m = snap.handlerTiming.max || {};
