@@ -1772,12 +1772,9 @@ if (debug) this.log(
           const _afterSunsetNow = !_calSunset
             || (Date.now() > _calSunset.getTime() + 30 * 60 * 1000)
             || (_calSunrise instanceof Date && Date.now() < _calSunrise.getTime());
+          const _battWAbs = Math.abs(battW ?? 0);
           const bmsCalibration = (currentSoc ?? 0) <= 0
-            && Math.abs(battW ?? 0) < 50
-            && gridW > 700
-            && _afterSunsetNow
-            && !applyMode.includes('charge')
-            && !applyMode.includes('discharge');
+            && ((_battWAbs >= 50 && _battWAbs <= 150) || (_battWAbs >= 700 && _battWAbs <= 900));
           const p1Available  = this.p1Device?.getAvailable() !== false;
           this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
