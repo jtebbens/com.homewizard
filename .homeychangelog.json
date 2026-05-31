@@ -1513,5 +1513,8 @@
   },
   "3.15.94": {
     "en": "Added languages fr, sv, de, dk etc, text fix standby, tuning P1 and 3 phases watt"
+  },
+  "3.15.95": {
+    "en": "watermeter toggle for Belgium (if there is no water data), improved battery fail detection"
   }
 }
