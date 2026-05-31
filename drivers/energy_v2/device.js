@@ -2096,65 +2096,40 @@ async _handleBatteries(data) {
       this.batteryErrorTriggered = false;
     }
 
-    // BMS cutoff detection — charge or discharge unexpectedly stopped:
-    // Fires when battery was active (>200W either direction) and drops to idle
-    // while the relevant permission is still set. No grid-return required.
-    // SoC guards: <90% for charge cutoff (not naturally full),
-    //             >10% for discharge cutoff (not naturally empty).
-    const batteryPowerNow = payload.power_w ?? 0;
-    const batteryIdle = Math.abs(batteryPowerNow) < 50;
+    // Mode/watt mismatch detection — commanded behavior not reflected in power:
+    // target_power_w is the HW setpoint, power_w the actual. When the mode commands
+    // active charge/discharge (|target|>200W) but the battery stays idle (|power|<50W),
+    // the mode's expected behavior is not happening → fault. No prior-activity gate:
+    // also catches a battery that never starts. SoC guards avoid natural full/empty.
+    const targetW = payload.target_power_w ?? 0;
+    const actualW = payload.power_w ?? 0;
+    const commandedActive = Math.abs(targetW) > 200;
+    const actualIdle = Math.abs(actualW) < 50;
     const avgSoC = this.getCapabilityValue('battery_group_average_soc') ?? 100;
-    const perms = Array.isArray(payload.permissions)
-      ? payload.permissions.map(p => p.toLowerCase())
-      : [];
-    const chargeAllowed = perms.includes('charge_allowed') || normalizedMode === 'to_full';
-    const dischargeAllowed = perms.includes('discharge_allowed');
+    const socGuardOk = targetW > 0
+      ? avgSoC < 90   // commanded charge → not naturally full
+      : avgSoC > 10;  // commanded discharge → not naturally empty
 
-    // Track last active direction
-    if (batteryPowerNow > 200 && chargeAllowed) {
-      this._bmsCutoffChargingActive = true;
-      this._bmsCutoffStart = null;
-      this._bmsCutoffTriggered = false;
-    } else if (batteryPowerNow < -200 && dischargeAllowed) {
-      this._bmsCutoffChargingActive = true; // reuse flag for discharge too
-      this._bmsCutoffStart = null;
-      this._bmsCutoffTriggered = false;
-    }
+    if (commandedActive && batteriesPresent && actualIdle && socGuardOk) {
+      if (!this._cmdMismatchStart) this._cmdMismatchStart = now;
+      const mismatchDuration = now - this._cmdMismatchStart;
 
-    const socGuardOk = (batteryPowerNow > 0 || this._bmsCutoffLastDir === 'charge')
-      ? avgSoC < 90   // was charging → not naturally full
-      : avgSoC > 10;  // was discharging → not naturally empty
-
-    // Track direction for SoC guard
-    if (batteryPowerNow > 200) this._bmsCutoffLastDir = 'charge';
-    else if (batteryPowerNow < -200) this._bmsCutoffLastDir = 'discharge';
-
-    const permissionActive = chargeAllowed || dischargeAllowed;
-
-    if (permissionActive && batteriesPresent && batteryIdle && socGuardOk
-        && this._bmsCutoffChargingActive) {
-      if (!this._bmsCutoffStart) this._bmsCutoffStart = now;
-      const cutoffDuration = now - this._bmsCutoffStart;
-
-      if (cutoffDuration > 180_000 && !this._bmsCutoffTriggered) {
-        this._bmsCutoffTriggered = true;
-        this.log(`❌ BMS cutoff: battery idle ${Math.round(cutoffDuration / 1000)}s, mode=${normalizedMode}, SoC=${avgSoC}%, perms=${perms.join(',')}`);
+      if (mismatchDuration > 180_000 && !this._cmdMismatchTriggered) {
+        this._cmdMismatchTriggered = true;
+        this.log(`❌ Mode/watt mismatch: target=${targetW}W actual=${actualW}W idle ${Math.round(mismatchDuration / 1000)}s, mode=${normalizedMode}, SoC=${avgSoC}%`);
         this.homey.flow
           .getDeviceTriggerCard('battery_error_detected')
           .trigger(this, {}, {
-            power: batteryPowerNow,
-            target: payload.target_power_w ?? 0,
+            power: actualW,
+            target: targetW,
             mode: normalizedMode,
             batteryCount: batteries.length
           })
           .catch(this.error);
       }
-    } else if (!permissionActive) {
-      this._bmsCutoffChargingActive = false;
-      this._bmsCutoffStart = null;
-      this._bmsCutoffTriggered = false;
-    } else if (!batteryIdle) {
-      this._bmsCutoffStart = null; // activity resumed
+    } else {
+      this._cmdMismatchStart = null;
+      this._cmdMismatchTriggered = false;
     }
 
   } catch (err) {
