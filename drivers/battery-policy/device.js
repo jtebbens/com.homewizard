@@ -2602,6 +2602,12 @@ if (debug) this.log(
       }
     }
 
+    // Capture before _dpHourly (future-only) overwrites liveState at line below.
+    // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
+    // pvForecast doesn't contain because hourlyForecast only has slots > now.
+    const _preExistingPvForecast = this._liveState.policy_pv_forecast_hourly
+      ?? this.homey.settings.get('policy_pv_forecast_hourly');
+
     // Sync chart orange line with the fully-corrected DP forecast (bias+conservatism+coverage applied)
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       const _todayNL    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2866,9 +2872,7 @@ if (debug) this.log(
         const _fcNow      = new Date();
         const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const _existing   = this._liveState.policy_pv_forecast_hourly
-          ?? this.homey.settings.get('policy_pv_forecast_hourly')
-          ?? [{}, {}];
+        const _existing   = _preExistingPvForecast ?? [{}, {}];
         const _nowHourNL  = parseInt(_fcNow.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
         const pvFcByDay   = [
           Object.fromEntries(Object.entries(_existing[0] ?? {}).filter(([h]) => parseInt(h) >= _nowHourNL)),
