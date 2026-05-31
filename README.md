@@ -57,11 +57,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 * **New flow action `Set EV charging state` (v3.15.94)** — Tell the policy engine when an electric vehicle starts or stops charging. While EV charging is active the battery is forced to `zero_charge_only` (`standby` when SoC ≥ max): the EV draws from grid and PV instead of cycling the home battery, but PV surplus may still top up the battery. The flag auto-clears after 8 hours as a safety net in case the "stop" trigger is missed, and is persisted to settings so it survives app restarts. Implemented as an early-return gate in `_mapPolicyToHwMode` so it overrides discharge for any policy mode (`balanced`, `eco`, `aggressive`, `balanced-dynamic`). Logged as `[MAPPING][EV]` for diagnostics
 
-### Internationalisation (v3.15.93)
+### Internationalisation (v3.15.94)
 
 * **7 new languages added** — Driver compose, capabilities, flow cards, and locale strings now include German (de), Danish (da), French (fr), Swedish (sv), Norwegian (no), Finnish (fi), and Hungarian (hu)
 
-### UI Text Fix (v3.15.93)
+### UI Text Fix (v3.15.94)
 
 * **"Standby" spelling normalized** — `Stand-by` (with hyphen, including non-breaking hyphen variant) replaced by `Standby` in `driver.settings.compose.json` and `explainability-engine.js`
 
