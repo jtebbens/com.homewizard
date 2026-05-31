@@ -525,7 +525,10 @@ _flushFetchStats() {
     // Only mark unavailable after 3 consecutive failures AND 90 seconds since last success
     // This prevents flapping on temporary WiFi glitches
     if (this._consecutiveFailures >= 5 && timeSinceLastSuccess > 120000) {
-      const dr = this.getDiscoveryResult();
+      let dr = null;
+      try {
+        dr = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+      } catch (e) { /* discovery unavailable */ }
       if (dr && dr.address) {
         const freshUrl = `http://${dr.address}:${dr.port}${dr.txt.path}`;
         if (freshUrl !== this.url) {
