@@ -2801,6 +2801,11 @@ if (debug) this.log(
     const refillConfidence = (typeof _pvCv === 'number')
       ? Math.max(0, Math.min(1, (0.60 - _pvCv) / 0.35))
       : 1.0;
+    if (refillConfidence < 1.0) {
+      const _s = this.getSettings();
+      const floorAddPct = ((1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0))).toFixed(0);
+      this.log(`🛡️ refill-reserve: cv=${_pvCv.toFixed(2)} conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
+    }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor, refillConfidence);
 
     // Compact planning summary — always visible in user diagnostics.
