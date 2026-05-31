@@ -1510,5 +1510,8 @@
   },
   "3.15.93": {
     "en": "Energy socket tuning, memory improvements, tcp connect check to Homewizard legacy as fallback"
+  },
+  "3.15.94": {
+    "en": "Added languages fr, sv, de, dk etc, text fix standby, tuning P1 and 3 phases watt"
   }
 }
