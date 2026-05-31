@@ -2531,6 +2531,7 @@ if (debug) this.log(
         // followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data.
         const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
         const cv        = Math.sqrt(variance) / meanRatio;
+        this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
         // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
         const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
         const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight;
@@ -2794,7 +2795,13 @@ if (debug) this.log(
       const factorNote = _netFactor !== 1.0 ? ` [netFactor=${_netFactor.toFixed(2)}→adj=${adjustedPvKwhTomorrow.toFixed(1)}kWh]` : '';
       this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh${factorNote}, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor);
+    // Overnight refill-reserve confidence: high CV (volatile PV forecast) → low confidence
+    // → hold a SoC buffer overnight. No samples yet (night/cold start) → confidence 1 (no reserve).
+    const _pvCv = this._lastPvForecastCv;
+    const refillConfidence = (typeof _pvCv === 'number')
+      ? Math.max(0, Math.min(1, (0.60 - _pvCv) / 0.35))
+      : 1.0;
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor, refillConfidence);
 
     // Compact planning summary — always visible in user diagnostics.
     {
