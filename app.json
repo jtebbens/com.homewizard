@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.15.93",
+  "version": "3.15.94",
   "platforms": [
     "local"
   ],
@@ -390,7 +390,14 @@
         "id": "tariff_changed",
         "title": {
           "en": "Peak / Normal Tariff changed",
-          "nl": "Dal / Normaal Tarief veranderd"
+          "nl": "Dal / Normaal Tarief veranderd",
+          "de": "Hoch-/Normaltarif geändert",
+          "da": "Høj-/Normaltarif ændret",
+          "fr": "Tarif pointe/normal modifié",
+          "sv": "Hög-/normaltariff ändrad",
+          "no": "Topp-/normaltariff endret",
+          "fi": "Huippu-/normaalitariffi muuttui",
+          "hu": "Csúcs/normál tarifa változott"
         },
         "args": [
           {
@@ -405,7 +412,14 @@
             "type": "number",
             "title": {
               "en": "tariff",
-              "nl": "tarief"
+              "nl": "tarief",
+              "de": "Tarif",
+              "da": "Tarif",
+              "fr": "tarif",
+              "sv": "tariff",
+              "no": "tariff",
+              "fi": "tariffi",
+              "hu": "tarifa"
             },
             "example": 1
           }
@@ -415,7 +429,14 @@
         "id": "import_changed",
         "title": {
           "en": "Total used changed",
-          "nl": "Som gebruik veranderd"
+          "nl": "Som gebruik veranderd",
+          "de": "Gesamtbezug geändert",
+          "da": "Samlet forbrug ændret",
+          "fr": "Total utilisé modifié",
+          "sv": "Totalt förbrukat ändrat",
+          "no": "Totalt forbrukt endret",
+          "fi": "Kokonaiskulutus muuttui",
+          "hu": "Összes felhasznált változott"
         },
         "args": [
           {
@@ -430,7 +451,14 @@
             "type": "number",
             "title": {
               "en": "import",
-              "nl": "import"
+              "nl": "import",
+              "de": "Bezug",
+              "da": "Import",
+              "fr": "import",
+              "sv": "import",
+              "no": "import",
+              "fi": "tuonti",
+              "hu": "import"
             },
             "example": 1
           }
@@ -440,7 +468,14 @@
         "id": "export_changed",
         "title": {
           "en": "Total delivered changed",
-          "nl": "Som teruglevering veranderd"
+          "nl": "Som teruglevering veranderd",
+          "de": "Gesamteinspeisung geändert",
+          "da": "Samlet levering ændret",
+          "fr": "Total injecté modifié",
+          "sv": "Totalt inmatat ändrat",
+          "no": "Totalt innmatet endret",
+          "fi": "Kokonaisinjektio muuttui",
+          "hu": "Összes visszatáplált változott"
         },
         "args": [
           {
@@ -455,7 +490,14 @@
             "type": "number",
             "title": {
               "en": "export",
-              "nl": "export"
+              "nl": "export",
+              "de": "Einspeisung",
+              "da": "Eksport",
+              "fr": "export",
+              "sv": "export",
+              "no": "eksport",
+              "fi": "vienti",
+              "hu": "export"
             },
             "example": 1
           }
@@ -465,11 +507,25 @@
         "id": "voltage_sag_detected_v1",
         "title": {
           "en": "Voltage sag detected",
-          "nl": "Spanningsdip gedetecteerd"
+          "nl": "Spanningsdip gedetecteerd",
+          "de": "Spannungseinbruch erkannt",
+          "da": "Spændingsdyk opdaget",
+          "fr": "Creux de tension détecté",
+          "sv": "Spänningsdipp detekterat",
+          "no": "Spenningsdyk oppdaget",
+          "fi": "Jännitteen notkahdus havaittu",
+          "hu": "Feszültségesés észlelve"
         },
         "hint": {
           "en": "Triggered when a voltage sag is detected on any phase",
-          "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase"
+          "nl": "Wordt geactiveerd wanneer een spanningsdip wordt gedetecteerd op een willekeurige fase",
+          "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
+          "da": "Udløses når et spændingsdyk registreres på en fase",
+          "fr": "Déclenché lors d'un creux de tension sur une phase",
+          "sv": "Utlöst när en spänningsdipp detekteras på någon fas",
+          "no": "Utløst når spenningsdyk oppdages på en fase",
+          "fi": "Käynnistyy kun jännitteen lasku havaitaan millä tahansa vaiheella",
+          "hu": "Feszültségesés észlelésekor aktiválódik"
         },
         "tokens": [
           {
@@ -477,7 +533,14 @@
             "type": "number",
             "title": {
               "en": "Phase L1 count",
-              "nl": "Fase L1 aantal"
+              "nl": "Fase L1 aantal",
+              "de": "Phase L1 Anzahl",
+              "da": "Fase L1 antal",
+              "fr": "Comptage phase L1",
+              "sv": "Fas L1 antal",
+              "no": "Fase L1 antall",
+              "fi": "Vaihe L1 määrä",
+              "hu": "L1 fázis szám"
             },
             "example": 5
           },
@@ -486,7 +549,14 @@
             "type": "number",
             "title": {
               "en": "Phase L2 count",
-              "nl": "Fase L2 aantal"
+              "nl": "Fase L2 aantal",
+              "de": "Phase L2 Anzahl",
+              "da": "Fase L2 antal",
+              "fr": "Comptage phase L2",
+              "sv": "Fas L2 antal",
+              "no": "Fase L2 antall",
+              "fi": "Vaihe L2 määrä",
+              "hu": "L2 fázis szám"
             },
             "example": 3
           },
@@ -495,7 +565,14 @@
             "type": "number",
             "title": {
               "en": "Phase L3 count",
-              "nl": "Fase L3 aantal"
+              "nl": "Fase L3 aantal",
+              "de": "Phase L3 Anzahl",
+              "da": "Fase L3 antal",
+              "fr": "Comptage phase L3",
+              "sv": "Fas L3 antal",
+              "no": "Fase L3 antall",
+              "fi": "Vaihe L3 määrä",
+              "hu": "L3 fázis szám"
             },
             "example": 2
           }
@@ -512,11 +589,25 @@
         "id": "voltage_swell_detected_v1",
         "title": {
           "en": "Voltage swell detected",
-          "nl": "Spanningspiek gedetecteerd"
+          "nl": "Spanningspiek gedetecteerd",
+          "de": "Spannungsüberhöhung erkannt",
+          "da": "Spændingsstigning opdaget",
+          "fr": "Surtension détectée",
+          "sv": "Spänningssväll detekterat",
+          "no": "Spenningsstige oppdaget",
+          "fi": "Jännitteen nousu havaittu",
+          "hu": "Feszültségnövekedés észlelve"
         },
         "hint": {
           "en": "Triggered when a voltage swell is detected on any phase",
-          "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase"
+          "nl": "Wordt geactiveerd wanneer een spanningspiek wordt gedetecteerd op een willekeurige fase",
+          "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
+          "da": "Udløses når en spændingsstigning registreres på en fase",
+          "fr": "Déclenché lors d'une surtension sur une phase",
+          "sv": "Utlöst när ett spänningssväll detekteras på någon fas",
+          "no": "Utløst når spenningsstigning oppdages på en fase",
+          "fi": "Käynnistyy kun jännitteen nousu havaitaan millä tahansa vaiheella",
+          "hu": "Feszültségnövekedés észlelésekor aktiválódik"
         },
         "tokens": [
           {
@@ -524,7 +615,14 @@
             "type": "number",
             "title": {
               "en": "Phase L1 count",
-              "nl": "Fase L1 aantal"
+              "nl": "Fase L1 aantal",
+              "de": "Phase L1 Anzahl",
+              "da": "Fase L1 antal",
+              "fr": "Comptage phase L1",
+              "sv": "Fas L1 antal",
+              "no": "Fase L1 antall",
+              "fi": "Vaihe L1 määrä",
+              "hu": "L1 fázis szám"
             },
             "example": 2
           },
@@ -533,7 +631,14 @@
             "type": "number",
             "title": {
               "en": "Phase L2 count",
-              "nl": "Fase L2 aantal"
+              "nl": "Fase L2 aantal",
+              "de": "Phase L2 Anzahl",
+              "da": "Fase L2 antal",
+              "fr": "Comptage phase L2",
+              "sv": "Fas L2 antal",
+              "no": "Fase L2 antall",
+              "fi": "Vaihe L2 määrä",
+              "hu": "L2 fázis szám"
             },
             "example": 1
           },
@@ -542,7 +647,14 @@
             "type": "number",
             "title": {
               "en": "Phase L3 count",
-              "nl": "Fase L3 aantal"
+              "nl": "Fase L3 aantal",
+              "de": "Phase L3 Anzahl",
+              "da": "Fase L3 antal",
+              "fr": "Comptage phase L3",
+              "sv": "Fas L3 antal",
+              "no": "Fase L3 antall",
+              "fi": "Vaihe L3 määrä",
+              "hu": "L3 fázis szám"
             },
             "example": 0
           }
@@ -559,11 +671,25 @@
         "id": "long_power_fail_detected_v1",
         "title": {
           "en": "Long power failure detected",
-          "nl": "Lange stroomstoring gedetecteerd"
+          "nl": "Lange stroomstoring gedetecteerd",
+          "de": "Langer Stromausfall erkannt",
+          "da": "Lang strømafbrydelse opdaget",
+          "fr": "Panne longue détectée",
+          "sv": "Lång strömavbrott detekterat",
+          "no": "Lang strømsvikt oppdaget",
+          "fi": "Pitkä sähkökatko havaittu",
+          "hu": "Hosszú áramkimaradás észlelve"
         },
         "hint": {
           "en": "Triggered when a long power failure is detected",
-          "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd"
+          "nl": "Wordt geactiveerd wanneer een lange stroomstoring wordt gedetecteerd",
+          "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird",
+          "da": "Udløses når en lang strømafbrydelse registreres",
+          "fr": "Déclenché lors d'une panne de courant prolongée",
+          "sv": "Utlöst när ett långt strömavbrott detekteras",
+          "no": "Utløst når et langvarig strømbrudd oppdages",
+          "fi": "Käynnistyy pitkän sähkökatkon havaitsemisesta",
+          "hu": "Hosszú áramkimaradás észlelésekor aktiválódik"
         },
         "tokens": [
           {
@@ -571,7 +697,14 @@
             "type": "number",
             "title": {
               "en": "Failure count",
-              "nl": "Storing aantal"
+              "nl": "Storing aantal",
+              "de": "Ausfallanzahl",
+              "da": "Fejlantal",
+              "fr": "Nombre de pannes",
+              "sv": "Antal fel",
+              "no": "Antall feil",
+              "fi": "Vikojen määrä",
+              "hu": "Hibák száma"
             },
             "example": 1
           }
@@ -588,11 +721,25 @@
         "id": "voltage_restored_v1",
         "title": {
           "en": "Voltage restored to normal",
-          "nl": "Spanning hersteld naar normaal"
+          "nl": "Spanning hersteld naar normaal",
+          "de": "Spannung wieder normal",
+          "da": "Spænding genoprettet til normalt",
+          "fr": "Tension revenue à la normale",
+          "sv": "Spänning återställd till normal",
+          "no": "Spenning tilbake til normal",
+          "fi": "Jännite palautunut normaaliksi",
+          "hu": "Feszültség visszaállt normálra"
         },
         "hint": {
           "en": "Triggers when voltage returns to normal range after a sag or swell",
-          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
+          "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
+          "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning",
+          "fr": "Se déclenche quand la tension revient à la normale",
+          "sv": "Utlöses när spänningen återvänder till normalt område",
+          "no": "Utløses når spenning returnerer til normalt område",
+          "fi": "Käynnistyy kun jännite palaa normaalialueelle notkahduksen tai nousun jälkeen",
+          "hu": "A feszültség normalizálódásakor aktiválódik"
         },
         "args": [
           {
@@ -607,7 +754,14 @@
             "type": "string",
             "title": {
               "en": "Phase",
-              "nl": "Fase"
+              "nl": "Fase",
+              "de": "Phase",
+              "da": "Fase",
+              "fr": "Phase",
+              "sv": "Fas",
+              "no": "Fase",
+              "fi": "Vaihe",
+              "hu": "Fázis"
             },
             "example": "L1"
           },
@@ -616,7 +770,14 @@
             "type": "number",
             "title": {
               "en": "Voltage (V)",
-              "nl": "Spanning (V)"
+              "nl": "Spanning (V)",
+              "de": "Spannung (V)",
+              "da": "Spænding (V)",
+              "fr": "Tension (V)",
+              "sv": "Spänning (V)",
+              "no": "Spenning (V)",
+              "fi": "Jännite (V)",
+              "hu": "Feszültség (V)"
             },
             "example": 230
           }
@@ -626,11 +787,25 @@
         "id": "power_restored_v1",
         "title": {
           "en": "Power restored",
-          "nl": "Stroom hersteld"
+          "nl": "Stroom hersteld",
+          "de": "Strom wiederhergestellt",
+          "da": "Strøm genoprettet",
+          "fr": "Alimentation rétablie",
+          "sv": "Ström återställd",
+          "no": "Strøm gjenopprettet",
+          "fi": "Virta palautettu",
+          "hu": "Áramellátás visszaállt"
         },
         "hint": {
           "en": "Triggers when power is restored after being offline",
-          "nl": "Triggert wanneer stroom is hersteld na een uitval"
+          "nl": "Triggert wanneer stroom is hersteld na een uitval",
+          "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
+          "da": "Udløses når strøm gendannes efter en afbrydelse",
+          "fr": "Se déclenche quand l'alimentation est rétablie",
+          "sv": "Utlöses när strömmen återställs efter att ha varit offline",
+          "no": "Utløses når strøm er gjenopprettet etter frakobling",
+          "fi": "Käynnistyy kun virransyöttö palautuu katkon jälkeen",
+          "hu": "Az áramellátás visszaállításakor aktiválódik"
         },
         "args": [
           {
@@ -645,7 +820,14 @@
             "type": "number",
             "title": {
               "en": "Offline duration (seconds)",
-              "nl": "Offline duur (seconden)"
+              "nl": "Offline duur (seconden)",
+              "de": "Ausfallzeit (Sekunden)",
+              "da": "Offline varighed (sekunder)",
+              "fr": "Durée hors ligne (secondes)",
+              "sv": "Offlinesida (sekunder)",
+              "no": "Frakoblet varighet (sekunder)",
+              "fi": "Offline-kesto (sekunnit)",
+              "hu": "Offline időtartam (másodperc)"
             },
             "example": 120
           }
@@ -655,7 +837,14 @@
         "id": "appliance_finished",
         "title": {
           "en": "Appliance finished",
-          "nl": "Apparaat klaar"
+          "nl": "Apparaat klaar",
+          "de": "Gerät fertig",
+          "da": "Apparat færdigt",
+          "fr": "Appareil terminé",
+          "sv": "Apparat klar",
+          "no": "Apparat ferdig",
+          "fi": "Laite valmis",
+          "hu": "Készülék kész"
         },
         "args": [
           {
@@ -670,7 +859,14 @@
             "type": "number",
             "title": {
               "en": "Active duration (min)",
-              "nl": "Actieve duur (min)"
+              "nl": "Actieve duur (min)",
+              "de": "Aktive Dauer (min)",
+              "da": "Aktiv varighed (min)",
+              "fr": "Durée active (min)",
+              "sv": "Aktiv varaktighet (min)",
+              "no": "Aktiv varighet (min)",
+              "fi": "Aktiivinen kesto (min)",
+              "hu": "Aktív időtartam (perc)"
             },
             "example": 45
           }
@@ -679,10 +875,24 @@
       {
         "id": "battery_mode_changed",
         "title": {
-          "en": "Battery mode changed"
+          "en": "Battery mode changed",
+          "de": "Batteriemodus geändert",
+          "da": "Batteritilstand ændret",
+          "fr": "Mode batterie modifié",
+          "sv": "Batteriläge ändrat",
+          "no": "Batterimodus endret",
+          "fi": "Akkutila muuttui",
+          "hu": "Akkumód megváltozott"
         },
         "titleFormatted": {
-          "en": "Battery mode changed"
+          "en": "Battery mode changed",
+          "de": "Batteriemodus geändert",
+          "da": "Batteritilstand ændret",
+          "fr": "Mode batterie modifié",
+          "sv": "Batteriläge ändrat",
+          "no": "Batterimodus endret",
+          "fi": "Akkutila muuttui",
+          "hu": "Akkumód megváltozott"
         },
         "args": [
           {
@@ -696,7 +906,14 @@
       {
         "id": "battery_error_detected",
         "title": {
-          "en": "Battery error detected"
+          "en": "Battery error detected",
+          "de": "Batteriefehler erkannt",
+          "da": "Batterifejl opdaget",
+          "fr": "Erreur batterie détectée",
+          "sv": "Batterifel detekterat",
+          "no": "Batterifeil oppdaget",
+          "fi": "Akkuvirhe havaittu",
+          "hu": "Akkumulátor hiba észlelve"
         },
         "args": [
           {
@@ -709,7 +926,14 @@
       {
         "id": "battery_group_state_changed",
         "title": {
-          "en": "Battery group state changed"
+          "en": "Battery group state changed",
+          "de": "Batteriegruppe Zustand geändert",
+          "da": "Batteri gruppe tilstand ændret",
+          "fr": "État du groupe de batteries modifié",
+          "sv": "Batterigrupptillstånd ändrat",
+          "no": "Batterigrupptilstand endret",
+          "fi": "Akkuryhmän tila muuttui",
+          "hu": "Akkucsoport állapot változott"
         },
         "args": [
           {
@@ -723,7 +947,14 @@
         "id": "tariff_changed_v2",
         "title": {
           "en": "Peak / Normal Tariff changed",
-          "nl": "Dal / Normaal Tarief veranderd"
+          "nl": "Dal / Normaal Tarief veranderd",
+          "de": "Hoch-/Normaltarif geändert",
+          "da": "Høj-/Normaltarif ændret",
+          "fr": "Tarif pointe/normal modifié",
+          "sv": "Hög-/normaltariff ändrad",
+          "no": "Topp-/normaltariff endret",
+          "fi": "Huippu-/normaalitariffi muuttui",
+          "hu": "Csúcs/normál tarifa változott"
         },
         "args": [
           {
@@ -738,7 +969,14 @@
             "type": "number",
             "title": {
               "en": "tariff",
-              "nl": "tarief"
+              "nl": "tarief",
+              "de": "Tarif",
+              "da": "Tarif",
+              "fr": "tarif",
+              "sv": "tariff",
+              "no": "tariff",
+              "fi": "tariffi",
+              "hu": "tarifa"
             },
             "example": 1
           }
@@ -748,7 +986,14 @@
         "id": "import_changed_v2",
         "title": {
           "en": "Total used changed",
-          "nl": "Som gebruik veranderd"
+          "nl": "Som gebruik veranderd",
+          "de": "Gesamtbezug geändert",
+          "da": "Samlet forbrug ændret",
+          "fr": "Total utilisé modifié",
+          "sv": "Totalt förbrukat ändrat",
+          "no": "Totalt forbrukt endret",
+          "fi": "Kokonaiskulutus muuttui",
+          "hu": "Összes felhasznált változott"
         },
         "args": [
           {
@@ -763,7 +1008,14 @@
             "type": "number",
             "title": {
               "en": "import",
-              "nl": "import"
+              "nl": "import",
+              "de": "Bezug",
+              "da": "Import",
+              "fr": "import",
+              "sv": "import",
+              "no": "import",
+              "fi": "tuonti",
+              "hu": "import"
             },
             "example": 1
           }
@@ -773,7 +1025,14 @@
         "id": "export_changed_v2",
         "title": {
           "en": "Total delivered changed",
-          "nl": "Som teruglevering veranderd"
+          "nl": "Som teruglevering veranderd",
+          "de": "Gesamteinspeisung geändert",
+          "da": "Samlet levering ændret",
+          "fr": "Total injecté modifié",
+          "sv": "Totalt inmatat ändrat",
+          "no": "Totalt innmatet endret",
+          "fi": "Kokonaisinjektio muuttui",
+          "hu": "Összes visszatáplált változott"
         },
         "args": [
           {
@@ -788,7 +1047,14 @@
             "type": "number",
             "title": {
               "en": "export",
-              "nl": "export"
+              "nl": "export",
+              "de": "Einspeisung",
+              "da": "Eksport",
+              "fr": "export",
+              "sv": "export",
+              "no": "eksport",
+              "fi": "vienti",
+              "hu": "export"
             },
             "example": 1
           }
@@ -798,11 +1064,25 @@
         "id": "voltage_sag_detected",
         "title": {
           "en": "Voltage sag detected",
-          "nl": "Spanningsdip gedetecteerd"
+          "nl": "Spanningsdip gedetecteerd",
+          "de": "Spannungseinbruch erkannt",
+          "da": "Spændingsdyk opdaget",
+          "fr": "Creux de tension détecté",
+          "sv": "Spänningsdipp detekterat",
+          "no": "Spenningsdyk oppdaget",
+          "fi": "Jännitteen notkahdus havaittu",
+          "hu": "Feszültségesés észlelve"
         },
         "hint": {
           "en": "Triggers when a voltage sag (dip) is detected on any phase",
-          "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase"
+          "nl": "Triggert wanneer een spanningsdip wordt gedetecteerd op een fase",
+          "de": "Wird ausgelöst, wenn ein Spannungseinbruch auf einer Phase erkannt wird",
+          "da": "Udløses når et spændingsdyk registreres på en fase",
+          "fr": "Se déclenche lors d'un creux de tension sur une phase",
+          "sv": "Utlöses vid spänningsdipp på någon fas",
+          "no": "Utløses ved spenningsdyk på en fase",
+          "fi": "Käynnistyy kun jännitteen lasku (notkahdus) havaitaan millä tahansa vaiheella",
+          "hu": "Feszültségesés (mélyedés) észlelésekor aktiválódik"
         },
         "args": [
           {
@@ -817,7 +1097,14 @@
             "type": "string",
             "title": {
               "en": "Phase",
-              "nl": "Fase"
+              "nl": "Fase",
+              "de": "Phase",
+              "da": "Fase",
+              "fr": "Phase",
+              "sv": "Fas",
+              "no": "Fase",
+              "fi": "Vaihe",
+              "hu": "Fázis"
             },
             "example": "L1"
           },
@@ -826,7 +1113,14 @@
             "type": "number",
             "title": {
               "en": "Total count",
-              "nl": "Totaal aantal"
+              "nl": "Totaal aantal",
+              "de": "Gesamtanzahl",
+              "da": "Samlet antal",
+              "fr": "Nombre total",
+              "sv": "Totalt antal",
+              "no": "Totalt antall",
+              "fi": "Yhteensä määrä",
+              "hu": "Összes darab"
             },
             "example": 1
           }
@@ -836,11 +1130,25 @@
         "id": "voltage_swell_detected",
         "title": {
           "en": "Voltage swell detected",
-          "nl": "Spanningspiek gedetecteerd"
+          "nl": "Spanningspiek gedetecteerd",
+          "de": "Spannungsüberhöhung erkannt",
+          "da": "Spændingsstigning opdaget",
+          "fr": "Surtension détectée",
+          "sv": "Spänningssväll detekterat",
+          "no": "Spenningsstige oppdaget",
+          "fi": "Jännitteen nousu havaittu",
+          "hu": "Feszültségnövekedés észlelve"
         },
         "hint": {
           "en": "Triggers when a voltage swell (surge) is detected on any phase",
-          "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase"
+          "nl": "Triggert wanneer een spanningspiek wordt gedetecteerd op een fase",
+          "de": "Wird ausgelöst, wenn eine Spannungsüberhöhung auf einer Phase erkannt wird",
+          "da": "Udløses når en spændingsstigning registreres på en fase",
+          "fr": "Se déclenche lors d'une surtension sur une phase",
+          "sv": "Utlöses vid spänningssväll på någon fas",
+          "no": "Utløses ved spenningsstige på en fase",
+          "fi": "Käynnistyy kun jännitteen nousu (piikki) havaitaan millä tahansa vaiheella",
+          "hu": "Feszültségcsúcs észlelésekor aktiválódik"
         },
         "args": [
           {
@@ -855,7 +1163,14 @@
             "type": "string",
             "title": {
               "en": "Phase",
-              "nl": "Fase"
+              "nl": "Fase",
+              "de": "Phase",
+              "da": "Fase",
+              "fr": "Phase",
+              "sv": "Fas",
+              "no": "Fase",
+              "fi": "Vaihe",
+              "hu": "Fázis"
             },
             "example": "L1"
           },
@@ -864,7 +1179,14 @@
             "type": "number",
             "title": {
               "en": "Total count",
-              "nl": "Totaal aantal"
+              "nl": "Totaal aantal",
+              "de": "Gesamtanzahl",
+              "da": "Samlet antal",
+              "fr": "Nombre total",
+              "sv": "Totalt antal",
+              "no": "Totalt antall",
+              "fi": "Yhteensä määrä",
+              "hu": "Összes darab"
             },
             "example": 1
           }
@@ -874,11 +1196,25 @@
         "id": "long_power_fail_detected",
         "title": {
           "en": "Long power failure detected",
-          "nl": "Lange stroomuitval gedetecteerd"
+          "nl": "Lange stroomuitval gedetecteerd",
+          "de": "Langer Stromausfall erkannt",
+          "da": "Lang strømafbrydelse opdaget",
+          "fr": "Panne longue détectée",
+          "sv": "Lång strömavbrott detekterat",
+          "no": "Lang strømsvikt oppdaget",
+          "fi": "Pitkä sähkökatko havaittu",
+          "hu": "Hosszú áramkimaradás észlelve"
         },
         "hint": {
           "en": "Triggers when a long power failure is detected (>1 minute)",
-          "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)"
+          "nl": "Triggert wanneer een lange stroomuitval wordt gedetecteerd (>1 minuut)",
+          "de": "Wird ausgelöst, wenn ein langer Stromausfall erkannt wird (>1 Minute)",
+          "da": "Udløses når en lang strømafbrydelse registreres (>1 minut)",
+          "fr": "Se déclenche lors d'une panne >1 minute",
+          "sv": "Utlöses vid strömavbrott längre än 1 minut",
+          "no": "Utløses ved strømbrudd lengre enn 1 minutt",
+          "fi": "Käynnistyy kun sähkökatko kestää yli 1 minuutin",
+          "hu": "1 percnél hosszabb áramkimaradáskor aktiválódik"
         },
         "args": [
           {
@@ -893,7 +1229,14 @@
             "type": "number",
             "title": {
               "en": "Total count",
-              "nl": "Totaal aantal"
+              "nl": "Totaal aantal",
+              "de": "Gesamtanzahl",
+              "da": "Samlet antal",
+              "fr": "Nombre total",
+              "sv": "Totalt antal",
+              "no": "Totalt antall",
+              "fi": "Yhteensä määrä",
+              "hu": "Összes darab"
             },
             "example": 1
           }
@@ -903,11 +1246,25 @@
         "id": "voltage_restored",
         "title": {
           "en": "Voltage restored to normal",
-          "nl": "Spanning hersteld naar normaal"
+          "nl": "Spanning hersteld naar normaal",
+          "de": "Spannung wieder normal",
+          "da": "Spænding genoprettet til normalt",
+          "fr": "Tension revenue à la normale",
+          "sv": "Spänning återställd till normal",
+          "no": "Spenning tilbake til normal",
+          "fi": "Jännite palautunut normaaliksi",
+          "hu": "Feszültség visszaállt normálra"
         },
         "hint": {
           "en": "Triggers when voltage returns to normal range after a sag or swell",
-          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek"
+          "nl": "Triggert wanneer spanning terugkeert naar normaal bereik na een dip of piek",
+          "de": "Wird ausgelöst, wenn die Spannung nach einem Einbruch oder einer Überhöhung wieder normal ist",
+          "da": "Udløses når spændingen vender tilbage til normalt område efter dyk eller stigning",
+          "fr": "Se déclenche quand la tension revient à la normale",
+          "sv": "Utlöses när spänningen återvänder till normalt område",
+          "no": "Utløses når spenning returnerer til normalt område",
+          "fi": "Käynnistyy kun jännite palaa normaalialueelle notkahduksen tai nousun jälkeen",
+          "hu": "A feszültség normalizálódásakor aktiválódik"
         },
         "args": [
           {
@@ -922,7 +1279,14 @@
             "type": "string",
             "title": {
               "en": "Phase",
-              "nl": "Fase"
+              "nl": "Fase",
+              "de": "Phase",
+              "da": "Fase",
+              "fr": "Phase",
+              "sv": "Fas",
+              "no": "Fase",
+              "fi": "Vaihe",
+              "hu": "Fázis"
             },
             "example": "L1"
           },
@@ -931,7 +1295,14 @@
             "type": "number",
             "title": {
               "en": "Voltage (V)",
-              "nl": "Spanning (V)"
+              "nl": "Spanning (V)",
+              "de": "Spannung (V)",
+              "da": "Spænding (V)",
+              "fr": "Tension (V)",
+              "sv": "Spänning (V)",
+              "no": "Spenning (V)",
+              "fi": "Jännite (V)",
+              "hu": "Feszültség (V)"
             },
             "example": 230
           }
@@ -941,11 +1312,25 @@
         "id": "power_restored",
         "title": {
           "en": "Power restored",
-          "nl": "Stroom hersteld"
+          "nl": "Stroom hersteld",
+          "de": "Strom wiederhergestellt",
+          "da": "Strøm genoprettet",
+          "fr": "Alimentation rétablie",
+          "sv": "Ström återställd",
+          "no": "Strøm gjenopprettet",
+          "fi": "Virta palautettu",
+          "hu": "Áramellátás visszaállt"
         },
         "hint": {
           "en": "Triggers when power is restored after being offline",
-          "nl": "Triggert wanneer stroom is hersteld na een uitval"
+          "nl": "Triggert wanneer stroom is hersteld na een uitval",
+          "de": "Wird ausgelöst, wenn der Strom nach einem Ausfall wiederhergestellt wird",
+          "da": "Udløses når strøm gendannes efter en afbrydelse",
+          "fr": "Se déclenche quand l'alimentation est rétablie",
+          "sv": "Utlöses när strömmen återställs efter att ha varit offline",
+          "no": "Utløses når strøm er gjenopprettet etter frakobling",
+          "fi": "Käynnistyy kun virransyöttö palautuu katkon jälkeen",
+          "hu": "Az áramellátás visszaállításakor aktiválódik"
         },
         "args": [
           {
@@ -960,7 +1345,14 @@
             "type": "number",
             "title": {
               "en": "Offline duration (seconds)",
-              "nl": "Offline duur (seconden)"
+              "nl": "Offline duur (seconden)",
+              "de": "Ausfallzeit (Sekunden)",
+              "da": "Offline varighed (sekunder)",
+              "fr": "Durée hors ligne (secondes)",
+              "sv": "Offlinesida (sekunder)",
+              "no": "Frakoblet varighet (sekunder)",
+              "fi": "Offline-kesto (sekunnit)",
+              "hu": "Offline időtartam (másodperc)"
             },
             "example": 120
           }
@@ -1344,6 +1736,24 @@
         "titleFormatted": {
           "en": "Battery SoC drift detected",
           "nl": "Batterij SoC-afwijking gedetecteerd"
+        }
+      },
+      {
+        "id": "battery_unresponsive",
+        "title": {
+          "en": "Battery is unresponsive",
+          "nl": "Batterij reageert niet"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=plugin_battery"
+          }
+        ],
+        "titleFormatted": {
+          "en": "Battery stopped responding (possible fault)",
+          "nl": "Batterij reageert niet meer (mogelijke storing)"
         }
       },
       {
@@ -2325,11 +2735,25 @@
         "id": "set-battery-to-full-charge-mode",
         "title": {
           "en": "Set battery to Full Charge mode",
-          "nl": "Zet batterij in Volledig Oplaad modus"
+          "nl": "Zet batterij in Volledig Oplaad modus",
+          "de": "Batterie in Vollladung-Modus setzen",
+          "da": "Sæt batteri til fuld opladning",
+          "fr": "Mettre batterie en mode Charge complète",
+          "sv": "Sätt batteri i Fulladdning-läge",
+          "no": "Sett batteri til full lading-modus",
+          "fi": "Aseta akku täysi lataus -tilaan",
+          "hu": "Akkumulátor teljes töltés módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Full Charge mode",
-          "nl": "Zet batterij in Volledig Oplaad modus"
+          "nl": "Zet batterij in Volledig Oplaad modus",
+          "de": "Batterie in Vollladung-Modus setzen",
+          "da": "Sæt batteri til fuld opladning",
+          "fr": "Mettre batterie en mode Charge complète",
+          "sv": "Sätt batteri i Fulladdning-läge",
+          "no": "Sett batteri til full lading-modus",
+          "fi": "Aseta akku täysi lataus -tilaan",
+          "hu": "Akkumulátor teljes töltés módba állítása"
         },
         "args": [
           {
@@ -2343,11 +2767,25 @@
         "id": "set-battery-to-zero-mode",
         "title": {
           "en": "Set battery to Zero mode",
-          "nl": "Zet batterij in Zero modus"
+          "nl": "Zet batterij in Zero modus",
+          "de": "Batterie in Nulleinspeisung-Modus setzen",
+          "da": "Sæt batteri til nul på måleren",
+          "fr": "Mettre batterie en mode Zéro",
+          "sv": "Sätt batteri i Noll-läge",
+          "no": "Sett batteri til nullmodus",
+          "fi": "Aseta akku nollatilaan",
+          "hu": "Akkumulátor nulla módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Zero mode",
-          "nl": "Zet batterij in Nul op de meter modus"
+          "nl": "Zet batterij in Nul op de meter modus",
+          "de": "Batterie in Nulleinspeisung-Modus setzen",
+          "da": "Sæt batteri til nul på måleren",
+          "fr": "Mettre batterie en mode Zéro",
+          "sv": "Sätt batteri i Noll-läge",
+          "no": "Sett batteri til nullmodus",
+          "fi": "Aseta akku nollatilaan",
+          "hu": "Akkumulátor nulla módba állítása"
         },
         "args": [
           {
@@ -2361,11 +2799,25 @@
         "id": "set-battery-to-standby-mode",
         "title": {
           "en": "Set battery to Standby mode",
-          "nl": "Zet batterij in Standby modus"
+          "nl": "Zet batterij in Standby modus",
+          "de": "Batterie in Standby-Modus setzen",
+          "da": "Sæt batteri til standby",
+          "fr": "Mettre batterie en mode Veille",
+          "sv": "Sätt batteri i Standby-läge",
+          "no": "Sett batteri til standby-modus",
+          "fi": "Aseta akku valmiustilaan",
+          "hu": "Akkumulátor készenléti módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Standby mode",
-          "nl": "Zet batterij in Standby modus"
+          "nl": "Zet batterij in Standby modus",
+          "de": "Batterie in Standby-Modus setzen",
+          "da": "Sæt batteri til standby",
+          "fr": "Mettre batterie en mode Veille",
+          "sv": "Sätt batteri i Standby-läge",
+          "no": "Sett batteri til standby-modus",
+          "fi": "Aseta akku valmiustilaan",
+          "hu": "Akkumulátor készenléti módba állítása"
         },
         "args": [
           {
@@ -2379,11 +2831,25 @@
         "id": "set-battery-to-zero-charge-only-mode",
         "title": {
           "en": "Set battery to Zero Charge Only mode",
-          "nl": "Zet batterij in Nul op de meter alleen opladen modus"
+          "nl": "Zet batterij in Nul op de meter alleen opladen modus",
+          "de": "Batterie in Nulleinspeisung, nur Laden",
+          "da": "Sæt batteri til nul på måleren, kun opladning",
+          "fr": "Mettre batterie en mode Zéro – Charge uniquement",
+          "sv": "Sätt batteri i Noll – Endast laddning-läge",
+          "no": "Sett batteri til null – kun lading-modus",
+          "fi": "Aseta akku nolla – vain lataus -tilaan",
+          "hu": "Akkumulátor nulla – csak töltés módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Zero Charge Only mode",
-          "nl": "Zet batterij in Nul op de meter alleen opladen modus"
+          "nl": "Zet batterij in Nul op de meter alleen opladen modus",
+          "de": "Batterie in Nulleinspeisung, nur Laden",
+          "da": "Sæt batteri til nul på måleren, kun opladning",
+          "fr": "Mettre batterie en mode Zéro – Charge uniquement",
+          "sv": "Sätt batteri i Noll – Endast laddning-läge",
+          "no": "Sett batteri til null – kun lading-modus",
+          "fi": "Aseta akku nolla – vain lataus -tilaan",
+          "hu": "Akkumulátor nulla – csak töltés módba állítása"
         },
         "args": [
           {
@@ -2397,11 +2863,25 @@
         "id": "set-battery-to-zero-discharge-only-mode",
         "title": {
           "en": "Set battery to Zero Discharge Only mode",
-          "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
+          "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
+          "de": "Batterie in Nulleinspeisung, nur Entladen",
+          "da": "Sæt batteri til nul på måleren, kun afladning",
+          "fr": "Mettre batterie en mode Zéro – Décharge uniquement",
+          "sv": "Sätt batteri i Noll – Endast urladdning-läge",
+          "no": "Sett batteri til null – kun utlading-modus",
+          "fi": "Aseta akku nolla – vain purkaus -tilaan",
+          "hu": "Akkumulátor nulla – csak töltésleadás módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Zero Discharge Only mode",
-          "nl": "Zet batterij in Nul op de meter, alleen ontladen modus"
+          "nl": "Zet batterij in Nul op de meter, alleen ontladen modus",
+          "de": "Batterie in Nulleinspeisung, nur Entladen",
+          "da": "Sæt batteri til nul på måleren, kun afladning",
+          "fr": "Mettre batterie en mode Zéro – Décharge uniquement",
+          "sv": "Sätt batteri i Noll – Endast urladdning-läge",
+          "no": "Sett batteri til null – kun utlading-modus",
+          "fi": "Aseta akku nolla – vain purkaus -tilaan",
+          "hu": "Akkumulátor nulla – csak töltésleadás módba állítása"
         },
         "args": [
           {
@@ -2415,11 +2895,25 @@
         "id": "set-battery-to-predictive-mode",
         "title": {
           "en": "Set battery to Predictive (Smart Charging) mode",
-          "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+          "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
+          "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
+          "da": "Sæt batteri til prædiktiv (smart opladning)",
+          "fr": "Mettre batterie en mode Prédictif",
+          "sv": "Sätt batteri i prediktivt läge",
+          "no": "Sett batteri til prediktiv modus",
+          "fi": "Aseta akku ennakoivaan tilaan",
+          "hu": "Akkumulátor prediktív módba állítása"
         },
         "titleFormatted": {
           "en": "Set battery to Predictive (Smart Charging) mode",
-          "nl": "Zet batterij in Slim Laden modus (HomeWizard)"
+          "nl": "Zet batterij in Slim Laden modus (HomeWizard)",
+          "de": "Batterie in Prädiktiven (Smart Charging) Modus setzen",
+          "da": "Sæt batteri til prædiktiv (smart opladning)",
+          "fr": "Mettre batterie en mode Prédictif",
+          "sv": "Sätt batteri i prediktivt läge",
+          "no": "Sett batteri til prediktiv modus",
+          "fi": "Aseta akku ennakoivaan tilaan",
+          "hu": "Akkumulátor prediktív módba állítása"
         },
         "args": [
           {
@@ -4526,7 +5020,14 @@
     },
     {
       "name": {
-        "en": "P1 Meter"
+        "en": "P1 Meter",
+        "de": "P1 Zähler",
+        "da": "P1 Måler",
+        "fr": "Compteur P1",
+        "sv": "P1-mätare",
+        "no": "P1-måler",
+        "fi": "P1-mittari",
+        "hu": "P1 mérő"
       },
       "images": {
         "large": "drivers/energy/assets/images/large.png",
@@ -4592,183 +5093,379 @@
         "measure_power": {
           "title": {
             "en": "Current usage",
-            "nl": "Huidig vermogen"
+            "nl": "Huidig vermogen",
+            "de": "Aktueller Verbrauch",
+            "da": "Aktuelt forbrug",
+            "fr": "Consommation actuelle",
+            "sv": "Aktuell förbrukning",
+            "no": "Aktuelt forbruk",
+            "fi": "Nykyinen kulutus",
+            "hu": "Jelenlegi fogyasztás"
           }
         },
         "meter_gas": {
           "decimals": 3,
           "title": {
             "en": "Gasmeter",
-            "nl": "Gasmeter"
+            "nl": "Gasmeter",
+            "de": "Gaszähler",
+            "da": "Gasmåler",
+            "fr": "Compteur de gaz",
+            "sv": "Gasmätare",
+            "no": "Gassmåler",
+            "fi": "Kaasumittari",
+            "hu": "Gázmérő"
           }
         },
         "meter_gas.daily": {
           "decimals": 3,
           "title": {
             "en": "Day Usage Gas",
-            "nl": "Dag verbruik Gas"
+            "nl": "Dag verbruik Gas",
+            "de": "Tagesverbrauch Gas",
+            "da": "Dagligt gasforbrug",
+            "fr": "Consommation de gaz du jour",
+            "sv": "Daglig gasförbrukning",
+            "no": "Daglig gassforbruk",
+            "fi": "Päivän kaasunkulutus",
+            "hu": "Napi gázfogyasztás"
           }
         },
         "meter_water": {
           "decimals": 3,
           "title": {
             "en": "Watermeter",
-            "nl": "Watermeter"
+            "nl": "Watermeter",
+            "de": "Wasserzähler",
+            "da": "Vandmåler",
+            "fr": "Compteur d'eau",
+            "sv": "Vattenmätare",
+            "no": "Vannmåler",
+            "fi": "Vesimittari",
+            "hu": "Vízórán"
           }
         },
         "measure_power.l1": {
           "title": {
             "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
+            "nl": "Huidig gebruik fase 1",
+            "de": "Aktueller Verbrauch Phase 1",
+            "da": "Aktuelt forbrug fase 1",
+            "fr": "Consommation phase 1",
+            "sv": "Aktuell förbrukning fas 1",
+            "no": "Aktuelt forbruk fase 1",
+            "fi": "Nykyinen kulutus vaihe 1",
+            "hu": "1. fázis fogyasztás"
           }
         },
         "measure_power.l2": {
           "title": {
             "en": "Current usage phase 2",
-            "nl": "Huidig gebruik fase 2"
+            "nl": "Huidig gebruik fase 2",
+            "de": "Aktueller Verbrauch Phase 2",
+            "da": "Aktuelt forbrug fase 2",
+            "fr": "Consommation phase 2",
+            "sv": "Aktuell förbrukning fas 2",
+            "no": "Aktuelt forbruk fase 2",
+            "fi": "Nykyinen kulutus vaihe 2",
+            "hu": "2. fázis fogyasztás"
           }
         },
         "measure_power.l3": {
           "title": {
             "en": "Current usage phase 3",
-            "nl": "Huidig gebruik fase 3"
+            "nl": "Huidig gebruik fase 3",
+            "de": "Aktueller Verbrauch Phase 3",
+            "da": "Aktuelt forbrug fase 3",
+            "fr": "Consommation phase 3",
+            "sv": "Aktuell förbrukning fas 3",
+            "no": "Aktuelt forbruk fase 3",
+            "fi": "Nykyinen kulutus vaihe 3",
+            "hu": "3. fázis fogyasztás"
           }
         },
         "measure_current.l1": {
           "title": {
             "en": "Current Amp phase 1",
-            "nl": "Huidig Amp fase 1"
+            "nl": "Huidig Amp fase 1",
+            "de": "Aktuelles Ampere Phase 1",
+            "da": "Aktuel Ampere fase 1",
+            "fr": "Ampérage phase 1",
+            "sv": "Ström fas 1",
+            "no": "Strøm fase 1",
+            "fi": "Virta vaihe 1",
+            "hu": "1. fázis áramerősség"
           }
         },
         "measure_current.l2": {
           "title": {
             "en": "Current Amp phase 2",
-            "nl": "Huidig Amp fase 2"
+            "nl": "Huidig Amp fase 2",
+            "de": "Aktuelles Ampere Phase 2",
+            "da": "Aktuel Ampere fase 2",
+            "fr": "Ampérage phase 2",
+            "sv": "Ström fas 2",
+            "no": "Strøm fase 2",
+            "fi": "Virta vaihe 2",
+            "hu": "2. fázis áramerősség"
           }
         },
         "measure_current.l3": {
           "title": {
             "en": "Current Amp phase 3",
-            "nl": "Huidig Amp fase 3"
+            "nl": "Huidig Amp fase 3",
+            "de": "Aktuelles Ampere Phase 3",
+            "da": "Aktuel Ampere fase 3",
+            "fr": "Ampérage phase 3",
+            "sv": "Ström fas 3",
+            "no": "Strøm fase 3",
+            "fi": "Virta vaihe 3",
+            "hu": "3. fázis áramerősség"
           }
         },
         "net_load_phase1_pct": {
           "title": {
             "en": "Phase 1 load %",
-            "nl": "Fase 1 belasting %"
+            "nl": "Fase 1 belasting %",
+            "de": "Phase 1 Auslastung %",
+            "da": "Fase 1 belastning %",
+            "fr": "Charge phase 1 %",
+            "sv": "Last fas 1 %",
+            "no": "Last fase 1 %",
+            "fi": "Vaiheen 1 kuorma %",
+            "hu": "1. fázis terhelés %"
           }
         },
         "net_load_phase2_pct": {
           "title": {
             "en": "Phase 2 load %",
-            "nl": "Fase 2 belasting %"
+            "nl": "Fase 2 belasting %",
+            "de": "Phase 2 Auslastung %",
+            "da": "Fase 2 belastning %",
+            "fr": "Charge phase 2 %",
+            "sv": "Last fas 2 %",
+            "no": "Last fase 2 %",
+            "fi": "Vaiheen 2 kuorma %",
+            "hu": "2. fázis terhelés %"
           }
         },
         "net_load_phase3_pct": {
           "title": {
             "en": "Phase 3 load %",
-            "nl": "Fase 3 belasting %"
+            "nl": "Fase 3 belasting %",
+            "de": "Phase 3 Auslastung %",
+            "da": "Fase 3 belastning %",
+            "fr": "Charge phase 3 %",
+            "sv": "Last fas 3 %",
+            "no": "Last fase 3 %",
+            "fi": "Vaiheen 3 kuorma %",
+            "hu": "3. fázis terhelés %"
           }
         },
         "measure_voltage.l1": {
           "title": {
             "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
+            "nl": "Huidig Voltage fase 1",
+            "de": "Aktuelle Spannung Phase 1",
+            "da": "Aktuel Spænding fase 1",
+            "fr": "Tension phase 1",
+            "sv": "Spänning fas 1",
+            "no": "Spenning fase 1",
+            "fi": "Jännite vaihe 1",
+            "hu": "1. fázis feszültség"
           }
         },
         "measure_voltage.l2": {
           "title": {
             "en": "Current Voltage phase 2",
-            "nl": "Huidig Voltage fase 2"
+            "nl": "Huidig Voltage fase 2",
+            "de": "Aktuelle Spannung Phase 2",
+            "da": "Aktuel Spænding fase 2",
+            "fr": "Tension phase 2",
+            "sv": "Spänning fas 2",
+            "no": "Spenning fase 2",
+            "fi": "Jännite vaihe 2",
+            "hu": "2. fázis feszültség"
           }
         },
         "measure_voltage.l3": {
           "title": {
             "en": "Current Voltage phase 3",
-            "nl": "Huidig Voltage fase 3"
+            "nl": "Huidig Voltage fase 3",
+            "de": "Aktuelle Spannung Phase 3",
+            "da": "Aktuel Spænding fase 3",
+            "fr": "Tension phase 3",
+            "sv": "Spänning fas 3",
+            "no": "Spenning fase 3",
+            "fi": "Jännite vaihe 3",
+            "hu": "3. fázis feszültség"
           }
         },
         "meter_power.consumed.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
+            "nl": "Totaal t1 gebruik",
+            "de": "Gesamt T1 Verbrauch",
+            "da": "Samlet T1 forbrug",
+            "fr": "Total utilisation T1",
+            "sv": "Total förbrukning T1",
+            "no": "Totalt forbruk T1",
+            "fi": "Kokonaiskulutus T1",
+            "hu": "Összes T1 fogyasztás"
           }
         },
         "meter_power.produced.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
+            "nl": "Totaal t1 teruglevering",
+            "de": "Gesamt T1 Einspeisung",
+            "da": "Samlet T1 levering",
+            "fr": "Total injection T1",
+            "sv": "Total inmatning T1",
+            "no": "Total innmating T1",
+            "fi": "Kokonaisinjektio T1",
+            "hu": "Összes T1 visszatáplálás"
           }
         },
         "meter_power.consumed.t2": {
           "decimals": 3,
           "title": {
             "en": "Total t2 usage",
-            "nl": "Totaal t2 gebruik"
+            "nl": "Totaal t2 gebruik",
+            "de": "Gesamt T2 Verbrauch",
+            "da": "Samlet T2 forbrug",
+            "fr": "Total utilisation T2",
+            "sv": "Total förbrukning T2",
+            "no": "Totalt forbruk T2",
+            "fi": "Kokonaiskulutus T2",
+            "hu": "Összes T2 fogyasztás"
           }
         },
         "meter_power.produced.t2": {
           "decimals": 3,
           "title": {
             "en": "Total t2 deliver",
-            "nl": "Totaal t2 teruglevering"
+            "nl": "Totaal t2 teruglevering",
+            "de": "Gesamt T2 Einspeisung",
+            "da": "Samlet T2 levering",
+            "fr": "Total injection T2",
+            "sv": "Total inmatning T2",
+            "no": "Total innmating T2",
+            "fi": "Kokonaisinjektio T2",
+            "hu": "Összes T2 visszatáplálás"
           }
         },
         "meter_power.consumed.t3": {
           "decimals": 3,
           "title": {
             "en": "Total t3 usage",
-            "nl": "Totaal t3 gebruik"
+            "nl": "Totaal t3 gebruik",
+            "de": "Gesamt T3 Verbrauch",
+            "da": "Samlet T3 forbrug",
+            "fr": "Total utilisation T3",
+            "sv": "Total förbrukning T3",
+            "no": "Totalt forbruk T3",
+            "fi": "Kokonaiskulutus T3",
+            "hu": "Összes T3 fogyasztás"
           }
         },
         "meter_power.produced.t3": {
           "decimals": 3,
           "title": {
             "en": "Total t3 deliver",
-            "nl": "Totaal t3 teruglevering"
+            "nl": "Totaal t3 teruglevering",
+            "de": "Gesamt T3 Einspeisung",
+            "da": "Samlet T3 levering",
+            "fr": "Total injection T3",
+            "sv": "Total inmatning T3",
+            "no": "Total innmating T3",
+            "fi": "Kokonaisinjektio T3",
+            "hu": "Összes T3 visszatáplálás"
           }
         },
         "meter_power.consumed": {
           "decimals": 3,
           "title": {
             "en": "Sum Consumed",
-            "nl": "Som gebruik"
+            "nl": "Som gebruik",
+            "de": "Gesamt Bezug",
+            "da": "Samlet forbrug",
+            "fr": "Total consommé",
+            "sv": "Totalt förbrukat",
+            "no": "Totalt forbrukt",
+            "fi": "Yhteensä kulutettu",
+            "hu": "Összesen felhasznált"
           }
         },
         "meter_power.returned": {
           "decimals": 3,
           "title": {
             "en": "Sum returned",
-            "nl": "Som teruglevering"
+            "nl": "Som teruglevering",
+            "de": "Gesamt Einspeisung",
+            "da": "Samlet levering",
+            "fr": "Total retourné",
+            "sv": "Totalt returnerat",
+            "no": "Totalt returnert",
+            "fi": "Yhteensä palautettu",
+            "hu": "Összesen visszatáplált"
           }
         },
         "meter_power.daily": {
           "decimals": 3,
           "title": {
             "en": "Daily usage",
-            "nl": "Dag verbruik"
+            "nl": "Dag verbruik",
+            "de": "Tagesverbrauch",
+            "da": "Dagligt forbrug",
+            "fr": "Consommation journalière",
+            "sv": "Daglig förbrukning",
+            "no": "Daglig forbruk",
+            "fi": "Päivittäinen kulutus",
+            "hu": "Napi fogyasztás"
           }
         },
         "meter_power": {
           "decimals": 3,
           "title": {
             "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
+            "nl": "Totaal verbruik KWh",
+            "de": "Gesamtverbrauch kWh",
+            "da": "Samlet forbrug kWh",
+            "fr": "Consommation totale kWh",
+            "sv": "Total förbrukning kWh",
+            "no": "Totalt forbruk kWh",
+            "fi": "Kokonaiskulutus kWh",
+            "hu": "Összfogyasztás kWh"
           }
         },
         "measure_frequency": {
           "decimals": 3,
           "title": {
             "en": "Current Frequency",
-            "nl": "Huidige Frequentie"
+            "nl": "Huidige Frequentie",
+            "de": "Aktuelle Frequenz",
+            "da": "Aktuel Frekvens",
+            "fr": "Fréquence actuelle",
+            "sv": "Aktuell frekvens",
+            "no": "Aktuell frekvens",
+            "fi": "Nykyinen taajuus",
+            "hu": "Aktuális frekvencia"
           }
         },
         "measure_power.montly_power_peak": {
           "title": {
             "en": "Monthly Power Peak",
-            "nl": "Maandelijks piekvermogen"
+            "nl": "Maandelijks piekvermogen",
+            "de": "Monatliche Spitzenleistung",
+            "da": "Månedlig spidsbelastning",
+            "fr": "Pic de puissance mensuel",
+            "sv": "Månatlig effekttopp",
+            "no": "Månedlig effekttopp",
+            "fi": "Kuukausittainen tehohuippu",
+            "hu": "Havi teljesítménycsúcs"
           }
         }
       },
@@ -4802,12 +5499,26 @@
           "id": "polling_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval"
+            "en": "Polling interval",
+            "de": "Abfrageintervall",
+            "da": "Afspøringsinterval",
+            "fr": "Intervalle d'interrogation",
+            "sv": "Uppfrågningsintervall",
+            "no": "Avspørringsintervall",
+            "fi": "Kyselyväli",
+            "hu": "Lekérdezési időköz"
           },
           "value": 10,
           "min": 1,
           "unit": {
-            "en": "s"
+            "en": "s",
+            "de": "s",
+            "da": "s",
+            "fr": "s",
+            "sv": "s",
+            "no": "s",
+            "fi": "s",
+            "hu": "mp"
           }
         },
         {
@@ -4815,7 +5526,14 @@
           "type": "number",
           "label": {
             "en": "Amount of phase(s)",
-            "nl": "Aantal fase(s)"
+            "nl": "Aantal fase(s)",
+            "de": "Anzahl der Phase(n)",
+            "da": "Antal fase(r)",
+            "fr": "Nombre de phase(s)",
+            "sv": "Antal fas(er)",
+            "no": "Antall fase(r)",
+            "fi": "Vaiheiden määrä",
+            "hu": "Fázisok száma"
           },
           "value": 1
         },
@@ -4824,11 +5542,25 @@
           "type": "number",
           "label": {
             "en": "Phase capacity A",
-            "nl": "Fase capaciteit A"
+            "nl": "Fase capaciteit A",
+            "de": "Phasenkapazität A",
+            "da": "Fasekapacitet A",
+            "fr": "Capacité de phase A",
+            "sv": "Faskapacitet A",
+            "no": "Fasekapasitet A",
+            "fi": "Vaiheen kapasiteetti A",
+            "hu": "Fázis kapacitás A"
           },
           "value": 40,
           "unit": {
-            "en": "A"
+            "en": "A",
+            "de": "A",
+            "da": "A",
+            "fr": "A",
+            "sv": "A",
+            "no": "A",
+            "fi": "A",
+            "hu": "A"
           }
         },
         {
@@ -4836,7 +5568,14 @@
           "type": "number",
           "label": {
             "en": "Cloud connection 1=on 0=off",
-            "nl": "Cloud verbinding 1=actief 0=uit"
+            "nl": "Cloud verbinding 1=actief 0=uit",
+            "de": "Cloud-Verbindung 1=ein 0=aus",
+            "da": "Sky-forbindelse 1=til 0=fra",
+            "fr": "Connexion cloud 1=activé 0=désactivé",
+            "sv": "Molnanslutning 1=på 0=av",
+            "no": "Skytilkobling 1=på 0=av",
+            "fi": "Pilviyhteystila 1=päällä 0=pois",
+            "hu": "Felhőkapcsolat 1=be 0=ki"
           },
           "value": 1
         },
@@ -4845,7 +5584,14 @@
           "type": "text",
           "label": {
             "en": "url",
-            "nl": "url"
+            "nl": "url",
+            "de": "url",
+            "da": "url",
+            "fr": "url",
+            "sv": "url",
+            "no": "url",
+            "fi": "url",
+            "hu": "url"
           }
         },
         {
@@ -4853,7 +5599,14 @@
           "type": "checkbox",
           "label": {
             "en": "Show gas meter",
-            "nl": "Gas meter weergeven"
+            "nl": "Gas meter weergeven",
+            "de": "Gaszähler anzeigen",
+            "da": "Vis gasmåler",
+            "fr": "Afficher le compteur de gaz",
+            "sv": "Visa gasmätare",
+            "no": "Vis gassmåler",
+            "fi": "Näytä kaasumittari",
+            "hu": "Gázmérő megjelenítése"
           },
           "value": true
         },
@@ -4862,7 +5615,14 @@
           "type": "checkbox",
           "label": {
             "en": "Enable baseload notifications",
-            "nl": "Sluipverbruik meldingen inschakelen"
+            "nl": "Sluipverbruik meldingen inschakelen",
+            "de": "Grundlast-Benachrichtigungen aktivieren",
+            "da": "Aktiver grundbelastningsnotifikationer",
+            "fr": "Activer les notifications de charge de base",
+            "sv": "Aktivera basbelastningsaviseringar",
+            "no": "Aktiver grunnlastmeldinger",
+            "fi": "Ota perustaakan ilmoitukset käyttöön",
+            "hu": "Alapterhelés értesítések engedélyezése"
           },
           "value": true
         },
@@ -4871,7 +5631,14 @@
           "type": "checkbox",
           "label": {
             "en": "Phase overload notifications",
-            "nl": "Fase-overbelasting meldingen"
+            "nl": "Fase-overbelasting meldingen",
+            "de": "Phasenüberlastungs-Benachrichtigungen",
+            "da": "Fase-overbelastningsnotifikationer",
+            "fr": "Notifications de surcharge de phase",
+            "sv": "Fas överlastmeddelanden",
+            "no": "Fase overbelastningsmeldinger",
+            "fi": "Faasin ylikuormitusilmoitukset",
+            "hu": "Fázis túlterhelési értesítések"
           },
           "value": true
         },
@@ -4880,7 +5647,14 @@
           "type": "number",
           "label": {
             "en": "Phase overload warning threshold (%)",
-            "nl": "Fase overbelasting waarschuwing (%)"
+            "nl": "Fase overbelasting waarschuwing (%)",
+            "de": "Phasenüberlastung Warnschwelle (%)",
+            "da": "Fase-overbelastning advarselsgrænse (%)",
+            "fr": "Seuil d'avertissement de surcharge de phase (%)",
+            "sv": "Fasöverbelastningsvarningsgräns (%)",
+            "no": "Fasoverbelastningsadvarselsterskel (%)",
+            "fi": "Faasin ylikuormitusvaroituksen kynnys (%)",
+            "hu": "Fázis túlterhelési figyelmeztetési küszöb (%)"
           },
           "value": 97,
           "min": 50,
@@ -4892,7 +5666,14 @@
           "type": "number",
           "label": {
             "en": "Phase overload reset threshold (%)",
-            "nl": "Fase overbelasting reset (%)"
+            "nl": "Fase overbelasting reset (%)",
+            "de": "Phasenüberlastung Reset-Schwelle (%)",
+            "da": "Fase-overbelastning nulstillingsgrænse (%)",
+            "fr": "Seuil de réinitialisation de surcharge de phase (%)",
+            "sv": "Fasöverbelastningsåterställningsgräns (%)",
+            "no": "Fasoverbelastningsresetterskel (%)",
+            "fi": "Faasin ylikuormituksen nollauskynnys (%)",
+            "hu": "Fázis túlterhelési visszaállítási küszöb (%)"
           },
           "value": 85,
           "min": 20,
@@ -4903,7 +5684,14 @@
     },
     {
       "name": {
-        "en": "Energy Socket"
+        "en": "Energy Socket",
+        "de": "Energiesteckdose",
+        "da": "Energistik",
+        "fr": "Prise connectée",
+        "sv": "Energiuttag",
+        "no": "Energikontakt",
+        "fi": "Energiapistoke",
+        "hu": "Okos konnektor"
       },
       "images": {
         "large": "drivers/energy_socket/assets/images/large.png",
@@ -4936,41 +5724,83 @@
         "measure_power": {
           "title": {
             "en": "Current usage",
-            "nl": "Huidig vermogen"
+            "nl": "Huidig vermogen",
+            "de": "Aktueller Verbrauch",
+            "da": "Aktuelt forbrug",
+            "fr": "Consommation actuelle",
+            "sv": "Aktuell förbrukning",
+            "no": "Aktuelt forbruk",
+            "fi": "Nykyinen kulutus",
+            "hu": "Jelenlegi fogyasztás"
           },
           "insights": true
         },
         "measure_power.l1": {
           "title": {
             "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
+            "nl": "Huidig gebruik fase 1",
+            "de": "Aktueller Verbrauch Phase 1",
+            "da": "Aktuelt forbrug fase 1",
+            "fr": "Consommation phase 1",
+            "sv": "Aktuell förbrukning fas 1",
+            "no": "Aktuelt forbruk fase 1",
+            "fi": "Nykyinen kulutus vaihe 1",
+            "hu": "1. fázis fogyasztás"
           }
         },
         "meter_power.consumed.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
+            "nl": "Totaal t1 gebruik",
+            "de": "Gesamt T1 Verbrauch",
+            "da": "Samlet T1 forbrug",
+            "fr": "Total utilisation T1",
+            "sv": "Total förbrukning T1",
+            "no": "Totalt forbruk T1",
+            "fi": "Kokonaiskulutus T1",
+            "hu": "Összes T1 fogyasztás"
           }
         },
         "meter_power.produced.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
+            "nl": "Totaal t1 teruglevering",
+            "de": "Gesamt T1 Einspeisung",
+            "da": "Samlet T1 levering",
+            "fr": "Total injection T1",
+            "sv": "Total inmatning T1",
+            "no": "Total innmating T1",
+            "fi": "Kokonaisinjektio T1",
+            "hu": "Összes T1 visszatáplálás"
           }
         },
         "meter_power": {
           "decimals": 3,
           "title": {
             "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
+            "nl": "Totaal verbruik KWh",
+            "de": "Gesamtverbrauch kWh",
+            "da": "Samlet forbrug kWh",
+            "fr": "Consommation totale kWh",
+            "sv": "Total förbrukning kWh",
+            "no": "Totalt forbruk kWh",
+            "fi": "Kokonaiskulutus kWh",
+            "hu": "Összfogyasztás kWh"
           }
         },
         "measure_voltage.l1": {
           "title": {
             "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
+            "nl": "Huidig Voltage fase 1",
+            "de": "Aktuelle Spannung Phase 1",
+            "da": "Aktuel Spænding fase 1",
+            "fr": "Tension phase 1",
+            "sv": "Spänning fas 1",
+            "no": "Spenning fase 1",
+            "fi": "Jännite vaihe 1",
+            "hu": "1. fázis feszültség"
           },
           "insights": true
         }
@@ -4980,7 +5810,14 @@
           "type": "group",
           "label": {
             "en": "Energy Socket settings",
-            "nl": "Energy Socket instellingen"
+            "nl": "Energy Socket instellingen",
+            "de": "Energiesteckdosen-Einstellungen",
+            "da": "Energistik indstillinger",
+            "fr": "Paramètres de la prise",
+            "sv": "Energiuttag inställningar",
+            "no": "Energikontakt innstillinger",
+            "fi": "Energiapistoke asetukset",
+            "hu": "Okos konnektor beállítások"
           },
           "children": [
             {
@@ -4988,12 +5825,26 @@
               "type": "number",
               "label": {
                 "en": "Offset Watt usage",
-                "nl": "Compensatie watt gebruik"
+                "nl": "Compensatie watt gebruik",
+                "de": "Versatz Watt-Verbrauch",
+                "da": "Forskydning Watt forbrug",
+                "fr": "Décalage consommation Watt",
+                "sv": "Offset för wattförbrukning",
+                "no": "Forskyvning watt-forbruk",
+                "fi": "Watin käytön siirtymä",
+                "hu": "Watt fogyasztás eltolás"
               },
               "value": 0,
               "unit": {
                 "en": "watt",
-                "nl": "watt"
+                "nl": "watt",
+                "de": "Watt",
+                "da": "Watt",
+                "fr": "watt",
+                "sv": "watt",
+                "no": "watt",
+                "fi": "watti",
+                "hu": "watt"
               }
             },
             {
@@ -5001,7 +5852,14 @@
               "type": "number",
               "label": {
                 "en": "Polling in seconds",
-                "nl": "Interval in seconden"
+                "nl": "Interval in seconden",
+                "de": "Abfrage in Sekunden",
+                "da": "Afspørgning i sekunder",
+                "fr": "Interrogation en secondes",
+                "sv": "Uppfrågning i sekunder",
+                "no": "Avspørring i sekunder",
+                "fi": "Kyselyväli sekunneissa",
+                "hu": "Lekérdezés másodpercekben"
               },
               "value": 10,
               "min": 2
@@ -5011,7 +5869,14 @@
               "type": "number",
               "label": {
                 "en": "Cloud connection 1=on 0=off",
-                "nl": "Cloud verbinding 1=actief 0=uit"
+                "nl": "Cloud verbinding 1=actief 0=uit",
+                "de": "Cloud-Verbindung 1=ein 0=aus",
+                "da": "Sky-forbindelse 1=til 0=fra",
+                "fr": "Connexion cloud 1=activé 0=désactivé",
+                "sv": "Molnanslutning 1=på 0=av",
+                "no": "Skytilkobling 1=på 0=av",
+                "fi": "Pilviyhteystila 1=päällä 0=pois",
+                "hu": "Felhőkapcsolat 1=be 0=ki"
               },
               "value": 1
             }
@@ -5021,7 +5886,14 @@
           "type": "group",
           "label": {
             "en": "Appliance detection",
-            "nl": "Apparaat detectie"
+            "nl": "Apparaat detectie",
+            "de": "Geräteerkennung",
+            "da": "Apparatgenkendelse",
+            "fr": "Détection d'appareils",
+            "sv": "Apparatdetektering",
+            "no": "Apparatdetektering",
+            "fi": "Laitekynnyksen tunnistus",
+            "hu": "Készülékfelismerés"
           },
           "children": [
             {
@@ -5029,7 +5901,14 @@
               "type": "checkbox",
               "label": {
                 "en": "Enable appliance detection",
-                "nl": "Apparaat detectie inschakelen"
+                "nl": "Apparaat detectie inschakelen",
+                "de": "Geräteerkennung aktivieren",
+                "da": "Aktiver apparatgenkendelse",
+                "fr": "Activer la détection d'appareils",
+                "sv": "Aktivera apparatdetektering",
+                "no": "Aktiver apparatdetektering",
+                "fi": "Ota laitekynnyksen tunnistus käyttöön",
+                "hu": "Készülékfelismerés engedélyezése"
               },
               "value": false
             },
@@ -5038,7 +5917,14 @@
               "type": "number",
               "label": {
                 "en": "Active threshold (W)",
-                "nl": "Actief-drempel (W)"
+                "nl": "Actief-drempel (W)",
+                "de": "Aktiv-Schwelle (W)",
+                "da": "Aktiv grænse (W)",
+                "fr": "Seuil actif (W)",
+                "sv": "Aktiv gräns (W)",
+                "no": "Aktiv terskel (W)",
+                "fi": "Aktiivinen kynnys (W)",
+                "hu": "Aktív küszöbszint (W)"
               },
               "value": 50,
               "min": 1
@@ -5048,7 +5934,14 @@
               "type": "number",
               "label": {
                 "en": "Standby threshold (W)",
-                "nl": "Stand-by drempel (W)"
+                "nl": "Stand-by drempel (W)",
+                "de": "Standby-Schwelle (W)",
+                "da": "Standby-grænse (W)",
+                "fr": "Seuil veille (W)",
+                "sv": "Standbygräns (W)",
+                "no": "Standbyterskel (W)",
+                "fi": "Valmiustilan kynnys (W)",
+                "hu": "Készenlét küszöbszint (W)"
               },
               "value": 5,
               "min": 0
@@ -5058,7 +5951,14 @@
               "type": "number",
               "label": {
                 "en": "Min active duration (min)",
-                "nl": "Min actieve duur (min)"
+                "nl": "Min actieve duur (min)",
+                "de": "Min. aktive Dauer (min)",
+                "da": "Min. aktiv varighed (min)",
+                "fr": "Durée active min (min)",
+                "sv": "Min aktiv varaktighet (min)",
+                "no": "Min aktiv varighet (min)",
+                "fi": "Min aktiivinen kesto (min)",
+                "hu": "Min. aktív időtartam (perc)"
               },
               "value": 5,
               "min": 0
@@ -5068,7 +5968,14 @@
               "type": "checkbox",
               "label": {
                 "en": "Also trigger on power-off (0W)",
-                "nl": "Ook triggeren bij volledige uitschakeling (0W)"
+                "nl": "Ook triggeren bij volledige uitschakeling (0W)",
+                "de": "Auch bei Abschaltung auslösen (0W)",
+                "da": "Udløs også ved slukning (0W)",
+                "fr": "Aussi déclencher à l'arrêt (0W)",
+                "sv": "Utlös även vid strömavstängning (0W)",
+                "no": "Utløs også ved strømavbrudd (0W)",
+                "fi": "Käynnistä myös virrankatkaisulla (0W)",
+                "hu": "Legyen kiváltás kikapcsoláskor is (0W)"
               },
               "value": true
             }
@@ -5098,7 +6005,14 @@
     },
     {
       "name": {
-        "en": "P1 Meter (apiv2)"
+        "en": "P1 Meter (apiv2)",
+        "de": "P1 Zähler (apiv2)",
+        "da": "P1 Måler (apiv2)",
+        "fr": "Compteur P1 (apiv2)",
+        "sv": "P1-mätare (apiv2)",
+        "no": "P1-måler (apiv2)",
+        "fi": "P1-mittari (apiv2)",
+        "hu": "P1 mérő (apiv2)"
       },
       "images": {
         "large": "drivers/energy_v2/assets/images/large.png",
@@ -5171,232 +6085,484 @@
         "measure_power": {
           "title": {
             "en": "Current usage",
-            "nl": "Huidig vermogen"
+            "nl": "Huidig vermogen",
+            "de": "Aktueller Verbrauch",
+            "da": "Aktuelt forbrug",
+            "fr": "Consommation actuelle",
+            "sv": "Aktuell förbrukning",
+            "no": "Aktuelt forbruk",
+            "fi": "Nykyinen kulutus",
+            "hu": "Jelenlegi fogyasztás"
           }
         },
         "meter_gas": {
           "decimals": 3,
           "title": {
             "en": "Gasmeter",
-            "nl": "Gasmeter"
+            "nl": "Gasmeter",
+            "de": "Gaszähler",
+            "da": "Gasmåler",
+            "fr": "Compteur de gaz",
+            "sv": "Gasmätare",
+            "no": "Gassmåler",
+            "fi": "Kaasumittari",
+            "hu": "Gázmérő"
           }
         },
         "meter_gas.daily": {
           "decimals": 3,
           "title": {
             "en": "Day Usage Gas",
-            "nl": "Dag verbruik Gas"
+            "nl": "Dag verbruik Gas",
+            "de": "Tagesverbrauch Gas",
+            "da": "Dagligt gasforbrug",
+            "fr": "Consommation de gaz du jour",
+            "sv": "Daglig gasförbrukning",
+            "no": "Daglig gassforbruk",
+            "fi": "Päivän kaasunkulutus",
+            "hu": "Napi gázfogyasztás"
           }
         },
         "meter_water": {
           "decimals": 3,
           "title": {
             "en": "Watermeter",
-            "nl": "Watermeter"
+            "nl": "Watermeter",
+            "de": "Wasserzähler",
+            "da": "Vandmåler",
+            "fr": "Compteur d'eau",
+            "sv": "Vattenmätare",
+            "no": "Vannmåler",
+            "fi": "Vesimittari",
+            "hu": "Vízórán"
           }
         },
         "measure_power.l1": {
           "title": {
             "en": "Current usage phase 1",
-            "nl": "Huidig gebruik fase 1"
+            "nl": "Huidig gebruik fase 1",
+            "de": "Aktueller Verbrauch Phase 1",
+            "da": "Aktuelt forbrug fase 1",
+            "fr": "Consommation phase 1",
+            "sv": "Aktuell förbrukning fas 1",
+            "no": "Aktuelt forbruk fase 1",
+            "fi": "Nykyinen kulutus vaihe 1",
+            "hu": "1. fázis fogyasztás"
           }
         },
         "measure_power.l2": {
           "title": {
             "en": "Current usage phase 2",
-            "nl": "Huidig gebruik fase 2"
+            "nl": "Huidig gebruik fase 2",
+            "de": "Aktueller Verbrauch Phase 2",
+            "da": "Aktuelt forbrug fase 2",
+            "fr": "Consommation phase 2",
+            "sv": "Aktuell förbrukning fas 2",
+            "no": "Aktuelt forbruk fase 2",
+            "fi": "Nykyinen kulutus vaihe 2",
+            "hu": "2. fázis fogyasztás"
           }
         },
         "measure_power.l3": {
           "title": {
             "en": "Current usage phase 3",
-            "nl": "Huidig gebruik fase 3"
+            "nl": "Huidig gebruik fase 3",
+            "de": "Aktueller Verbrauch Phase 3",
+            "da": "Aktuelt forbrug fase 3",
+            "fr": "Consommation phase 3",
+            "sv": "Aktuell förbrukning fas 3",
+            "no": "Aktuelt forbruk fase 3",
+            "fi": "Nykyinen kulutus vaihe 3",
+            "hu": "3. fázis fogyasztás"
           }
         },
         "measure_current": {
           "title": {
             "en": "Current Amp",
-            "nl": "Huidig Amp"
+            "nl": "Huidig Amp",
+            "de": "Aktuelles Ampere",
+            "da": "Aktuel Ampere",
+            "fr": "Ampérage actuel",
+            "sv": "Aktuell ström",
+            "no": "Aktuell strøm",
+            "fi": "Nykyinen virta",
+            "hu": "Aktuális áramerősség"
           }
         },
         "measure_current.l1": {
           "title": {
             "en": "Current Amp phase 1",
-            "nl": "Huidig Amp fase 1"
+            "nl": "Huidig Amp fase 1",
+            "de": "Aktuelles Ampere Phase 1",
+            "da": "Aktuel Ampere fase 1",
+            "fr": "Ampérage phase 1",
+            "sv": "Ström fas 1",
+            "no": "Strøm fase 1",
+            "fi": "Virta vaihe 1",
+            "hu": "1. fázis áramerősség"
           }
         },
         "measure_current.l2": {
           "title": {
             "en": "Current Amp phase 2",
-            "nl": "Huidig Amp fase 2"
+            "nl": "Huidig Amp fase 2",
+            "de": "Aktuelles Ampere Phase 2",
+            "da": "Aktuel Ampere fase 2",
+            "fr": "Ampérage phase 2",
+            "sv": "Ström fas 2",
+            "no": "Strøm fase 2",
+            "fi": "Virta vaihe 2",
+            "hu": "2. fázis áramerősség"
           }
         },
         "measure_current.l3": {
           "title": {
             "en": "Current Amp phase 3",
-            "nl": "Huidig Amp fase 3"
+            "nl": "Huidig Amp fase 3",
+            "de": "Aktuelles Ampere Phase 3",
+            "da": "Aktuel Ampere fase 3",
+            "fr": "Ampérage phase 3",
+            "sv": "Ström fas 3",
+            "no": "Strøm fase 3",
+            "fi": "Virta vaihe 3",
+            "hu": "3. fázis áramerősség"
           }
         },
         "net_load_phase1_pct": {
           "title": {
             "en": "Phase 1 load %",
-            "nl": "Fase 1 belasting %"
+            "nl": "Fase 1 belasting %",
+            "de": "Phase 1 Auslastung %",
+            "da": "Fase 1 belastning %",
+            "fr": "Charge phase 1 %",
+            "sv": "Last fas 1 %",
+            "no": "Last fase 1 %",
+            "fi": "Vaiheen 1 kuorma %",
+            "hu": "1. fázis terhelés %"
           }
         },
         "net_load_phase2_pct": {
           "title": {
             "en": "Phase 2 load %",
-            "nl": "Fase 2 belasting %"
+            "nl": "Fase 2 belasting %",
+            "de": "Phase 2 Auslastung %",
+            "da": "Fase 2 belastning %",
+            "fr": "Charge phase 2 %",
+            "sv": "Last fas 2 %",
+            "no": "Last fase 2 %",
+            "fi": "Vaiheen 2 kuorma %",
+            "hu": "2. fázis terhelés %"
           }
         },
         "net_load_phase3_pct": {
           "title": {
             "en": "Phase 3 load %",
-            "nl": "Fase 3 belasting %"
+            "nl": "Fase 3 belasting %",
+            "de": "Phase 3 Auslastung %",
+            "da": "Fase 3 belastning %",
+            "fr": "Charge phase 3 %",
+            "sv": "Last fas 3 %",
+            "no": "Last fase 3 %",
+            "fi": "Vaiheen 3 kuorma %",
+            "hu": "3. fázis terhelés %"
           }
         },
         "measure_voltage": {
           "title": {
             "en": "Current Voltage",
-            "nl": "Huidig Voltage"
+            "nl": "Huidig Voltage",
+            "de": "Aktuelle Spannung",
+            "da": "Aktuel Spænding",
+            "fr": "Tension actuelle",
+            "sv": "Aktuell spänning",
+            "no": "Aktuell spenning",
+            "fi": "Nykyinen jännite",
+            "hu": "Aktuális feszültség"
           }
         },
         "measure_voltage.l1": {
           "title": {
             "en": "Current Voltage phase 1",
-            "nl": "Huidig Voltage fase 1"
+            "nl": "Huidig Voltage fase 1",
+            "de": "Aktuelle Spannung Phase 1",
+            "da": "Aktuel Spænding fase 1",
+            "fr": "Tension phase 1",
+            "sv": "Spänning fas 1",
+            "no": "Spenning fase 1",
+            "fi": "Jännite vaihe 1",
+            "hu": "1. fázis feszültség"
           }
         },
         "measure_voltage.l2": {
           "title": {
             "en": "Current Voltage phase 2",
-            "nl": "Huidig Voltage fase 2"
+            "nl": "Huidig Voltage fase 2",
+            "de": "Aktuelle Spannung Phase 2",
+            "da": "Aktuel Spænding fase 2",
+            "fr": "Tension phase 2",
+            "sv": "Spänning fas 2",
+            "no": "Spenning fase 2",
+            "fi": "Jännite vaihe 2",
+            "hu": "2. fázis feszültség"
           }
         },
         "measure_voltage.l3": {
           "title": {
             "en": "Current Voltage phase 3",
-            "nl": "Huidig Voltage fase 3"
+            "nl": "Huidig Voltage fase 3",
+            "de": "Aktuelle Spannung Phase 3",
+            "da": "Aktuel Spænding fase 3",
+            "fr": "Tension phase 3",
+            "sv": "Spänning fas 3",
+            "no": "Spenning fase 3",
+            "fi": "Jännite vaihe 3",
+            "hu": "3. fázis feszültség"
           }
         },
         "meter_power.consumed.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 usage",
-            "nl": "Totaal t1 gebruik"
+            "nl": "Totaal t1 gebruik",
+            "de": "Gesamt T1 Verbrauch",
+            "da": "Samlet T1 forbrug",
+            "fr": "Total utilisation T1",
+            "sv": "Total förbrukning T1",
+            "no": "Totalt forbruk T1",
+            "fi": "Kokonaiskulutus T1",
+            "hu": "Összes T1 fogyasztás"
           }
         },
         "meter_power.produced.t1": {
           "decimals": 3,
           "title": {
             "en": "Total t1 deliver",
-            "nl": "Totaal t1 teruglevering"
+            "nl": "Totaal t1 teruglevering",
+            "de": "Gesamt T1 Einspeisung",
+            "da": "Samlet T1 levering",
+            "fr": "Total injection T1",
+            "sv": "Total inmatning T1",
+            "no": "Total innmating T1",
+            "fi": "Kokonaisinjektio T1",
+            "hu": "Összes T1 visszatáplálás"
           }
         },
         "meter_power.consumed.t2": {
           "decimals": 3,
           "title": {
             "en": "Total t2 usage",
-            "nl": "Totaal t2 gebruik"
+            "nl": "Totaal t2 gebruik",
+            "de": "Gesamt T2 Verbrauch",
+            "da": "Samlet T2 forbrug",
+            "fr": "Total utilisation T2",
+            "sv": "Total förbrukning T2",
+            "no": "Totalt forbruk T2",
+            "fi": "Kokonaiskulutus T2",
+            "hu": "Összes T2 fogyasztás"
           }
         },
         "meter_power.produced.t2": {
           "decimals": 3,
           "title": {
             "en": "Total t2 deliver",
-            "nl": "Totaal t2 teruglevering"
+            "nl": "Totaal t2 teruglevering",
+            "de": "Gesamt T2 Einspeisung",
+            "da": "Samlet T2 levering",
+            "fr": "Total injection T2",
+            "sv": "Total inmatning T2",
+            "no": "Total innmating T2",
+            "fi": "Kokonaisinjektio T2",
+            "hu": "Összes T2 visszatáplálás"
           }
         },
         "meter_power.consumed.t3": {
           "decimals": 3,
           "title": {
             "en": "Total t3 usage",
-            "nl": "Totaal t3 gebruik"
+            "nl": "Totaal t3 gebruik",
+            "de": "Gesamt T3 Verbrauch",
+            "da": "Samlet T3 forbrug",
+            "fr": "Total utilisation T3",
+            "sv": "Total förbrukning T3",
+            "no": "Totalt forbruk T3",
+            "fi": "Kokonaiskulutus T3",
+            "hu": "Összes T3 fogyasztás"
           }
         },
         "meter_power.produced.t3": {
           "decimals": 3,
           "title": {
             "en": "Total t3 deliver",
-            "nl": "Totaal t3 teruglevering"
+            "nl": "Totaal t3 teruglevering",
+            "de": "Gesamt T3 Einspeisung",
+            "da": "Samlet T3 levering",
+            "fr": "Total injection T3",
+            "sv": "Total inmatning T3",
+            "no": "Total innmating T3",
+            "fi": "Kokonaisinjektio T3",
+            "hu": "Összes T3 visszatáplálás"
           }
         },
         "meter_power.consumed.t4": {
           "decimals": 3,
           "title": {
             "en": "Total t4 usage",
-            "nl": "Totaal t4 gebruik"
+            "nl": "Totaal t4 gebruik",
+            "de": "Gesamt T4 Verbrauch",
+            "da": "Samlet T4 forbrug",
+            "fr": "Total utilisation T4",
+            "sv": "Total förbrukning T4",
+            "no": "Totalt forbruk T4",
+            "fi": "Kokonaiskulutus T4",
+            "hu": "Összes T4 fogyasztás"
           }
         },
         "meter_power.produced.t4": {
           "decimals": 3,
           "title": {
             "en": "Total t4 deliver",
-            "nl": "Totaal t4 teruglevering"
+            "nl": "Totaal t4 teruglevering",
+            "de": "Gesamt T4 Einspeisung",
+            "da": "Samlet T4 levering",
+            "fr": "Total injection T4",
+            "sv": "Total inmatning T4",
+            "no": "Total innmating T4",
+            "fi": "Kokonaisinjektio T4",
+            "hu": "Összes T4 visszatáplálás"
           }
         },
         "meter_power.consumed": {
           "decimals": 3,
           "title": {
             "en": "Sum Consumed",
-            "nl": "Som gebruik"
+            "nl": "Som gebruik",
+            "de": "Gesamt Bezug",
+            "da": "Samlet forbrug",
+            "fr": "Total consommé",
+            "sv": "Totalt förbrukat",
+            "no": "Totalt forbrukt",
+            "fi": "Yhteensä kulutettu",
+            "hu": "Összesen felhasznált"
           }
         },
         "meter_power.returned": {
           "decimals": 3,
           "title": {
             "en": "Sum returned",
-            "nl": "Som teruglevering"
+            "nl": "Som teruglevering",
+            "de": "Gesamt Einspeisung",
+            "da": "Samlet levering",
+            "fr": "Total retourné",
+            "sv": "Totalt returnerat",
+            "no": "Totalt returnert",
+            "fi": "Yhteensä palautettu",
+            "hu": "Összesen visszatáplált"
           }
         },
         "meter_power.daily": {
           "decimals": 3,
           "title": {
             "en": "Daily usage",
-            "nl": "Dag verbruik"
+            "nl": "Dag verbruik",
+            "de": "Tagesverbrauch",
+            "da": "Dagligt forbrug",
+            "fr": "Consommation journalière",
+            "sv": "Daglig förbrukning",
+            "no": "Daglig forbruk",
+            "fi": "Päivittäinen kulutus",
+            "hu": "Napi fogyasztás"
           }
         },
         "meter_power": {
           "decimals": 3,
           "title": {
             "en": "Total usage KWh",
-            "nl": "Totaal verbruik KWh"
+            "nl": "Totaal verbruik KWh",
+            "de": "Gesamtverbrauch kWh",
+            "da": "Samlet forbrug kWh",
+            "fr": "Consommation totale kWh",
+            "sv": "Total förbrukning kWh",
+            "no": "Totalt forbruk kWh",
+            "fi": "Kokonaiskulutus kWh",
+            "hu": "Összfogyasztás kWh"
           }
         },
         "measure_power.montly_power_peak": {
           "title": {
             "en": "Monthly Power Peak",
-            "nl": "Maandelijks piekvermogen"
+            "nl": "Maandelijks piekvermogen",
+            "de": "Monatliche Spitzenleistung",
+            "da": "Månedlig spidsbelastning",
+            "fr": "Pic de puissance mensuel",
+            "sv": "Månatlig effekttopp",
+            "no": "Månedlig effekttopp",
+            "fi": "Kuukausittainen tehohuippu",
+            "hu": "Havi teljesítménycsúcs"
           }
         },
         "measure_power.average_power_15m_w": {
           "title": {
             "en": "Active average power over 15 minutes",
-            "nl": "Actief gemiddeld vermogen over 15 minuten"
+            "nl": "Actief gemiddeld vermogen over 15 minuten",
+            "de": "Durchschnittliche Wirkleistung über 15 Minuten",
+            "da": "Aktiv gennemsnitseffekt over 15 minutter",
+            "fr": "Puissance moyenne active sur 15 minutes",
+            "sv": "Aktiv genomsnittlig effekt under 15 minuter",
+            "no": "Aktiv gjennomsnittlig effekt over 15 minutter",
+            "fi": "Aktiivinen kesitehoteho 15 minuutissa",
+            "hu": "Aktív átlagteljesítmény 15 percen át"
           }
         },
         "measure_power.battery_group_power_w": {
           "title": {
             "en": "Battery group Current combined Power",
-            "nl": "Battery groep Huidig samengesteld vermogen"
+            "nl": "Battery groep Huidig samengesteld vermogen",
+            "de": "Batteriegruppe Aktuelle Gesamtleistung",
+            "da": "Batteri gruppe aktuel kombineret effekt",
+            "fr": "Puissance combinée actuelle du groupe",
+            "sv": "Grupp aktuell kombinerad effekt",
+            "no": "Gruppe gjeldende kombinert effekt",
+            "fi": "Ryhmän nykyinen yhteislähtöteho",
+            "hu": "Akkucsoport aktuális összteljesítmény"
           }
         },
         "measure_power.battery_group_target_power_w": {
           "title": {
             "en": "Battery group Target Power",
-            "nl": "Battery groep Doel vermogen"
+            "nl": "Battery groep Doel vermogen",
+            "de": "Batteriegruppe Zielleistung",
+            "da": "Batteri gruppe måleffekt",
+            "fr": "Puissance cible du groupe",
+            "sv": "Gruppmåleffekt",
+            "no": "Grupperingens måleffekt",
+            "fi": "Ryhmän kohdelähtöteho",
+            "hu": "Akkucsoport célteljesítmény"
           }
         },
         "measure_power.battery_group_max_consumption_w": {
           "title": {
             "en": "Battery group Max allowed Consumption Power",
-            "nl": "Battery groep Max toegestaand gebruiksvermogen"
+            "nl": "Battery groep Max toegestaand gebruiksvermogen",
+            "de": "Batteriegruppe Max. erlaubte Bezugsleistung",
+            "da": "Batteri gruppe maks tilladt forbrugseffekt",
+            "fr": "Puissance de consommation max autorisée",
+            "sv": "Grupp max tillåten förbrukningseffekt",
+            "no": "Gruppe maks tillatt forbrukseffekt",
+            "fi": "Ryhmän suurin sallittu kulutus",
+            "hu": "Akkucsoport max. megengedett fogyasztás"
           }
         },
         "measure_power.battery_group_max_production_w": {
           "title": {
             "en": "Battery group Max allowed Production Power",
-            "nl": "Battery groep Max toegestaand leveringssvermogen"
+            "nl": "Battery groep Max toegestaand leveringssvermogen",
+            "de": "Batteriegruppe Max. erlaubte Einspeiseleistung",
+            "da": "Batteri gruppe maks tilladt produktionseffekt",
+            "fr": "Puissance de production max autorisée",
+            "sv": "Grupp max tillåten produktionseffekt",
+            "no": "Gruppe maks tillatt produksjonseffekt",
+            "fi": "Ryhmän suurin sallittu tuotanto",
+            "hu": "Akkucsoport max. megengedett termelés"
           }
         },
         "battery_group_total_capacity_kwh": {
@@ -5406,10 +6572,24 @@
           "uiComponent": "sensor",
           "icon": "assets/battery.svg",
           "units": {
-            "en": "kWh"
+            "en": "kWh",
+            "de": "kWh",
+            "da": "kWh",
+            "fr": "kWh",
+            "sv": "kWh",
+            "no": "kWh",
+            "fi": "kWh",
+            "hu": "kWh"
           },
           "title": {
-            "en": "Battery Group Total Capacity"
+            "en": "Battery Group Total Capacity",
+            "de": "Batteriegruppe Gesamtkapazität",
+            "da": "Batteri gruppe samlet kapacitet",
+            "fr": "Capacité totale du groupe",
+            "sv": "Gruppens totala kapacitet",
+            "no": "Gruppens totale kapasitet",
+            "fi": "Akkuryhmän kokonaiskapasiteetti",
+            "hu": "Akkucsoport teljes kapacitás"
           },
           "insights": false
         },
@@ -5420,10 +6600,24 @@
           "uiComponent": "sensor",
           "icon": "assets/battery.svg",
           "units": {
-            "en": "%"
+            "en": "%",
+            "de": "%",
+            "da": "%",
+            "fr": "%",
+            "sv": "%",
+            "no": "%",
+            "fi": "%",
+            "hu": "%"
           },
           "title": {
-            "en": "Battery Group Average SoC"
+            "en": "Battery Group Average SoC",
+            "de": "Batteriegruppe Ø Ladezustand",
+            "da": "Batteri gruppe gennemsnitlig ladetilstand",
+            "fr": "SoC moyen du groupe",
+            "sv": "Genomsnittligt grupp-SoC",
+            "no": "Gjennomsnittlig gruppe-SoC",
+            "fi": "Akkuryhmän keski-SoC",
+            "hu": "Akkucsoport átlagos SoC"
           },
           "insights": true
         },
@@ -5435,7 +6629,14 @@
           "icon": "assets/battery.svg",
           "title": {
             "en": "Battery Group Charge state",
-            "nl": "Battery Groep Laadt status"
+            "nl": "Battery Groep Laadt status",
+            "de": "Batteriegruppe Ladezustand",
+            "da": "Batteri gruppe ladetilstand",
+            "fr": "État de charge du groupe",
+            "sv": "Gruppladdningstillstånd",
+            "no": "Gruppeladestatus",
+            "fi": "Akkuryhmän latausaste",
+            "hu": "Akkucsoport töltési állapot"
           },
           "insights": true
         },
@@ -5443,7 +6644,14 @@
           "type": "number",
           "title": {
             "en": "WiFi Signal",
-            "nl": "WiFi signaal"
+            "nl": "WiFi signaal",
+            "de": "WLAN-Signal",
+            "da": "WiFi-signal",
+            "fr": "Signal WiFi",
+            "sv": "WiFi-signal",
+            "no": "WiFi-signal",
+            "fi": "WiFi-signaali",
+            "hu": "WiFi-jel"
           },
           "getable": true,
           "setable": false,
@@ -5452,7 +6660,14 @@
           "icon": "assets/rssi.svg",
           "units": {
             "en": "dBm",
-            "nl": "dBm"
+            "nl": "dBm",
+            "de": "dBm",
+            "da": "dBm",
+            "fr": "dBm",
+            "sv": "dBm",
+            "no": "dBm",
+            "fi": "dBm",
+            "hu": "dBm"
           }
         }
       },
@@ -5487,49 +6702,98 @@
           "value": "plugin-battery",
           "label": {
             "en": "Plugin Battery mode",
-            "nl": "Plugin‑batterijmodus"
+            "nl": "Plugin‑batterijmodus",
+            "de": "Plugin-Batteriemodus",
+            "da": "Plugin-batteritilstand",
+            "fr": "Mode batterie plugin",
+            "sv": "Plugin-batteriläge",
+            "no": "Plugin-batterimodus",
+            "fi": "Plugin-akkutila",
+            "hu": "Plugin akkumód"
           },
           "values": [
             {
               "id": "zero",
               "label": {
                 "en": "Zero mode",
-                "nl": "Nul op de meter"
+                "nl": "Nul op de meter",
+                "de": "Nulleinspeisung",
+                "da": "Nul på måleren",
+                "fr": "Mode zéro",
+                "sv": "Nollläge",
+                "no": "Nullmodus",
+                "fi": "Nollatila",
+                "hu": "Nulla mód"
               }
             },
             {
               "id": "to_full",
               "label": {
                 "en": "Full charge",
-                "nl": "Volledig opladen"
+                "nl": "Volledig opladen",
+                "de": "Vollladung",
+                "da": "Fuld opladning",
+                "fr": "Charge complète",
+                "sv": "Fulladdning",
+                "no": "Full lading",
+                "fi": "Täysi lataus",
+                "hu": "Teljes töltés"
               }
             },
             {
               "id": "standby",
               "label": {
                 "en": "Standby",
-                "nl": "Stand‑by"
+                "nl": "Standby",
+                "de": "Standby",
+                "da": "Standby",
+                "fr": "Veille",
+                "sv": "Standby",
+                "no": "Standby",
+                "fi": "Valmiustila",
+                "hu": "Készenlét"
               }
             },
             {
               "id": "zero_charge_only",
               "label": {
                 "en": "Zero mode, Charge allowed",
-                "nl": "Nul op de meter, laden toegestaan"
+                "nl": "Nul op de meter, laden toegestaan",
+                "de": "Nulleinspeisung, Laden erlaubt",
+                "da": "Nul på måleren, opladning tilladt",
+                "fr": "Mode zéro, charge autorisée",
+                "sv": "Nollläge, laddning tillåten",
+                "no": "Nullmodus, lading tillatt",
+                "fi": "Nollatila, lataus sallittu",
+                "hu": "Nulla mód, töltés engedélyezve"
               }
             },
             {
               "id": "zero_discharge_only",
               "label": {
                 "en": "Zero mode, Discharge allowed",
-                "nl": "Nul op de meter, ontladen toegestaan"
+                "nl": "Nul op de meter, ontladen toegestaan",
+                "de": "Nulleinspeisung, Entladen erlaubt",
+                "da": "Nul på måleren, afladning tilladt",
+                "fr": "Mode zéro, décharge autorisée",
+                "sv": "Nollläge, urladdning tillåten",
+                "no": "Nullmodus, utlading tillatt",
+                "fi": "Nollatila, purkaus sallittu",
+                "hu": "Nulla mód, töltésleadás engedélyezve"
               }
             },
             {
               "id": "predictive",
               "label": {
                 "en": "Predictive (HW Smart Charging)",
-                "nl": "Slim laden (HomeWizard)"
+                "nl": "Slim laden (HomeWizard)",
+                "de": "Prädiktiv (HW Smart Charging)",
+                "da": "Prædiktiv (HW Smart Opladning)",
+                "fr": "Prédictif (HW Smart Charging)",
+                "sv": "Prediktiv (HW Smart Charging)",
+                "no": "Prediktiv (HW Smart Charging)",
+                "fi": "Ennakoiva (HW Smart Charging)",
+                "hu": "Prediktív (HW Smart Charging)"
               }
             }
           ]
@@ -5538,12 +6802,26 @@
           "id": "polling_interval",
           "type": "number",
           "label": {
-            "en": "Polling interval"
+            "en": "Polling interval",
+            "de": "Abfrageintervall",
+            "da": "Afspøringsinterval",
+            "fr": "Intervalle d'interrogation",
+            "sv": "Uppfrågningsintervall",
+            "no": "Avspørringsintervall",
+            "fi": "Kyselyväli",
+            "hu": "Lekérdezési időköz"
           },
           "value": 10,
           "min": 1,
           "unit": {
-            "en": "s"
+            "en": "s",
+            "de": "s",
+            "da": "s",
+            "fr": "s",
+            "sv": "s",
+            "no": "s",
+            "fi": "s",
+            "hu": "mp"
           }
         },
         {
@@ -5551,12 +6829,26 @@
           "type": "number",
           "label": {
             "en": "Grid phase Amps",
-            "nl": "Net fase aansluiting"
+            "nl": "Net fase aansluiting",
+            "de": "Netzphase Ampere",
+            "da": "Netfase Ampere",
+            "fr": "Ampérage phase réseau",
+            "sv": "Nätfas ampere",
+            "no": "Nettfase ampere",
+            "fi": "Verkkofaasin virta",
+            "hu": "Hálózati fázis ampere"
           },
           "value": 40,
           "unit": {
             "en": "A",
-            "nl": "A"
+            "nl": "A",
+            "de": "A",
+            "da": "A",
+            "fr": "A",
+            "sv": "A",
+            "no": "A",
+            "fi": "A",
+            "hu": "A"
           }
         },
         {
@@ -5564,7 +6856,14 @@
           "type": "number",
           "label": {
             "en": "Cloud connection 1=on 0=off",
-            "nl": "Cloud verbinding 1=actief 0=uit"
+            "nl": "Cloud verbinding 1=actief 0=uit",
+            "de": "Cloud-Verbindung 1=ein 0=aus",
+            "da": "Sky-forbindelse 1=til 0=fra",
+            "fr": "Connexion cloud 1=activé 0=désactivé",
+            "sv": "Molnanslutning 1=på 0=av",
+            "no": "Skytilkobling 1=på 0=av",
+            "fi": "Pilviyhteystila 1=päällä 0=pois",
+            "hu": "Felhőkapcsolat 1=be 0=ki"
           },
           "value": 1
         },
@@ -5573,7 +6872,14 @@
           "type": "text",
           "label": {
             "en": "url",
-            "nl": "url"
+            "nl": "url",
+            "de": "url",
+            "da": "url",
+            "fr": "url",
+            "sv": "url",
+            "no": "url",
+            "fi": "url",
+            "hu": "url"
           }
         },
         {
@@ -5581,7 +6887,14 @@
           "type": "checkbox",
           "label": {
             "en": "Use polling instead of WebSocket",
-            "nl": "Gebruik polling in plaats van WebSocket"
+            "nl": "Gebruik polling in plaats van WebSocket",
+            "de": "Abfrage statt WebSocket verwenden",
+            "da": "Brug polling i stedet for WebSocket",
+            "fr": "Utiliser l'interrogation au lieu du WebSocket",
+            "sv": "Använd avfråga istället för WebSocket",
+            "no": "Bruk avspørring i stedet for WebSocket",
+            "fi": "Käytä kyselyä WebSocketin sijaan",
+            "hu": "Lekérdezés használata WebSocket helyett"
           },
           "value": true
         },
@@ -5590,11 +6903,25 @@
           "type": "number",
           "label": {
             "en": "WebSocket update interval (seconds)",
-            "nl": "WebSocket update interval (seconden)"
+            "nl": "WebSocket update interval (seconden)",
+            "de": "WebSocket-Aktualisierungsintervall (Sekunden)",
+            "da": "WebSocket opdateringsinterval (sekunder)",
+            "fr": "Intervalle de mise à jour WebSocket (secondes)",
+            "sv": "WebSocket-uppdateringsintervall (sekunder)",
+            "no": "WebSocket-oppdateringsintervall (sekunder)",
+            "fi": "WebSocket-päivitysväli (sekunnit)",
+            "hu": "WebSocket frissítési időköz (másodperc)"
           },
           "hint": {
             "en": "How often measurements are processed from the WebSocket. Increase to 3 or 4 on older or slower Homey devices to reduce CPU load. Default: 2.",
-            "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2."
+            "nl": "Hoe vaak metingen worden verwerkt via WebSocket. Verhoog naar 3 of 4 op oudere Homey apparaten om CPU-belasting te verminderen. Standaard: 2.",
+            "de": "Wie oft Messungen über WebSocket verarbeitet werden. Auf 3 oder 4 erhöhen bei älteren Homey Geräten, um die CPU-Last zu reduzieren. Standard: 2.",
+            "da": "Hvor ofte målinger behandles fra WebSocket. Øg til 3 eller 4 på ældre Homey-enheder for at reducere CPU-belastningen. Standard: 2.",
+            "fr": "Fréquence de traitement des mesures depuis le WebSocket. Augmenter à 3 ou 4 sur les appareils Homey plus anciens ou plus lents pour réduire la charge CPU. Par défaut : 2.",
+            "sv": "Hur ofta mätningar bearbetas från WebSocket. Öka till 3 eller 4 på äldre eller långsammare Homey-enheter för att minska CPU-belastningen. Standard: 2.",
+            "no": "Hvor ofte målinger behandles fra WebSocket. Øk til 3 eller 4 på eldre eller tregere Homey-enheter for å redusere CPU-belastningen. Standard: 2.",
+            "fi": "Kuinka usein mittauksia käsitellään WebSocketista. Lisää 3 tai 4:ään vanhemmilla tai hitaammilla Homey-laitteilla CPU-kuorman vähentämiseksi. Oletus: 2.",
+            "hu": "Milyen gyakran dolgozzuk fel a méréseket a WebSocketből. Növelje 3-ra vagy 4-re régebbi vagy lassabb Homey eszközökön a CPU-terhelés csökkentéséhez. Alapértelmezett: 2."
           },
           "value": 2,
           "min": 2,
@@ -5606,7 +6933,14 @@
           "type": "checkbox",
           "label": {
             "en": "Show gas meter",
-            "nl": "Gas meter weergeven"
+            "nl": "Gas meter weergeven",
+            "de": "Gaszähler anzeigen",
+            "da": "Vis gasmåler",
+            "fr": "Afficher le compteur de gaz",
+            "sv": "Visa gasmätare",
+            "no": "Vis gassmåler",
+            "fi": "Näytä kaasumittari",
+            "hu": "Gázmérő megjelenítése"
           },
           "value": true
         },
@@ -5615,7 +6949,14 @@
           "type": "checkbox",
           "label": {
             "en": "Enable baseload notifications",
-            "nl": "Sluipverbruik meldingen inschakelen"
+            "nl": "Sluipverbruik meldingen inschakelen",
+            "de": "Grundlast-Benachrichtigungen aktivieren",
+            "da": "Aktiver grundbelastningsnotifikationer",
+            "fr": "Activer les notifications de charge de base",
+            "sv": "Aktivera basbelastningsaviseringar",
+            "no": "Aktiver grunnlastmeldinger",
+            "fi": "Ota perustaakan ilmoitukset käyttöön",
+            "hu": "Alapterhelés értesítések engedélyezése"
           },
           "value": true
         },
@@ -5624,7 +6965,14 @@
           "type": "checkbox",
           "label": {
             "en": "Phase overload notifications",
-            "nl": "Fase-overbelasting meldingen"
+            "nl": "Fase-overbelasting meldingen",
+            "de": "Phasenüberlastungs-Benachrichtigungen",
+            "da": "Fase-overbelastningsnotifikationer",
+            "fr": "Notifications de surcharge de phase",
+            "sv": "Fas överlastmeddelanden",
+            "no": "Fase overbelastningsmeldinger",
+            "fi": "Faasin ylikuormitusilmoitukset",
+            "hu": "Fázis túlterhelési értesítések"
           },
           "value": true
         },
@@ -5633,12 +6981,26 @@
           "type": "checkbox",
           "label": {
             "en": "Enable debug logging",
-            "nl": "Debug logging inschakelen"
+            "nl": "Debug logging inschakelen",
+            "de": "Debug-Protokollierung aktivieren",
+            "da": "Aktiver fejlretningslogning",
+            "fr": "Activer la journalisation de débogage",
+            "sv": "Aktivera felsökningsloggning",
+            "no": "Aktiver feilsøkingslogging",
+            "fi": "Ota virheenkorjausloki käyttöön",
+            "hu": "Hibakeresési napló engedélyezése"
           },
           "value": false,
           "hint": {
             "en": "Enables verbose logging for WebSocket and battery events. Disable after debugging to reduce CPU load.",
-            "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen."
+            "nl": "Schakelt uitgebreide logging in voor WebSocket en batterijgebeurtenissen. Schakel uit na het debuggen om CPU-belasting te verminderen.",
+            "de": "Aktiviert detaillierte Protokollierung für WebSocket- und Batterie-Ereignisse. Nach dem Debuggen deaktivieren, um CPU-Last zu reduzieren.",
+            "da": "Aktiverer detaljeret logning for WebSocket- og batterihændelser. Deaktiver efter fejlretning for at reducere CPU-belastningen.",
+            "fr": "Active la journalisation détaillée pour les événements WebSocket et batterie. Désactiver après le débogage pour réduire la charge CPU.",
+            "sv": "Aktiverar utförlig loggning för WebSocket- och batterihändelser. Inaktivera efter felsökning för att minska CPU-belastningen.",
+            "no": "Aktiverer detaljert logging for WebSocket- og batterihendelser. Deaktiver etter feilsøking for å redusere CPU-belastningen.",
+            "fi": "Ottaa käyttöön yksityiskohtaisen kirjaamisen WebSocket- ja akkutapahtumille. Poista käytöstä virheenkorjauksen jälkeen CPU-kuorman vähentämiseksi.",
+            "hu": "Részletes naplózást engedélyez WebSocket és akkumulátor eseményekhez. Kapcsolja ki a hibakeresés után a CPU-terhelés csökkentéséhez."
           }
         }
       ]
@@ -6058,6 +7420,7 @@
       ],
       "capabilities": [
         "identify",
+        "alarm_generic",
         "dim",
         "led_brightness_pct",
         "meter_power.import",
@@ -6725,11 +8088,25 @@
       "type": "string",
       "title": {
         "en": "Active Mode",
-        "nl": "Actieve Modus"
+        "nl": "Actieve Modus",
+        "de": "Aktiver Modus",
+        "da": "Aktiv tilstand",
+        "fr": "Mode actif",
+        "sv": "Aktivt läge",
+        "no": "Aktiv modus",
+        "fi": "Aktiivinen tila",
+        "hu": "Aktív mód"
       },
       "desc": {
         "en": "The battery mode that is currently active on the hardware. May differ from the recommended mode when the confidence score is below the threshold, auto-apply is off, or a manual override is active.",
-        "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is."
+        "nl": "De batterijmodus die momenteel actief is op de hardware. Kan afwijken van de aanbevolen modus als de betrouwbaarheidsscore onder de drempel ligt, automatisch toepassen uitstaat, of een handmatige override actief is.",
+        "de": "Der aktuell auf der Hardware aktive Batteriemodus. Kann vom empfohlenen Modus abweichen, wenn der Konfidenzwert unter dem Schwellenwert liegt, Auto-Apply deaktiviert ist oder eine manuelle Überschreibung aktiv ist.",
+        "da": "Den batteritilstand, der aktuelt er aktiv på hardwaren. Kan afvige fra den anbefalede tilstand, når konfidensscore er under tærsklen, auto-anvend er slået fra, eller en manuel tilsidesættelse er aktiv.",
+        "fr": "Le mode batterie actuellement actif sur le matériel. Peut différer du mode recommandé lorsque le score de confiance est en dessous du seuil, l'application automatique est désactivée ou un remplacement manuel est actif.",
+        "sv": "Det batterilåge som för närvarande är aktivt på hårdvaran. Kan skilja sig från det rekommenderade läget när konfidenspoängen är under tröskeln, auto-apply är av, eller en manuell åsidosättning är aktiv.",
+        "no": "Batterimodus som for øyeblikket er aktivt på maskinvaren. Kan avvike fra anbefalt modus når konfidensscore er under terskelen, auto-apply er av, eller manuell overstyring er aktiv.",
+        "fi": "Akkutila, joka on tällä hetkellä aktiivinen laitteistossa. Voi poiketa suositellusta tilasta, kun luottamuspisteet ovat kynnyksen alapuolella, automaattinen käyttö on pois tai manuaalinen ohitus on aktiivinen.",
+        "hu": "Az akkumód, amely jelenleg aktív a hardveren. Eltérhet az ajánlott módtól, ha a megbízhatósági pontszám a küszöb alá esik, az automatikus alkalmazás ki van kapcsolva, vagy manuális felülírás aktív."
       },
       "getable": true,
       "setable": false,
@@ -6740,11 +8117,25 @@
       "type": "boolean",
       "title": {
         "en": "Auto-Apply",
-        "nl": "Automatisch Toepassen"
+        "nl": "Automatisch Toepassen",
+        "de": "Automatisch anwenden",
+        "da": "Anvend automatisk",
+        "fr": "Application automatique",
+        "sv": "Automatisk tillämpning",
+        "no": "Automatisk bruk",
+        "fi": "Automaattinen käyttö",
+        "hu": "Automatikus alkalmazás"
       },
       "desc": {
         "en": "Automatically apply policy recommendations to battery",
-        "nl": "Pas beleidsaanbevelingen automatisch toe op batterij"
+        "nl": "Pas beleidsaanbevelingen automatisch toe op batterij",
+        "de": "Richtlinienempfehlungen automatisch auf Batterie anwenden",
+        "da": "Anvend automatisk politikanbefalinger på batteri",
+        "fr": "Appliquer automatiquement les recommandations de politique à la batterie",
+        "sv": "Tillämpa automatiskt policyrekommendationer på batteri",
+        "no": "Bruk automatisk politikkanbefalinger på batteri",
+        "fi": "Käytä politiikkasuosituksia akkuun automaattisesti",
+        "hu": "Automatikusan alkalmazza az irányvonal ajánlásait az akkura"
       },
       "getable": true,
       "setable": true,
@@ -6755,7 +8146,14 @@
       "type": "number",
       "title": {
         "en": "Battery Group Average SoC",
-        "nl": "Batterij Groep Lading"
+        "nl": "Batterij Groep Lading",
+        "de": "Durchschn. Gruppen-SoC",
+        "da": "Gns. gruppe-SoC",
+        "fr": "SoC moyen du groupe",
+        "sv": "Genomsnittligt grupp-SoC",
+        "no": "Gjennomsnittlig gruppe-SoC",
+        "fi": "Akkuryhmän keski-SoC",
+        "hu": "Akkucsoport átlagos SoC"
       },
       "getable": true,
       "setable": false,
@@ -6764,14 +8162,28 @@
       "icon": "assets/battery.svg",
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       }
     },
     "battery_group_charge_mode": {
       "type": "enum",
       "title": {
         "en": "Battery Group Charge Mode",
-        "nl": "Battery Groep Oplaadmodus"
+        "nl": "Battery Groep Oplaadmodus",
+        "de": "Gruppen-Lademodus",
+        "da": "Gruppe-ladetilstand",
+        "fr": "Mode de charge du groupe",
+        "sv": "Gruppladdningsläge",
+        "no": "Gruppeladetilstand",
+        "fi": "Akkuryhmän lataustila",
+        "hu": "Akkucsoport töltési mód"
       },
       "getable": true,
       "setable": true,
@@ -6783,42 +8195,84 @@
           "id": "zero",
           "title": {
             "en": "Zero (Net Zero)",
-            "nl": "Nul op de meter"
+            "nl": "Nul op de meter",
+            "de": "Nulleinspeisung",
+            "da": "Nul på måleren",
+            "fr": "Zéro (Net Zéro)",
+            "sv": "Noll (Netto Noll)",
+            "no": "Null på måleren",
+            "fi": "Nolla (netto nolla)",
+            "hu": "Nulla (nettó nulla)"
           }
         },
         {
           "id": "zero_charge_only",
           "title": {
             "en": "Zero – Charge Only",
-            "nl": "NOM – Alleen laden"
+            "nl": "NOM – Alleen laden",
+            "de": "Nulleinspeisung – Nur laden",
+            "da": "Nul – kun opladning",
+            "fr": "Zéro – Charge uniquement",
+            "sv": "Noll – Endast laddning",
+            "no": "Null – Kun lading",
+            "fi": "Nolla – vain lataus",
+            "hu": "Nulla – csak töltés"
           }
         },
         {
           "id": "zero_discharge_only",
           "title": {
             "en": "Zero – Discharge Only",
-            "nl": "NOM – Alleen ontladen"
+            "nl": "NOM – Alleen ontladen",
+            "de": "Nulleinspeisung – Nur entladen",
+            "da": "Nul – kun afladning",
+            "fr": "Zéro – Décharge uniquement",
+            "sv": "Noll – Endast urladdning",
+            "no": "Null – Kun utlading",
+            "fi": "Nolla – vain purkaus",
+            "hu": "Nulla – csak töltésleadás"
           }
         },
         {
           "id": "standby",
           "title": {
             "en": "Standby",
-            "nl": "Stand‑by"
+            "nl": "Stand‑by",
+            "de": "Bereitschaft",
+            "da": "Standby",
+            "fr": "Veille",
+            "sv": "Standby",
+            "no": "Standby",
+            "fi": "Valmiustila",
+            "hu": "Készenlét"
           }
         },
         {
           "id": "to_full",
           "title": {
             "en": "Full Charge",
-            "nl": "Volledig laden"
+            "nl": "Volledig laden",
+            "de": "Vollladen",
+            "da": "Fuld opladning",
+            "fr": "Charge complète",
+            "sv": "Fulladdning",
+            "no": "Full lading",
+            "fi": "Täysi lataus",
+            "hu": "Teljes töltés"
           }
         },
         {
           "id": "predictive",
           "title": {
             "en": "Predictive (HW Smart Charging)",
-            "nl": "Slim laden (HomeWizard)"
+            "nl": "Slim laden (HomeWizard)",
+            "de": "Prädiktiv (HW Smart Charging)",
+            "da": "Prædiktiv (HW Smart Charging)",
+            "fr": "Prédictif (HW Smart Charging)",
+            "sv": "Prediktiv (HW Smart Charging)",
+            "no": "Prediktiv (HW Smart Charging)",
+            "fi": "Ennakoiva (HW Smart Charging)",
+            "hu": "Prediktív (HW Smart Charging)"
           }
         }
       ]
@@ -6827,7 +8281,14 @@
       "type": "string",
       "title": {
         "en": "Battery Group Charge state",
-        "nl": "Battery Groep Laadt status"
+        "nl": "Battery Groep Laadt status",
+        "de": "Gruppen-Ladezustand",
+        "da": "Gruppe-ladetilstand",
+        "fr": "État de charge du groupe",
+        "sv": "Gruppladdningstillstånd",
+        "no": "Gruppeladestatus",
+        "fi": "Akkuryhmän latausaste",
+        "hu": "Akkucsoport töltési állapot"
       },
       "getable": true,
       "setable": false,
@@ -6838,10 +8299,24 @@
     "battery_group_total_capacity_kwh": {
       "type": "number",
       "title": {
-        "en": "Battery Group Total Capacity"
+        "en": "Battery Group Total Capacity",
+        "de": "Gesamtkapazität der Gruppe",
+        "da": "Gruppens samlede kapacitet",
+        "fr": "Capacité totale du groupe",
+        "sv": "Gruppens totala kapacitet",
+        "no": "Gruppens totale kapasitet",
+        "fi": "Akkuryhmän kokonaiskapasiteetti",
+        "hu": "Akkucsoport teljes kapacitás"
       },
       "units": {
-        "en": "kWh"
+        "en": "kWh",
+        "de": "kWh",
+        "da": "kWh",
+        "fr": "kWh",
+        "sv": "kWh",
+        "no": "kWh",
+        "fi": "kWh",
+        "hu": "kWh"
       },
       "getable": true,
       "setable": false,
@@ -6853,15 +8328,36 @@
       "type": "number",
       "title": {
         "en": "Battery RTE",
-        "nl": "Batterij RTE"
+        "nl": "Batterij RTE",
+        "de": "Batterie-RWG",
+        "da": "Batteri-RTE",
+        "fr": "RTE batterie",
+        "sv": "Batteri-RTE",
+        "no": "Batteri-RTE",
+        "fi": "Akku-RTE",
+        "hu": "Akkumulátor RTE"
       },
       "desc": {
         "en": "Learned round-trip efficiency of battery (0-100%)",
-        "nl": "Geleerde round-trip efficiency van batterij (0-100%)"
+        "nl": "Geleerde round-trip efficiency van batterij (0-100%)",
+        "de": "Erlernter Wirkungsgrad der Batterie (0-100%)",
+        "da": "Lært rundtur-effektivitet for batteri (0-100%)",
+        "fr": "Efficacité aller-retour apprise (0-100%)",
+        "sv": "Inlärd tur-och-retur-effektivitet (0-100%)",
+        "no": "Lært tur-retur-effektivitet (0-100%)",
+        "fi": "Opittu kiertojakson hyötysuhde (0-100%)",
+        "hu": "Tanult körfolyamat-hatásfok (0-100%)"
       },
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "min": 0,
       "max": 100,
@@ -6875,15 +8371,36 @@
       "type": "number",
       "title": {
         "en": "Battery Level",
-        "nl": "Batterijniveau"
+        "nl": "Batterijniveau",
+        "de": "Batteriestand",
+        "da": "Batteriniveau",
+        "fr": "Niveau de batterie",
+        "sv": "Batterinivå",
+        "no": "Batterinivå",
+        "fi": "Akun taso",
+        "hu": "Akkuszint"
       },
       "desc": {
         "en": "Current battery state of charge",
-        "nl": "Huidige batterij laadstatus"
+        "nl": "Huidige batterij laadstatus",
+        "de": "Aktueller Batterieladezustand",
+        "da": "Aktuel batteriladestatus",
+        "fr": "État de charge actuel de la batterie",
+        "sv": "Aktuellt batteriladdningstillstånd",
+        "no": "Aktuell batteriladestatus",
+        "fi": "Akun nykyinen varausaste",
+        "hu": "Az akku aktuális töltöttségi állapota"
       },
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "min": 0,
       "max": 100,
@@ -6897,11 +8414,25 @@
       "type": "number",
       "title": {
         "en": "PV Intraday Bias",
-        "nl": "PV Intradag Bias"
+        "nl": "PV Intradag Bias",
+        "de": "PV-Intraday-Bias",
+        "da": "PV intradag bias",
+        "fr": "Biais intraday PV",
+        "sv": "PV intradag-bias",
+        "no": "PV intradag-bias",
+        "fi": "PV-päivänsisäinen bias",
+        "hu": "PV napközbeni torzítás"
       },
       "desc": {
         "en": "Intraday PV correction ratio (actual/forecast)",
-        "nl": "Intradag PV-correctiefactor (actueel/voorspeld)"
+        "nl": "Intradag PV-correctiefactor (actueel/voorspeld)",
+        "de": "Intraday-PV-Korrekturfaktor (Ist/Prognose)",
+        "da": "Intradag PV-korrektionsforhold (faktisk/prognose)",
+        "fr": "Ratio correction PV intraday (réel/prévision)",
+        "sv": "Intradag PV-korrektionsfaktor (faktisk/prognos)",
+        "no": "Intradag PV-korreksjonsforhold (faktisk/prognose)",
+        "fi": "Päivänsisäinen PV-korjaussuhde (todellinen/ennuste)",
+        "hu": "Napközbeni PV-korrekciós arány"
       },
       "decimals": 2,
       "getable": true,
@@ -6914,7 +8445,14 @@
       "type": "boolean",
       "title": {
         "en": "Central Heating Burner",
-        "nl": "CV brander"
+        "nl": "CV brander",
+        "de": "Zentralheizungsbrenner",
+        "da": "Centralvarmefyr",
+        "fr": "Brûleur de chauffage central",
+        "sv": "Centralvärmepanna",
+        "no": "Sentralvarmefyr",
+        "fi": "Kaukolämpöpolttin",
+        "hu": "Központi fűtési égő"
       },
       "getable": true,
       "setable": false,
@@ -6926,7 +8464,14 @@
       "type": "boolean",
       "title": {
         "en": "Central Heating",
-        "nl": "Central Verwarming"
+        "nl": "Central Verwarming",
+        "de": "Zentralheizung",
+        "da": "Centralvarme",
+        "fr": "Chauffage central",
+        "sv": "Centralvärme",
+        "no": "Sentralvarme",
+        "fi": "Kaukolämpö",
+        "hu": "Központi fűtés"
       },
       "getable": true,
       "setable": false,
@@ -6938,15 +8483,36 @@
       "type": "number",
       "title": {
         "en": "Confidence",
-        "nl": "Vertrouwen"
+        "nl": "Vertrouwen",
+        "de": "Konfidenz",
+        "da": "Tillid",
+        "fr": "Confiance",
+        "sv": "Förtroende",
+        "no": "Tillit",
+        "fi": "Luottamus",
+        "hu": "Megbízhatóság"
       },
       "desc": {
         "en": "Confidence in current recommendation (0-100%)",
-        "nl": "Vertrouwen in huidige aanbeveling (0-100%)"
+        "nl": "Vertrouwen in huidige aanbeveling (0-100%)",
+        "de": "Konfidenz der aktuellen Empfehlung (0-100%)",
+        "da": "Tillid til aktuel anbefaling (0-100%)",
+        "fr": "Confiance dans la recommandation actuelle (0-100%)",
+        "sv": "Förtroende för aktuell rekommendation (0-100%)",
+        "no": "Tillit til gjeldende anbefaling (0-100%)",
+        "fi": "Luottamus nykyiseen suositukseen (0-100%)",
+        "hu": "Megbízhatóság az aktuális ajánlásban (0-100%)"
       },
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "min": 0,
       "max": 100,
@@ -6960,7 +8526,14 @@
       "type": "string",
       "title": {
         "en": "Connection Error",
-        "nl": "Verbindingsfout"
+        "nl": "Verbindingsfout",
+        "de": "Verbindungsfehler",
+        "da": "Forbindelsesfejl",
+        "fr": "Erreur de connexion",
+        "sv": "Anslutningsfel",
+        "no": "Tilkoblingsfeil",
+        "fi": "Yhteysvirhe",
+        "hu": "Kapcsolódási hiba"
       },
       "getable": true,
       "setable": false,
@@ -6971,7 +8544,14 @@
       "type": "number",
       "title": {
         "en": "Number of battery cycles",
-        "nl": "Aantal battery laadcycli"
+        "nl": "Aantal battery laadcycli",
+        "de": "Anzahl Batteriezyklen",
+        "da": "Antal battericyklusser",
+        "fr": "Nombre de cycles de batterie",
+        "sv": "Antal batteriladdningscykler",
+        "no": "Antall batterisykler",
+        "fi": "Akkusyklit",
+        "hu": "Akkuciklusok száma"
       },
       "getable": true,
       "setable": false,
@@ -6980,14 +8560,28 @@
       "icon": "assets/cycles.svg",
       "units": {
         "en": "cycles",
-        "nl": "cycli"
+        "nl": "cycli",
+        "de": "Zyklen",
+        "da": "cyklusser",
+        "fr": "cycles",
+        "sv": "cykler",
+        "no": "sykler",
+        "fi": "syklit",
+        "hu": "ciklusok"
       }
     },
     "estimate_kwh": {
       "type": "number",
       "title": {
         "en": "Estimate kWh in battery",
-        "nl": "Geschatte kWh in batterij"
+        "nl": "Geschatte kWh in batterij",
+        "de": "Geschätzte kWh in Batterie",
+        "da": "Estimeret kWh i batteri",
+        "fr": "Estimation kWh en batterie",
+        "sv": "Uppskattad kWh i batteri",
+        "no": "Estimert kWh i batteri",
+        "fi": "Arvioitu kWh akussa",
+        "hu": "Becsült kWh az akkuban"
       },
       "getable": true,
       "setable": true,
@@ -6996,18 +8590,39 @@
       "icon": "assets/tariff.svg",
       "units": {
         "en": "kWh",
-        "nl": "kWh"
+        "nl": "kWh",
+        "de": "kWh",
+        "da": "kWh",
+        "fr": "kWh",
+        "sv": "kWh",
+        "no": "kWh",
+        "fi": "kWh",
+        "hu": "kWh"
       }
     },
     "explanation_summary": {
       "type": "string",
       "title": {
         "en": "Decision Reason",
-        "nl": "Beslissingsreden"
+        "nl": "Beslissingsreden",
+        "de": "Entscheidungsgrund",
+        "da": "Beslutningsårsag",
+        "fr": "Raison de décision",
+        "sv": "Beslutsorsak",
+        "no": "Beslutningsårsak",
+        "fi": "Päätöksen syy",
+        "hu": "Döntés indoka"
       },
       "desc": {
         "en": "Explanation of current policy decision",
-        "nl": "Uitleg van huidige beleidsbeslissing"
+        "nl": "Uitleg van huidige beleidsbeslissing",
+        "de": "Erläuterung der aktuellen Richtlinienentscheidung",
+        "da": "Forklaring af aktuel politikbeslutning",
+        "fr": "Explication de la décision de politique actuelle",
+        "sv": "Förklaring av aktuellt policybeslut",
+        "no": "Forklaring av gjeldende politikkbeslutning",
+        "fi": "Nykyisen politiikkapäätöksen selitys",
+        "hu": "Az aktuális irányvonal döntés magyarázata"
       },
       "getable": true,
       "setable": false,
@@ -7018,15 +8633,36 @@
       "type": "number",
       "title": {
         "en": "Grid Power",
-        "nl": "Netvermogen"
+        "nl": "Netvermogen",
+        "de": "Netzleistung",
+        "da": "Neteffekt",
+        "fr": "Puissance réseau",
+        "sv": "Näteffekt",
+        "no": "Netteffekt",
+        "fi": "Verkkoteho",
+        "hu": "Hálózati teljesítmény"
       },
       "desc": {
         "en": "Current grid import/export power",
-        "nl": "Huidig net import/export vermogen"
+        "nl": "Huidig net import/export vermogen",
+        "de": "Aktuelle Netzeinspeisung/-bezug",
+        "da": "Aktuel netimport/-eksporteffekt",
+        "fr": "Puissance import/export réseau",
+        "sv": "Aktuell nätimport/-export",
+        "no": "Aktuell nettimport/-eksport",
+        "fi": "Verkon tuonti/vienti",
+        "hu": "Aktuális hálózati import/export"
       },
       "units": {
         "en": "W",
-        "nl": "W"
+        "nl": "W",
+        "de": "W",
+        "da": "W",
+        "fr": "W",
+        "sv": "W",
+        "no": "W",
+        "fi": "W",
+        "hu": "W"
       },
       "decimals": 0,
       "getable": true,
@@ -7038,7 +8674,14 @@
       "type": "boolean",
       "title": {
         "en": "Identify",
-        "nl": "Identificeren"
+        "nl": "Identificeren",
+        "de": "Identifizieren",
+        "da": "Identificer",
+        "fr": "Identifier",
+        "sv": "Identifiera",
+        "no": "Identifiser",
+        "fi": "Tunnista",
+        "hu": "Azonosítás"
       },
       "getable": false,
       "setable": true,
@@ -7050,11 +8693,25 @@
       "type": "string",
       "title": {
         "en": "Last Update",
-        "nl": "Laatste Update"
+        "nl": "Laatste Update",
+        "de": "Letzte Aktualisierung",
+        "da": "Seneste opdatering",
+        "fr": "Dernière mise à jour",
+        "sv": "Senaste uppdatering",
+        "no": "Siste oppdatering",
+        "fi": "Viimeisin päivitys",
+        "hu": "Utolsó frissítés"
       },
       "desc": {
         "en": "Timestamp of last policy check",
-        "nl": "Tijdstempel van laatste beleidscontrole"
+        "nl": "Tijdstempel van laatste beleidscontrole",
+        "de": "Zeitstempel der letzten Richtlinienprüfung",
+        "da": "Tidsstempel for seneste politikkontrol",
+        "fr": "Horodatage de la dernière vérification de politique",
+        "sv": "Tidsstämpel för senaste policykontroll",
+        "no": "Tidsstempel for siste politikksjekk",
+        "fi": "Viimeisimmän politiikkatarkistuksen aikaleima",
+        "hu": "Az utolsó irányvonal ellenőrzés időbélyege"
       },
       "getable": true,
       "setable": false,
@@ -7065,7 +8722,14 @@
       "type": "number",
       "title": {
         "en": "LED Brightness",
-        "nl": "LED Helderheid"
+        "nl": "LED Helderheid",
+        "de": "LED-Helligkeit",
+        "da": "LED-lysstyrke",
+        "fr": "Luminosité LED",
+        "sv": "LED-ljusstyrka",
+        "no": "LED-lysstyrke",
+        "fi": "LED-kirkkaus",
+        "hu": "LED-fényerő"
       },
       "getable": true,
       "setable": true,
@@ -7076,14 +8740,28 @@
       "step": 1,
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       }
     },
     "long_power_fail_count": {
       "type": "number",
       "title": {
         "en": "Power failures",
-        "nl": "Stroomstoringen"
+        "nl": "Stroomstoringen",
+        "de": "Stromausfälle",
+        "da": "Strømudfald",
+        "fr": "Pannes de courant",
+        "sv": "Strömavbrott",
+        "no": "Strømfeil",
+        "fi": "Sähkökatkot",
+        "hu": "Áramkimaradások"
       },
       "getable": true,
       "setable": false,
@@ -7095,7 +8773,14 @@
       "type": "number",
       "title": {
         "en": "Current gas usage",
-        "nl": "Huidig gasverbruik"
+        "nl": "Huidig gasverbruik",
+        "de": "Aktueller Gasverbrauch",
+        "da": "Aktuelt gasforbrug",
+        "fr": "Consommation de gaz actuelle",
+        "sv": "Aktuell gasförbrukning",
+        "no": "Aktuelt gasforbruk",
+        "fi": "Nykyinen kaasunkulutus",
+        "hu": "Aktuális gázfogyasztás"
       },
       "getable": true,
       "setable": false,
@@ -7104,7 +8789,14 @@
       "insights": true,
       "units": {
         "en": "m3",
-        "nl": "m3"
+        "nl": "m3",
+        "de": "m³",
+        "da": "m³",
+        "fr": "m³",
+        "sv": "m³",
+        "no": "m³",
+        "fi": "m³",
+        "hu": "m³"
       },
       "icon": "assets/icon.svg"
     },
@@ -7112,15 +8804,36 @@
       "type": "number",
       "title": {
         "en": "Battery Level",
-        "nl": "Batterijniveau"
+        "nl": "Batterijniveau",
+        "de": "Batteriestand",
+        "da": "Batteriniveau",
+        "fr": "Niveau de batterie",
+        "sv": "Batterinivå",
+        "no": "Batterinivå",
+        "fi": "Akun taso",
+        "hu": "Akkuszint"
       },
       "desc": {
         "en": "Current battery state of charge",
-        "nl": "Huidige batterij laadstatus"
+        "nl": "Huidige batterij laadstatus",
+        "de": "Aktueller Batterieladezustand",
+        "da": "Aktuel batteriladestatus",
+        "fr": "État de charge actuel de la batterie",
+        "sv": "Aktuellt batteriladdningstillstånd",
+        "no": "Aktuell batteriladestatus",
+        "fi": "Akun nykyinen varausaste",
+        "hu": "Az akku aktuális töltöttségi állapota"
       },
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "min": 0,
       "max": 100,
@@ -7134,15 +8847,36 @@
       "type": "number",
       "title": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "desc": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "min": 0,
       "max": 100,
@@ -7155,7 +8889,14 @@
       "insights": true,
       "units": {
         "en": "A",
-        "nl": "A"
+        "nl": "A",
+        "de": "A",
+        "da": "A",
+        "fr": "A",
+        "sv": "A",
+        "no": "A",
+        "fi": "A",
+        "hu": "A"
       },
       "icon": "assets/icon.svg"
     },
@@ -7163,15 +8904,36 @@
       "type": "number",
       "title": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "desc": {
         "en": "Phase 1 load",
-        "nl": "Fase 1 belasting"
+        "nl": "Fase 1 belasting",
+        "de": "Last Phase 1",
+        "da": "Belastning fase 1",
+        "fr": "Charge phase 1",
+        "sv": "Last fas 1",
+        "no": "Last fase 1",
+        "fi": "Vaiheen 1 kuorma",
+        "hu": "1. fázis terhelés"
       },
       "decimals": 0,
       "getable": true,
@@ -7180,7 +8942,14 @@
       "insights": true,
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "icon": "assets/icon.svg"
     },
@@ -7188,15 +8957,36 @@
       "type": "number",
       "title": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "desc": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "min": 0,
       "max": 100,
@@ -7209,7 +8999,14 @@
       "insights": true,
       "units": {
         "en": "A",
-        "nl": "A"
+        "nl": "A",
+        "de": "A",
+        "da": "A",
+        "fr": "A",
+        "sv": "A",
+        "no": "A",
+        "fi": "A",
+        "hu": "A"
       },
       "icon": "assets/icon.svg"
     },
@@ -7217,15 +9014,36 @@
       "type": "number",
       "title": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "desc": {
         "en": "Phase 2 load",
-        "nl": "Fase 2 belasting"
+        "nl": "Fase 2 belasting",
+        "de": "Last Phase 2",
+        "da": "Belastning fase 2",
+        "fr": "Charge phase 2",
+        "sv": "Last fas 2",
+        "no": "Last fase 2",
+        "fi": "Vaiheen 2 kuorma",
+        "hu": "2. fázis terhelés"
       },
       "decimals": 0,
       "getable": true,
@@ -7234,7 +9052,14 @@
       "insights": true,
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "icon": "assets/icon.svg"
     },
@@ -7242,15 +9067,36 @@
       "type": "number",
       "title": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "desc": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "min": 0,
       "max": 100,
@@ -7263,7 +9109,14 @@
       "insights": true,
       "units": {
         "en": "A",
-        "nl": "A"
+        "nl": "A",
+        "de": "A",
+        "da": "A",
+        "fr": "A",
+        "sv": "A",
+        "no": "A",
+        "fi": "A",
+        "hu": "A"
       },
       "icon": "assets/icon.svg"
     },
@@ -7271,15 +9124,36 @@
       "type": "number",
       "title": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "titleFormatted": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "desc": {
         "en": "Phase 3 load",
-        "nl": "Fase 3 belasting"
+        "nl": "Fase 3 belasting",
+        "de": "Last Phase 3",
+        "da": "Belastning fase 3",
+        "fr": "Charge phase 3",
+        "sv": "Last fas 3",
+        "no": "Last fase 3",
+        "fi": "Vaiheen 3 kuorma",
+        "hu": "3. fázis terhelés"
       },
       "decimals": 0,
       "getable": true,
@@ -7288,7 +9162,14 @@
       "insights": true,
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "icon": "assets/icon.svg"
     },
@@ -7296,11 +9177,25 @@
       "type": "string",
       "title": {
         "en": "Override Until",
-        "nl": "Overschrijven Tot"
+        "nl": "Overschrijven Tot",
+        "de": "Überschreiben bis",
+        "da": "Tilsidesat indtil",
+        "fr": "Remplacer jusqu'à",
+        "sv": "Åsidosätt till",
+        "no": "Overstyr til",
+        "fi": "Ohita asti",
+        "hu": "Felülírás eddig"
       },
       "desc": {
         "en": "Manual override expiry time",
-        "nl": "Handmatige overschrijving vervaltijd"
+        "nl": "Handmatige overschrijving vervaltijd",
+        "de": "Ablaufzeit der manuellen Überschreibung",
+        "da": "Udløbstid for manuel tilsidesættelse",
+        "fr": "Heure d'expiration du remplacement manuel",
+        "sv": "Manuell åsidosättning utgångstid",
+        "no": "Utløpstid for manuell overstyring",
+        "fi": "Manuaalisen ohituksen vanhenemisaika",
+        "hu": "Manuális felülírás lejárati ideje"
       },
       "getable": true,
       "setable": false,
@@ -7311,11 +9206,25 @@
       "type": "string",
       "title": {
         "en": "Plan Summary",
-        "nl": "Plan Samenvatting"
+        "nl": "Plan Samenvatting",
+        "de": "Planzusammenfassung",
+        "da": "Planresumé",
+        "fr": "Résumé du plan",
+        "sv": "Plansammanfattning",
+        "no": "Plansammendrag",
+        "fi": "Suunnitelmayhteenveto",
+        "hu": "Terv összefoglaló"
       },
       "desc": {
         "en": "Today's optimizer plan in compact form",
-        "nl": "Compact overzicht van het optimizerplan"
+        "nl": "Compact overzicht van het optimizerplan",
+        "de": "Heutiger Optimierungsplan in kompakter Form",
+        "da": "Dagens optimeringsplan i kompakt form",
+        "fr": "Plan d'optimisation d'aujourd'hui en forme compacte",
+        "sv": "Dagens optimeringsplan i kompakt form",
+        "no": "Dagens optimeringsplan i kompakt form",
+        "fi": "Tämän päivän optimointisuunnitelma tiiviissä muodossa",
+        "hu": "Mai optimalizálási terv tömör formában"
       },
       "getable": true,
       "setable": false,
@@ -7328,11 +9237,25 @@
       "type": "string",
       "title": {
         "en": "Policy Debug",
-        "nl": "Policy Debug"
+        "nl": "Policy Debug",
+        "de": "Richtlinien-Debug",
+        "da": "Politik-debug",
+        "fr": "Débogage politique",
+        "sv": "Policy-debug",
+        "no": "Politikk-debug",
+        "fi": "Politiikkavirheenkorjaus",
+        "hu": "Irányvonal hibakeresés"
       },
       "desc": {
         "en": "Current tariff and weather inputs used by the policy engine",
-        "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine"
+        "nl": "Huidige tarief- en weerinputs gebruikt door de policy engine",
+        "de": "Aktuelle Tarif- und Wettereingaben für die Richtlinien-Engine",
+        "da": "Aktuelle tarif- og vejrinput brugt af politik-motoren",
+        "fr": "Tarif actuel et données météo utilisés par le moteur de politique",
+        "sv": "Aktuella tariff- och väderdata använda av policy-motorn",
+        "no": "Gjeldende tariff- og værinnganger brukt av politikkmotoren",
+        "fi": "Politiikkamoottorin käyttämät tariffin ja sään syötteet",
+        "hu": "Az irányvonal motor által használt tarifa és időjárás adatok"
       },
       "getable": true,
       "setable": false,
@@ -7344,11 +9267,25 @@
       "type": "string",
       "title": {
         "en": "Policy Learning",
-        "nl": "Policy Leren"
+        "nl": "Policy Leren",
+        "de": "Richtlinien-Lernen",
+        "da": "Politik-læring",
+        "fr": "Apprentissage politique",
+        "sv": "Policy-inlärning",
+        "no": "Politikk-læring",
+        "fi": "Politiikan oppiminen",
+        "hu": "Irányvonal tanulás"
       },
       "desc": {
         "en": "Historical learning statistics and pattern coverage",
-        "nl": "Historische leerstatistieken en patroonbedekking"
+        "nl": "Historische leerstatistieken en patroonbedekking",
+        "de": "Historische Lernstatistiken und Musterabdeckung",
+        "da": "Historiske læringsstatistikker og mønstertækning",
+        "fr": "Statistiques d'apprentissage historiques et couverture des modèles",
+        "sv": "Historiska inlärningsstatistik och mönsterkäckning",
+        "no": "Historiske læringsstatistikker og mønsterdekning",
+        "fi": "Historialliset oppimistilastot ja kaavakattavuus",
+        "hu": "Historikus tanulási statisztikák és mintafedettség"
       },
       "getable": true,
       "setable": false,
@@ -7361,11 +9298,25 @@
       "type": "string",
       "title": {
         "en": "Policy Price",
-        "nl": "Policy Prijs"
+        "nl": "Policy Prijs",
+        "de": "Richtlinienpreis",
+        "da": "Politikpris",
+        "fr": "Prix de la politique",
+        "sv": "Policy-pris",
+        "no": "Politikk-pris",
+        "fi": "Politiikan hinta",
+        "hu": "Irányvonal ár"
       },
       "desc": {
         "en": "Current DAP price and rate bucket",
-        "nl": "Huidige DAP-prijs en tariefcategorie"
+        "nl": "Huidige DAP-prijs en tariefcategorie",
+        "de": "Aktueller DAP-Preis und Tarifklasse",
+        "da": "Aktuel DAP-pris og takstgruppe",
+        "fr": "Prix DAP actuel et catégorie de tarif",
+        "sv": "Aktuellt DAP-pris och tariffkategori",
+        "no": "Gjeldende DAP-pris og takstgruppe",
+        "fi": "Nykyinen DAP-hinta ja hintaluokka",
+        "hu": "Aktuális DAP-ár és tarifacsalád"
       },
       "getable": true,
       "setable": false,
@@ -7378,11 +9329,25 @@
       "type": "string",
       "title": {
         "en": "Policy Sun",
-        "nl": "Policy Zon"
+        "nl": "Policy Zon",
+        "de": "Richtlinie Sonne",
+        "da": "Politik sol",
+        "fr": "Soleil politique",
+        "sv": "Policy-sol",
+        "no": "Politikk-sol",
+        "fi": "Politiikan aurinko",
+        "hu": "Irányvonal nap"
       },
       "desc": {
         "en": "Sunshine forecast inputs used by the policy",
-        "nl": "Zon-voorspelling gebruikt door de policy"
+        "nl": "Zon-voorspelling gebruikt door de policy",
+        "de": "Von der Richtlinie genutzte Sonnenscheinprognose",
+        "da": "Solskinsprognoseinputs brugt af politik",
+        "fr": "Données de prévision solaire utilisées par la politique",
+        "sv": "Solprognosindata använd av policyn",
+        "no": "Solinngangsdata brukt av politikken",
+        "fi": "Politiikan käyttämät aurinkoennustedatat",
+        "hu": "Az irányvonal által használt napfényprognózis"
       },
       "getable": true,
       "setable": false,
@@ -7395,11 +9360,25 @@
       "type": "string",
       "title": {
         "en": "Policy Top3 High",
-        "nl": "Policy Top3 Hoog"
+        "nl": "Policy Top3 Hoog",
+        "de": "Richtlinie Top3 Hoch",
+        "da": "Politik Top3 Høj",
+        "fr": "Politique Top3 Haut",
+        "sv": "Policy Top3 Hög",
+        "no": "Politikk Top3 Høy",
+        "fi": "Politiikka Top3 Korkea",
+        "hu": "Irányvonal Top3 Magas"
       },
       "desc": {
         "en": "Top 3 most expensive DAP hours",
-        "nl": "Top 3 duurste DAP-uren"
+        "nl": "Top 3 duurste DAP-uren",
+        "de": "Die 3 teuersten DAP-Stunden",
+        "da": "Top 3 dyreste DAP-timer",
+        "fr": "Les 3 heures DAP les plus chères",
+        "sv": "De 3 dyraste DAP-timmarna",
+        "no": "De 3 dyreste DAP-timene",
+        "fi": "3 kalleinta DAP-tuntia",
+        "hu": "3 legdrágább DAP-óra"
       },
       "getable": true,
       "setable": false,
@@ -7412,11 +9391,25 @@
       "type": "string",
       "title": {
         "en": "Policy Top3 Low",
-        "nl": "Policy Top3 Laag"
+        "nl": "Policy Top3 Laag",
+        "de": "Richtlinie Top3 Niedrig",
+        "da": "Politik Top3 Lav",
+        "fr": "Politique Top3 Bas",
+        "sv": "Policy Top3 Låg",
+        "no": "Politikk Top3 Lav",
+        "fi": "Politiikka Top3 Matala",
+        "hu": "Irányvonal Top3 Alacsony"
       },
       "desc": {
         "en": "Top 3 cheapest DAP hours",
-        "nl": "Top 3 goedkoopste DAP-uren"
+        "nl": "Top 3 goedkoopste DAP-uren",
+        "de": "Die 3 günstigsten DAP-Stunden",
+        "da": "Top 3 billigste DAP-timer",
+        "fr": "Les 3 heures DAP les moins chères",
+        "sv": "De 3 billigaste DAP-timmarna",
+        "no": "De 3 billigste DAP-timene",
+        "fi": "3 halvinta DAP-tuntia",
+        "hu": "3 legolcsóbb DAP-óra"
       },
       "getable": true,
       "setable": false,
@@ -7428,11 +9421,25 @@
       "type": "boolean",
       "title": {
         "en": "Policy Enabled",
-        "nl": "Beleid Ingeschakeld"
+        "nl": "Beleid Ingeschakeld",
+        "de": "Richtlinie aktiviert",
+        "da": "Politik aktiveret",
+        "fr": "Politique activée",
+        "sv": "Policy aktiverad",
+        "no": "Politikk aktivert",
+        "fi": "Politiikka käytössä",
+        "hu": "Irányvonal engedélyezve"
       },
       "desc": {
         "en": "Enable or disable the battery policy automation",
-        "nl": "Schakel batterijbeleid automatisering in of uit"
+        "nl": "Schakel batterijbeleid automatisering in of uit",
+        "de": "Batterie-Richtlinienautomation aktivieren oder deaktivieren",
+        "da": "Aktivér eller deaktivér batteriautomatisering",
+        "fr": "Activer ou désactiver l'automatisation de la politique de batterie",
+        "sv": "Aktivera eller inaktivera batteripolityautomatisering",
+        "no": "Aktiver eller deaktiver batteriautomatisering",
+        "fi": "Ota akkupolitiikan automaatio käyttöön tai poista se käytöstä",
+        "hu": "Akkumulátor irányvonal automatizálás engedélyezése/letiltása"
       },
       "getable": true,
       "setable": true,
@@ -7444,42 +9451,84 @@
       "type": "enum",
       "title": {
         "en": "Policy Mode",
-        "nl": "Beleidsmodus"
+        "nl": "Beleidsmodus",
+        "de": "Richtlinienmodus",
+        "da": "Politiktilstand",
+        "fr": "Mode de politique",
+        "sv": "Policyläge",
+        "no": "Politikkmodus",
+        "fi": "Politiikkatila",
+        "hu": "Irányvonal mód"
       },
       "values": [
         {
           "id": "off",
           "title": {
             "en": "Off",
-            "nl": "Uit"
+            "nl": "Uit",
+            "de": "Aus",
+            "da": "Fra",
+            "fr": "Arrêt",
+            "sv": "Av",
+            "no": "Av",
+            "fi": "Pois",
+            "hu": "Ki"
           }
         },
         {
           "id": "balanced",
           "title": {
             "en": "Dynamic Pricing",
-            "nl": "Dynamisch Tarief"
+            "nl": "Dynamisch Tarief",
+            "de": "Dynamische Preisgestaltung",
+            "da": "Dynamisk prissætning",
+            "fr": "Tarification dynamique",
+            "sv": "Dynamisk prissättning",
+            "no": "Dynamisk prissetting",
+            "fi": "Dynaaminen hinnoittelu",
+            "hu": "Dinamikus árazás"
           }
         },
         {
           "id": "balanced-fixed",
           "title": {
             "en": "Fixed Pricing",
-            "nl": "Vast Tarief"
+            "nl": "Vast Tarief",
+            "de": "Fester Preis",
+            "da": "Fast pris",
+            "fr": "Tarification fixe",
+            "sv": "Fast prissättning",
+            "no": "Fast prissetting",
+            "fi": "Kiinteä hinnoittelu",
+            "hu": "Rögzített árazás"
           }
         },
         {
           "id": "balanced-dynamic",
           "title": {
             "en": "Dynamic Pricing (V2 — post-saldering)",
-            "nl": "Dynamisch Tarief (V2 — na salderen)"
+            "nl": "Dynamisch Tarief (V2 — na salderen)",
+            "de": "Dynamische Preisgestaltung (V2 — post-saldering)",
+            "da": "Dynamisk prissætning (V2 — post-saldering)",
+            "fr": "Tarification dynamique (V2 — post-saldering)",
+            "sv": "Dynamisk prissättning (V2 — post-saldering)",
+            "no": "Dynamisk prissetting (V2 — post-saldering)",
+            "fi": "Dynaaminen hinnoittelu (V2 — post-saldering)",
+            "hu": "Dinamikus árazás (V2 — post-saldering)"
           }
         },
         {
           "id": "zero",
           "title": {
             "en": "Peak Shaving",
-            "nl": "Peak Shaving"
+            "nl": "Peak Shaving",
+            "de": "Lastspitzenkappung",
+            "da": "Spidslastbegrænsning",
+            "fr": "Écrêtage de pointe",
+            "sv": "Toppstympning",
+            "no": "Toppkapping",
+            "fi": "Huippuleikkaus",
+            "hu": "Csúcsnyesés"
           }
         }
       ],
@@ -7492,15 +9541,36 @@
       "type": "number",
       "title": {
         "en": "Expected Profit",
-        "nl": "Verwachte Winst"
+        "nl": "Verwachte Winst",
+        "de": "Erwarteter Gewinn",
+        "da": "Forventet profit",
+        "fr": "Bénéfice attendu",
+        "sv": "Förväntad vinst",
+        "no": "Forventet fortjeneste",
+        "fi": "Odotettu tuotto",
+        "hu": "Várható nyereség"
       },
       "desc": {
         "en": "Projected daily profit from today's optimizer plan",
-        "nl": "Verwachte dagwinst van het optimizerplan"
+        "nl": "Verwachte dagwinst van het optimizerplan",
+        "de": "Prognostizierter Tagesgewinn aus dem heutigen Optimierungsplan",
+        "da": "Forventet daglig profit fra dagens optimeringsplan",
+        "fr": "Bénéfice journalier projeté du plan d'optimisation",
+        "sv": "Projekterad daglig vinst från dagens optimeringsplan",
+        "no": "Forventet daglig fortjeneste fra dagens optimeringsplan",
+        "fi": "Päivän optimointisuunnitelman ennakoitu päivätuotto",
+        "hu": "Mai optimalizálási terv szerinti várható napi nyereség"
       },
       "units": {
         "en": "€",
-        "nl": "€"
+        "nl": "€",
+        "de": "€",
+        "da": "€",
+        "fr": "€",
+        "sv": "€",
+        "no": "€",
+        "fi": "€",
+        "hu": "€"
       },
       "decimals": 2,
       "getable": true,
@@ -7513,15 +9583,36 @@
       "type": "number",
       "title": {
         "en": "Predicted Sun (4h)",
-        "nl": "Voorspelde Zon (4u)"
+        "nl": "Voorspelde Zon (4u)",
+        "de": "Vorhergesagte Sonne (4h)",
+        "da": "Forudsagt sol (4h)",
+        "fr": "Soleil prévu (4h)",
+        "sv": "Förutsagd sol (4h)",
+        "no": "Forutsagt sol (4h)",
+        "fi": "Ennustettu aurinko (4h)",
+        "hu": "Előrejelzett nap (4h)"
       },
       "desc": {
         "en": "Expected sunshine hours in next 4 hours",
-        "nl": "Verwachte zonuren in komende 4 uur"
+        "nl": "Verwachte zonuren in komende 4 uur",
+        "de": "Erwartete Sonnenstunden in den nächsten 4 Stunden",
+        "da": "Forventede soltimer de næste 4 timer",
+        "fr": "Heures d'ensoleillement prévues dans les 4 prochaines heures",
+        "sv": "Förväntade soltimmar de nästa 4 timmarna",
+        "no": "Forventede soltimer de neste 4 timene",
+        "fi": "Odotetut aurinkotunnit seuraavan 4 tunnin aikana",
+        "hu": "Várható napsütéses órák a következő 4 órában"
       },
       "units": {
         "en": "h",
-        "nl": "u"
+        "nl": "u",
+        "de": "h",
+        "da": "h",
+        "fr": "h",
+        "sv": "h",
+        "no": "t",
+        "fi": "h",
+        "hu": "ó"
       },
       "min": 0,
       "max": 4,
@@ -7535,11 +9626,25 @@
       "type": "string",
       "title": {
         "en": "Presence",
-        "nl": "Aanwezigheid"
+        "nl": "Aanwezigheid",
+        "de": "Anwesenheit",
+        "da": "Tilstedeværelse",
+        "fr": "Présence",
+        "sv": "Närvaro",
+        "no": "Tilstedeværelse",
+        "fi": "Läsnäolo",
+        "hu": "Jelenlét"
       },
       "desc": {
         "en": "Indicates whether someone is home. Away mode pauses consumption learning so vacation patterns do not corrupt learned profiles.",
-        "nl": "Geeft aan of iemand thuis is. Afwezigheidsmodus pauzeert het verbruikspatroon zodat vakantiegedrag de geleerde profielen niet verstoort."
+        "nl": "Geeft aan of iemand thuis is. Afwezigheidsmodus pauzeert het verbruikspatroon zodat vakantiegedrag de geleerde profielen niet verstoort.",
+        "de": "Zeigt an, ob jemand zu Hause ist. Der Abwesenheitsmodus pausiert das Verbrauchslernen, damit Urlaubsmuster die erlernten Profile nicht verfälschen.",
+        "da": "Angiver om nogen er hjemme. Væk-tilstand pauser forbrugslæring, så ferietilstande ikke ødelægger lærte profiler.",
+        "fr": "Indique si quelqu'un est à la maison. Le mode Absent met en pause l'apprentissage de la consommation afin que les habitudes de vacances ne corrompent pas les profils appris.",
+        "sv": "Anger om någon är hemma. Bortaläge pausar konsumtionsinlärning så att semestermönster inte korrumperar inlärda profiler.",
+        "no": "Angir om noen er hjemme. Borte-modus setter forbrukslæring på pause slik at ferietilstander ikke ødelegger lærte profiler.",
+        "fi": "Ilmaisee, onko joku kotona. Poissa-tila keskeyttää kulutuksen oppimisen niin, että lomakaavat eivät pilaa opittuja profiileja.",
+        "hu": "Jelzi, hogy van-e valaki otthon. A Távol mód szünetelteti a fogyasztás tanulását, hogy a nyaralási minták ne rontsák el a tanult profilokat."
       },
       "getable": true,
       "setable": false,
@@ -7550,7 +9655,14 @@
       "type": "enum",
       "title": {
         "en": "Preset",
-        "nl": "Preset"
+        "nl": "Preset",
+        "de": "Voreinstellung",
+        "da": "Forudindstilling",
+        "fr": "Préréglage",
+        "sv": "Förinställning",
+        "no": "Forhåndsinnstilling",
+        "fi": "Esiasetus",
+        "hu": "Előbeállítás"
       },
       "getable": true,
       "setable": true,
@@ -7560,28 +9672,56 @@
           "id": "0",
           "title": {
             "nl": "Thuis",
-            "en": "Home"
+            "en": "Home",
+            "de": "Zuhause",
+            "da": "Hjemme",
+            "fr": "Maison",
+            "sv": "Hemma",
+            "no": "Hjemme",
+            "fi": "Kotona",
+            "hu": "Otthon"
           }
         },
         {
           "id": "1",
           "title": {
             "nl": "Weg",
-            "en": "Away"
+            "en": "Away",
+            "de": "Abwesend",
+            "da": "Væk",
+            "fr": "Absent",
+            "sv": "Borta",
+            "no": "Borte",
+            "fi": "Poissa",
+            "hu": "Távol"
           }
         },
         {
           "id": "2",
           "title": {
             "nl": "Slapen",
-            "en": "Sleep"
+            "en": "Sleep",
+            "de": "Schlaf",
+            "da": "Søvn",
+            "fr": "Sommeil",
+            "sv": "Sömn",
+            "no": "Søvn",
+            "fi": "Uni",
+            "hu": "Alvás"
           }
         },
         {
           "id": "3",
           "title": {
             "nl": "Vakantie",
-            "en": "Holiday"
+            "en": "Holiday",
+            "de": "Urlaub",
+            "da": "Ferie",
+            "fr": "Vacances",
+            "sv": "Semester",
+            "no": "Ferie",
+            "fi": "Loma",
+            "hu": "Nyaralás"
           }
         }
       ]
@@ -7590,15 +9730,36 @@
       "type": "number",
       "title": {
         "en": "PV Forecast Today",
-        "nl": "PV Voorspelling Vandaag"
+        "nl": "PV Voorspelling Vandaag",
+        "de": "PV-Prognose heute",
+        "da": "PV-prognose i dag",
+        "fr": "Prévision PV aujourd'hui",
+        "sv": "PV-prognos idag",
+        "no": "PV-prognose i dag",
+        "fi": "PV-ennuste tänään",
+        "hu": "Mai PV-prognózis"
       },
       "desc": {
         "en": "Blended PV yield forecast for today",
-        "nl": "Gecombineerde PV opbrengst voor vandaag"
+        "nl": "Gecombineerde PV opbrengst voor vandaag",
+        "de": "Gemischte PV-Ertragsprognose für heute",
+        "da": "Blandet PV-udbytteprog. for i dag",
+        "fr": "Prévision rendement PV mixte pour aujourd'hui",
+        "sv": "Blandad PV-prognos för idag",
+        "no": "Blandet PV-prognose for i dag",
+        "fi": "Yhdistetty PV-tuottoennuste tänään",
+        "hu": "Vegyes PV-hozamprognózis mára"
       },
       "units": {
         "en": "kWh",
-        "nl": "kWh"
+        "nl": "kWh",
+        "de": "kWh",
+        "da": "kWh",
+        "fr": "kWh",
+        "sv": "kWh",
+        "no": "kWh",
+        "fi": "kWh",
+        "hu": "kWh"
       },
       "decimals": 1,
       "getable": true,
@@ -7611,11 +9772,25 @@
       "type": "string",
       "title": {
         "en": "Recommended Mode",
-        "nl": "Aanbevolen Modus"
+        "nl": "Aanbevolen Modus",
+        "de": "Empfohlener Modus",
+        "da": "Anbefalet tilstand",
+        "fr": "Mode recommandé",
+        "sv": "Rekommenderat läge",
+        "no": "Anbefalt modus",
+        "fi": "Suositeltu tila",
+        "hu": "Ajánlott mód"
       },
       "desc": {
         "en": "Current battery mode recommendation",
-        "nl": "Huidige batterij modus aanbeveling"
+        "nl": "Huidige batterij modus aanbeveling",
+        "de": "Aktuelle Batteriemodus-Empfehlung",
+        "da": "Aktuel batterimodusanbefaling",
+        "fr": "Recommandation de mode batterie actuel",
+        "sv": "Aktuell batterilägerekommendation",
+        "no": "Aktuell batterimodusanbefaling",
+        "fi": "Nykyinen akkutilan suositus",
+        "hu": "Aktuális akkumód ajánlás"
       },
       "getable": true,
       "setable": false,
@@ -7626,7 +9801,14 @@
       "type": "number",
       "title": {
         "en": "WiFi Signal",
-        "nl": "WiFi signaal"
+        "nl": "WiFi signaal",
+        "de": "WLAN-Signal",
+        "da": "WiFi-signal",
+        "fr": "Signal WiFi",
+        "sv": "WiFi-signal",
+        "no": "WiFi-signal",
+        "fi": "WiFi-signaali",
+        "hu": "WiFi-jel"
       },
       "getable": true,
       "setable": false,
@@ -7635,22 +9817,50 @@
       "icon": "assets/rssi.svg",
       "units": {
         "en": "RSSI",
-        "nl": "RSSI"
+        "nl": "RSSI",
+        "de": "RSSI",
+        "da": "RSSI",
+        "fr": "RSSI",
+        "sv": "RSSI",
+        "no": "RSSI",
+        "fi": "RSSI",
+        "hu": "RSSI"
       }
     },
     "sun_score": {
       "type": "number",
       "title": {
         "en": "Sunshine Score",
-        "nl": "Zonneschijn Score"
+        "nl": "Zonneschijn Score",
+        "de": "Sonneneinstrahlung",
+        "da": "Solscore",
+        "fr": "Score d'ensoleillement",
+        "sv": "Solpoäng",
+        "no": "Solscore",
+        "fi": "Aurinkoinen pisteet",
+        "hu": "Napsugárzás pontszám"
       },
       "desc": {
         "en": "Predicted sunshine availability (0-100%)",
-        "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)"
+        "nl": "Voorspelde zonneschijn beschikbaarheid (0-100%)",
+        "de": "Vorhergesagte Sonnenstrahlung (0-100%)",
+        "da": "Forudsagt soltilgængelighed (0-100%)",
+        "fr": "Disponibilité solaire prévue (0-100%)",
+        "sv": "Förutsagd soltillgänglighet (0-100%)",
+        "no": "Forutsagt soltilgjengelighet (0-100%)",
+        "fi": "Ennustettu auringon saatavuus (0-100%)",
+        "hu": "Előrejelzett naptartalék (0-100%)"
       },
       "units": {
         "en": "%",
-        "nl": "%"
+        "nl": "%",
+        "de": "%",
+        "da": "%",
+        "fr": "%",
+        "sv": "%",
+        "no": "%",
+        "fi": "%",
+        "hu": "%"
       },
       "min": 0,
       "max": 100,
@@ -7664,7 +9874,14 @@
       "type": "number",
       "title": {
         "en": "Active tariff",
-        "nl": "Tarief actief"
+        "nl": "Tarief actief",
+        "de": "Aktiver Tarif",
+        "da": "Aktiv takst",
+        "fr": "Tarif actif",
+        "sv": "Aktiv tariff",
+        "no": "Aktiv tariff",
+        "fi": "Aktiivinen tariffi",
+        "hu": "Aktív tarifa"
       },
       "getable": true,
       "setable": false,
@@ -7673,14 +9890,26 @@
       "icon": "assets/tariff.svg",
       "units": {
         "en": "Tariff",
-        "nl": "Tarief"
+        "nl": "Tarief",
+        "fr": "Tarif",
+        "sv": "Tariff",
+        "no": "Tariff",
+        "fi": "Tariffi",
+        "hu": "Tarifa"
       }
     },
     "time_to_empty": {
       "type": "number",
       "title": {
         "en": "Time until discharged",
-        "nl": "Tijd tot ontladen"
+        "nl": "Tijd tot ontladen",
+        "de": "Zeit bis Entladung",
+        "da": "Tid til afladning",
+        "fr": "Temps avant décharge",
+        "sv": "Tid till urladdning",
+        "no": "Tid til utlading",
+        "fi": "Aika purkautumiseen",
+        "hu": "Idő lemerülésig"
       },
       "getable": true,
       "setable": false,
@@ -7689,14 +9918,28 @@
       "icon": "assets/clock.svg",
       "units": {
         "en": "min",
-        "nl": "min"
+        "nl": "min",
+        "de": "min",
+        "da": "min",
+        "fr": "min",
+        "sv": "min",
+        "no": "min",
+        "fi": "min",
+        "hu": "perc"
       }
     },
     "time_to_full": {
       "type": "number",
       "title": {
         "en": "Time until full charge",
-        "nl": "Tijd tot vol geladen"
+        "nl": "Tijd tot vol geladen",
+        "de": "Zeit bis Vollladung",
+        "da": "Tid til fuld opladning",
+        "fr": "Temps avant charge complète",
+        "sv": "Tid till fulladdning",
+        "no": "Tid til full lading",
+        "fi": "Aika täyteen lataukseen",
+        "hu": "Idő teljes töltésig"
       },
       "getable": true,
       "setable": false,
@@ -7705,14 +9948,28 @@
       "icon": "assets/clock.svg",
       "units": {
         "en": "min",
-        "nl": "min"
+        "nl": "min",
+        "de": "min",
+        "da": "min",
+        "fr": "min",
+        "sv": "min",
+        "no": "min",
+        "fi": "min",
+        "hu": "perc"
       }
     },
     "voltage_sag_l1": {
       "type": "number",
       "title": {
         "en": "Net dip L1",
-        "nl": "Net dip L1"
+        "nl": "Net dip L1",
+        "de": "Netzeinbruch L1",
+        "da": "Netdyk L1",
+        "fr": "Creux réseau L1",
+        "sv": "Nätdipp L1",
+        "no": "Netdyk L1",
+        "fi": "Verkon notkahdus L1",
+        "hu": "Hálózati mélypont L1"
       },
       "getable": true,
       "setable": false,
@@ -7724,7 +9981,14 @@
       "type": "number",
       "title": {
         "en": "Net dip L2",
-        "nl": "Net dip L2"
+        "nl": "Net dip L2",
+        "de": "Netzeinbruch L2",
+        "da": "Netdyk L2",
+        "fr": "Creux réseau L2",
+        "sv": "Nätdipp L2",
+        "no": "Netdyk L2",
+        "fi": "Verkon notkahdus L2",
+        "hu": "Hálózati mélypont L2"
       },
       "getable": true,
       "setable": false,
@@ -7736,7 +10000,14 @@
       "type": "number",
       "title": {
         "en": "Net dip L3",
-        "nl": "Net dip L3"
+        "nl": "Net dip L3",
+        "de": "Netzeinbruch L3",
+        "da": "Netdyk L3",
+        "fr": "Creux réseau L3",
+        "sv": "Nätdipp L3",
+        "no": "Netdyk L3",
+        "fi": "Verkon notkahdus L3",
+        "hu": "Hálózati mélypont L3"
       },
       "getable": true,
       "setable": false,
@@ -7748,7 +10019,14 @@
       "type": "number",
       "title": {
         "en": "Net peak L1",
-        "nl": "Net piek L1"
+        "nl": "Net piek L1",
+        "de": "Netzspitze L1",
+        "da": "Nettopspids L1",
+        "fr": "Pic réseau L1",
+        "sv": "Nätspets L1",
+        "no": "Netttopp L1",
+        "fi": "Verkon huippu L1",
+        "hu": "Hálózati csúcs L1"
       },
       "getable": true,
       "setable": false,
@@ -7760,7 +10038,14 @@
       "type": "number",
       "title": {
         "en": "Net peak L2",
-        "nl": "Net piek L2"
+        "nl": "Net piek L2",
+        "de": "Netzspitze L2",
+        "da": "Nettopspids L2",
+        "fr": "Pic réseau L2",
+        "sv": "Nätspets L2",
+        "no": "Netttopp L2",
+        "fi": "Verkon huippu L2",
+        "hu": "Hálózati csúcs L2"
       },
       "getable": true,
       "setable": false,
@@ -7772,7 +10057,14 @@
       "type": "number",
       "title": {
         "en": "Net peak L3",
-        "nl": "Net piek L3"
+        "nl": "Net piek L3",
+        "de": "Netzspitze L3",
+        "da": "Nettopspids L3",
+        "fr": "Pic réseau L3",
+        "sv": "Nätspets L3",
+        "no": "Netttopp L3",
+        "fi": "Verkon huippu L3",
+        "hu": "Hálózati csúcs L3"
       },
       "getable": true,
       "setable": false,
@@ -7784,7 +10076,14 @@
       "type": "boolean",
       "title": {
         "en": "Warm water",
-        "nl": "Warm water"
+        "nl": "Warm water",
+        "de": "Warmwasser",
+        "da": "Varmt vand",
+        "fr": "Eau chaude",
+        "sv": "Varmvatten",
+        "no": "Varmtvann",
+        "fi": "Lämmin vesi",
+        "hu": "Melegvíz"
       },
       "getable": true,
       "setable": false,
@@ -7797,39 +10096,81 @@
       "type": "enum",
       "title": {
         "en": "Weather Override",
-        "nl": "Weer Overschrijven"
+        "nl": "Weer Overschrijven",
+        "de": "Wetterüberschreibung",
+        "da": "Vejr-tilsidesættelse",
+        "fr": "Remplacement météo",
+        "sv": "Väderåsidosättning",
+        "no": "Vær-overstyring",
+        "fi": "Sääohitus",
+        "hu": "Időjárás felülírás"
       },
       "desc": {
         "en": "Override weather forecast for policy decisions",
-        "nl": "Overschrijf weersverwachting voor beleidsbeslissingen"
+        "nl": "Overschrijf weersverwachting voor beleidsbeslissingen",
+        "de": "Wetterprognose für Richtlinienentscheidungen überschreiben",
+        "da": "Tilsidesæt vejrprognose for politikbeslutninger",
+        "fr": "Remplacer les prévisions météo pour les décisions de politique",
+        "sv": "Åsidosätt väderprognos för policybeslut",
+        "no": "Overstyr værvarselet for politikkbeslutninger",
+        "fi": "Ohita sääennuste politiikkapäätöksiä varten",
+        "hu": "Időjárás-prognózis felülírása az irányvonal döntésekhez"
       },
       "values": [
         {
           "id": "auto",
           "title": {
             "en": "Auto (use forecast)",
-            "nl": "Auto (gebruik voorspelling)"
+            "nl": "Auto (gebruik voorspelling)",
+            "de": "Auto (Prognose nutzen)",
+            "da": "Auto (brug prognose)",
+            "fr": "Auto (utiliser les prévisions)",
+            "sv": "Auto (använd prognos)",
+            "no": "Auto (bruk prognose)",
+            "fi": "Auto (käytä ennustetta)",
+            "hu": "Auto (prognózis alapján)"
           }
         },
         {
           "id": "sunny",
           "title": {
             "en": "Sunny",
-            "nl": "Zonnig"
+            "nl": "Zonnig",
+            "de": "Sonnig",
+            "da": "Solrigt",
+            "fr": "Ensoleillé",
+            "sv": "Soligt",
+            "no": "Solrikt",
+            "fi": "Aurinkoinen",
+            "hu": "Napos"
           }
         },
         {
           "id": "cloudy",
           "title": {
             "en": "Cloudy",
-            "nl": "Bewolkt"
+            "nl": "Bewolkt",
+            "de": "Bewölkt",
+            "da": "Overskyet",
+            "fr": "Nuageux",
+            "sv": "Molnigt",
+            "no": "Overskyet",
+            "fi": "Pilvinen",
+            "hu": "Felhős"
           }
         },
         {
           "id": "rainy",
           "title": {
             "en": "Rainy",
-            "nl": "Regenachtig"
+            "nl": "Regenachtig",
+            "de": "Regnerisch",
+            "da": "Regnvejr",
+            "fr": "Pluvieux",
+            "sv": "Regnigt",
+            "no": "Regnvær",
+            "fi": "Sateinen",
+            "hu": "Esős"
           }
         }
       ],
@@ -7842,7 +10183,14 @@
       "type": "string",
       "title": {
         "en": "WiFi State",
-        "nl": "WiFi Status"
+        "nl": "WiFi Status",
+        "de": "WLAN-Status",
+        "da": "WiFi-tilstand",
+        "fr": "État WiFi",
+        "sv": "WiFi-status",
+        "no": "WiFi-tilstand",
+        "fi": "WiFi-tila",
+        "hu": "WiFi-állapot"
       },
       "getable": true,
       "setable": false,
