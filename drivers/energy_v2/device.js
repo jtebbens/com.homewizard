@@ -2100,40 +2100,56 @@ async _handleBatteries(data) {
       this.batteryErrorTriggered = false;
     }
 
-    // Mode/watt mismatch detection — commanded behavior not reflected in power:
-    // target_power_w is the HW setpoint, power_w the actual. When the mode commands
-    // active charge/discharge (|target|>200W) but the battery stays idle (|power|<50W),
-    // the mode's expected behavior is not happening → fault. No prior-activity gate:
-    // also catches a battery that never starts. SoC guards avoid natural full/empty.
+    // Battery stall detection — commanded direction not reflected in SoC movement:
+    // target_power_w is the HW setpoint (must), SoC the ground truth. The WS power_w
+    // is unreliable in predictive mode (reports 0 W while the battery actually charges),
+    // so we judge progress by SoC trend instead. When the HW commands >200W charge but
+    // SoC does not rise ≥1pp within 10 min (or commands discharge but SoC does not fall),
+    // the battery is stalled → fault. Resets on progress; SoC guards skip natural
+    // full/empty. |target|>200 gate excludes the firmware discharge cap (~96W).
     const targetW = payload.target_power_w ?? 0;
-    const actualW = payload.power_w ?? 0;
-    const commandedActive = Math.abs(targetW) > 200;
-    const actualIdle = Math.abs(actualW) < 50;
-    const avgSoC = this.getCapabilityValue('battery_group_average_soc') ?? 100;
-    const socGuardOk = targetW > 0
-      ? avgSoC < 90   // commanded charge → not naturally full
-      : avgSoC > 10;  // commanded discharge → not naturally empty
+    const avgSoC = this.getCapabilityValue('battery_group_average_soc');
+    const commandedCharge = targetW > 200;
+    const commandedDischarge = targetW < -200;
+    const socGuardOk = commandedCharge ? avgSoC < 98 : avgSoC > 2;
 
-    if (commandedActive && batteriesPresent && actualIdle && socGuardOk) {
-      if (!this._cmdMismatchStart) this._cmdMismatchStart = now;
-      const mismatchDuration = now - this._cmdMismatchStart;
+    if ((commandedCharge || commandedDischarge) && batteriesPresent && typeof avgSoC === 'number') {
+      const dir = commandedCharge ? 'charge' : 'discharge';
 
-      if (mismatchDuration > 180_000 && !this._cmdMismatchTriggered) {
-        this._cmdMismatchTriggered = true;
-        this.log(`❌ Mode/watt mismatch: target=${targetW}W actual=${actualW}W idle ${Math.round(mismatchDuration / 1000)}s, mode=${normalizedMode}, SoC=${avgSoC}%`);
-        this.homey.flow
-          .getDeviceTriggerCard('battery_error_detected')
-          .trigger(this, {}, {
-            power: actualW,
-            target: targetW,
-            mode: normalizedMode,
-            batteryCount: batteries.length
-          })
-          .catch(this.error);
+      if (this._stallDir !== dir || this._stallBaselineSoc == null) {
+        // New commanded direction → start a fresh baseline.
+        this._stallDir = dir;
+        this._stallBaselineSoc = avgSoC;
+        this._stallBaselineTime = now;
+        this._stallTriggered = false;
+      } else {
+        const socDelta = avgSoC - this._stallBaselineSoc;
+        const progressed = commandedCharge ? socDelta >= 1 : socDelta <= -1;
+
+        if (progressed) {
+          // Battery is moving as commanded → healthy, advance baseline.
+          this._stallBaselineSoc = avgSoC;
+          this._stallBaselineTime = now;
+          this._stallTriggered = false;
+        } else if (socGuardOk && (now - this._stallBaselineTime) > 600_000 && !this._stallTriggered) {
+          this._stallTriggered = true;
+          this.log(`❌ Battery stall: target=${targetW}W but SoC stuck at ${avgSoC}% for ${Math.round((now - this._stallBaselineTime) / 1000)}s, mode=${normalizedMode}`);
+          this.homey.flow
+            .getDeviceTriggerCard('battery_error_detected')
+            .trigger(this, {}, {
+              power: payload.power_w ?? 0,
+              target: targetW,
+              mode: normalizedMode,
+              batteryCount: batteries.length
+            })
+            .catch(this.error);
+        }
       }
     } else {
-      this._cmdMismatchStart = null;
-      this._cmdMismatchTriggered = false;
+      this._stallDir = null;
+      this._stallBaselineSoc = null;
+      this._stallBaselineTime = null;
+      this._stallTriggered = false;
     }
 
   } catch (err) {
