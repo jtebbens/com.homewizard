@@ -1516,5 +1516,8 @@
   },
   "3.15.95": {
     "en": "watermeter toggle for Belgium (if there is no water data), improved battery fail detection"
+  },
+  "3.15.96": {
+    "en": "Energy socket bug fux (discovery) and learning section added for PV forecast and actual for planning"
   }
 }
