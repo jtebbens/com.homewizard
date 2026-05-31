@@ -1698,7 +1698,8 @@ async _handleMeasurement(m) {
   const now = Date.now();
   const settings = this.getSettings();
   const showGas = settings.show_gas === true;
-  
+  const showWater = settings.show_water !== false;
+
   // Safely get language, default to 'en' if app instance is destroyed
   let homeyLang = 'en';
   try {
@@ -1717,7 +1718,7 @@ async _handleMeasurement(m) {
   this._measurementNetPower(m, tasks);
 
   const { gas, water } = await this._measurementExternalMeters(m, tasks);
-  await this._measurementGasWater(gas, water, tasks, showGas);
+  await this._measurementGasWater(gas, water, tasks, showGas, showWater);
 
   if (tasks.length > 0) {
     await Promise.allSettled(tasks);
@@ -1905,12 +1906,15 @@ async _measurementExternalMeters(m, tasks) {
 }
 
 
-async _measurementGasWater(gas, water, tasks, showGas) {
+async _measurementGasWater(gas, water, tasks, showGas, showWater) {
   if (!showGas) {
     if (this.hasCapability('meter_gas')) tasks.push(this.removeCapability('meter_gas').catch(this.error));
     if (this.hasCapability('measure_gas')) tasks.push(this.removeCapability('measure_gas').catch(this.error));
     if (this.hasCapability('meter_gas.daily')) tasks.push(this.removeCapability('meter_gas.daily').catch(this.error));
-    return;
+  }
+
+  if (!showWater) {
+    if (this.hasCapability('meter_water')) tasks.push(this.removeCapability('meter_water').catch(this.error));
   }
 
   // (No extra logic — everything happens in _handleExternalMeters)
