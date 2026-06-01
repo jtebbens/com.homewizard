@@ -53,9 +53,21 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.15.97)
 
+### Weak-PV Surplus No Longer Exported Before a Reachable Peak (v3.15.97)
+
+* **A cloudy-afternoon slot with a small PV surplus now charges the battery instead of dumping it to the grid** — Observed live (2026-06-01 14:00): a strong ~2 kW PV surplus was exported (−1.7 kWh to grid) while the battery sat at 57% with room to spare and an evening price peak of €0.52 ahead. Cause: the PV-uncertainty/cloud haircut (`pvCloudFactor ≈ 0.60`) pushed the slot's `pvCoverage` just under the `pvStrongCoverage` threshold (0.5), blocking the `pvStoreWins` path; simultaneously the next hour was a strong-PV slot, which resets `trickleSuffixMaxPrice` to 0 (the cap assumes that refill saturates the battery, making a later peak unreachable), blocking the `pvTrickle` path. With both blocked the slot fell through to `pvExportWins` and the surplus was exported — even though the uncapped store value (€0.374) beat the price (€0.25) and the battery never saturated (the plan peaked at 85%). `optimization-engine.js` now stores a weak-slot surplus when the battery still has room and the uncapped store value beats the price, treating the later peak as reachable. The trickle cap is unchanged for strong-PV slots, so genuine export-wins cases (a peak that PV truly refills) still export. Regression test `test/dp-pvstrong-cap-export.test.js`
+
+### Planning Chart PV-Charge SoC Projection No Longer Loses Efficiency Twice (v3.15.97)
+
+* **The planning chart projected PV charging too low** — The chart's SoC projection multiplied the PV-charge step by the round-trip efficiency (`rte ≈ 0.74`), so 1.6 kWh of PV into a 5.376 kWh battery drew as +22% instead of +30% of state-of-charge. Round-trip efficiency belongs in the *value* math (`storeValue = price × rte`), not in the SoC *state*: the battery physically gains the charged kWh. Every other projection path already tracked raw kWh — the grid-charge branch in the same function and the optimizer forward-sim in `optimization-engine.js` — so only the PV-charge branch was inconsistent. Removed the stray `* rte` in `buildPlanningSchedule` (`policy-engine.js`); display-only, no runtime decision effect
+
 ### Planning Chart Matches Real Export Decisions (v3.15.97)
 
 * **The planning chart no longer projects the battery filling on slots the optimizer actually exports** — On variable/cloudy days the chart could show the battery charging up to full from PV while the live policy was exporting that surplus to the grid (plan ≠ reality). Cause: the chart's SoC projection valued storing PV with the *uncapped* maximum future price, while the runtime mapper uses the *trickle-capped* store value — a far evening peak that tomorrow's PV will refill anyway should not make storing today worthwhile. When a future peak sits beyond a strong-PV refill, the uncapped value over-stated storing and the chart drew a fill that never happened. Both projections (the optimizer forward-sim in `optimization-engine.js` and the re-mapper `_mapActionToHwModeForPlanning` in `policy-engine.js`, which drives the drawn SoC line) now gate PV charging on the same capped *store-beats-export* test the runtime uses: when exporting wins, the slot is shown as `standby` with a flat SoC. Verified live — `export more profitable → standby, no override`, `drift 0.0pp`
+
+### PV Forecast Cap at Inverter Peak (v3.15.97)
+
+* **PV forecast can no longer exceed the system's physical peak** — On clear days where actual PV ran well above the morning model, the intraday correction ratio (e.g. ×2) multiplied the forecast above `pv_capacity_w`, producing impossible values (e.g. 5.8 kW on a 3.57 kWp system) on the "Batterij Vandaag" and "PV Opwek" charts — and, worse, made the DP over-estimate PV recharge (risking premature discharge stop). The blended/bias/intraday-corrected forecast is now capped at the inverter peak as the final step before the optimizer, the chart forecast line, and the stored hourly forecast consume it. Solcast values are additionally clamped at the source (`solcast-provider.js`), since a misconfigured Solcast resource capacity can report above the physical system limit
 
 ### EV Charging Gate (v3.15.94)
 
