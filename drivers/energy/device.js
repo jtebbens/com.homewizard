@@ -490,21 +490,32 @@ _flushDebugLogs() {
 
 async onPoll() {
   if (this._deleted) return;
+  if (this._polling) return;                       // re-entrancy guard: no overlapping polls
 
+  // Tick-skip backoff: while a device is down, skip interval ticks instead of
+  // sleeping inside the poll. Sleeping kept each un-awaited invocation alive,
+  // so the fixed interval piled them up → memory ceiling → app crash loop.
+  if (this._pollErrorCount > 0) {
+    const skipTicks = Math.min(6, this._pollErrorCount);
+    this._backoffTicks = (this._backoffTicks || 0) + 1;
+    if (this._backoffTicks <= skipTicks) return;
+    this._backoffTicks = 0;
+  }
+
+  this._polling = true;
+  try {
+    await this._onPollImpl();
+  } finally {
+    this._polling = false;
+  }
+}
+
+async _onPollImpl() {
   const settings = this.getSettings();
 
   // --- EARLY RETURN SAFE ---
   if (!await this._prepareUrl(settings)) {
     return;
-  }
-
-  //
-  // --- BACKOFF DURING ERRORS ---
-  //
-  if (this._pollErrorCount > 0) {
-    const delayMs = Math.min(60000, this._pollErrorCount * 2000); // max 60s
-    this._debugLog(`Backoff active: waiting ${delayMs}ms due to ${this._pollErrorCount} errors`);
-    await new Promise(r => setTimeout(r, delayMs));
   }
 
   let data, nowLocal, homeyLang;
@@ -520,6 +531,7 @@ async onPoll() {
 
     // Succes → reset error counter
     this._pollErrorCount = 0;
+    this._backoffTicks = 0;
 
   } catch (err) {
     this._pollErrorCount++;
