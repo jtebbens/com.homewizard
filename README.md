@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.94)
+## 📝 Latest Updates (v3.15.63–v3.15.97)
+
+### Planning Chart Matches Real Export Decisions (v3.15.97)
+
+* **The planning chart no longer projects the battery filling on slots the optimizer actually exports** — On variable/cloudy days the chart could show the battery charging up to full from PV while the live policy was exporting that surplus to the grid (plan ≠ reality). Cause: the chart's SoC projection valued storing PV with the *uncapped* maximum future price, while the runtime mapper uses the *trickle-capped* store value — a far evening peak that tomorrow's PV will refill anyway should not make storing today worthwhile. When a future peak sits beyond a strong-PV refill, the uncapped value over-stated storing and the chart drew a fill that never happened. Both projections (the optimizer forward-sim in `optimization-engine.js` and the re-mapper `_mapActionToHwModeForPlanning` in `policy-engine.js`, which drives the drawn SoC line) now gate PV charging on the same capped *store-beats-export* test the runtime uses: when exporting wins, the slot is shown as `standby` with a flat SoC. Verified live — `export more profitable → standby, no override`, `drift 0.0pp`
 
 ### EV Charging Gate (v3.15.94)
 
