@@ -52,6 +52,7 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     this.homey.app.bumpDeviceCount?.('SDM230');
     this._debugLogs = [];
     this._pollFailCount = 0;
+    this._pollRunning = false;
 
     // KeepAlive agent (blijft)
     this.agent = new http.Agent({
@@ -229,8 +230,13 @@ _flushDebugLogs() {
    * GET /data
    */
   async onPoll() {
+    // Guard against concurrent polls — setInterval fires regardless of whether
+    // the previous poll finished. Prevents overlapping invocations piling up.
+    if (this._pollRunning) return;
+    this._pollRunning = true;
+
     const settings = this.getSettings();
-    
+
     // URL alleen uit settings; nooit terugschrijven
     if (!this.url) {
       if (settings.url) {
@@ -240,6 +246,7 @@ _flushDebugLogs() {
         //this.setUnavailable('Missing URL').catch(this.error);
         this.log('❌ Missing URL, skipping poll');
         await updateCapability(this, 'alarm_connectivity', true);
+        this._pollRunning = false;
         return;
       }
     }
@@ -311,6 +318,8 @@ _flushDebugLogs() {
       if (this._pollFailCount === 3) {
         this._switchToBackoffInterval();
       }
+    } finally {
+      this._pollRunning = false;
     }
 
   }
