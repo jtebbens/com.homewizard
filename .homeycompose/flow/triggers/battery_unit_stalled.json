@@ -1,0 +1,36 @@
+{
+  "id": "battery_unit_stalled",
+  "title": {
+    "en": "Single battery stalled",
+    "nl": "Eén batterij gestald"
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=energy_v2"
+    }
+  ],
+  "tokens": [
+    {
+      "name": "battery_id",
+      "type": "string",
+      "title": {
+        "en": "Battery ID",
+        "nl": "Batterij ID"
+      }
+    },
+    {
+      "name": "soc",
+      "type": "number",
+      "title": {
+        "en": "State of charge",
+        "nl": "Laadtoestand"
+      }
+    }
+  ],
+  "titleFormatted": {
+    "en": "A single battery stalled (ignoring command)",
+    "nl": "Eén batterij reageert niet op aansturing"
+  }
+}

@@ -2156,6 +2156,46 @@ async _handleBatteries(data) {
       this._stallTriggered = false;
     }
 
+    // Per-unit stall detection — the group average masks a single stalled unit:
+    // 3 of 4 batteries moving keeps avgSoC progressing, so the group-level check
+    // never fires. Judge each battery's own soc_pct against the commanded direction.
+    // Reuses the same gates; baseline tracked per battery id. Only soc_pct is
+    // reliably fresh in the pluginBatteryGroup snapshot (power_w/updated_at are not
+    // re-persisted), so we trend on SoC alone. Needs ≥2 batteries.
+    if ((commandedCharge || commandedDischarge) && batteries.length >= 2) {
+      const dir = commandedCharge ? 'charge' : 'discharge';
+      if (!this._unitStall || this._unitStallDir !== dir) {
+        this._unitStall = new Map();
+        this._unitStallDir = dir;
+      }
+      for (const b of batteries) {
+        if (!b || b.id == null || typeof b.soc_pct !== 'number') continue;
+        const guardOk = commandedCharge ? b.soc_pct < 98 : b.soc_pct > 2;
+        const rec = this._unitStall.get(b.id);
+        if (!rec) {
+          this._unitStall.set(b.id, { soc: b.soc_pct, time: now, fired: false });
+          continue;
+        }
+        const delta = b.soc_pct - rec.soc;
+        const progressed = commandedCharge ? delta >= 1 : delta <= -1;
+        if (progressed) {
+          rec.soc = b.soc_pct;
+          rec.time = now;
+          rec.fired = false;
+        } else if (guardOk && (now - rec.time) > 600_000 && !rec.fired) {
+          rec.fired = true;
+          this.log(`❌ Battery unit stall: id=${b.id} target=${targetW}W but SoC stuck at ${b.soc_pct}% for ${Math.round((now - rec.time) / 1000)}s, mode=${normalizedMode}`);
+          this.homey.flow
+            .getDeviceTriggerCard('battery_unit_stalled')
+            .trigger(this, { battery_id: String(b.id), soc: b.soc_pct }, {})
+            .catch(this.error);
+        }
+      }
+    } else if (this._unitStall) {
+      this._unitStall = null;
+      this._unitStallDir = null;
+    }
+
   } catch (err) {
     this.error('❌ _handleBatteries failed:', err);
   }
