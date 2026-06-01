@@ -2109,8 +2109,12 @@ async _handleBatteries(data) {
     // full/empty. |target|>200 gate excludes the firmware discharge cap (~96W).
     const targetW = payload.target_power_w ?? 0;
     const avgSoC = this.getCapabilityValue('battery_group_average_soc');
-    const commandedCharge = targetW > 200;
-    const commandedDischarge = targetW < -200;
+    // In predictive (SlimLaden) and standby the target_power_w is not our enforced
+    // setpoint — it can carry a ghost/cloud value while the battery sits idle, so a
+    // flat SoC there is expected, not a fault. Only judge stall in actively-commanded modes.
+    const activeControl = normalizedMode !== 'predictive' && normalizedMode !== 'standby';
+    const commandedCharge = activeControl && targetW > 200;
+    const commandedDischarge = activeControl && targetW < -200;
     const socGuardOk = commandedCharge ? avgSoC < 98 : avgSoC > 2;
 
     if ((commandedCharge || commandedDischarge) && batteriesPresent && typeof avgSoC === 'number') {
