@@ -1782,6 +1782,12 @@ if (debug) this.log(
           const existing = modeHistory.findIndex(
             h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
           );
+          // plan-accuracy: store this slot's forecast alongside the actuals.
+          // Slots may be hourly (1h optimizer) or 15-min — pick the slot covering now
+          // (latest start <= now) so bucket granularity never blocks the match.
+          const _planSlot = this.optimizationEngine?._schedule?.slots
+            ?.filter(s => new Date(s.timestamp).getTime() <= nowTs.getTime())
+            .pop();
           const entry = {
             ts:     nowTs.toISOString(),
             hwMode: applyMode,
@@ -1791,6 +1797,8 @@ if (debug) this.log(
             minDischargePrice: this.getSetting('min_discharge_price'),
             pvW:     result.debug?.pvEstimate      ?? null,
             consumW: result.debug?.houseConsumption ?? null,
+            pvFcW:     _planSlot?.pvForecastW  ?? null,
+            consumFcW: _planSlot?.consumptionW ?? null,
             gridW:   this.getCapabilityValue('grid_power_mirror') ?? null,
             battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
             policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
@@ -2821,6 +2829,27 @@ if (debug) this.log(
       this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
       this.setCapabilityValue('policy_profit_eur', parseFloat(_profit.toFixed(2))).catch(this.error);
       this.setCapabilityValue('plan_summary', `${_cnt.charge}↑ ${_cnt.discharge}↓ ${_cnt.preserve}=`).catch(this.error);
+    }
+
+    // Plan-accuracy: forecast vs actual over last 24h (96 slots). bias = actual − forecast
+    // (positive = under-forecast). Observe-only; not yet fed back into confidence.
+    {
+      const _hist = (this.homey.settings.get('policy_mode_history') || []).slice(-96);
+      const _acc = (fc, act) => {
+        const errs = _hist
+          .filter(e => e[fc] != null && e[act] != null)
+          .map(e => e[act] - e[fc]);
+        if (errs.length < 4) return null;
+        const mae  = errs.reduce((a, x) => a + Math.abs(x), 0) / errs.length;
+        const bias = errs.reduce((a, x) => a + x, 0) / errs.length;
+        return { n: errs.length, mae: Math.round(mae), bias: Math.round(bias) };
+      };
+      const _fmt = m => `MAE ${m.mae}W bias ${m.bias > 0 ? '+' : ''}${m.bias}W (n${m.n})`;
+      const _pv = _acc('pvFcW', 'pvW');
+      const _co = _acc('consumFcW', 'consumW');
+      if (_pv || _co) {
+        this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
+      }
     }
 
     // Persist planning schedule for the settings UI (single source of truth).
