@@ -1229,6 +1229,7 @@ if (debug) this.log(
                 const solcastForecast = await this._solcastProvider.getForecast(
                   settings.solcast_api_key,
                   settings.solcast_resource_id,
+                  settings.pv_capacity_w || 0,
                 );
                 if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
                   // Persist day-start Solcast snapshot once per Amsterdam calendar day.
@@ -2151,8 +2152,9 @@ if (debug) this.log(
     // past hours causes simulated SoC to diverge from reality by the current slot.
     const hourBoundary = new Date(now);
     hourBoundary.setMinutes(0, 0, 0);
+    const slotBoundary15 = new Date(Math.floor(now.getTime() / 900_000) * 900_000);
     const rawPrices = (raw15min?.length > 0)
-      ? raw15min.filter(p => new Date(p.timestamp) >= now)
+      ? raw15min.filter(p => new Date(p.timestamp) >= slotBoundary15)
       : (inputs.tariff?.allPrices || inputs.tariff?.next24Hours)?.filter(p => new Date(p.timestamp) >= hourBoundary);
     const prices = rawPrices;
     if (!prices || prices.length === 0) return;
@@ -2276,6 +2278,7 @@ if (debug) this.log(
           const solcastForecast = await this._solcastProvider.getForecast(
             blendSettings.solcast_api_key,
             blendSettings.solcast_resource_id,
+            blendSettings.pv_capacity_w || 0,
           );
           if (Array.isArray(solcastForecast) && solcastForecast.length > 0) {
             solcastByHourMs = new Map();
@@ -2609,6 +2612,14 @@ if (debug) this.log(
       if (omCorrCount > 0) {
         this.log(`🌧️ OM precipitatie: PV correctie op ${omCorrCount} slots`);
       }
+    }
+
+    // Final cap at the physical inverter ceiling. The intraday ratio (and daily bias) above
+    // are upward multipliers — on days where actual PV outruns the forecast the ratio can
+    // exceed 2×, pushing slots well over pv_capacity_w (impossible). Cap here, after every
+    // scaler and before the DP, chart orange line, and stored forecast consume pvForecast.
+    if (Array.isArray(pvForecast) && pvCapacityW > 0) {
+      pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.min(s.pvPowerW, pvCapacityW) }));
     }
 
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
