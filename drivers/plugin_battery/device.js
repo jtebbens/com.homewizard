@@ -667,9 +667,14 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
         batteryCapacityWh: this.getSetting('battery_capacity_wh') || 2470
       });
 
-      // 3. Update previousSoC/timestamp na drift-check
-      this.previousSoC = data.state_of_charge_pct;
-      this.previousTimestamp = now;
+      // 3. Update previousSoC/timestamp pas als SoC verandert. De drift-loop
+      //    draait elke 5 min; bij ongewijzigde update ververste de anker-
+      //    timestamp continu zodat deltaTimeMin nooit de 20-min drempel haalde
+      //    en drift (BMS-calibratie op stuck 0%) nooit kon vuren.
+      if (data.state_of_charge_pct !== this.previousSoC) {
+        this.previousSoC = data.state_of_charge_pct;
+        this.previousTimestamp = now;
+      }
 
 
       // 4. Drift events
@@ -1186,3 +1191,6 @@ async _registerCapabilityListeners() {
     return true;
   }
 };
+
+// Exported for unit tests (pure helper, no Homey deps).
+module.exports.checkSoCDrift = checkSoCDrift;
