@@ -142,6 +142,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
       await this.setSettings({ show_gas: true });
     }
 
+    if (settings.show_water === undefined || settings.show_water === null) {
+      await this.setSettings({ show_water: true });
+    }
+
     // Initial phase count (user setting or autodetect later)
     this._phases = Number(this.getSettings().number_of_phases) || 1;
 
@@ -172,6 +176,13 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
         if (this.hasCapability(cap)) {
           await this.removeCapability(cap).catch(this.error);
         }
+      }
+    }
+
+    // Water capability is settings-driven, not payload-driven
+    if (!settings.show_water) {
+      if (this.hasCapability('meter_water')) {
+        await this.removeCapability('meter_water').catch(this.error);
       }
     }
 
@@ -1082,6 +1093,7 @@ async _processGasDelta(data, tasks, settings, nowLocal) {
   }
 
   _processExternalWater(data, tasks) {
+    if (!this.getSettings().show_water) return;
     const externalData = data.external;
     if (Array.isArray(externalData)) {
       const latestWater = externalData.reduce((prev, current) => {
@@ -1200,6 +1212,14 @@ _handlePollError(err) {
             if (this.hasCapability(cap)) {
               await this.removeCapability(cap).catch(this.error);
             }
+          }
+        }
+      }
+
+      if (key === 'show_water') {
+        if (!newSettings.show_water) {
+          if (this.hasCapability('meter_water')) {
+            await this.removeCapability('meter_water').catch(this.error);
           }
         }
       }
