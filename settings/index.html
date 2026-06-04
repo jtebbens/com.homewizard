@@ -2648,8 +2648,15 @@
               ? Math.round(pvForecastByDay[iv.day ?? 0][ivHour])
               : null;
             const durH = repeatCount * slotMinutes / 60;
+            // Clamp to hardware limits: intra-hour SoC is stepwise (held per DP slot, then
+            // jumps), so dividing a full-slot SoC delta by a shorter collapsed group inflates
+            // the implied power above the physical max. The DP itself respects maxChargePowerW;
+            // this keeps the display from showing impossible values (e.g. 1602W on an 800W unit).
+            const _maxChgW = ps.maxChargePowerW || 800;
+            const _maxDisW = ps.maxDischargePowerW || 800;
             const battW = (iv.soc != null && nextSoc != null)
-              ? Math.round(((nextSoc - iv.soc) / 100) * capacityKwh * 1000 / durH)
+              ? Math.max(-_maxDisW, Math.min(_maxChgW,
+                  Math.round(((nextSoc - iv.soc) / 100) * capacityKwh * 1000 / durH)))
               : null;
             const pvCovStr = iv.pvCoverage != null ? iv.pvCoverage.toFixed(2) : '—';
 
