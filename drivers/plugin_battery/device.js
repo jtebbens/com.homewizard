@@ -77,6 +77,21 @@ function checkSoCDrift({
   return { drift: false };
 }
 
+// ---------------------------------------------------------
+// computeChargeStuckAnchor
+// Anchor the drift timer to when CHARGING began while SoC is stuck at 0%,
+// not to when SoC last changed. A battery left empty+idle overnight keeps
+// SoC=0 for hours; without this the drift delta counts that idle time and
+// fires the moment a legitimate planned to_full starts (false positive).
+// Returns the timestamp charging-while-stuck started, or null when not
+// charging or SoC has moved off 0% (reset).
+// ---------------------------------------------------------
+function computeChargeStuckAnchor(prevAnchor, powerW, soc, now) {
+  const charging = Math.abs(powerW) >= 50;
+  const stuck    = soc === 0;
+  if (charging && stuck) return prevAnchor ?? now; // keep running anchor, or start now
+  return null; // idle, or SoC left 0% → reset
+}
 
 
 
@@ -649,35 +664,24 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     // ---------------------------------------------------------
     if (!this._driftLastUpdate || now - this._driftLastUpdate > 300000) // 5 min
     {
-      // 1. Eerste measurement initialiseren
-      if (Math.abs(data.power_w) > 10 && (this.previousSoC === undefined || this.previousTimestamp === undefined)) {
-        this.previousSoC = data.state_of_charge_pct;
-        this.previousTimestamp = now;
-        this._driftLastUpdate = now;
-        return; // drift kan nog niet berekend worden
-      }
+      // Anchor the drift timer to when charging-while-stuck began (not to SoC change).
+      // An empty+idle battery keeps SoC=0 for hours overnight; anchoring on SoC change
+      // counted that idle time and fired the moment a legitimate planned to_full started
+      // (false positive). The anchor now resets whenever the battery is idle or SoC leaves
+      // 0%, so deltaTime measures sustained CHARGING duration. See computeChargeStuckAnchor.
+      this._chargeStuckSince = computeChargeStuckAnchor(
+        this._chargeStuckSince, data.power_w, data.state_of_charge_pct, now);
 
-      // 2. Nu pas drift berekenen
       const driftResult = checkSoCDrift({
-        previousSoC: this.previousSoC,
-        previousTimestamp: this.previousTimestamp,
+        previousSoC: 0,
+        previousTimestamp: this._chargeStuckSince ?? now,
         currentSoC: data.state_of_charge_pct,
         currentPowerW: data.power_w,
         currentTimestamp: now,
         batteryCapacityWh: this.getSetting('battery_capacity_wh') || 2470
       });
 
-      // 3. Update previousSoC/timestamp pas als SoC verandert. De drift-loop
-      //    draait elke 5 min; bij ongewijzigde update ververste de anker-
-      //    timestamp continu zodat deltaTimeMin nooit de 20-min drempel haalde
-      //    en drift (BMS-calibratie op stuck 0%) nooit kon vuren.
-      if (data.state_of_charge_pct !== this.previousSoC) {
-        this.previousSoC = data.state_of_charge_pct;
-        this.previousTimestamp = now;
-      }
-
-
-      // 4. Drift events
+      // Drift events
       if (driftResult.drift && !this.driftActive) {
         this.driftActive = true;
         this.log(`⚠️ SoC drift detected`);
@@ -1194,3 +1198,4 @@ async _registerCapabilityListeners() {
 
 // Exported for unit tests (pure helper, no Homey deps).
 module.exports.checkSoCDrift = checkSoCDrift;
+module.exports.computeChargeStuckAnchor = computeChargeStuckAnchor;

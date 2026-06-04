@@ -19,7 +19,7 @@ Module.prototype.require = function (id) {
   return origRequire.apply(this, arguments);
 };
 
-const { checkSoCDrift } = require('../drivers/plugin_battery/device.js');
+const { checkSoCDrift, computeChargeStuckAnchor } = require('../drivers/plugin_battery/device.js');
 
 // checkSoCDrift gebruikt intern Date.now() als "now"; previousTimestamp moet
 // dus relatief aan de wandklok. We modelleren 5-min polls via offsets.
@@ -95,8 +95,68 @@ function testDriftContract() {
   console.log('✓ checkSoCDrift contract: 20min-drempel + powerband');
 }
 
+// ── computeChargeStuckAnchor: anchor the drift timer to charge-start, not idle ──
+// False positive: battery empty+idle overnight (SoC 0%, power 0 for hours), then a
+// planned to_full starts. The anchor must reset during idle and only start counting
+// once charging-while-stuck begins, so drift cannot fire before 20min of real charging.
+function testAnchorResetsWhenIdle() {
+  // Idle empty battery: power 0, SoC 0 → no anchor (null), regardless of how long.
+  assert.strictEqual(computeChargeStuckAnchor(null, 0, 0, 1000), null,
+    'idle (power 0) at SoC 0 → no anchor');
+  assert.strictEqual(computeChargeStuckAnchor(5000, 0, 0, 1_000_000), null,
+    'idle clears a previously running anchor');
+  console.log('✓ anchor: idle-empty battery → anchor stays null (no idle time counted)');
+}
+
+function testAnchorStartsAtChargeStart() {
+  // Charging begins while stuck → anchor set to now (charge-start).
+  assert.strictEqual(computeChargeStuckAnchor(null, 800, 0, 42), 42,
+    'charge start at SoC 0 → anchor = now');
+  // Subsequent polls keep the original anchor (running duration).
+  assert.strictEqual(computeChargeStuckAnchor(42, 800, 0, 9999), 42,
+    'continued charging keeps the original anchor');
+  console.log('✓ anchor: charge-start anchors, continued charging keeps it');
+}
+
+function testAnchorResetsWhenSocMoves() {
+  // SoC left 0% (battery accepting charge) → no drift, anchor clears.
+  assert.strictEqual(computeChargeStuckAnchor(42, 800, 5, 9999), null,
+    'SoC moved off 0% → anchor reset (healthy charge)');
+  console.log('✓ anchor: SoC leaving 0% clears anchor (no false stall)');
+}
+
+// ── End-to-end false positive: idle night then planned to_full ──────────────
+// Models the caller: anchor via computeChargeStuckAnchor, then checkSoCDrift on it.
+function testNoFalsePositiveOnPlannedToFull() {
+  const POLL_MS = 5 * 60 * 1000;
+  const now0 = Date.now();
+  let anchor = 5_000_000; // stale anchor from hours ago (overnight)
+  // First poll of the morning: charging 800W just started, SoC still 0%.
+  // computeChargeStuckAnchor must reset+restart the anchor → delta ~0 → no drift.
+  anchor = computeChargeStuckAnchor(null, 800, 0, now0); // null prev = idle reset happened
+  const earlyDrift = checkSoCDrift({
+    previousSoC: 0, previousTimestamp: anchor ?? now0,
+    currentSoC: 0, currentPowerW: 800, batteryCapacityWh: 2470,
+  }).drift;
+  assert.strictEqual(earlyDrift, false,
+    'planned to_full just started (charge 2min) must NOT fire drift');
+
+  // After 25min of sustained charging while SoC still stuck 0% → genuine stall → fire.
+  const lateDrift = checkSoCDrift({
+    previousSoC: 0, previousTimestamp: now0 - 25 * 60 * 1000,
+    currentSoC: 0, currentPowerW: 800, batteryCapacityWh: 2470,
+  }).drift;
+  assert.strictEqual(lateDrift, true,
+    '25min sustained charge, SoC still 0% → genuine stall fires');
+  console.log('✓ no false positive: fresh to_full silent, 25min-stuck charge fires');
+}
+
 testBuggyNeverFires();
 testFixedFires();
 testTwoPhaseFires();
 testDriftContract();
+testAnchorResetsWhenIdle();
+testAnchorStartsAtChargeStart();
+testAnchorResetsWhenSocMoves();
+testNoFalsePositiveOnPlannedToFull();
 console.log('All battery-soc-drift tests passed');

@@ -1588,6 +1588,10 @@ if (debug) this.log(
       // which pushes total above the Homey memory ceiling (~65 MB heap).
       let _heapBeforeExplain = 50; // conservative default: skip
       try { _heapBeforeExplain = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      // Surface overnight refill-reserve so the explanation can tell users WHY the battery
+      // holds charge instead of discharging (PV-forecast downside — refillConfidenceFromForecast).
+      inputs.refillConfidence    = this._lastRefillConfidence ?? 1;
+      inputs.refillReserveActive = (this._lastRefillConfidence ?? 1) < 1;
       let explanation = null;
       if (_heapBeforeExplain > 35) {
         this.log(`[MEM] Skipping explainability — heap ${_heapBeforeExplain.toFixed(1)} MB > 35 MB guard`);
@@ -2543,6 +2547,7 @@ if (debug) this.log(
         const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
         const cv        = Math.sqrt(variance) / meanRatio;
         this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
+        this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
         // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
         const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
         const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight;
@@ -2817,13 +2822,14 @@ if (debug) this.log(
     // Overnight refill-reserve confidence: high CV (volatile PV forecast) → low confidence
     // → hold a SoC buffer overnight. No samples yet (night/cold start) → confidence 1 (no reserve).
     const _pvCv = this._lastPvForecastCv;
-    const refillConfidence = (typeof _pvCv === 'number')
-      ? Math.max(0, Math.min(1, (0.60 - _pvCv) / 0.35))
-      : 1.0;
+    const _pvRatio = this._lastPvForecastRatio;
+    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
+    this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
     if (refillConfidence < 1.0) {
       const _s = this.getSettings();
       const floorAddPct = ((1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0))).toFixed(0);
-      this.log(`🛡️ refill-reserve: cv=${_pvCv.toFixed(2)} conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
+      const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
+      this.log(`🛡️ refill-reserve: cv=${typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a'}${_ratioNote} conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
     }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor, refillConfidence);
 
