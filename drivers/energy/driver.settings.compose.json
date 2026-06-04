@@ -115,6 +115,22 @@
     "value": true
   },
   {
+    "id": "show_water",
+    "type": "checkbox",
+    "label": {
+      "en": "Show water meter",
+      "nl": "Water meter weergeven",
+      "de": "Wasserzähler anzeigen",
+      "da": "Vis vandmåler",
+      "fr": "Afficher le compteur d'eau",
+      "sv": "Visa vattenmätare",
+      "no": "Vis vannmåler",
+      "fi": "Näytä vesimittari",
+      "hu": "Vízmérő megjelenítése"
+    },
+    "value": true
+  },
+  {
     "id": "baseload_notifications",
     "type": "checkbox",
     "label": {
