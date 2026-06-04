@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.97)
+## 📝 Latest Updates (v3.15.63–v3.15.98)
+
+### False Battery-Error Alarm in `zero_charge_only` (v3.15.98)
+
+* **The "battery error" notification no longer fires when the battery is held in a no-discharge mode** — The stall detector judged the battery healthy by SoC movement against the commanded `target_power_w`. It armed discharge-stall detection in any mode except `predictive`/`standby`, but `zero_charge_only` (and `pv_trickle`, which maps to it) never discharges for home use — it only charges from PV surplus. With PV surplus and the P1 zero-on-meter firmware, the battery legitimately sits idle while the WebSocket payload carries a ghost negative `target_power_w`. The detector read that as a commanded discharge with a stuck SoC and raised a false `battery_error_detected` card (seen at 16:10 CEST on a `trickle`/`preserve` slot). Stall detection is now gated by modes that actually command each direction: discharge in `zero`/`zero_discharge_only`, charge in `zero`/`to_full`/`zero_charge_only`. Real charge- and discharge-stalls remain detected; the ghost-target case no longer alarms. `drivers/energy_v2/device.js`
 
 ### Planning Chart No Longer Projects a Grid Charge the Runtime Won't Make (v3.15.97)
 
