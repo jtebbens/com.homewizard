@@ -1,6 +1,6 @@
 # Learning Engine
 
-- Records consumption from `gridPower` only when `gridPower > 0` — intentional; battery discharge is not recorded separately
+- Records TRUE house load `houseConsumptionW = gridPower − batteryPower + pvW` (battery charge/discharge and PV self-consumption removed), skipped when `< 0` or during battery_power sensor lag. Mean of right-skewed load sits above the typical slot → plan-accuracy shows a persistent negative consumption bias (forecast > actual); observe-only, not a measurement bug.
 - `pv_predictions` capped at 300 entries (only last 100 used for accuracy calc via `slice(-100)`)
 - `getPredictedConsumption()` falls back: specific day → day-group (weekday/weekend) → all days → 0
 - Consumption forecast in optimizer: `learned > 0 ? learned : baseloadW` — baseload only used when slot has no learned data at all
