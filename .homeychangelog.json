@@ -1519,5 +1519,8 @@
   },
   "3.15.96": {
     "en": "Energy socket bug fux (discovery) and learning section added for PV forecast and actual for planning"
+  },
+  "3.15.97": {
+    "en": "SoC calibration improvement, battery policy improvement, PV & Planning forecast correction + learning, battery error trigger card"
   }
 }
