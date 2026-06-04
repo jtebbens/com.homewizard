@@ -268,6 +268,8 @@ class HomeWizardDevice extends Homey.Device {
   }
 
   getStatus(devices) {
+    if (this._polling) return; // re-entrancy guard: skip tick if previous poll still running
+    this._polling = true;
     Promise.resolve()
       .then(async () => {
 
@@ -342,6 +344,9 @@ class HomeWizardDevice extends Homey.Device {
       .catch((err) => {
         this.error(err);
         this.setUnavailable(err).catch(this.error);
+      })
+      .finally(() => {
+        this._polling = false;
       });
   } // end of getStatus
 
