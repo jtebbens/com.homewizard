@@ -165,5 +165,30 @@ test('planning schedule uses actual battery capacity for SoC projection', () => 
     `Expected ~30% SoC after 1h @ 1600W on 5.376kWh, got ${schedule[1].socProjected}%`);
 });
 
+test('dynamic charge ceiling tracks the known future peak, not the min-discharge break-even', () => {
+  // Regression: a known day-ahead evening peak (€0.36) makes charging at €0.18 profitable
+  // (0.36 × RTE − margin ≈ €0.257 break-even). The old maxByDischarge clamp pinned the
+  // ceiling to (min_discharge_price × RTE − margin) ≈ €0.175 regardless of the peak,
+  // blocking certain arbitrage. Ceiling must now follow the peak.
+  const engine = makeEngine();
+  const now = Date.now();
+  const allPrices = [0.20, 0.18, 0.22, 0.31, 0.36, 0.33].map((p, i) => ({
+    timestamp: new Date(now + (i + 1) * 3600_000).toISOString(),
+    price: p,
+  }));
+  const ceiling = engine._getDynamicChargePrice({ allPrices }, 0.20);
+  const eff = SETTINGS.battery_efficiency;
+  // True break-even nets out cycle cost too: ((peak − cycleCost) × RTE − margin).
+  const expected = (0.36 - SETTINGS.cycle_cost_per_kwh) * eff - 0.01;
+  assert.ok(Math.abs(ceiling - expected) < 0.001,
+    `Expected ceiling ≈ €${expected.toFixed(3)} (peak break-even net of cycle cost), got €${ceiling.toFixed(3)}`);
+  assert.ok(ceiling > 0.18,
+    `Charging at €0.18 into a €0.36 peak must be allowed, ceiling €${ceiling.toFixed(3)}`);
+  // Old clamp would have capped at min_discharge break-even — assert we moved past it.
+  const oldClamp = SETTINGS.min_discharge_price * eff - 0.01;
+  assert.ok(ceiling > oldClamp,
+    `Ceiling €${ceiling.toFixed(3)} must exceed old min-discharge clamp €${oldClamp.toFixed(3)}`);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

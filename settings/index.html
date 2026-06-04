@@ -2036,9 +2036,9 @@
         .filter(p => p && typeof p.price === 'number' && p.price > 0 && new Date(p.timestamp || p.time) > new Date())
         .map(p => p.price);
       const maxFutureDynPrice = futureDynPrices.length ? Math.max(...futureDynPrices) : null;
-      const dynamicChgThreshold = maxFutureDynPrice ? (maxFutureDynPrice * battEff) - minProfit : maxChgPrice;
-      const maxByDischarge = (minDchPrice * battEff) - minProfit;
-      const effectiveChgPrice = Math.max(maxChgPrice, Math.min(dynamicChgThreshold, maxByDischarge));
+      const cycleCostChg = deviceSettings['cycle_cost_per_kwh'] ?? 0.075;
+      const dynamicChgThreshold = maxFutureDynPrice ? ((maxFutureDynPrice - cycleCostChg) * battEff) - minProfit : maxChgPrice;
+      const effectiveChgPrice = Math.max(maxChgPrice, dynamicChgThreshold);
 
       /* ── Battery power limits ── */
       const maxDischW = policyState?.maxDischargePowerW || 800;
