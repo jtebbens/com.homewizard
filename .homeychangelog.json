@@ -1528,5 +1528,11 @@
   },
   "3.15.99": {
     "en": " Smarter solar handling & cleaner planning"
+  },
+  "3.15.100": {
+    "en": "Fix repair tool for Battery Policy when P1 is replaced"
+  },
+  "3.15.101": {
+    "en": "Fix repairtool for battery policy when P1 is replaced"
   }
 }
