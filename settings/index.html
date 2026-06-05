@@ -2619,7 +2619,7 @@
         if (futureSlots.length > 0) {
           lines.push('', '--- Planning per slot (huidig → einde) ---');
           lines.push(
-            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV-DP'.padStart(6)}  ${'PV-rauw'.padStart(7)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'Batt(W)'.padStart(7)}  ${'SoC%'.padEnd(5)}  ${'pvCov'.padStart(5)}  Reden`
+            `${'Tijd'.padEnd(6)}  ${'Prijs'.padEnd(7)}  ${'DP-actie'.padEnd(10)}  ${'Modus'.padEnd(20)}  ${'PV(W)'.padStart(6)}  ${'Verbr(W)'.padStart(8)}  ${'Netto(W)'.padStart(8)}  ${'Batt(W)'.padStart(7)}  ${'SoC%'.padEnd(5)}  ${'pvCov'.padStart(5)}  Reden`
           );
           lines.push('─'.repeat(132));
 
@@ -2641,12 +2641,6 @@
             const curMark  = iv.isCurrent ? '◀' : ' ';
             const reason   = iv.reason ?? '';
             const countStr = repeatCount > 1 ? `  [×${repeatCount}]` : '';
-            const ivHour   = iv.timestamp
-              ? parseInt(iv.timestamp.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10)
-              : null;
-            const pvChart  = (ivHour != null && pvForecastByDay[iv.day ?? 0]?.[ivHour] != null)
-              ? Math.round(pvForecastByDay[iv.day ?? 0][ivHour])
-              : null;
             const durH = repeatCount * slotMinutes / 60;
             // Clamp to hardware limits: intra-hour SoC is stepwise (held per DP slot, then
             // jumps), so dividing a full-slot SoC delta by a shorter collapsed group inflates
@@ -2666,7 +2660,6 @@
               `${action.padEnd(10)}  ` +
               `${mode.padEnd(20)}  ` +
               `${pad(pvW     != null ? pvW     : '—',  6, true)}  ` +
-              `${pad(pvChart != null ? pvChart : '—',  7, true)}  ` +
               `${pad(consW   != null ? consW   : '—',  8, true)}  ` +
               `${pad(nettoW  != null ? nettoW  : '—',  8, true)}  ` +
               `${pad(battW   != null ? battW   : '—',  7, true)}  ` +
