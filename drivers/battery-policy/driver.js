@@ -214,40 +214,33 @@ class BatteryPolicyDriver extends Homey.Driver {
    * Device repair (voor opnieuw koppelen aan P1 device)
    */
   async onRepair(session, device) {
-    session.setHandler('list_devices', async () => {
+    session.setHandler('list_p1_devices', async () => {
       const driver = this.homey.drivers.getDriver('energy_v2');
       if (!driver) {
         this.log('energy_v2 driver not found during repair');
         return [];
       }
 
-      const devices = driver.getDevices();
-
-      return devices.map(p1Device => ({
-        name: p1Device.getName(),
-        data: {
-          id: p1Device.getData().id
-        }
+      return driver.getDevices().map(p1Device => ({
+        id: p1Device.getData().id,
+        name: p1Device.getName()
       }));
     });
 
-    session.setHandler('list_devices_selection', async (devices) => {
-      if (devices && devices.length > 0) {
-        const newP1Id = devices[0].data.id;
-
-        await device.setSettings({
-          p1_device_id: newP1Id
-        });
-
-        // Reconnect naar P1
-        if (typeof device._connectP1Device === 'function') {
-          await device._connectP1Device();
-        }
-
-        this.log('Repaired policy device to P1:', newP1Id);
-        return true;
+    session.setHandler('set_p1', async ({ id }) => {
+      if (!id) {
+        throw new Error('No P1 device selected');
       }
-      return false;
+
+      await device.setSettings({ p1_device_id: id });
+
+      // Reconnect naar P1
+      if (typeof device._connectP1Device === 'function') {
+        await device._connectP1Device();
+      }
+
+      this.log('Repaired policy device to P1:', id);
+      return true;
     });
   }
 }
