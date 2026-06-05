@@ -255,6 +255,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._setLive('device_settings', {
       max_charge_price:    s.max_charge_price    || 0.19,
       min_discharge_price: s.min_discharge_price || 0.22,
+      respect_minmax:      s.respect_minmax      ?? true,
       min_soc:             s.min_soc             ?? 0,
       max_soc:             s.max_soc             ?? 100,
       battery_efficiency:  s.battery_efficiency  || 0.75,
@@ -1636,6 +1637,7 @@ if (debug) this.log(
       this._setLive('device_settings', {
         max_charge_price:    this.getSetting('max_charge_price')    || 0.19,
         min_discharge_price: this.getSetting('min_discharge_price') || 0.22,
+        respect_minmax:      this.getSetting('respect_minmax')      ?? true,
         min_soc:             this.getSetting('min_soc')             ?? 0,
         max_soc:             this.getSetting('max_soc')             ?? 100,
         battery_efficiency:  this.getSetting('battery_efficiency') || 0.75,
@@ -1897,7 +1899,6 @@ if (debug) this.log(
     // Future slots from the optimizer schedule (include current slot via -15min buffer)
     // Use step as grace period so the current slot is never lost in the gap
     // between past-loop cutoff (now - step) and future filter (now - 15min)
-    const currentSoc = state.batterySOC ?? null;
     const futureSlots = schedule
       .filter(s => new Date(s.timestamp).getTime() >= now - step)
       .slice(0, 192)
@@ -1914,44 +1915,12 @@ if (debug) this.log(
         };
       });
 
-    // Re-simulate future SoC trajectory from the real current SoC.
-    // The optimizer schedule may have been computed hours ago with a different starting SoC,
-    // leading to a stale projection (e.g. showing 100% while battery is actually at 37%).
-    // Instead of a simple delta-shift (breaks when all projected values are equal),
-    // walk forward from the real SoC and simulate charge/discharge per slot using
-    // the planned mode and PV power already stored in each slot.
-    if (currentSoc != null && futureSlots.length > 0) {
-      const capacityKwh  = state.totalCapacityKwh || this.getSetting('pv_capacity_w') ? null : 2.688;
-      const capKwh       = state.totalCapacityKwh || 2.688;
-      const maxChargeW   = state.maxChargePowerW  || 800;
-      const maxDischargeW = state.maxDischargePowerW || 800;
-      const rte          = this.efficiencyEstimator?.getEfficiency() ?? 0.75;
-      const slotH        = step / 3_600_000; // 1 for hourly, 0.25 for 15-min
-      const maxSoc       = this.getSetting('max_soc') ?? 100;
-      const minSoc       = this.getSetting('min_soc') ?? 0;
-
-      let simSoc = currentSoc;
-      for (const slot of futureSlots) {
-        slot.soc = Math.round(simSoc);
-        const pvW = slot.pvW || 0;
-        if (slot.mode === 'to_full') {
-          // Charge at max rate from grid
-          const deltaKwh = (maxChargeW / 1000) * slotH * rte;
-          simSoc += (deltaKwh / capKwh) * 100;
-        } else if (slot.mode === 'zero_charge_only' || slot.mode === 'pv_trickle') {
-          // Charge from PV only — only net surplus can enter the battery.
-          const chargeW = Math.min(Math.max(0, pvW - (slot.consumptionW || 0)), maxChargeW);
-          const deltaKwh = (chargeW / 1000) * slotH * rte;
-          simSoc += (deltaKwh / capKwh) * 100;
-        } else if (slot.mode === 'zero_discharge_only') {
-          // Discharge at max rate
-          const deltaKwh = (maxDischargeW / 1000) * slotH;
-          simSoc -= (deltaKwh / capKwh) * 100;
-        }
-        // standby / zero: no SoC change
-        simSoc = Math.max(minSoc, Math.min(maxSoc, simSoc));
-      }
-    }
+    // Chart plots the DP's own socProjected trajectory (already mapped to
+    // slot.soc above from each schedule slot). No re-simulation: the DP is the
+    // single source of truth for the SoC line, so the chart, the settings
+    // planning view, and the explainability engine all show the same numbers.
+    // Drift between live SoC and the schedule start is handled upstream — reopt
+    // force-recomputes the schedule whenever the deviation exceeds threshold.
 
     // Past slots from mode history (has real soc + mode) — keyed by rounded 15-min ts
     const modeHistory = this.homey.settings.get('policy_mode_history') || [];
@@ -3939,6 +3908,7 @@ if (debug) this.log(
     this.homey.settings.set('device_settings', {
       max_charge_price:    newSettings.max_charge_price    || 0.19,
       min_discharge_price: newSettings.min_discharge_price || 0.22,
+      respect_minmax:      newSettings.respect_minmax      ?? true,
       min_soc:             newSettings.min_soc             ?? 0,
       max_soc:             newSettings.max_soc             ?? 100,
       battery_efficiency:  newSettings.battery_efficiency  || 0.75,
@@ -4013,6 +3983,7 @@ if (debug) this.log(
       this.homey.settings.set('device_settings', {
         max_charge_price:    newSettings.max_charge_price    || 0.19,
         min_discharge_price: newSettings.min_discharge_price || 0.22,
+        respect_minmax:      newSettings.respect_minmax      ?? true,
         min_soc:             newSettings.min_soc             || 10,
         max_soc:             newSettings.max_soc             || 95,
         battery_efficiency:  newSettings.battery_efficiency || 0.75,
