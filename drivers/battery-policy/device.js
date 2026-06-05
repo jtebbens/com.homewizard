@@ -2602,6 +2602,8 @@ if (debug) this.log(
     const _preExistingPvForecast = this._liveState.policy_pv_forecast_hourly
       ?? this.homey.settings.get('policy_pv_forecast_hourly');
 
+    // NOTE: this write is overwritten below (~line 2927) by the UNBIASED pvForecastChart
+    // aggregation. Kept for now; the surviving chart series is the unbiased one.
     // Sync chart orange line with the fully-corrected DP forecast (bias+conservatism+coverage applied)
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       const _todayNL    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -3277,7 +3279,13 @@ if (debug) this.log(
           this._lastLoggedPvW = this._pvProductionW;
           this.log(`PV from flow card: ${this._pvProductionW}W (age: ${Math.round(age/1000)}s)`);
         }
-        return this._pvProductionW;
+        // Clamp to physical array capacity when configured — a flow source can
+        // momentarily over-report (DC string sum / transient) above nameplate,
+        // which is physically impossible as AC output. Flow users without a
+        // configured pv_capacity_w are trusted as-is (no reference to clamp to).
+        return settings.pv_capacity_w > 0
+          ? Math.min(this._pvProductionW, settings.pv_capacity_w)
+          : this._pvProductionW;
       } else {
         // Data too old, clear it
         this._pvProductionW = null;
@@ -3341,7 +3349,11 @@ if (debug) this.log(
       this.log(`PV estimate: ${adjustedEstimate}W (raw: ${estimate}W, model: ${pvModel}W, fromGrid: ${pvFromGrid}W, sun: ${sunScore}%, learning: ${learningMultiplier.toFixed(2)}x)`);
     }
 
-    return Math.max(0, adjustedEstimate);
+    // Hard-clamp to physical array capacity: the learning multiplier (≤1.5×) and
+    // pvFromGrid (export + battery charge/discharge summed) can push the estimate
+    // above nameplate, which is physically impossible. pvCap is always >0 here
+    // (guarded at the Priority-2 entry above).
+    return Math.min(pvCap, Math.max(0, adjustedEstimate));
   }
 
   _isEvCharging() {
