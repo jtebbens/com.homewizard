@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.15.97",
+  "version": "3.15.98",
   "platforms": [
     "local"
   ],
@@ -5643,6 +5643,22 @@
             "no": "Vis gassmåler",
             "fi": "Näytä kaasumittari",
             "hu": "Gázmérő megjelenítése"
+          },
+          "value": true
+        },
+        {
+          "id": "show_water",
+          "type": "checkbox",
+          "label": {
+            "en": "Show water meter",
+            "nl": "Water meter weergeven",
+            "de": "Wasserzähler anzeigen",
+            "da": "Vis vandmåler",
+            "fr": "Afficher le compteur d'eau",
+            "sv": "Visa vattenmätare",
+            "no": "Vis vannmåler",
+            "fi": "Näytä vesimittari",
+            "hu": "Vízmérő megjelenítése"
           },
           "value": true
         },
