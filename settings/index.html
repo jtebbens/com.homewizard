@@ -2407,17 +2407,17 @@
         let opportunisticBadge = '';
         if (!respectMinMax && avgPrice !== null) {
           // Check if any interval in this hour is charging above threshold or discharging below threshold
-          const hasOpportunisticCharge = hourGroup.intervals.some(i => 
-            i.policyMode === 'charge' && i.price > maxChgPrice
+          const hasOpportunisticCharge = hourGroup.intervals.some(i =>
+            i.hwMode === 'to_full' && i.price > maxChgPrice
           );
-          const hasOpportunisticDischarge = hourGroup.intervals.some(i => 
-            i.policyMode === 'discharge' && i.price < minDchPrice && i.price > 0.20
+          const hasOpportunisticDischarge = hourGroup.intervals.some(i =>
+            i.hwMode === 'zero_discharge_only' && i.price < minDchPrice && i.price > 0.20
           );
 
           if (hasOpportunisticCharge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#5f6fff;color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#5f6fff;color:#fff;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
           } else if (hasOpportunisticDischarge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#20F29B;color:#000;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#20F29B;color:#000;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
           }
         }
 
