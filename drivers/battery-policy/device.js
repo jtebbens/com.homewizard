@@ -2414,8 +2414,9 @@ if (debug) this.log(
     // so actual=0 with forecast>0 would wrongly degrade the PV accuracy score.
     this._recordPvAccuracySample(now, inputs.tariff?.currentPrice ?? null);
 
-    // Save unbiased pvForecast for chart display — bias is a planning correction,
-    // chart should show realistic expected production, not inflated DP assumptions.
+    // (Unused since the chart now plots the DP forecast directly — see ~line 2898.
+    // Kept as a no-op anchor; the chart source switched away from this pre-bias snapshot
+    // because it diverged in shape from the DP series after per-slot corrections.)
     const pvForecastChart = pvForecast ? [...pvForecast] : null;
 
     // Daily PV level bias: correct systematic over/under-prediction learned across days.
@@ -2602,8 +2603,8 @@ if (debug) this.log(
     const _preExistingPvForecast = this._liveState.policy_pv_forecast_hourly
       ?? this.homey.settings.get('policy_pv_forecast_hourly');
 
-    // NOTE: this write is overwritten below (~line 2927) by the UNBIASED pvForecastChart
-    // aggregation. Kept for now; the surviving chart series is the unbiased one.
+    // NOTE: this future-only write is superseded below (~line 2898) by the past+future
+    // merge, which now uses the SAME fully-corrected DP forecast. Both are consistent.
     // Sync chart orange line with the fully-corrected DP forecast (bias+conservatism+coverage applied)
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       const _todayNL    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2895,8 +2896,10 @@ if (debug) this.log(
         });
       }
 
-      // Sync PV chart from schedule slots — average of 4 × 15-min pvW per hour,
-      // identical source and aggregation as consumption (avgConsumptionW in the UI).
+      // Sync PV chart from the SAME forecast the DP planned on (bias + intraday + rain/
+      // precip corrections all applied) — single source of truth, no chart/DP divergence.
+      // (The earlier unbiased pvForecastChart snapshot diverged in shape because it was taken
+      // before the per-slot intraday/rain/precip corrections, misrepresenting DP assumptions.)
       {
         const _fcNow      = new Date();
         const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2909,7 +2912,7 @@ if (debug) this.log(
         ];
         const pvSumByDayHour = [{}, {}];
         const pvCntByDayHour = [{}, {}];
-        for (const fc of (pvForecastChart ?? [])) {
+        for (const fc of (pvForecast ?? [])) {
           const st    = new Date(fc.timestamp);
           const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
           const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
@@ -2925,7 +2928,7 @@ if (debug) this.log(
         }
         const _chartTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
         const _chartTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-        this.log(`[PV chart] unbiased forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (future only), morgen ${_chartTomKwh.toFixed(1)} kWh`);
+        this.log(`[PV chart] DP forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (future only), morgen ${_chartTomKwh.toFixed(1)} kWh`);
         this._setLive('policy_pv_forecast_hourly', pvFcByDay);
       }
 
