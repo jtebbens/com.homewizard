@@ -56,6 +56,23 @@
       }
     }
   ],
+  "repair": [
+    {
+      "id": "repair_p1",
+      "template": "list_devices",
+      "options": {
+        "singular": true,
+        "title": {
+          "en": "Select Linked P1",
+          "nl": "Selecteer gekoppelde P1"
+        },
+        "instruction": {
+          "en": "Select the HomeWizard P1 (energy_v2) device this policy should use",
+          "nl": "Selecteer het HomeWizard P1‑apparaat (energy_v2) dat deze policy moet gebruiken"
+        }
+      }
+    }
+  ],
   "settings": [
     {
       "type": "group",
