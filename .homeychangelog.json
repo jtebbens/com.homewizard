@@ -1534,5 +1534,8 @@
   },
   "3.15.101": {
     "en": "Fix repairtool for battery policy when P1 is replaced"
+  },
+  "3.15.102": {
+    "en": "Bugfix repair button P1 for battery policy"
   }
 }
