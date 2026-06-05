@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+        }
+
+        .error {
+            color: #c62828;
+            background-color: #ffebee;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="homey-title">Selecteer gekoppelde P1</h1>
+    <p class="homey-subtitle">Selecteer het HomeWizard P1-apparaat (energy_v2) dat deze policy moet gebruiken.</p>
+
+    <div id="error" class="error"></div>
+
+    <fieldset id="selectFieldset" class="homey-form-fieldset">
+        <legend class="homey-form-legend">P1-apparaten</legend>
+    </fieldset>
+
+    <button id="save-btn" class="homey-button-primary-full" onclick="saveClicked()">Bevestig</button>
+
+    <script type="text/javascript">
+        let selectedP1 = null;
+
+        async function loadDevices() {
+            const fieldset = document.getElementById('selectFieldset');
+            const errorDiv = document.getElementById('error');
+            const saveBtn = document.getElementById('save-btn');
+            errorDiv.style.display = 'none';
+
+            try {
+                const devices = await Homey.emit('list_p1_devices');
+
+                if (!devices || devices.length === 0) {
+                    errorDiv.textContent = 'Geen P1-apparaten gevonden.';
+                    errorDiv.style.display = 'block';
+                    saveBtn.style.display = 'none';
+                    return;
+                }
+
+                devices.forEach(device => {
+                    const wrapper = document.createElement('label');
+                    wrapper.className = 'homey-form-radio';
+
+                    const input = document.createElement('input');
+                    input.className = 'homey-form-radio-input';
+                    input.type = 'radio';
+                    input.name = 'p1-selection';
+                    input.value = device.id;
+
+                    const checkmark = document.createElement('span');
+                    checkmark.className = 'homey-form-radio-checkmark';
+
+                    const text = document.createElement('span');
+                    text.className = 'homey-form-radio-text';
+                    text.textContent = device.name;
+
+                    input.addEventListener('change', () => {
+                        selectedP1 = device.id;
+                    });
+
+                    wrapper.appendChild(input);
+                    wrapper.appendChild(checkmark);
+                    wrapper.appendChild(text);
+                    fieldset.appendChild(wrapper);
+                });
+
+                // Auto-select if only one
+                if (devices.length === 1) {
+                    const input = fieldset.querySelector('input[type="radio"]');
+                    input.checked = true;
+                    selectedP1 = devices[0].id;
+                }
+
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Laden van P1-apparaten mislukt.';
+                errorDiv.style.display = 'block';
+                saveBtn.style.display = 'none';
+            }
+        }
+
+        async function saveClicked() {
+            const saveBtn = document.getElementById('save-btn');
+            const errorDiv = document.getElementById('error');
+
+            if (!selectedP1) {
+                errorDiv.textContent = 'Selecteer eerst een P1-apparaat.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.className = 'homey-button-primary-full is-loading';
+            errorDiv.style.display = 'none';
+
+            try {
+                await Homey.emit('set_p1', { id: selectedP1 });
+                await Homey.done();
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Koppelen mislukt.';
+                errorDiv.style.display = 'block';
+                saveBtn.disabled = false;
+                saveBtn.className = 'homey-button-primary-full';
+            }
+        }
+
+        // Load P1 devices on page load. No Homey.ready() wrapper: the repair
+        // view does not reliably fire the ready callback (energy_v2 repair calls
+        // its loader directly too), which left this handler never firing.
+        loadDevices();
+    </script>
+</body>
+</html>
