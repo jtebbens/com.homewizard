@@ -2206,6 +2206,11 @@ if (debug) this.log(
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
       // Split off the observe-only ensemble-GTI forecast, then strip the helper field.
       this._pvForecastEnsGti = pvForecast.map(s => ({ timestamp: s.timestamp, pvPowerW: s.pvEnsW }));
+      // Diagnostic: how many slots carry a real ensemble-GTI value (radiationEnsWm2 present)
+      // and actually differ from best_match. If 0 differ, the ensemble source isn't reaching us.
+      const _ensHave = inputs.weather.hourlyForecast.filter(h => h.radiationEnsWm2 != null).length;
+      const _ensDiff = pvForecast.filter(s => s.pvEnsW !== s.pvPowerW).length;
+      this.log(`[GTI ens] slots with ensemble-GTI=${_ensHave}/${inputs.weather.hourlyForecast.length}, differ from best_match=${_ensDiff}`);
       pvForecast.forEach(s => { delete s.pvEnsW; });
       if (clearSkyCeilingApplied > 0) {
         this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
