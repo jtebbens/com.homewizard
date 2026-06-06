@@ -2194,9 +2194,19 @@ if (debug) this.log(
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
           const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
-          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0 };
+          // Observe-only ensemble-GTI variant: same conversion, scaled by the radiation ratio.
+          // Exact in the linear region (pvW≈rad×yf); diverges only at clear-sky floor / cap edges.
+          const pvEnsW = (h.radiationEnsWm2 != null && h.radiationWm2 > 0)
+            ? (pvCapacityW > 0
+                ? Math.min(Math.round(pvW * h.radiationEnsWm2 / h.radiationWm2), pvCapacityW)
+                : Math.round(pvW * h.radiationEnsWm2 / h.radiationWm2))
+            : pvW;
+          return { timestamp: d.toISOString(), pvPowerW: pvW, pvEnsW, precipMmh: h.precipMmh ?? 0 };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
+      // Split off the observe-only ensemble-GTI forecast, then strip the helper field.
+      this._pvForecastEnsGti = pvForecast.map(s => ({ timestamp: s.timestamp, pvPowerW: s.pvEnsW }));
+      pvForecast.forEach(s => { delete s.pvEnsW; });
       if (clearSkyCeilingApplied > 0) {
         this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
       }
@@ -3255,9 +3265,17 @@ if (debug) this.log(
         if (mW != null) perModelW[m] = mW;
       }
     }
-    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
+    // Observe-only ensemble-GTI prediction for the same slot (best_match GTI vs ensemble GTI).
+    const ensIdx = this._pvForecastEnsGti ? this.optimizationEngine._buildPvIndex(this._pvForecastEnsGti) : null;
+    const ensW   = ensIdx ? this.optimizationEngine._getPvForSlot(ensIdx, nowMs) : null;
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, ensW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
+    const accBm  = this.learningEngine.data?.pv_accuracy_om;
+    const accEns = this.learningEngine.data?.pv_accuracy_ens;
+    if (accBm != null && accEns != null) {
+      this.log(`[GTI compare] bm=${(accBm*100).toFixed(0)}% ens=${(accEns*100).toFixed(0)}% (slot bm=${omW ?? '–'}W ens=${ensW ?? '–'}W actual=${actualW}W)`);
+    }
   }
 
   /**
