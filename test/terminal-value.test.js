@@ -113,6 +113,48 @@ test('pvKwhTomorrow = 80% capacity → terminal value ≈ 0', () => {
     `Expected p79 (${p79.toFixed(4)}) >= p80 (${p80.toFixed(4)})`);
 });
 
+// ── Scalable refill normaliser: cap by overnight-dischargeable, not full cap ──
+// Discharge is firmware-capped at 800 W regardless of pack size. A 4-battery pack
+// (10.75 kWh) can only empty ~8 kWh overnight (800 W × ~10 h), so PV that refills
+// that 8 kWh fully discounts the terminal value — even though 8 kWh is < 80% of the
+// 10.75 kWh full capacity (old normaliser would still hoard).
+test('large pack: PV ≥ overnight-dischargeable → terminal ≈ 0 (no over-hoard)', () => {
+  const BIG_CAP = 10.75; // 4-battery pack
+  const eng = new OptimizationEngine({ ...SETTINGS, cycle_cost_per_kwh: 0 });
+  const prices = makePrices(24, 0.15); // flat → no arbitrage
+  const noCons = Array(24).fill(0);    // zero consumption → no discharge value; leftover SoC valued only by terminal
+  // 8 kWh = 800 W × 10 h overnight-dischargeable; = 8/10.75 = 0.74 of full capacity.
+  const p = eng.computeExpectedProfit(prices, 90, BIG_CAP, MAX_POWER_W, MAX_POWER_W,
+    null, null, noCons, 0, 1.0, 8.0).profit;
+  // New normaliser: 8 / min(0.95×10.75, 800W×10h=8) = 1.0 → terminalFactor 0 → no residual value.
+  // Old normaliser: 8 / 10.75 = 0.74 → terminalFactor 0.07 → residual value > 0.01.
+  assert.ok(Math.abs(p) < 0.01, `Expected terminal≈0 on big pack with sufficient PV, got ${p}`);
+});
+
+// ── sumPvNetWindow: terminal (post-horizon) window excludes today's PV ────────
+// Bug: terminal refill used a now→+24h window, double-counting today's PV that
+// the DP forward pass already credits. Terminal window must start at horizon end.
+test('sumPvNetWindow: post-horizon window excludes today PV (no double-count)', () => {
+  const base = new Date();
+  base.setMinutes(0, 0, 0);
+  const t0 = base.getTime();
+  // 48 hourly slots from t0+1h: big PV in first 12h (today), tiny PV after.
+  const pv = Array.from({ length: 48 }, (_, i) => ({
+    timestamp: new Date(t0 + (i + 1) * 3_600_000).toISOString(),
+    pvPowerW: i < 12 ? 3000 : 100
+  }));
+  const maxCharge = 800;
+  const horizonEnd = t0 + 12 * 3_600_000; // horizon ends 12h out
+
+  const nowWin  = OptimizationEngine.sumPvNetWindow(pv, t0, t0 + 24 * 3_600_000, maxCharge, null);
+  const termWin = OptimizationEngine.sumPvNetWindow(pv, horizonEnd, horizonEnd + 24 * 3_600_000, maxCharge, null);
+
+  // now-window captures the big (clamped-to-800W) today slots → high
+  assert.ok(nowWin > termWin, `now-window (${nowWin}) should exceed terminal-window (${termWin})`);
+  // terminal-window sees only post-horizon tiny PV → today's PV not counted
+  assert.ok(termWin < 2.5, `terminal window should exclude today PV, got ${termWin}`);
+});
+
 // ── computeExpectedProfit returns { profit, selfSufficiencyPct } ──────────────
 test('return shape: { profit: number, selfSufficiencyPct: number }', () => {
   const eng = new OptimizationEngine(SETTINGS);
