@@ -2394,18 +2394,19 @@ if (debug) this.log(
     // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
     if (pvForecast && inputs.weather) {
       const nowMs = now.getTime();
-      const windowEndMs = nowMs + 24 * 3600_000;
-      let pvWhTomorrowNet = 0;
-      for (const { timestamp, pvPowerW } of pvForecast) {
-        const slotMs = new Date(timestamp).getTime();
-        if (slotMs <= nowMs) continue;
-        if (slotMs > windowEndMs) continue;
-        const consW = this.learningEngine
-          ? (this.learningEngine.getPredictedConsumption(new Date(timestamp)) ?? 0)
-          : 0;
-        pvWhTomorrowNet += Math.min(maxChargePowerW, Math.max(0, pvPowerW - consW));
-      }
-      inputs.weather.pvKwhTomorrow = Math.round(pvWhTomorrowNet / 100) / 10;
+      const consFn = this.learningEngine
+        ? (d) => this.learningEngine.getPredictedConsumption(d)
+        : null;
+      // Within-horizon refill (flattening / pvAbundant / night-floor guards): rolling 24h from now.
+      inputs.weather.pvKwhTomorrow = OptimizationEngine.sumPvNetWindow(
+        pvForecast, nowMs, nowMs + 24 * 3600_000, maxChargePowerW, consFn);
+      // Post-horizon refill (terminal value only): 24h starting at the end of the priced
+      // horizon, so today's PV — already credited in the DP forward pass via pvWPerSlot — is
+      // not double-counted into the terminal refill discount. Rolling past the horizon end
+      // also avoids the midnight strategy flip the now-window was built to dodge.
+      const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
+      inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
+        pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
     }
 
     // Snapshot blended forecast before discounts (used for accuracy tracking below).
@@ -2807,14 +2808,28 @@ if (debug) this.log(
       : pvKwhTomorrow;
 
     const _netFactor = this.learningEngine?.getPvNetSurplusAccuracyFactor() ?? 1.0;
-    const adjustedPvKwhTomorrow = effectivePvKwhTomorrow * _netFactor;
+    // Terminal value uses the post-horizon refill window (PV that arrives AFTER the
+    // priced horizon ends) so today's PV — already credited in the DP forward pass —
+    // is not double-counted into the terminal refill discount.
+    const terminalPvKwh = inputs.weather?.terminalPvKwh ?? 0;
+    const effectiveTerminalPvKwh = (_negativeCharge && terminalPvKwh === 0)
+      ? capacityKwh * 2
+      : terminalPvKwh;
+    const adjustedTerminalPvKwh = effectiveTerminalPvKwh * _netFactor;
 
-    if (adjustedPvKwhTomorrow > 0) {
-      const pvRefill = Math.min(1, adjustedPvKwhTomorrow / capacityKwh);
+    if (adjustedTerminalPvKwh > 0) {
+      // Mirror of optimization-engine terminal normaliser: refillable = min(usable SoC span,
+      // overnight-dischargeable). Discharge is firmware-capped at maxDischargePowerW regardless
+      // of pack size, so large packs only empty ~dischargeCap×window — not full capacity.
+      const REFILL_WINDOW_H = 10; // overnight discharge hours (sunset→sunrise)
+      const _ts = this.getSettings();
+      const usableSpanKwh = (((_ts.max_soc ?? 100) - (_ts.min_soc ?? 0)) / 100) * capacityKwh;
+      const refillableKwh = Math.min(usableSpanKwh, (maxDischargePowerW / 1000) * REFILL_WINDOW_H);
+      const pvRefill = refillableKwh > 0 ? Math.min(1, adjustedTerminalPvKwh / refillableKwh) : 0;
       const terminalFactor = pvRefill >= 0.8 ? 0 : Math.max(0, 1 - pvRefill / 0.8);
-      const negNote = _negativeCharge ? ` (→ ${effectivePvKwhTomorrow.toFixed(1)}kWh: negatief geladen €${_avgCost.toFixed(3)}, terminal=0)` : '';
-      const factorNote = _netFactor !== 1.0 ? ` [netFactor=${_netFactor.toFixed(2)}→adj=${adjustedPvKwhTomorrow.toFixed(1)}kWh]` : '';
-      this.log(`☀️ Terminal value: pvTomorrow=${pvKwhTomorrow}kWh${factorNote}, capacity=${capacityKwh}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
+      const negNote = _negativeCharge ? ` (→ ${effectiveTerminalPvKwh.toFixed(1)}kWh: negatief geladen €${_avgCost.toFixed(3)}, terminal=0)` : '';
+      const factorNote = _netFactor !== 1.0 ? ` [netFactor=${_netFactor.toFixed(2)}→adj=${adjustedTerminalPvKwh.toFixed(1)}kWh]` : '';
+      this.log(`☀️ Terminal value: pvRefill(post-horizon)=${terminalPvKwh}kWh${factorNote}, refillable=${refillableKwh.toFixed(1)}kWh, pvRefill=${(pvRefill*100).toFixed(0)}% → factor=${terminalFactor.toFixed(2)}${pvRefill >= 0.8 ? ' (ZERO — PV refills battery)' : ''}${negNote}`);
     }
     // Overnight refill-reserve confidence: high CV (volatile PV forecast) → low confidence
     // → hold a SoC buffer overnight. No samples yet (night/cold start) → confidence 1 (no reserve).
@@ -2828,7 +2843,7 @@ if (debug) this.log(
       const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
       this.log(`🛡️ refill-reserve: cv=${typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a'}${_ratioNote} conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedPvKwhTomorrow, _pvCloudFactor, refillConfidence);
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence);
 
     // Compact planning summary — always visible in user diagnostics.
     {
