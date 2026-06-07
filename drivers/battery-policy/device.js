@@ -2536,7 +2536,16 @@ if (debug) this.log(
         this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
         // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
         const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
-        const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight;
+        // Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
+        // The CV guard above can't catch a clear-morning→cloudy-afternoon turn — consistent
+        // morning samples give low CV → full correction → the upward ratio re-inflates PV the
+        // model already (correctly) lowered for the cloudy afternoon. Damp the upward push toward
+        // 1.0 as forecast cloud rises (gate 1.0 at ≤70% → 0 at full overcast); same 70/30 ramp as
+        // the pvCoverage cloud discount below. Downward correction is left intact.
+        const cloudGate = (correctedMeanRatio > 1.0 && _pvBiasCloud != null && _pvBiasCloud > 70)
+          ? Math.max(0, 1 - (_pvBiasCloud - 70) / 30)
+          : 1.0;
+        const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
 
         this._lastIntradayPvRatio = ratio;
         this.setCapabilityValue('bias_factor', parseFloat(ratio.toFixed(2))).catch(this.error);
@@ -2548,7 +2557,7 @@ if (debug) this.log(
             if (slotDate !== todayNLDate) return slot;
             return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
           });
-          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} cloudGate=${cloudGate.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
         } else {
           this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
         }
