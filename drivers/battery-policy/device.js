@@ -1015,8 +1015,15 @@ if (debug) this.log(
     this._hourBoundaryTimeout = this.homey.setTimeout(async () => {
       await this._maybeRefreshWeatherOnly().catch(() => {});
       if (this.getCapabilityValue('policy_enabled')) {
-        this.log(`⏰ Hour boundary reached (${new Date().getHours()}:00) → running policy check`);
-        await this._runPolicyCheck().catch(err => this.error('Hour-boundary policy check failed:', err));
+        // Skip if the slot-aligned interval already ran a policy check since the top of
+        // this hour — otherwise the :00 interval run and this :05 net double-recompute.
+        const topOfHour = new Date().setMinutes(0, 0, 0);
+        if (this._lastPolicyRunAt && this._lastPolicyRunAt >= topOfHour) {
+          this.log(`⏰ Hour boundary (${new Date().getHours()}:00) → slot run already covered it, skipping net`);
+        } else {
+          this.log(`⏰ Hour boundary reached (${new Date().getHours()}:00) → running policy check`);
+          await this._runPolicyCheck().catch(err => this.error('Hour-boundary policy check failed:', err));
+        }
       }
       // Schedule the next hour boundary
       this._scheduleHourBoundary();
@@ -1471,6 +1478,10 @@ if (debug) this.log(
         this.log('Manual override active, skipping policy check');
         return;
       }
+
+      // Timestamp of the last real (non-skipped) policy run. Lets the hour-boundary
+      // safety-net skip when the slot-aligned interval already covered this hour.
+      this._lastPolicyRunAt = Date.now();
 
       // Record mode history + detect predictive mode (altijd, ook bij overrides)
       if (this.p1Device) {
