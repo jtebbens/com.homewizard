@@ -1540,5 +1540,8 @@
   },
   "3.15.103": {
     "en": "Improved solar accuracy and overnight soc planning when low sun pv next day"
+  },
+  "3.15.104": {
+    "en": "Tuning plan with expensive slots"
   }
 }
