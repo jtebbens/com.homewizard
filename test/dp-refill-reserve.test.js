@@ -81,5 +81,36 @@ test('refillConfidence=1.0 identical to omitted param', () => {
   assert.strictEqual(a, b);
 });
 
+// ── Price-blind floor regression ─────────────────────────────────────────────
+// Minimised live miss (shrunk from optimizer-properties invariant 15): a slot
+// PRECEDES the PV window and is the strict price-max of the remaining horizon, yet
+// the price-blind floor used to hold it back to insure a CHEAPER future. The reserve
+// is only spendable after the PV window, so hoarding through this slot is strictly
+// value-destroying regardless of how PV resolves — it must discharge.
+//
+// Horizon: [0.22, 0.22, PV, PV, 0.05]. Slot 1 (0.22) is the strict max ahead
+// (everything after is ≤ 0.10). With a price-blind floor at confidence 0 the DP held
+// slot 1; the price-aware floor must discharge it. Slot 0 (also 0.22, but 0.22 later
+// equals it) may legitimately defer, so only slot 1 is asserted.
+const RESERVE_SETTINGS = { battery_efficiency: 0.50, min_soc: 0, max_soc: 85, cycle_cost_per_kwh: 0, export_price_ratio: 1.0 };
+const base2 = new Date('2026-06-08T16:00:00+02:00').getTime();
+const priceVals2 = [0.22, 0.22, 0.10, 0.10, 0.05];
+const pvVals2    = [0, 0, 1200, 1200, 0]; // PV surplus ≥ charge power → strongPvAhead
+const prices2 = priceVals2.map((p, t) => ({ timestamp: new Date(base2 + t * H).toISOString(), price: p }));
+const pv2     = pvVals2.map((w, t) => ({ timestamp: new Date(base2 + t * H).toISOString(), pvPowerW: w }));
+const cons2   = priceVals2.map(() => 500);
+
+function run2(refillConfidence) {
+  const eng = new OptimizationEngine(RESERVE_SETTINGS);
+  eng.compute(prices2, 60, 1, 400, 400, pv2, null, cons2, 0, 1.0, 0, 0, 1.0, refillConfidence);
+  return eng._schedule.slots;
+}
+
+test('low confidence → strict-max pre-PV slot still discharges (not hoarded)', () => {
+  const slots = run2(0.0);
+  assert.strictEqual(slots[1].action, 'discharge',
+    `expected strict-max pre-PV slot to discharge, got ${slots[1].action}`);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

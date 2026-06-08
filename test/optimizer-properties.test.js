@@ -67,7 +67,10 @@ function runCompute(settings, scenario) {
     scenario.consumptionW ?? null,
     scenario.minDischargePrice ?? 0,
     scenario.consumptionMargin ?? 1.0,
-    scenario.pvKwhTomorrow ?? 0
+    scenario.pvKwhTomorrow ?? 0,
+    scenario.terminalPvKwhTomorrow ?? scenario.pvKwhTomorrow ?? 0,
+    scenario.pvCloudFactor ?? 1.0,
+    scenario.refillConfidence ?? 1.0
   );
   return eng;
 }
@@ -962,6 +965,79 @@ testInvariant('14:night-discharge-defers-to-better-price',
     // Invariant: slot 0 (priceA, cheaper) must NOT be discharged.
     // The DP must preserve SoC for slot 1 (priceB, more expensive).
     return slots[0].action !== 'discharge';
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 15
+// "Overnight refill-reserve floor never sacrifices a pricier slot for a cheaper one"
+//
+// The reserve floor (raised when refillConfidence < 1) holds SoC through non-PV
+// slots that precede a strong-PV refill, to insure the next day if PV under-delivers.
+// The reserve is only spendable AFTER the PV window, so its value is bounded by the
+// best price in that trailing window. It must therefore NEVER suppress discharge at
+// a slot whose own price exceeds every later slot's price: discharging there strictly
+// dominates hoarding for a cheaper future peak, regardless of how PV resolves.
+//
+// Oracle-free check: run the same scenario twice — baseline (confidence 1.0, no floor)
+// vs floored (random low confidence). For every slot the baseline discharges whose
+// price is the strict maximum of the remaining horizon, the floored run must also
+// discharge. Any discharge→hold delta there is caused solely by the floor = the bug.
+//
+// Horizon shape is fixed as [pre-PV | strong-PV block | post-PV tail] so the floor
+// can actually engage (it needs a strong-PV slot ahead) and pre-PV peaks exist.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot\n');
+
+testInvariant('15:refill-reserve-floor-never-sacrifices-pricier-slot',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 12.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 60, max: 94, noNaN: true, noDefaultInfinity: true }),
+    }),
+    fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // pre-PV prices
+    fc.integer({ min: 2, max: 6 }),  // PV block length
+    fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // post-PV tail prices
+    fc.double({ min: 0.0, max: 0.6, noNaN: true, noDefaultInfinity: true }), // low refillConfidence → floor engages
+  ),
+  ([settings, base, prePrices, pvLen, tailPrices, refillConfidence]) => {
+    const { maxChargeW } = base;
+    const minDischargePrice = 0.220;
+    // PV block: strong PV (full charge power), cheap price (no discharge there anyway).
+    const pvPrices = Array(pvLen).fill(0.10);
+    const priceValues = [...prePrices, ...pvPrices, ...tailPrices];
+    const prices = makePriceSlots(priceValues);
+
+    const pvWValues = [
+      ...prePrices.map(() => 0),
+      ...pvPrices.map(() => maxChargeW + 800), // surplus ≥ charge power → strongPvAhead
+      ...tailPrices.map(() => 0),
+    ];
+    const pvForecast = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 500);
+
+    const scenario = {
+      ...base, prices, pvForecast, consumptionW, minDischargePrice,
+    };
+    const baseSlots = runCompute(settings, { ...scenario, refillConfidence: 1.0 })._schedule?.slots;
+    const floorSlots = runCompute(settings, { ...scenario, refillConfidence })._schedule?.slots;
+    if (!baseSlots || !floorSlots) return true;
+
+    const N = priceValues.length;
+    for (let t = 0; t < N; t++) {
+      if (baseSlots[t].action !== 'discharge') continue;
+      // strict price-max of the remaining horizon (t+1 … end)?
+      let laterMax = -Infinity;
+      for (let u = t + 1; u < N; u++) laterMax = Math.max(laterMax, priceValues[u]);
+      if (priceValues[t] <= laterMax) continue; // held energy could serve a ≥-priced later slot
+      // t is the strict max ahead → floor must not suppress discharge here.
+      if (floorSlots[t].action !== 'discharge') return false;
+    }
+    return true;
   }
 );
 
