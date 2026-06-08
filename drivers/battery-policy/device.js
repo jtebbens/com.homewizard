@@ -3441,7 +3441,7 @@ if (debug) this.log(
       this.log('[EV] Auto-clear: 8h timeout reached, discharge gate released');
       this._evChargingUntil = 0;
       try { this.homey.settings.set('ev_charging_until', 0); } catch (_) {}
-      this._runPolicyCheck().catch(err => this.error('[EV] auto-clear policy run failed:', err));
+      this._enforceEvGate(false).catch(err => this.error('[EV] auto-clear gate release failed:', err));
     }, delay);
   }
 
@@ -3456,7 +3456,31 @@ if (debug) this.log(
     }
     try { this.homey.settings.set('ev_charging_until', this._evChargingUntil); } catch (_) {}
     this._scheduleEvAutoClear();
-    this._runPolicyCheck().catch(err => this.error('[EV] policy run after toggle failed:', err));
+    this._enforceEvGate(active).catch(err => this.error('[EV] gate enforce after toggle failed:', err));
+  }
+
+  // Enforce the EV discharge-gate at the hardware level. When the policy is ENABLED the
+  // normal policy run + mapper gate (policy-engine.js _mapPolicyToHwMode) already blocks
+  // discharge. When the policy is DISABLED (predictive / manual off) that run is skipped,
+  // so the gate would be a dead flag and the EV drains the battery via nul-op-de-meter —
+  // we then take the battery OUT of predictive into standby (fully passive, no charge or
+  // discharge) and restore the pre-gate HW mode on release.
+  async _enforceEvGate(active) {
+    const runPolicy = () => this._runPolicyCheck();
+    if (active) {
+      if (this.getCapabilityValue('policy_enabled') || !this.p1Device) return runPolicy();
+      this._evPreGateMode = this.p1Device.getCapabilityValue('battery_group_charge_mode') || 'predictive';
+      try { this.homey.settings.set('ev_pregate_mode', this._evPreGateMode); } catch (_) {}
+      this.log(`[EV] policy disabled — predictive off → standby (pre-gate ${this._evPreGateMode})`);
+      await this._applyRecommendation('standby', 100, { force: true });
+    } else {
+      if (this.getCapabilityValue('policy_enabled')) return runPolicy();
+      const restore = this._evPreGateMode || this.homey.settings.get('ev_pregate_mode') || 'predictive';
+      this._evPreGateMode = null;
+      try { this.homey.settings.set('ev_pregate_mode', null); } catch (_) {}
+      this.log(`[EV] policy disabled — restoring HW mode ${restore}`);
+      await this._applyRecommendation(restore, 100, { force: true });
+    }
   }
 
   async _gatherInputs() {
@@ -3770,10 +3794,10 @@ if (debug) this.log(
     }
   }
 
-  async _applyRecommendation(mode, confidence) {
+  async _applyRecommendation(mode, confidence, { force = false } = {}) {
     const minConfidence = this.getSetting('min_confidence_threshold') || 55;
 
-    if (confidence < minConfidence) {
+    if (!force && confidence < minConfidence) {
       this.log(`Confidence ${confidence}% below threshold ${minConfidence}%, not applying`);
       return false;
     }
@@ -3810,8 +3834,10 @@ if (debug) this.log(
 
       this.log(`🔍 Actual HW mode: ${actualMode}, desired: ${targetMode}`);
 
-      // ⭐ HW Slim laden actief → policy engine niet overrulen
-      if (actualMode === 'predictive') {
+      // ⭐ HW Slim laden actief → policy engine niet overrulen.
+      // Exception: EV-charging gate (force) MUST block discharge even in predictive,
+      // otherwise the EV drains the home battery via nul-op-de-meter (see _enforceEvGate).
+      if (actualMode === 'predictive' && !force) {
         this.log('⏸️ HW Slim laden (predictive) actief — policy engine gepauzeerd, geen mode-wijziging');
         return true;
       }
