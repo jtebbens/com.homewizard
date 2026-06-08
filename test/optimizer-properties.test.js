@@ -1041,6 +1041,88 @@ testInvariant('15:refill-reserve-floor-never-sacrifices-pricier-slot',
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 16
+// "Pre-PV discharge window spends the priciest slots first (no stranded peak)"
+//
+// Within a contiguous pre-PV discharge window the battery has a single energy budget
+// and discharge is consumption-capped (nul-op-de-meter). Under a fixed budget, every
+// kWh spent at a cheaper slot is a kWh NOT spent at a pricier eligible slot in the same
+// window — strictly value-destroying. So the discharged set must be the HIGHEST-priced
+// eligible slots: no slot may discharge while a LATER eligible slot in the same pre-PV
+// window (before strong PV refills) is held in preserve at a strictly higher price.
+//
+// This is the optimality guard the layer-sync rules do NOT cover: the post-DP price
+// reorder (optimization-engine ~283) exists to enforce exactly this, but its
+// budget-neutral revert can silently discard a valid correction, stranding the late
+// peak (live miss 2026-06-08 16:45: DP discharged 17:00 €0.284 chronologically and
+// left 21:00 €0.359 — the pricier slot — on preserve).
+//
+// refillConfidence = 1.0 (no reserve floor) so the only reason to hold a pricier slot
+// would be the bug, not a deliberate overnight reserve. The window ends at the first
+// strong-PV slot, matching the engine's reorder window boundary.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 16 — pre-pv-window-spends-priciest-first\n');
+
+testInvariant('16:pre-pv-window-spends-priciest-first',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 60, max: 94, noNaN: true, noDefaultInfinity: true }),
+    }),
+    // 4–7 pre-PV evening slots, all eligible (≥ minDischargePrice), non-monotone so a
+    // pricier slot can sit LATER than a cheaper one (the case the reorder must fix).
+    fc.array(fc.double({ min: 0.230, max: 0.420, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 4, maxLength: 7 }),
+    fc.integer({ min: 2, max: 5 }), // strong-PV block length
+  ),
+  ([settings, base, prePrices, pvLen]) => {
+    const { maxChargeW } = base;
+    const minDischargePrice = 0.220;
+
+    // [pre-PV evening | strong-PV block (cheap) | short cheap tail]
+    const pvPrices  = Array(pvLen).fill(0.10);
+    const tailPrices = [0.10, 0.10];
+    const priceValues = [...prePrices, ...pvPrices, ...tailPrices];
+    const prices = makePriceSlots(priceValues);
+
+    const pvWValues = [
+      ...prePrices.map(() => 0),
+      ...pvPrices.map(() => maxChargeW + 800), // surplus ≥ charge power → strong PV / window boundary
+      ...tailPrices.map(() => 0),
+    ];
+    const pvForecast = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 500); // equal load → revenue driven by price alone
+
+    const eng = runCompute(settings, {
+      ...base, prices, pvForecast, consumptionW, minDischargePrice,
+      refillConfidence: 1.0, // no reserve floor → holding a pricier slot can only be the bug
+    });
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+
+    const preLen = prePrices.length; // pre-PV window = [0, preLen)
+    // Scope to PURE-discharge windows — the reorder's own domain (it skips windows with any
+    // charge slot). A mid-window grid charge is a separate churn concern, out of scope here.
+    for (let t = 0; t < preLen; t++) if (slots[t].action === 'charge') return true;
+    const PRICE_EPS = 0.005; // ties within half a cent are economically equivalent (vs FP noise)
+    for (let t = 0; t < preLen; t++) {
+      if (slots[t].action !== 'discharge') continue;
+      // Any LATER eligible slot in the same pre-PV window held at a MEANINGFULLY higher price?
+      for (let u = t + 1; u < preLen; u++) {
+        if (priceValues[u] < minDischargePrice) continue;
+        if (priceValues[u] <= priceValues[t] + PRICE_EPS) continue;
+        if (slots[u].action !== 'discharge') return false; // cheaper t discharged, pricier u stranded
+      }
+    }
+    return true;
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
