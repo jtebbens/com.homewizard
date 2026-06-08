@@ -1543,5 +1543,8 @@
   },
   "3.15.104": {
     "en": "Tuning plan with expensive slots"
+  },
+  "3.15.105": {
+    "en": "EV card fix, battery standby"
   }
 }
