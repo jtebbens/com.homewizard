@@ -64,5 +64,36 @@ test('cv 0.40, ratio 0.5 → cv-term × ratio', () => {
   assert.ok(approx(c, cvTerm * 0.50), `expected ~${(cvTerm * 0.5).toFixed(3)}, got ${c.toFixed(3)}`);
 });
 
+// ── Tomorrow-PV lift: abundant forecast waives reserve despite sunset cv ──────
+// The bug this guards: same-day cv spikes on low-light sample noise every sunset
+// → confidence collapsed → overnight floor held SoC through a high-priced evening
+// even though tomorrow's forecast abundantly refills the battery for free.
+test('high cv (0.55) but tomorrow PV ≥ usable span → confidence 1.0 (no floor)', () => {
+  const cvOnly = f(0.55, undefined);            // ≈0.14 — sunset noise
+  assert.ok(cvOnly < 0.2, `precondition: cv-only low, got ${cvOnly.toFixed(3)}`);
+  const c = f(0.55, undefined, 8.0, 2.69);      // 8kWh surplus vs 2.69kWh span
+  assert.strictEqual(c, 1.0);
+});
+
+test('high cv + tomorrow PV refills half the span → confidence ~0.5', () => {
+  const c = f(0.55, undefined, 1.345, 2.69);    // exactly 50% of span
+  assert.ok(approx(c, 0.50), `expected ~0.50, got ${c.toFixed(3)}`);
+});
+
+test('tomorrow-PV haircut by under-delivery ratio (0.5) → half lift', () => {
+  // 4kWh forecast × ratio 0.5 = 2kWh effective vs 2.69 span → ~0.74
+  const c = f(0.55, 0.50, 4.0, 2.69);
+  assert.ok(approx(c, Math.min(1, 2.0 / 2.69)), `expected ~0.74, got ${c.toFixed(3)}`);
+});
+
+test('no tomorrow PV (0 kWh) → confidence unchanged from same-day terms', () => {
+  assert.strictEqual(f(0.55, undefined, 0, 2.69), f(0.55, undefined));
+});
+
+test('tomorrow-PV lift never lowers confidence below same-day terms', () => {
+  // weak tomorrow PV must not drag down an already-confident same-day signal
+  assert.strictEqual(f(0.10, undefined, 0.1, 2.69), 1.0);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
