@@ -2,7 +2,6 @@
 
 const Homey = require('homey');
 const http = require('http');
-const net = require('net');
 const FetchLegacyDebug = require('./fetchLegacyDebug');
 const fetch = require('node-fetch');
 
@@ -77,6 +76,8 @@ module.exports = (function() {
     c.failures++;
     c.lastFailure = now;
 
+    console.log(`${new Date().toISOString()} [HW] ${device.settings?.homewizard_id || device.settings?.homewizard_ip || 'unknown'} fail ${c.failures}/${c.threshold} (avg=${Math.round(getAverageResponseTime(device) || 0)}ms)`);
+
     if (c.failures >= c.threshold) {
         c.openUntil = now + c.cooldownMs;
 
@@ -85,23 +86,22 @@ module.exports = (function() {
           openUntil: c.openUntil
         });
 
-        console.log(`[HW] circuit breaker OPEN for ${device.settings?.homewizard_id || device.settings?.homewizard_ip || 'unknown'} (${c.failures} failures, cooldown ${c.cooldownMs / 1000}s)`);
+        console.log(`${new Date().toISOString()} [HW] circuit breaker OPEN for ${device.settings?.homewizard_id || device.settings?.homewizard_ip || 'unknown'} (${c.failures} failures, cooldown ${c.cooldownMs / 1000}s)`);
         device.deviceInstance?.setUnavailable('Connection lost').catch(() => {});
         startRecoveryPoller(device);
       }
 
   }
 
-  function tcpPing(ip, port, timeoutMs) {
+  // Probe with a real HTTP request — a device whose HTTP stack is broken
+  // (TCP connects but returns garbage) must NOT reset the breaker.
+  function httpProbe(ip, pass, timeoutMs) {
     return new Promise((resolve) => {
-      const socket = net.createConnection({ host: ip, port, timeout: timeoutMs });
-      socket.on('connect', () => { socket.destroy(); resolve(true); });
-      socket.on('timeout', () => { socket.destroy(); resolve(false); });
-      socket.on('error', (err) => {
-        // ECONNREFUSED = device reachable, port closed — still online
-        socket.destroy();
-        resolve(err.code === 'ECONNREFUSED');
-      });
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), timeoutMs);
+      fetch(`http://${ip}/${pass}/get-status`, { signal: controller.signal, redirect: 'error' })
+        .then((res) => { clearTimeout(t); resolve(res.status === 200); })
+        .catch(() => { clearTimeout(t); resolve(false); });
     });
   }
 
@@ -109,25 +109,28 @@ module.exports = (function() {
     const c = device.circuit;
     if (c.recoveryInterval) return;
     const ip = device.settings?.homewizard_ip;
-    if (!ip) return;
+    const pass = device.settings?.homewizard_pass;
+    if (!ip || !pass) return;
 
     c.recoveryInterval = setInterval(async () => {
-      const online = await tcpPing(ip, 80, 1000);
+      const online = await httpProbe(ip, pass, 2000);
       if (online) {
-        console.log(`[HW] TCP ping ${ip} ok — circuit breaker reset`);
-        circuitBreakerSuccess(device);
+        console.log(`${new Date().toISOString()} [HW] HTTP probe ${ip} ok — circuit breaker reset`);
+        circuitBreakerSuccess(device, true);
       }
     }, 10000);
   }
 
-  function circuitBreakerSuccess(device) {
+  function circuitBreakerSuccess(device, fullReset = false) {
     initCircuitBreaker(device);
     const c = device.circuit;
     if (c.recoveryInterval) {
       clearInterval(c.recoveryInterval);
       c.recoveryInterval = null;
     }
-    c.failures = 0;
+    // Decay on a normal success so a flapping device still accumulates toward
+    // the threshold; full reset only when the recovery poller confirms it back.
+    c.failures = fullReset ? 0 : Math.max(0, c.failures - 1);
     c.openUntil = 0;
     device.deviceInstance?.setAvailable().catch(() => {});
   }
@@ -289,8 +292,10 @@ module.exports = (function() {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    clearTimeout(timeout);
-
+    // NB: do NOT clear the abort timer here — it must stay armed across
+    // response.text() below, else a device that sends headers then hangs the
+    // body read blocks for the full TCP socket timeout (~75s). safeCallback
+    // clears it on every exit.
     const duration = Date.now() - start;
     recordResponseTime(device, duration);
     circuitBreakerSuccess(device);
@@ -369,8 +374,9 @@ module.exports = (function() {
   } catch (error) {
     clearTimeout(timeout);
 
+    // NB: failure/timeout durations are NOT fed into recordResponseTime —
+    // a 75s hang would inflate the avg and push getAdaptiveTimeout upward.
     const duration = Date.now() - start;
-    recordResponseTime(device, duration);
     circuitBreakerFail(device);
 
     if (error.name === 'AbortError') {
@@ -380,7 +386,7 @@ module.exports = (function() {
         ms: duration,
         timeout: timeoutDuration
       });
-      console.log(`[HW] timeout after ${duration}ms (limit=${timeoutDuration}ms): ${uri_part}`);
+      console.log(`${new Date().toISOString()} [HW] ${homewizard_ip} timeout after ${duration}ms (limit=${timeoutDuration}ms): ${uri_part}`);
       return safeCallback('timeout', []);
     }
 
@@ -391,6 +397,8 @@ module.exports = (function() {
       error: error.message || error,
       code: error.code || null
     });
+
+    console.log(`${new Date().toISOString()} [HW] ${homewizard_ip} request error after ${duration}ms (limit=${timeoutDuration}ms): ${uri_part} — code=${error.code || 'n/a'} msg=${error.message || error}`);
 
     return safeCallback(error, []);
   }
