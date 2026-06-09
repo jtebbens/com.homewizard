@@ -2090,7 +2090,7 @@
             `Break-even:     ${fmtE(d.breakEven)}    Gem. kostprijs: ${fmtE(d.avgCost)}`,
             `Optimizer:      ${fmt(d.optimizer)}  dynMax: ${d.dynamicMaxChargePrice != null ? '€' + d.dynamicMaxChargePrice.toFixed(3) : '—'}`,
             `Prijsrange 12h: ${fmtE(d.priceMin12h)} – ${fmtE(d.priceMax12h)}`,
-            `PV morgen:      ${d.pvKwhTomorrow != null ? d.pvKwhTomorrow + ' kWh' : '—'}    Capaciteit: ${d.battCapKwh != null ? d.battCapKwh + ' kWh' : '—'}    Terminal factor: ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`,
+            `PV morgen:      ${d.pvKwhTomorrow != null ? d.pvKwhTomorrow + ' kWh' : '—'}    Capaciteit: ${d.battCapKwh != null ? d.battCapKwh + ' kWh' : '—'}    Terminal factor: ${d.pvTermFactor != null ? d.pvTermFactor : '—'}${d.pvTermKwh != null ? ` (post-horizon ${d.pvTermKwh} kWh)` : ''}`,
           );
         } else {
           lines.push('', '--- Laatste policy run ---', '(nog geen data)');
@@ -2607,7 +2607,8 @@
               const threshStr = thresh != null ? `  drempel ${thresh} kWh ${flatOk ? '✓' : '✗'}` : '';
               const csStr     = clearSky != null ? `  helder ~${clearSky} kWh bruto` : '';
               const pctStr    = pct != null ? ` (netto=${pct}% van helder)` : '';
-              return `PV morgen:     ${pv != null ? pv + ' kWh' : '—'}${threshStr}${csStr}${pctStr}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}`;
+              const termStr   = d.pvTermKwh != null ? ` (post-horizon ${d.pvTermKwh} kWh)` : '';
+              return `PV morgen:     ${pv != null ? pv + ' kWh' : '—'}${threshStr}${csStr}${pctStr}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}${termStr}`;
             })(),
           );
         }
