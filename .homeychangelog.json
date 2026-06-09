@@ -1546,5 +1546,8 @@
   },
   "3.15.105": {
     "en": "EV card fix, battery standby"
+  },
+  "3.15.106": {
+    "en": "Bugfix planning (again)"
   }
 }
