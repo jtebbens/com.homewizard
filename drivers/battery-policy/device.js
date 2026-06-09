@@ -1718,12 +1718,13 @@ if (debug) this.log(
       // Store compact diagnostic for user-facing troubleshooting (settings page).
       if (result.debug) {
         result.debug.appVersion = require('../../app.json').version;
-        // Terminal value: show the DP's actual factor + the post-horizon refill window it used,
-        // not policy-engine's now-window recompute (which double-counts cloudy today and diverges
-        // from the plan). Falls back to policy-engine values when no fresh schedule exists.
+        // Terminal value: show the DP's actual factor + the post-horizon refill window it used.
+        // pvKwhTomorrow stays the WITHIN-horizon net surplus (drives the flatten threshold and
+        // netto%-of-clear-sky on the settings page); the post-horizon terminal window is its own
+        // field so the two are not conflated (the terminal window is 0 until the day-after loads).
         const _sched = this.optimizationEngine?._schedule;
         if (_sched?.terminalFactor != null) result.debug.pvTermFactor = +_sched.terminalFactor.toFixed(2);
-        if (_sched?.terminalPvKwh != null)  result.debug.pvKwhTomorrow = +_sched.terminalPvKwh.toFixed(1);
+        if (_sched?.terminalPvKwh != null)  result.debug.pvTermKwh = +_sched.terminalPvKwh.toFixed(1);
         this._setLive('policy_last_run_debug', result.debug);
       }
 
