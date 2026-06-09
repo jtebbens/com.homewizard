@@ -2669,15 +2669,18 @@ async _setCapabilityValue(capability, value) {
   // onPoll method if websocket is to heavy for Homey unit
   async onPoll() {
     if (this.__deleted) return; // Skip if device is deleted/uninit
+    if (this._pollInFlight) return; // Skip if previous poll still running (prevent pileup → SIGABRT)
+    this._pollInFlight = true;
 
     const settings = this.getSettings();
-    
+
     // 1. Restore URL if runtime is empty
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
       } else {
         await this.setUnavailable('Missing URL');
+        this._pollInFlight = false;
         return;
       }
     }
@@ -2723,7 +2726,9 @@ async _setCapabilityValue(capability, value) {
         this.log(`Polling error: ${err.message}`);
         this.setUnavailable(err.message || 'Polling error').catch(this.error);
       }
-    } 
+    } finally {
+      this._pollInFlight = false;
+    }
   }
 
   _handlePhaseOverload(phaseKey, loadPct, lang) {
