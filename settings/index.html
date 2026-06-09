@@ -2192,6 +2192,7 @@
         // The backend (policy-engine.js buildPlanningSchedule) is the single source of truth
         // for hwMode decisions — no re-simulation in the frontend.
         const optimizerSchedule = settings['policy_optimizer_schedule'] || [];
+        const consProfile = settings['policy_consumption_profile'];
         const scheduleMap = {};
         for (const slot of optimizerSchedule) {
           if (!slot.timestamp) continue;
@@ -2223,6 +2224,16 @@
             interval.sampleCount  = slot.sampleCount  ?? null;
             interval.reason       = slot.reason       ?? null;
             interval.pvCoverage   = slot.pvCoverage   ?? null;
+          }
+          // Fallback: no schedule slot yet (e.g. tomorrow before day-ahead prices arrive ~14:00)
+          // → fill consumptionW from the learned weekly profile so the hourly tiles still show
+          // house load instead of a blank. Display only — does not affect the DP decision.
+          if (interval.consumptionW == null && consProfile?.days) {
+            const prof = consProfile.days[(todayStart.getDay() + interval.day) % 7];
+            if (Array.isArray(prof)) {
+              const v = prof[interval.hour * 4 + interval.minute / 15];
+              if (v != null && v > 0) interval.consumptionW = Math.round(v);
+            }
           }
           // Live HW state overrides hwMode/policyMode/soc for the current slot
           if (interval.isCurrent && policyState?.currentMode) {
