@@ -1123,6 +1123,76 @@ testInvariant('16:pre-pv-window-spends-priciest-first',
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 17
+// "Abundant tomorrow-PV waives the overnight reserve — sunset cv-noise cannot
+//  strand a high-priced discharge"
+//
+// refillConfidenceFromForecast derives the reserve from TODAY's forecast-error cv,
+// which spikes on low-light sample noise every sunset → confidence ~0 → floor +~50%.
+// When tomorrow's within-horizon PV surplus covers the usable span, that floor guards
+// a risk that no longer exists. The pvKwhTomorrow lift must restore confidence enough
+// that the derived-confidence run discharges every strict-price-max slot the no-floor
+// baseline discharges — i.e. a noisy sunset can never hoard SoC past tonight's peak
+// when tomorrow refills for free.
+//
+// Economic-dominance, oracle-free: baseline (confidence 1.0) vs derived (worst-case
+// cv=0.60 → cv-conf 0, but pvKwhTomorrow ≥ usable span). Any discharge→hold delta at
+// a strict-price-max-ahead slot is caused solely by an un-waived floor = the bug.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 17 — abundant-tomorrow-pv-waives-reserve\n');
+
+testInvariant('17:abundant-tomorrow-pv-waives-reserve',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 12.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 60, max: 94, noNaN: true, noDefaultInfinity: true }),
+    }),
+    fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // pre-PV prices
+    fc.integer({ min: 2, max: 6 }),  // PV block length
+    fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // post-PV tail prices
+  ),
+  ([settings, base, prePrices, pvLen, tailPrices]) => {
+    const { maxChargeW, capacityKwh } = base;
+    const minDischargePrice = 0.220;
+    const pvPrices = Array(pvLen).fill(0.10);
+    const priceValues = [...prePrices, ...pvPrices, ...tailPrices];
+    const prices = makePriceSlots(priceValues);
+    const pvWValues = [
+      ...prePrices.map(() => 0),
+      ...pvPrices.map(() => maxChargeW + 800),
+      ...tailPrices.map(() => 0),
+    ];
+    const pvForecast = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 500);
+
+    // Worst-case sunset cv (→ cv-conf 0) but tomorrow's surplus covers 2× the usable span.
+    const usableSpanKwh = ((settings.max_soc - settings.min_soc) / 100) * capacityKwh;
+    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(
+      0.60, undefined, usableSpanKwh * 2, usableSpanKwh);
+    if (refillConfidence < 1.0) return false; // lift must fully waive when surplus ≥ span
+
+    const scenario = { ...base, prices, pvForecast, consumptionW, minDischargePrice };
+    const baseSlots  = runCompute(settings, { ...scenario, refillConfidence: 1.0 })._schedule?.slots;
+    const derSlots   = runCompute(settings, { ...scenario, refillConfidence })._schedule?.slots;
+    if (!baseSlots || !derSlots) return true;
+
+    const N = priceValues.length;
+    for (let t = 0; t < N; t++) {
+      if (baseSlots[t].action !== 'discharge') continue;
+      let laterMax = -Infinity;
+      for (let u = t + 1; u < N; u++) laterMax = Math.max(laterMax, priceValues[u]);
+      if (priceValues[t] <= laterMax) continue;
+      if (derSlots[t].action !== 'discharge') return false;
+    }
+    return true;
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));

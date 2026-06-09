@@ -2852,13 +2852,21 @@ if (debug) this.log(
     // → hold a SoC buffer overnight. No samples yet (night/cold start) → confidence 1 (no reserve).
     const _pvCv = this._lastPvForecastCv;
     const _pvRatio = this._lastPvForecastRatio;
-    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
+    const _s = this.getSettings();
+    const _usableSpanKwh = (((_s.max_soc ?? 100) - (_s.min_soc ?? 0)) / 100) * capacityKwh;
+    // Same-day forecast accuracy (cv/ratio) spikes on low-light sample noise every sunset
+    // and ignores tomorrow's actual forecast. Pass tomorrow's within-horizon PV surplus so
+    // an abundant forecast lifts confidence and waives a reserve that guards a vanished risk.
+    const _cvConf = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
+    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh);
     this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
+    const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
+    const _cvStr = typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a';
     if (refillConfidence < 1.0) {
-      const _s = this.getSettings();
       const floorAddPct = ((1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0))).toFixed(0);
-      const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
-      this.log(`🛡️ refill-reserve: cv=${typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a'}${_ratioNote} conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
+      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
+    } else if (_cvConf < 1.0) {
+      this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
     }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence);
 
