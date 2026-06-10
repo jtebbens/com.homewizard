@@ -1567,5 +1567,8 @@
   },
   "3.15.112": {
     "en": "kwh meter forced to 3s interval minimum. Further energy-socket cleanup now every 30min"
+  },
+  "3.15.113": {
+    "en": "Force P1 to 3s for fetch mode (tls overhead problem cou+mem), adjusted max sockets for api.js"
   }
 }
