@@ -101,6 +101,34 @@ class HomeWizardApp extends Homey.App {
       }
       setTimeout(() => this._runSettingsMigration(currentVersion), 30_000);
     }
+
+    // Support diagnostics: periodic app-health snapshot (version, uptime, heap,
+    // device inventory) surfaced in the settings "Copy Diagnostics" report.
+    this._startedAt = Date.now();
+    this._writeHealthSnapshot();
+    this.homey.setInterval(() => this._writeHealthSnapshot(), 15 * 60 * 1000);
+  }
+
+  _writeHealthSnapshot() {
+    try {
+      const hs = v8.getHeapStatistics();
+      const heapMB = +(hs.used_heap_size / 1048576).toFixed(1);
+      this._heapPeakMB = Math.max(this._heapPeakMB || 0, heapMB);
+      this.homey.settings.set('app_health', {
+        version: this.homey.manifest.version,
+        startedAt: new Date(this._startedAt).toISOString(),
+        uptimeH: +((Date.now() - this._startedAt) / 3_600_000).toFixed(1),
+        heapMB,
+        heapTotalMB: +(hs.total_heap_size / 1048576).toFixed(1),
+        heapLimitMB: +(hs.heap_size_limit / 1048576).toFixed(0),
+        heapPeakMB: this._heapPeakMB,
+        externalMB: +(hs.external_memory / 1048576).toFixed(1),
+        deviceCounts: { ..._deviceCounts },
+        ts: new Date().toISOString(),
+      });
+    } catch (e) {
+      this.error('health snapshot failed:', e.message);
+    }
   }
 
   _runSettingsMigration(currentVersion) {
