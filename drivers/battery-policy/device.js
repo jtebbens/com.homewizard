@@ -2762,19 +2762,35 @@ if (debug) this.log(
       const pvRatio = pvKwhTomorrow / capacityKwh;
       const nightFloor   = pvRatio >= 1.5 ? 0.00 : Math.max(actualBreakEven + 0.015, 0.115);
       const dayFloor     = inputs.settings?.min_discharge_price || 0.22;
-      const weakPvFloor  = Math.max(actualBreakEven + 0.02, 0.115);
+      const weakPvFloorBase = Math.max(actualBreakEven + 0.02, 0.115);
       const pvStrongW    = (inputs.battery?.maxChargePowerW || 800) * 0.5; // mirrors pvStrongCoverage=400/800
       const maxSoc       = inputs.settings?.max_soc ?? 95;
       // When battery is at max_soc, PV cannot add more energy — the opportunity-cost
       // reasoning behind dayFloor (PV recharges for free) does not apply.
-      const effectiveDayFloor = soc >= maxSoc ? weakPvFloor : dayFloor;
-      const perSlotFloors = prices.map(p => {
+      const atMaxSoc = soc >= maxSoc;
+      // RTE-spread guard: a weak-PV slot is also a candidate grid-charge slot (DP fills for
+      // the evening peak). Discharging there is only profitable when the price clears the
+      // cost of recharging the same energy later: price ≥ cheapestRefillAhead / RTE.
+      // Without it the DP churns (discharge €0.21 → recharge €0.20 = ~27% RTE loss, no arb).
+      // Only slots priced BELOW the discharge floor are real grid-recharge candidates —
+      // evening/peak slots (all above the floor) carry no rebuy risk and must not be blocked.
+      const suffixMinChargePrice = new Array(prices.length);
+      let runningMin = Infinity;
+      for (let i = prices.length - 1; i >= 0; i--) {
+        suffixMinChargePrice[i] = runningMin;
+        if (prices[i].price < dayFloor) runningMin = Math.min(runningMin, prices[i].price);
+      }
+      const perSlotFloors = prices.map((p, i) => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
-        if (pvW >= pvStrongW) return effectiveDayFloor;
-        if (pvW >= 50)        return weakPvFloor;
+        if (pvW >= pvStrongW && !atMaxSoc) return dayFloor;
+        if (pvW >= 50 || (pvW >= pvStrongW && atMaxSoc)) {
+          const refill = suffixMinChargePrice[i];
+          const rteFloor = (refill !== Infinity && refill > 0) ? refill / effectiveRte : 0;
+          return Math.max(weakPvFloorBase, rteFloor);
+        }
         return nightFloor;
       });
-      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor €${weakPvFloor}, day floor €${dayFloor}${soc >= maxSoc ? ` (→ €${weakPvFloor} omdat SoC ${soc}%=max, geen PV-ruimte)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
+      this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor ≥€${weakPvFloorBase} (RTE-spread guard: ≥ refillAhead/${effectiveRte.toFixed(2)}), day floor €${dayFloor}${atMaxSoc ? ` (SoC ${soc}%=max → weak-PV floor on PV-strong slots too)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = perSlotFloors;
     }
     // Negative tariff headroom: when strongly negative prices are coming (< -€0.10),
