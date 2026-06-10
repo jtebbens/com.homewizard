@@ -6,12 +6,16 @@ const fetchWithTimeout = require('../utils/fetchWithTimeout');
 module.exports = (function () {
   const api = {};
 
+  // Singleton agent shared by ALL v2 devices (SDM230/SDM630/energy_v2). maxFreeSockets
+  // must cover the v2 device count, else idle TLS connections are closed between polls
+  // and every other poll pays a full TLS handshake (CPU + transient memory). 8/12 keeps
+  // a typical multi-meter setup warm so keepAlive actually reuses the connection.
   const http_agent = new https.Agent({
     keepAlive: true,
     keepAliveMsecs: 11000,
     rejectUnauthorized: false,
-    maxSockets: 6,
-    maxFreeSockets: 2,
+    maxSockets: 12,
+    maxFreeSockets: 8,
   });
 
 

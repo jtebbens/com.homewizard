@@ -211,10 +211,12 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     const allDevices = this.driver.getDevices();
     const deviceCount = Math.max(1, allDevices.length);
     const myIndex = Math.max(0, allDevices.indexOf(this));
-    const pollIntervalMs = 1000 * settings.polling_interval;
+    const pollIntervalSec = Math.max(3, settings.polling_interval || 3); // runtime floor: UI min only guards new settings, not stored 1s. 3s covers worst-case ~2.3s slow poll → no tick overrun/skip churn
+    const pollIntervalMs = 1000 * pollIntervalSec;
+    this._pollIntervalMs = pollIntervalMs; // [POLLDIAG] temp: for lag/duration measurement in onPoll
     const offsetMs = myIndex === 0 ? 500 : Math.round((myIndex / deviceCount) * pollIntervalMs);
 
-    this.log(`⏱️ Polling interval ${settings.polling_interval}s, spread offset ${Math.round(offsetMs/1000)}s (device ${myIndex + 1}/${deviceCount})`);
+    this.log(`⏱️ Polling interval ${pollIntervalSec}s, spread offset ${Math.round(offsetMs/1000)}s (device ${myIndex + 1}/${deviceCount})`);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
     this._firstPollDone = false;
@@ -428,8 +430,16 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
   }
 
   async onPoll() {
-    if (this._pollInFlight) return; // Skip if previous poll still running (prevent pileup → OOM)
+    if (this._pollInFlight) { // Skip if previous poll still running (prevent pileup → OOM)
+      this._pollSkips = (this._pollSkips || 0) + 1; // [POLLDIAG] temp
+      let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+      this.log(`[POLLDIAG] ⏭️ skip #${this._pollSkips} prev-poll busy ${Date.now() - (this._pollT0 || 0)}ms heap=${_h.toFixed(1)}MB`);
+      return;
+    }
     this._pollInFlight = true;
+    const _t0 = Date.now(); // [POLLDIAG] temp
+    const _lag = this._pollT0 ? _t0 - this._pollT0 - (this._pollIntervalMs || 0) : 0; // [POLLDIAG] temp
+    this._pollT0 = _t0; // [POLLDIAG] temp
     try {
       const settings = this.getSettings();
 
@@ -523,6 +533,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       await this.setUnavailable(err).catch(this.error);
     } finally {
       this._pollInFlight = false;
+      const _dur = Date.now() - _t0; // [POLLDIAG] temp: flag slow fetch / late interval
+      if (_dur > (this._pollIntervalMs || 2000) * 0.8 || _lag > (this._pollIntervalMs || 2000)) {
+        let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
+        this.log(`[POLLDIAG] dur=${_dur}ms lag=${_lag}ms interval=${this._pollIntervalMs}ms heap=${_h.toFixed(1)}MB`);
+      }
     }
 }
 
@@ -537,7 +552,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
       // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * Math.max(3, this.getSettings().polling_interval));
     }
     if ('mode' in MySettings.oldSettings
       && MySettings.oldSettings.mode !== MySettings.newSettings.mode
