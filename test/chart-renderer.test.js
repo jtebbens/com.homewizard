@@ -125,6 +125,12 @@ test('includes OM dataset when forecast available', () => {
 
 console.log('\nbuildModeChartBody:');
 
+// buildModeChartBody windows on the last 24h relative to Date.now(), so test
+// timestamps must be derived from the clock — fixed dates rot out of the window.
+const SLOT_MS = 15 * 60000;
+const curSlot = Math.floor(Date.now() / SLOT_MS) * SLOT_MS;
+const slotStr = (offset = 0) => new Date(curSlot + offset * SLOT_MS).toISOString().slice(0, 16);
+
 test('returns null for empty modeHistory', () => {
   assert.strictEqual(CR.buildModeChartBody(null), null);
   assert.strictEqual(CR.buildModeChartBody([]), null);
@@ -133,8 +139,8 @@ test('returns null for empty modeHistory', () => {
 
 test('returns JSON body string for valid history', () => {
   const history = [
-    { h: '2026-05-20T09:00', m: { zero: 4 }, soc: 50 },
-    { h: '2026-05-20T09:15', m: { zero: 4 }, soc: 51 },
+    { h: slotStr(-1), m: { zero: 4 }, soc: 50 },
+    { h: slotStr(0), m: { zero: 4 }, soc: 51 },
   ];
   const body = CR.buildModeChartBody(history);
   assert.strictEqual(typeof body, 'string');
@@ -147,7 +153,7 @@ test('returns JSON body string for valid history', () => {
 });
 
 test('includes SoC line dataset when soc values present', () => {
-  const history = [{ h: '2026-05-20T09:00', m: { zero: 4 }, soc: 50 }];
+  const history = [{ h: slotStr(0), m: { zero: 4 }, soc: 50 }];
   const body = CR.buildModeChartBody(history);
   const parsed = JSON.parse(body);
   const socDs = parsed.chart.data.datasets.find(d => d.label === 'SoC %');
@@ -156,7 +162,7 @@ test('includes SoC line dataset when soc values present', () => {
 });
 
 test('skips modes with zero contribution', () => {
-  const history = [{ h: '2026-05-20T09:00', m: { zero: 4 }, soc: 50 }];
+  const history = [{ h: slotStr(0), m: { zero: 4 }, soc: 50 }];
   const body = CR.buildModeChartBody(history);
   const parsed = JSON.parse(body);
   const labels = parsed.chart.data.datasets.map(d => d.label);
