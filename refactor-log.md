@@ -3458,3 +3458,1958 @@ PASS — 1000 scenarios, no counterexample.
 - Passed: 15
 - Failed: 0
 
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 51 tests
+{ seed: 12345, path: "50:0:0:0:0:0:0:0:0:0:5:1:2:3:4:1:1:2:1:1:2:1:2:3:2:2:2:3:1:1:1:2:6:1:2:7:1:1:1:1:6:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:2:2:1:1:6:4:4:4:4:4:4:4:4:4:4:4:3:1:1:2:1:7:4:1:2:3:1:1:1:2:1:1:3:2:1:5:4:1:2:3:1:1:1:1:6:1:1:1:1:1:1:1:8:4:1:1:1:1:2:1:1:6:4:1:1:1:1:2:1:1:6:4:1:5:2:1:9:3:5:1:1:1:1:1:2:1:2:1:1:1:7:3:5:1:1:1:1:1:1:3:2:1:10:3:4:1:2:4:2:2:1:3:1:1:1:4:3:1:2:2:1:6:2:1:11:3:4:1:1:1:1:2:2:1:2:1:1:1:3:2:1:1:4:2:1:1:2:1:3:1:1:2:1:12:3:3:5:1:1:1:1:2:1:3:3:2:1:1:1:1:2:2:3:2:2:1:2:1:1:13:3:3:4:1:2:4:6:1:2:2:1:2:2:1:1:1:2:3:2:1:14:3:3:4:1:1:1:1:2:2:1:3:3:1:6:1:1:1:1:2:1:2:1:1:1:15:3:3:3:5:1:1:1:1:2:2:1:2:3:3:1:1:1:4:1:1:2:1:16:3:3:3:4:1:2:5:1:1:1:1:1:4:4:2:1:2:1:1:1:17:3:3:3:4:1:1:1:1:2:2:1:4:1:2:1:1:2:4:2:1:18:3:3:3:3:5:1:1:1:1:2:2:1:3:5:3:1:1:1:1:19:3:3:3:3:4:1:2:5:1:1:1:1:2:2:1:1:1:2:1:1:20:3:3:3:3:4:1:1:1:1:2:2:1:4:1:2:1:2:1:1:1:21:3:3:3:3:3:5:1:1:1:1:2:2:1:3:1:1:2:1:22:3:3:3:3:3:4:1:2:4:5:2:1:1:23:3:3:3:3:3:4:1:1:1:1:2:2:1:1:3:1:1:1:1:24:3:3:3:3:3:3:5:1:1:1:1:2:1:2:1:1:25:3:3:3:3:3:3:4:1:2:3:1:2:1:1:26:3:3:3:3:3:3:3:8:1:1:1:1:1:1:1:1:1:27:3:3:3:3:3:4:1:1:4:1:1:2:1:1:28:3:3:3:3:3:3:3:3:2:2:1:29:3:3:3:3:3:3:3:2:2:2:1:30:3:3:3:3:3:3:3:2:1:1:2:1:31:3:3:3:3:3:3:3:1:1:2:1:1:32:3:3:3:3:3:3:2:3:1:1:1:1:33:3:3:3:3:3:4:1:1:1:2:1:34:3:3:3:3:3:3:1:2:1:1:1:35:3:3:3:3:3:3:1:1:2:1:36:3:3:3:3:3:2:1:2:1:1:37:3:3:3:3:3:2:2:1:38:3:3:3:3:2:3:1:1:1:1:39:3:3:3:4:1:1:1:2:1:40:3:3:3:3:1:2:1:1:1:41:3:3:3:3:2:1:1:1:42:3:3:3:3:2:1:43:3:3:3:2:2:1:44:3:3:3:1:2:1:1:45:3:3:3:2:1:46:3:3:3:1:1:1:1:47:4:1:1:1:1:2:1:48:3:3:2:1:49:3:3:1:1:1:1:51:1:1:1:1:2:1:51:3:2:1:52:2:2:1:53:2:1:2:1:55:54:5:1:5:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:9:1:12:3:3:3:3:3:3:3:3:3:3:3:3:3:1:1:1:4:1:1:15:3:3:3:2:1:1:1:6:1:2:2:1:2:1:1:1:1:2:3:4:1:1:1:17:3:3:3:1:6:2:2:2:2:1:1:1:2:1:2:1:1:2:3:1:1:19:3:3:3:1:5:2:2:3:3:2:1:1:3:2:1:3:1:21:3:3:3:1:5:2:1:1:1:1:5:1:2:1:1:8:1:1:1:1:27:3:3:3:1:5:1:5:1:2:3:3:1:29:3:3:3:1:5:1:5:1:1:1:1:3:1:1:31:3:3:3:1:5:1:4:7:1:1:1:1:1:35:3:3:3:1:5:3:2:1:1:36:3:3:3:1:5:1:2:3:1:38:3:3:3:1:4:2:2:1:39:3:3:3:1:4:2:1:1:40:3:3:3:1:3:2:1:1:41:3:3:3:1:3:3:1:43:3:3:3:1:1:2:1:44:3:3:2:3:1:1:1:45:3:4:1:1:2:1:46:3:3:2:3:1:48:3:3:2:1:49:3:4:1:1:1:52:1:3:1:1:56:56", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.22,0.22],2,[0.05],0]]
+Shrunk 1096 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 51 tests
+{ seed: 12345, path: "50:0:0:0:0:0:0:0:0:0:5:1:2:3:4:1:1:2:1:1:2:1:2:3:2:2:2:3:1:1:1:2:6:1:2:7:1:1:1:1:6:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:2:2:1:1:6:4:4:4:4:4:4:4:4:4:4:4:3:1:1:2:1:7:4:1:2:3:1:1:1:2:1:1:3:2:1:5:4:1:2:3:1:1:1:1:6:1:1:1:1:1:1:1:8:4:1:1:1:1:2:1:1:6:4:1:1:1:1:2:1:1:6:4:1:5:2:1:9:3:5:1:1:1:1:1:2:1:2:1:1:1:7:3:5:1:1:1:1:1:1:3:2:1:10:3:4:1:2:4:2:2:1:3:1:1:1:4:3:1:2:2:1:6:2:1:11:3:4:1:1:1:1:2:2:1:2:1:1:1:3:2:1:1:4:2:1:1:2:1:3:1:1:2:1:12:3:3:5:1:1:1:1:2:1:3:3:2:1:1:1:1:2:2:3:2:2:1:2:1:1:13:3:3:4:1:2:4:6:1:2:2:1:2:2:1:1:1:2:3:2:1:14:3:3:4:1:1:1:1:2:2:1:3:3:1:6:1:1:1:1:2:1:2:1:1:1:15:3:3:3:5:1:1:1:1:2:2:1:2:3:3:1:1:1:4:1:1:2:1:16:3:3:3:4:1:2:5:1:1:1:1:1:4:4:2:1:2:1:1:1:17:3:3:3:4:1:1:1:1:2:2:1:4:1:2:1:1:2:4:2:1:18:3:3:3:3:5:1:1:1:1:2:2:1:3:5:3:1:1:1:1:19:3:3:3:3:4:1:2:5:1:1:1:1:2:2:1:1:1:2:1:1:20:3:3:3:3:4:1:1:1:1:2:2:1:4:1:2:1:2:1:1:1:21:3:3:3:3:3:5:1:1:1:1:2:2:1:3:1:1:2:1:22:3:3:3:3:3:4:1:2:4:5:2:1:1:23:3:3:3:3:3:4:1:1:1:1:2:2:1:1:3:1:1:1:1:24:3:3:3:3:3:3:5:1:1:1:1:2:1:2:1:1:25:3:3:3:3:3:3:4:1:2:3:1:2:1:1:26:3:3:3:3:3:3:3:8:1:1:1:1:1:1:1:1:1:27:3:3:3:3:3:4:1:1:4:1:1:2:1:1:28:3:3:3:3:3:3:3:3:2:2:1:29:3:3:3:3:3:3:3:2:2:2:1:30:3:3:3:3:3:3:3:2:1:1:2:1:31:3:3:3:3:3:3:3:1:1:2:1:1:32:3:3:3:3:3:3:2:3:1:1:1:1:33:3:3:3:3:3:4:1:1:1:2:1:34:3:3:3:3:3:3:1:2:1:1:1:35:3:3:3:3:3:3:1:1:2:1:36:3:3:3:3:3:2:1:2:1:1:37:3:3:3:3:3:2:2:1:38:3:3:3:3:2:3:1:1:1:1:39:3:3:3:4:1:1:1:2:1:40:3:3:3:3:1:2:1:1:1:41:3:3:3:3:2:1:1:1:42:3:3:3:3:2:1:43:3:3:3:2:2:1:44:3:3:3:1:2:1:1:45:3:3:3:2:1:46:3:3:3:1:1:1:1:47:4:1:1:1:1:2:1:48:3:3:2:1:49:3:3:1:1:1:1:51:1:1:1:1:2:1:51:3:2:1:52:2:2:1:53:2:1:2:1:55:54:5:1:5:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:1:9:1:12:3:3:3:3:3:3:3:3:3:3:3:3:3:1:1:1:4:1:1:15:3:3:3:2:1:1:1:6:1:2:2:1:2:1:1:1:1:2:3:4:1:1:1:17:3:3:3:1:6:2:2:2:2:1:1:1:2:1:2:1:1:2:3:1:1:19:3:3:3:1:5:2:2:3:3:2:1:1:3:2:1:3:1:21:3:3:3:1:5:2:1:1:1:1:5:1:2:1:1:8:1:1:1:1:27:3:3:3:1:5:1:5:1:2:3:3:1:29:3:3:3:1:5:1:5:1:1:1:1:3:1:1:31:3:3:3:1:5:1:4:7:1:1:1:1:1:35:3:3:3:1:5:3:2:1:1:36:3:3:3:1:5:1:2:3:1:38:3:3:3:1:4:2:2:1:39:3:3:3:1:4:2:1:1:40:3:3:3:1:3:2:1:1:41:3:3:3:1:3:3:1:43:3:3:3:1:1:2:1:44:3:3:2:3:1:1:1:45:3:4:1:1:2:1:46:3:3:2:3:1:48:3:3:2:1:49:3:4:1:1:1:52:1:3:1:1:56:56", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.22,0.22],2,[0.05],0]]
+Shrunk 1096 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 15
+- Failed: 1
+
+### Failed invariants
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:9:0:5:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:1:0:1:1:1:1:3:0:0:6:0:1:0:1:2:0:0:0:0:1:0:4:1:0:1:2:0:2:2:0:0:0:1:0:0:0:0:3:0:0:7:0:0:6:0:0:0:1:3:0:1:0:1:0:4:2:2:1:0:1:1:0:3:0:8:0:0:3:0:0:2:0:4:0:0:0:0:0:0:3:0:0:2:2:0:0:0:3:1:0:3:0:9:0:0:2:1:2:0:10:0:1:2:0:0:0:3:0:3:0:0:1:0:52:49:0:0:2:0:10:0:0:2:1:0:0:0:0:0:0:1:0:0:0:1:1:1:2:1:2:4:1:1:2:0:11:0:0:2:0:2:0:2:1:1:0:1:2:2:0:2:1:1:0:0:0:0:0:2:0:0:0:12:0:0:2:0:1:2:0:2:1:2:1:0:1:0:0:1:0:0:0:5:0:2:0:13:0:0:2:0:1:1:0:2:0:1:3:1:1:1:0:0:0:2:4:2:0:14:0:0:2:0:1:0:7:3:2:5:0:1:0:0:0:0:0:2:0:15:0:0:2:0:1:0:3:0:1:0:3:2:1:3:1:0:0:3:0:0:0:0:16:0:0:2:0:1:0:2:1:6:2:0:1:1:1:0:2:2:0:17:0:0:2:0:1:0:2:1:0:0:1:2:2:0:0:0:1:0:0:0:0:0:0:2:0:18:0:0:2:0:1:0:2:0:3:0:0:1:1:4:1:0:0:2:0:0:0:19:0:0:2:0:1:0:2:0:2:0:1:0:0:1:3:1:0:3:0:0:0:0:20:0:0:2:0:1:0:2:0:1:3:3:3:0:0:1:2:0:21:0:0:2:0:1:0:2:0:1:2:1:1:0:2:3:2:0:22:0:0:2:0:1:0:2:0:1:2:0:0:5:0:3:0:0:0:0:23:0:0:2:0:1:0:2:0:1:2:0:0:0:0:1:1:3:0:0:0:0:24:0:0:2:0:1:0:2:0:1:1:5:0:0:1:2:0:25:0:0:2:0:1:0:2:0:1:1:3:6:0:0:0:0:0:0:0:26:0:0:2:0:1:0:2:0:1:2:0:0:0:1:0:2:0:0:0:27:0:0:2:0:1:0:2:0:1:1:3:0:3:0:0:0:0:28:0:0:2:0:1:0:2:0:1:1:4:2:0:0:29:0:0:2:0:1:0:2:0:1:1:2:3:0:0:0:30:0:0:2:0:1:0:2:0:1:1:1:0:2:0:0:0:31:0:0:2:0:1:0:2:0:1:2:0:2:0:0:32:0:0:2:0:1:0:2:0:1:0:4:0:0:0:0:0:33:0:0:2:0:1:0:2:0:2:0:2:0:0:0:34:0:0:2:0:1:0:2:0:1:3:0:0:0:0:35:0:0:2:0:1:0:2:0:1:2:0:0:36:0:0:2:0:1:0:2:0:0:2:0:0:0:37:0:0:2:0:1:0:2:1:2:0:38:0:0:2:0:1:0:1:0:0:2:0:0:39:0:0:2:0:1:0:1:2:0:0:40:0:0:2:0:1:1:0:2:0:41:0:0:2:0:0:4:0:0:0:0:0:42:0:0:2:1:0:2:0:0:0:43:0:0:2:1:2:0:0:44:0:0:2:0:0:0:2:0:45:0:0:2:2:0:0:46:0:0:1:0:2:0:47:0:4:0:0:0:0:0:48:0:1:2:0:49:3:0:0:0:51:3:3:0:0:0:3:0:0:0:6:2:1:0:0:3:0:1:1:1:2:1:1:3:1:2:0:2:2:1:1:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:1:0:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.2300000000000001,0.23000000000000012,0.23,0.23000000000000012],2]]
+Shrunk 976 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:9:0:5:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:1:0:1:1:1:1:3:0:0:6:0:1:0:1:2:0:0:0:0:1:0:4:1:0:1:2:0:2:2:0:0:0:1:0:0:0:0:3:0:0:7:0:0:6:0:0:0:1:3:0:1:0:1:0:4:2:2:1:0:1:1:0:3:0:8:0:0:3:0:0:2:0:4:0:0:0:0:0:0:3:0:0:2:2:0:0:0:3:1:0:3:0:9:0:0:2:1:2:0:10:0:1:2:0:0:0:3:0:3:0:0:1:0:52:49:0:0:2:0:10:0:0:2:1:0:0:0:0:0:0:1:0:0:0:1:1:1:2:1:2:4:1:1:2:0:11:0:0:2:0:2:0:2:1:1:0:1:2:2:0:2:1:1:0:0:0:0:0:2:0:0:0:12:0:0:2:0:1:2:0:2:1:2:1:0:1:0:0:1:0:0:0:5:0:2:0:13:0:0:2:0:1:1:0:2:0:1:3:1:1:1:0:0:0:2:4:2:0:14:0:0:2:0:1:0:7:3:2:5:0:1:0:0:0:0:0:2:0:15:0:0:2:0:1:0:3:0:1:0:3:2:1:3:1:0:0:3:0:0:0:0:16:0:0:2:0:1:0:2:1:6:2:0:1:1:1:0:2:2:0:17:0:0:2:0:1:0:2:1:0:0:1:2:2:0:0:0:1:0:0:0:0:0:0:2:0:18:0:0:2:0:1:0:2:0:3:0:0:1:1:4:1:0:0:2:0:0:0:19:0:0:2:0:1:0:2:0:2:0:1:0:0:1:3:1:0:3:0:0:0:0:20:0:0:2:0:1:0:2:0:1:3:3:3:0:0:1:2:0:21:0:0:2:0:1:0:2:0:1:2:1:1:0:2:3:2:0:22:0:0:2:0:1:0:2:0:1:2:0:0:5:0:3:0:0:0:0:23:0:0:2:0:1:0:2:0:1:2:0:0:0:0:1:1:3:0:0:0:0:24:0:0:2:0:1:0:2:0:1:1:5:0:0:1:2:0:25:0:0:2:0:1:0:2:0:1:1:3:6:0:0:0:0:0:0:0:26:0:0:2:0:1:0:2:0:1:2:0:0:0:1:0:2:0:0:0:27:0:0:2:0:1:0:2:0:1:1:3:0:3:0:0:0:0:28:0:0:2:0:1:0:2:0:1:1:4:2:0:0:29:0:0:2:0:1:0:2:0:1:1:2:3:0:0:0:30:0:0:2:0:1:0:2:0:1:1:1:0:2:0:0:0:31:0:0:2:0:1:0:2:0:1:2:0:2:0:0:32:0:0:2:0:1:0:2:0:1:0:4:0:0:0:0:0:33:0:0:2:0:1:0:2:0:2:0:2:0:0:0:34:0:0:2:0:1:0:2:0:1:3:0:0:0:0:35:0:0:2:0:1:0:2:0:1:2:0:0:36:0:0:2:0:1:0:2:0:0:2:0:0:0:37:0:0:2:0:1:0:2:1:2:0:38:0:0:2:0:1:0:1:0:0:2:0:0:39:0:0:2:0:1:0:1:2:0:0:40:0:0:2:0:1:1:0:2:0:41:0:0:2:0:0:4:0:0:0:0:0:42:0:0:2:1:0:2:0:0:0:43:0:0:2:1:2:0:0:44:0:0:2:0:0:0:2:0:45:0:0:2:2:0:0:46:0:0:1:0:2:0:47:0:4:0:0:0:0:0:48:0:1:2:0:49:3:0:0:0:51:3:3:0:0:0:3:0:0:0:6:2:1:0:0:3:0:1:1:1:2:1:1:3:1:2:0:2:2:1:1:1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:1:0:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.2300000000000001,0.23000000000000012,0.23,0.23000000000000012],2]]
+Shrunk 976 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 15 tests
+{ seed: 12345, path: "14:6:0:4:1:1:2:0:0:0:1:1:0:2:1:0:2:2:0:0:0:0:0:1:1:0:3:0:0:0:0:2:1:0:0:0:0:2:0:1:0:1:3:1:2:0:1:1:0:0:3:3:1:1:0:0:0:0:0:1:1:1:1:6:1:0:56:10:0:0:0:0:2:1:0:0:0:1:0:0:4:2:0:0:1:1:4:1:0:2:15:6:6:5:8:5:5:6:5:6:7:8:5:9:11:6:6:5:5:10:0:6:0:2:0:0:0:1:0:1:0:2:0:0:0:0:0:1:1:0:4:0:0:1:0:3:1:0:0:0:1:1:1:1:3:0:0:7:0:1:1:2:0:1:5:0:0:1:0:1:1:0:1:0:2:0:0:5:0:1:1:1:1:0:49:1:2:0:8:0:1:1:0:0:0:2:0:0:1:1:0:1:0:0:1:4:5:0:0:0:3:0:3:0:10:0:1:0:2:4:1:0:4:1:8:0:0:1:0:0:0:2:4:0:13:0:1:0:2:1:0:2:0:0:2:0:2:1:0:0:1:0:0:1:0:0:0:1:2:0:0:0:14:0:1:0:2:1:0:0:2:1:1:0:0:0:1:0:3:0:1:0:2:0:0:0:3:0:16:0:1:0:2:1:0:0:0:3:5:0:1:1:2:1:0:1:3:0:18:0:1:0:2:1:0:0:0:2:0:0:0:0:1:2:0:1:4:0:4:0:21:0:1:0:2:1:0:0:0:1:2:1:3:2:0:2:2:0:22:0:1:0:2:1:0:0:0:1:2:1:0:0:2:0:2:0:4:0:25:0:1:0:2:1:0:0:0:1:2:0:3:0:2:3:0:27:0:1:0:2:1:0:0:0:1:2:0:3:0:3:0:0:0:29:0:1:0:2:1:0:0:0:1:2:0:1:8:0:0:0:0:35:0:1:0:2:1:0:0:0:1:3:0:0:0:0:36:0:1:0:2:1:0:0:0:2:3:0:38:0:1:0:2:1:0:0:1:3:0:40:0:1:0:2:0:1:0:2:0:0:41:0:1:0:2:0:0:3:0:0:0:43:0:1:0:3:3:0:45:0:1:1:0:0:2:0:46:0:0:5:0:0:0:0:0:49:0:2:0:0:0:50:3:2:2:0:0:49:4:0:0:0:0:0:0:3:0:1:1:1:2:1:1:3:1:2:2:2:0:4:0:0:1:5:2:2:1:2:1:3:1:1:2:2:4:1:2:2:1:1:1:2:2:1:5:1:2:2:1:3:1:1:1:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.2300000000000001,0.23500000000000013,0.23,0.24288937809576228],3]]
+Shrunk 564 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 788 tests
+{ seed: 12345, path: "787:0:0:0:1:1:0:0:4:2:0:3:1:2:1:0:4:0:0:0:0:1:4:1:0:1:0:1:0:0:1:1:0:0:5:5:5:5:5:5:5:5:1:10:3:1:3:1:1:2:2:9:2:1:1:10:1:1:2:2:2:4:4:3:5:3:3:3:4:3:3:3:6:5:3:3:3:3:4:5:4:3:3:4:3:3:6:3:3:3:3:3:5:5:8:4:4:5:5:4:5:4:6:4:4:4:5:4:7:4:11:5:4:4:4:4:4:6:5:5:0:0:0:0:0:3:1:0:1:0:4:0:1:0:1:1:4:0:0:2:1:0:1:0:0:0:5:2:0:2:2:2:6:3:6:6:4:2:2:2:3:2:6:4:3:2:3:2:7:2:2:2:3:8:2:7:2:2:2:2:7:3:4:2:3:3:2:2:5:2:3:3:2:2:4:2:5:2:2:3:2:7:6:7:3:3:3:2:2:2:2:6:2:3:3:3:3:3:3:2:3:3:2:2:8:5:6:2:2:2:2:6:2:3:6:3:3:5:2:2:2:3:2:2:2:3:2:9:5:3:3:2:4:2:6:2:4:3:3:2:2:3:2:3:2:4:2:3:3:2:2:10:5:3:2:2:2:2:2:2:3:2:2:2:4:6:5:4:3:2:2:3:2:2:3:2:11:5:2:4:4:3:3:2:6:2:2:4:3:2:2:3:3:2:3:2:2:3:2:12:5:2:4:2:2:5:3:2:2:4:3:2:5:2:2:3:2:4:3:2:2:2:13:5:2:3:6:4:2:3:2:3:4:3:2:3:2:3:3:4:2:2:2:2:14:5:2:3:5:2:2:3:4:4:5:3:6:2:3:2:3:2:15:5:2:3:4:4:2:3:2:3:2:2:2:6:2:2:2:3:3:3:2:2:16:5:2:3:4:3:3:2:2:3:2:2:3:2:2:5:3:3:2:3:2:2:17:5:2:3:4:3:2:2:5:3:3:4:3:2:2:2:3:2:3:2:18:5:2:3:4:3:2:2:2:3:2:6:2:2:4:2:3:2:3:2:19:5:2:3:4:3:2:2:2:2:2:2:2:2:2:3:2:5:2:3:2:2:2:20:5:2:3:4:2:7:4:3:2:3:2:2:2:3:2:2:2:21:5:2:3:4:2:7:2:2:4:4:3:2:3:2:2:22:5:2:3:4:2:6:6:3:2:2:2:3:2:2:2:23:5:2:3:4:2:6:5:2:2:2:2:2:2:3:2:2:24:5:2:3:4:2:6:4:4:2:2:2:3:2:2:25:5:2:3:4:2:6:4:2:4:2:2:3:2:26:5:2:3:4:2:6:4:2:5:2:2:2:2:2:27:5:2:3:4:2:6:6:2:3:2:2:28:5:2:3:4:2:6:3:4:3:2:29:5:2:3:4:2:6:2:4:3:2:30:5:2:3:4:2:6:3:2:2:3:2:31:5:2:3:4:2:6:2:3:2:2:2:32:5:2:3:4:2:6:2:2:3:2:33:5:2:3:4:2:6:3:2:34:5:2:3:4:2:3:4:2:2:2:2:35:5:2:3:4:3:4:2:2:2:2:36:5:2:3:4:5:2:2:2:2:2:37:5:2:3:5:2:2:3:2:38:5:2:3:3:4:2:2:2:2:39:5:2:3:5:2:2:2:2:2:40:5:3:2:4:2:2:2:2:41:5:4:2:2:3:2:42:5:2:3:3:2:2:43:5:2:2:2:3:2:44:4:2:3:2:2:2:46:3:3:2:2:2:46:2:2:2:3:2:2:49:3:3:3:2:47:3:3:8:2:6:6:5:3:2:2:3:2:5:2:2:2:2:3:2:5:2:3:3:5:3:2:3:2:2:7:5:2:3:2:7:3:2:2:2:3:2:2:2:3:3:6:4:2:5:3:2:2:2:8:4:4:3:4:4:2:3:3:2:4:2:2:2:2:2:3:2:3:5:2:4:3:2:9:4:3:3:4:2:2:2:2:3:2:2:2:2:5:6:2:6:2:2:2:2:3:2:2:2:10:4:3:2:3:4:2:2:2:5:2:3:3:6:3:2:2:3:2:2:2:4:2:2:2:2:11:4:3:2:2:3:3:7:6:6:2:2:2:3:2:2:2:2:2:2:3:2:2:12:4:3:2:2:2:3:3:4:2:2:2:4:2:3:2:2:5:4:2:2:2:3:2:2:2:13:4:3:2:2:2:2:3:3:2:3:2:2:6:4:4:4:2:3:2:3:2:14:4:3:2:2:2:2:2:3:2:3:3:2:3:6:4:5:4:3:2:15:4:3:2:2:2:2:2:2:2:5:3:3:2:2:4:3:2:2:4:4:2:2:2:2:16:4:3:2:2:2:2:2:2:2:2:2:4:3:4:8:2:2:3:3:2:17:4:2:12:4:4:9:2:3:3:2:18:4:2:11:3:5:2:3:6:3:3:2:2:19:4:2:11:2:3:7:2:4:4:3:2:20:4:2:11:2:2:4:2:3:2:2:2:2:4:3:2:21:4:2:11:2:2:2:4:4:4:3:3:2:22:4:2:11:2:2:2:3:2:2:2:2:2:5:2:2:2:2:2:23:4:2:11:2:2:2:2:3:4:2:2:2:3:2:2:24:4:2:11:2:2:2:2:2:6:2:3:2:25:4:2:11:2:2:2:2:2:3:5:2:2:2:2:2:26:4:2:11:2:2:2:2:2:2:4:3:2:27:4:2:11:2:2:2:2:2:5:2:2:2:2:2:28:4:2:11:2:2:2:3:3:3:2:29:4:2:10:8:3:2:30:4:2:10:5:2:2:2:3:2:31:4:2:11:2:5:2:2:2:2:2:32:4:2:11:2:4:2:2:2:2:33:4:2:11:2:3:2:2:2:34:4:2:12:3:2:35:4:2:10:3:2:2:36:4:2:8:4:2:2:2:2:37:4:3:2:2:2:2:4:3:2:38:4:3:2:2:2:2:2:2:2:3:2:39:4:2:8:2:2:2:2:2:2:2:2:40:5:4:2:2:2:3:2:41:4:3:4:3:2:42:4:2:4:3:2:43:4:3:3:2:2:44:3:2:3:3:2:46:3:2:3:2:46:5:2:2:2:2:2:48:2:3:2:48:3:3:3:8:2:2:6:5:2:2:3:7:2:2:3:2:3:2:3:3:2:2:3:3:4:5:2:2:2:2:2:3:2:7:4:2:4:4:3:2:5:2:4:4:4:3:3:2:6:4:3:3:2:8:4:2:2:2:2:5:2:2:2:2:2:3:2:2:2:3:2:4:2:3:5:2:2:4:4:2:2:2:9:3:5:4:5:2:3:3:3:2:3:2:3:2:2:2:2:2:3:2:2:2:3:2:3:2:2:10:3:5:2:2:2:2:4:2:4:7:2:4:3:2:4:3:2:4:3:2:11:3:4:4:3:2:2:4:4:3:2:3:2:3:2:3:2:2:2:3:4:3:2:2:12:3:4:3:4:5:2:3:2:3:2:2:2:2:2:3:2:2:2:2:3:2:3:2:3:2:13:3:4:3:3:3:2:5:2:5:5:2:3:2:4:2:2:3:3:2:14:3:4:3:3:2:2:4:2:3:2:2:2:3:2:2:4:2:2:2:2:2:2:2:2:3:2:15:3:4:3:2:9:2:3:2:3:4:2:2:3:2:4:3:2:2:16:3:4:3:2:6:2:2:2:5:3:3:3:2:5:3:3:2:17:3:4:3:2:5:3:3:2:2:5:2:7:4:3:2:18:3:4:3:2:5:2:4:5:2:2:2:4:2:2:2:3:3:2:19:3:4:3:2:5:2:3:3:2:4:3:3:2:3:3:3:2:20:3:4:3:2:5:2:3:2:2:3:7:2:2:3:3:2:21:3:4:3:2:5:2:2:8:3:2:2:4:3:2:22:3:4:3:2:5:2:2:5:6:2:3:3:2:2:23:3:4:3:2:5:2:2:5:3:2:3:4:3:2:24:3:4:3:2:5:2:2:5:2:3:2:3:3:2:2:25:3:4:3:2:5:2:2:5:2:3:2:3:3:2:26:3:4:3:2:5:2:2:5:2:2:2:3:3:2:27:3:4:3:2:5:2:2:5:2:2:4:2:2:2:28:3:4:3:2:5:2:2:4:3:2:3:2:2:29:3:4:3:2:5:2:2:6:3:2:2:30:3:4:3:2:5:2:2:5:3:2:2:31:3:4:3:2:5:2:3:2:2:3:2:2:32:3:4:3:2:4:5:3:3:2:33:3:4:3:2:5:2:3:2:3:2:34:3:4:3:2:5:5:2:2:2:2:35:3:4:3:2:4:3:3:2:2:36:3:4:3:2:7:2:2:2:2:2:2:37:3:4:4:6:2:2:2:2:2:38:3:4:4:2:2:3:2:2:39:3:4:3:5:2:2:2:2:40:3:4:4:2:3:2:41:3:4:2:3:3:2:42:3:5:3:2:2:43:3:2:2:2:2:3:2:44:7:2:2:2:2:3:2:2:47:4:2:2:3:3:3:2:47:2:2:3:8:2:6:4:2:3:2:4:2:3:3:3:3:3:2:2:2:3:2:2:2:2:2:4:4:2:4:2:2:3:2:7:3:4:2:2:2:2:2:3:2:2:2:3:2:2:3:2:2:4:3:6:7:2:4:2:2:2:8:3:3:2:2:2:5:2:2:3:3:2:2:3:2:2:2:4:2:5:2:3:2:6:2:2:2:2:2:2:9:3:2:4:3:2:2:2:6:3:2:6:3:4:3:2:3:2:2:2:2:2:2:3:2:10:3:2:3:4:2:2:3:3:3:6:3:3:4:3:2:3:3:2:3:3:2:2:11:3:2:3:3:2:2:2:3:3:2:2:3:4:3:2:2:2:2:2:2:4:2:2:2:3:2:3:2:12:3:2:3:2:4:2:3:2:3:3:4:4:4:3:2:2:4:2:3:2:3:2:13:3:2:3:2:3:3:3:2:2:4:2:9:3:4:6:2:2:2:2:2:2:14:3:2:3:2:3:2:4:2:2:3:2:2:2:2:2:3:5:4:6:2:2:2:2:2:2:15:3:2:3:2:3:2:3:2:2:2:2:3:4:2:2:2:2:2:2:4:3:2:3:3:2:16:3:2:3:2:3:2:2:4:2:2:3:2:2:2:3:4:2:3:3:3:2:3:2:17:3:2:3:2:3:2:2:3:3:2:2:5:2:2:2:2:2:2:2:4:2:2:3:2:18:3:2:3:2:3:2:2:3:2:3:2:4:2:3:3:2:4:3:3:2:2:19:3:2:3:2:3:2:2:3:2:2:3:3:9:2:2:3:3:2:20:3:2:3:2:3:2:2:3:2:2:2:4:5:3:2:2:3:3:2:2:21:3:2:3:2:3:2:2:3:2:2:2:3:2:4:5:2:2:2:3:2:22:3:2:3:2:3:2:2:3:2:2:2:2:6:3:3:4:2:2:2:23:3:2:3:2:3:2:2:3:2:2:2:2:4:3:3:3:3:2:2:24:3:2:3:2:3:2:2:3:2:2:2:2:4:2:2:2:3:2:3:2:25:3:2:3:2:3:2:2:3:2:2:2:2:3:5:2:3:2:2:26:3:2:3:2:3:2:2:3:2:2:2:2:3:4:2:2:3:2:27:3:2:3:2:3:2:2:3:2:2:2:2:3:3:2:2:3:2:28:3:2:3:2:3:2:2:3:2:2:2:2:2:5:2:2:2:2:2:29:3:2:3:2:3:2:2:3:2:2:2:4:3:2:2:2:30:3:2:3:2:3:2:2:3:2:2:2:4:2:3:2:31:3:2:3:2:3:2:2:2:7:3:2:2:32:3:2:3:2:3:2:2:3:2:2:2:2:3:2:2:33:3:2:3:2:3:2:2:2:5:3:2:2:34:3:2:3:2:3:2:2:3:3:3:2:2:35:3:2:3:2:2:7:2:3:2:36:3:2:3:2:3:2:2:3:3:2:2:37:3:2:3:2:2:3:4:2:2:2:2:38:3:2:3:2:4:2:3:2:2:39:3:2:3:3:2:2:2:3:2:40:3:2:3:2:2:2:3:2:2:41:3:2:2:3:3:3:2:42:3:3:2:2:3:2:2:43:3:2:2:2:3:2:2:44:2:3:3:3:2:47:2:3:2:2:46:3:2:3:2:46:2:2:3:2:2:48:3:3:5:2:2:48:2:3:8:2:6:3:3:3:2:2:9:3:3:3:2:3:4:2:9:2:6:2:2:2:2:2:2:7:3:2:2:3:2:4:3:2:3:3:3:3:2:3:2:2:3:3:2:4:2:6:2:2:3:2:8:2:5:6:5:2:2:2:2:4:2:4:4:2:3:3:3:2:4:3:2:2:2:9:2:4:5:2:2:2:4:2:2:4:2:3:2:2:2:3:2:5:4:3:3:3:2:2:10:2:4:3:2:3:2:2:4:4:2:4:2:2:2:2:6:3:3:3:2:2:2:3:2:11:2:4:2:4:3:2:3:2:2:2:2:4:3:5:2:3:2:3:2:2:2:4:2:2:2:2:12:2:4:2:3:3:3:2:2:10:3:2:2:2:2:6:4:3:2:13:2:4:2:3:2:3:3:2:2:3:7:4:4:2:2:4:2:2:3:2:2:14:2:4:2:3:2:2:3:3:2:2:2:2:3:2:3:3:2:3:2:5:2:2:3:2:2:15:2:4:2:3:2:2:2:3:2:4:5:2:3:3:3:2:3:2:2:2:3:2:2:16:2:4:2:3:2:2:2:2:3:2:3:2:2:3:7:3:2:4:3:2:17:2:4:2:3:2:2:2:2:2:2:7:3:3:2:2:2:2:2:3:3:2:2:2:18:2:4:2:3:2:2:2:2:2:2:2:3:3:3:2:4:2:2:2:2:2:2:3:2:2:19:2:4:2:3:2:2:2:2:2:2:2:2:2:2:2:2:2:6:2:4:3:2:20:2:4:2:2:11:4:2:2:2:4:3:2:3:2:2:21:2:4:2:2:11:2:2:2:5:3:3:2:3:2:22:2:4:2:2:10:5:2:3:3:3:2:3:2:23:2:4:2:2:10:4:3:2:2:2:3:3:2:2:24:2:4:2:2:10:4:2:2:2:4:3:2:2:25:2:4:2:2:10:4:2:2:2:4:2:2:2:2:26:2:4:2:2:10:4:2:2:2:2:3:2:2:27:2:4:2:2:10:3:3:2:3:2:2:2:28:2:4:2:2:10:4:3:3:2:2:29:2:4:2:2:10:4:2:2:3:2:30:2:4:2:2:10:3:2:2:3:2:31:2:4:2:2:9:3:2:2:3:2:32:2:4:2:2:12:2:2:2:2:2:2:2:2:2:2:2:2:33:2:4:4:2:2:2:2:2:2:2:2:2:3:2:34:2:4:2:2:8:2:2:3:2:35:2:4:2:2:9:2:2:2:2:2:2:2:2:2:36:2:4:3:7:3:2:37:2:4:2:2:7:2:2:2:2:2:2:2:38:2:4:3:3:3:3:2:2:39:2:4:2:3:3:2:3:2:40:2:4:2:2:3:3:2:2:41:2:3:4:2:2:3:2:42:2:4:4:2:2:2:2:43:3:2:2:2:3:2:2:44:2:4:3:2:44:4:3:2:2:2:48:3:2:49:47:2:2:3:3:3:8:2:6:2:7:4:6:4:3:2:2:2:2:2:5:2:5:2:2:4:2:2:3:2:2:2:7:2:3:3:3:4:2:2:2:3:7:5:2:4:3:3:2:4:4:2:2:3:2:8:2:2:7:2:2:2:4:2:9:3:6:4:2:3:2:3:2:3:2:2:9:2:2:4:2:2:3:4:2:4:2:2:2:2:5:6:2:2:2:3:2:2:2:3:3:2:10:2:2:3:3:3:4:2:2:4:2:2:7:2:2:3:2:4:2:2:2:4:3:2:11:2:2:3:2:5:4:2:2:10:4:4:3:3:2:2:3:3:2:12:2:2:3:2:3:4:3:5:2:2:3:3:2:4:6:2:2:3:3:2:2:13:2:2:3:2:3:2:4:3:2:3:2:2:2:2:5:9:3:3:2:2:14:2:2:3:2:3:2:2:4:2:2:5:4:3:2:6:3:2:3:3:2:15:2:2:3:2:3:2:2:2:3:4:2:2:5:3:2:3:4:2:2:2:2:2:3:2:16:2:2:3:2:3:2:2:2:2:3:2:2:2:4:2:8:2:2:2:2:3:2:2:2:17:2:2:3:2:3:2:2:2:2:2:2:2:3:8:2:2:2:2:2:4:3:2:18:2:2:3:2:2:10:2:2:2:2:3:2:2:6:3:3:2:19:2:2:3:2:2:9:2:2:3:2:5:2:4:4:2:2:2:2:20:2:2:3:2:2:8:4:5:2:2:3:2:2:4:2:2:2:2:21:2:2:3:2:2:8:4:2:2:2:2:2:3:2:5:2:2:2:2:2:22:2:2:3:2:2:8:3:4:2:3:4:2:3:2:2:2:23:2:2:3:2:2:8:3:3:4:2:2:2:2:3:2:2:2:24:2:2:3:2:2:8:3:3:2:7:3:2:25:2:2:3:2:2:8:3:3:2:4:2:3:2:2:2:26:2:2:3:2:2:8:3:3:2:3:2:3:2:2:2:27:2:2:3:2:2:8:3:2:7:2:2:2:2:2:2:2:28:2:2:3:2:2:8:5:3:3:2:2:29:2:2:3:2:2:8:3:2:3:3:2:2:30:2:2:3:2:2:8:4:2:2:2:3:2:31:2:2:3:2:2:8:3:2:2:3:2:2:32:2:2:3:2:2:7:6:2:2:2:2:2:2:33:2:2:3:2:3:2:2:2:2:4:2:3:2:34:2:2:3:2:2:7:2:3:2:2:2:35:2:2:3:2:3:2:2:2:3:2:3:2:2:36:2:2:3:2:3:2:2:2:2:2:2:3:2:37:2:2:3:2:2:5:2:3:2:38:2:2:3:2:2:6:2:2:2:2:2:2:39:2:2:3:3:2:2:2:3:2:2:40:2:2:3:3:2:2:2:3:2:41:2:2:2:3:3:3:2:42:2:2:4:3:2:2:43:2:2:2:2:3:2:2:2:44:3:2:2:2:3:2:45:2:2:3:2:2:2:45:3:2:4:8:3:2:47:2:6:3:7:2:5:2:3:2:2:2:2:4:4:3:5:3:3:3:2:3:2:2:2:5:2:2:2:5:3:2:2:5:5:2:2:3:3:3:4:8:2:2:2:2:3:4:3:2:2:2:2:2:2:3:4:2:2:2:6:3:4:3:2:2:8:4:3:7:2:2:2:5:2:2:2:2:3:3:2:2:2:7:3:2:3:5:3:2:4:4:2:2:4:2:2:4:2:2:2:5:3:2:3:3:2:2:8:3:2:2:2:4:3:4:2:2:2:3:2:3:4:5:2:4:2:4:5:2:2:2:2:2:9:2:7:5:2:3:5:5:6:3:2:3:2:3:2:2:2:3:2:2:10:2:6:2:3:2:4:2:2:2:3:2:3:2:3:3:5:2:2:2:2:2:3:2:3:2:11:2:5:4:4:4:2:2:2:4:2:2:2:5:2:5:2:2:2:2:3:2:2:12:2:5:3:4:3:3:2:4:2:3:2:8:3:2:4:3:2:13:2:5:3:3:2:2:3:2:2:3:7:5:4:2:2:3:3:2:2:14:2:5:3:2:4:2:2:3:3:3:2:2:4:4:2:3:2:2:2:3:2:2:15:2:5:3:2:3:2:7:2:3:2:2:2:2:2:2:4:3:3:2:2:2:16:2:5:3:2:3:2:2:4:2:2:2:2:2:3:3:2:2:3:2:3:3:2:17:2:5:3:2:3:2:2:2:2:3:2:8:2:4:2:3:2:2:2:18:2:5:3:2:2:7:4:5:2:2:2:4:2:2:3:2:19:2:5:3:2:2:6:4:3:3:3:3:2:3:3:2:20:2:5:3:2:2:6:3:2:2:3:2:2:4:3:3:2:21:2:5:3:2:2:6:2:4:2:2:3:3:4:2:2:2:2:22:2:5:3:2:2:6:2:3:2:9:2:2:2:2:2:2:2:2:2:23:2:5:3:2:2:6:2:4:2:3:2:3:3:2:24:2:5:3:2:2:6:2:3:2:2:2:2:2:2:3:2:2:25:2:5:3:2:2:6:2:2:6:2:3:2:2:26:2:5:3:2:2:6:2:3:2:2:2:2:3:2:2:27:2:5:3:2:2:6:2:2:6:2:2:2:2:2:2:28:2:5:3:2:2:6:2:5:3:2:29:2:5:3:2:2:6:2:3:2:2:3:2:30:2:5:3:2:2:5:6:2:2:2:2:2:2:31:2:5:3:2:3:2:2:3:2:2:3:2:2:32:2:5:3:2:2:6:2:3:2:2:33:2:5:3:2:2:4:3:3:2:34:2:5:3:2:2:6:2:2:2:2:2:2:35:2:5:3:3:3:2:2:3:2:36:2:5:3:2:3:2:2:3:2:37:2:5:2:4:3:2:2:2:38:2:5:3:3:3:2:39:2:5:2:4:2:2:2:2:40:3:2:2:2:2:2:2:3:2:41:2:5:3:2:2:2:42:2:3:2:2:3:2:2:43:4:3:2:2:2:43:4:2:3:3:2:2:46:2:3:2:2:46:3:3:7:2:2:2:4:3:3:2:3:6:3:2:5:3:2:9:5:4:2:3:2:2:2:3:2:2:4:7:3:3:2:5:3:5:3:3:3:2:2:2:3:3:2:2:2:2:2:5:2:2:2:2:2:5:3:3:2:2:2:3:2:2:2:2:4:3:2:6:4:3:2:3:2:2:7:3:2:2:2:6:2:3:4:2:2:2:5:2:2:2:2:2:5:2:3:2:3:2:2:2:4:2:2:2:2:4:2:2:2:2:7:2:2:3:2:6:2:3:4:2:2:4:5:3:3:5:3:3:2:3:2:2:8:2:2:2:2:3:3:3:3:4:3:2:5:2:3:2:3:2:2:4:2:2:2:2:3:2:2:8:8:3:4:4:3:2:3:3:2:2:3:3:2:2:7:2:3:2:2:9:7:2:3:3:2:2:6:4:4:6:3:2:4:2:3:2:2:10:6:5:2:3:3:2:2:2:2:2:9:2:3:2:2:4:2:3:2:11:6:4:2:2:2:3:3:3:2:2:2:2:3:3:2:5:2:2:4:2:2:2:2:12:6:3:4:2:2:3:3:3:3:2:2:2:3:2:3:7:2:2:2:2:2:2:2:13:6:3:3:3:2:2:3:3:2:5:2:3:2:4:3:2:3:2:2:14:6:3:3:2:3:2:2:3:2:5:5:5:3:2:3:2:15:6:3:3:2:2:3:2:2:3:2:2:3:2:4:2:6:2:2:2:2:2:2:16:6:3:3:2:2:2:3:2:2:2:4:2:2:2:2:4:3:2:3:2:17:6:3:3:2:2:2:2:3:2:2:2:2:2:2:4:2:5:2:2:2:2:2:18:6:3:3:2:2:2:2:2:2:5:4:3:2:3:3:2:2:19:6:3:3:2:2:2:2:2:2:2:4:2:2:2:4:3:2:2:2:20:6:3:3:2:2:2:2:2:2:2:2:2:5:2:2:2:2:3:2:21:6:3:2:13:6:2:2:2:2:2:2:22:6:3:2:13:4:2:3:2:23:6:3:2:11:3:4:2:2:2:2:24:6:3:2:13:2:3:2:2:25:6:3:2:11:2:2:3:2:2:26:6:3:2:11:3:2:2:2:27:6:3:2:12:2:2:2:2:2:2:2:2:2:2:2:2:28:6:4:10:2:3:2:29:6:3:3:2:2:2:2:2:3:2:3:2:30:6:3:2:9:2:2:2:2:2:2:2:2:2:31:6:4:5:2:4:2:2:2:32:6:3:3:2:2:3:2:3:2:33:6:3:3:2:4:2:2:2:2:34:6:3:2:4:3:2:2:35:6:3:4:2:3:2:36:6:3:2:4:2:2:2:37:6:3:2:2:3:2:38:8:2:3:2:39:5:3:3:2:2:40:7:3:2:2:2:2:3:2:42:4:3:2:2:44:3:2:2:2:44:3:3:2:2:2:43:4:8:2:2:2:2:3:2:2:3:4:2:3:8:4:5:2:4:3:3:2:2:2:2:8:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:7:7:2:2:2:3:2:2:4:6:6:2:2:4:3:3:7:2:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:4:4:3:3:5:5:5:4:3:4:4:3:3:4:3:8:3:4:7:3:3:3:3:3:7:3:4:3:50:3", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.23,0.23500000000000004,0.23,0.23,0.24288937809576214],2]]
+Shrunk 5525 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 788 tests
+{ seed: 12345, path: "787:0:0:0:1:1:0:0:4:2:0:3:1:2:1:0:4:0:0:0:0:1:4:1:0:1:0:1:0:0:1:1:0:0:5:5:5:5:5:5:5:5:1:10:3:1:3:1:1:2:2:9:2:1:1:10:1:1:2:2:2:4:4:3:5:3:3:3:4:3:3:3:6:5:3:3:3:3:4:5:4:3:3:4:3:3:6:3:3:3:3:3:5:5:8:4:4:5:5:4:5:4:6:4:4:4:5:4:7:4:11:5:4:4:4:4:4:6:5:5:0:0:0:0:0:3:1:0:1:0:4:0:1:0:1:1:4:0:0:2:1:0:1:0:0:0:5:2:0:2:2:2:6:3:6:6:4:2:2:2:3:2:6:4:3:2:3:2:7:2:2:2:3:8:2:7:2:2:2:2:7:3:4:2:3:3:2:2:5:2:3:3:2:2:4:2:5:2:2:3:2:7:6:7:3:3:3:2:2:2:2:6:2:3:3:3:3:3:3:2:3:3:2:2:8:5:6:2:2:2:2:6:2:3:6:3:3:5:2:2:2:3:2:2:2:3:2:9:5:3:3:2:4:2:6:2:4:3:3:2:2:3:2:3:2:4:2:3:3:2:2:10:5:3:2:2:2:2:2:2:3:2:2:2:4:6:5:4:3:2:2:3:2:2:3:2:11:5:2:4:4:3:3:2:6:2:2:4:3:2:2:3:3:2:3:2:2:3:2:12:5:2:4:2:2:5:3:2:2:4:3:2:5:2:2:3:2:4:3:2:2:2:13:5:2:3:6:4:2:3:2:3:4:3:2:3:2:3:3:4:2:2:2:2:14:5:2:3:5:2:2:3:4:4:5:3:6:2:3:2:3:2:15:5:2:3:4:4:2:3:2:3:2:2:2:6:2:2:2:3:3:3:2:2:16:5:2:3:4:3:3:2:2:3:2:2:3:2:2:5:3:3:2:3:2:2:17:5:2:3:4:3:2:2:5:3:3:4:3:2:2:2:3:2:3:2:18:5:2:3:4:3:2:2:2:3:2:6:2:2:4:2:3:2:3:2:19:5:2:3:4:3:2:2:2:2:2:2:2:2:2:3:2:5:2:3:2:2:2:20:5:2:3:4:2:7:4:3:2:3:2:2:2:3:2:2:2:21:5:2:3:4:2:7:2:2:4:4:3:2:3:2:2:22:5:2:3:4:2:6:6:3:2:2:2:3:2:2:2:23:5:2:3:4:2:6:5:2:2:2:2:2:2:3:2:2:24:5:2:3:4:2:6:4:4:2:2:2:3:2:2:25:5:2:3:4:2:6:4:2:4:2:2:3:2:26:5:2:3:4:2:6:4:2:5:2:2:2:2:2:27:5:2:3:4:2:6:6:2:3:2:2:28:5:2:3:4:2:6:3:4:3:2:29:5:2:3:4:2:6:2:4:3:2:30:5:2:3:4:2:6:3:2:2:3:2:31:5:2:3:4:2:6:2:3:2:2:2:32:5:2:3:4:2:6:2:2:3:2:33:5:2:3:4:2:6:3:2:34:5:2:3:4:2:3:4:2:2:2:2:35:5:2:3:4:3:4:2:2:2:2:36:5:2:3:4:5:2:2:2:2:2:37:5:2:3:5:2:2:3:2:38:5:2:3:3:4:2:2:2:2:39:5:2:3:5:2:2:2:2:2:40:5:3:2:4:2:2:2:2:41:5:4:2:2:3:2:42:5:2:3:3:2:2:43:5:2:2:2:3:2:44:4:2:3:2:2:2:46:3:3:2:2:2:46:2:2:2:3:2:2:49:3:3:3:2:47:3:3:8:2:6:6:5:3:2:2:3:2:5:2:2:2:2:3:2:5:2:3:3:5:3:2:3:2:2:7:5:2:3:2:7:3:2:2:2:3:2:2:2:3:3:6:4:2:5:3:2:2:2:8:4:4:3:4:4:2:3:3:2:4:2:2:2:2:2:3:2:3:5:2:4:3:2:9:4:3:3:4:2:2:2:2:3:2:2:2:2:5:6:2:6:2:2:2:2:3:2:2:2:10:4:3:2:3:4:2:2:2:5:2:3:3:6:3:2:2:3:2:2:2:4:2:2:2:2:11:4:3:2:2:3:3:7:6:6:2:2:2:3:2:2:2:2:2:2:3:2:2:12:4:3:2:2:2:3:3:4:2:2:2:4:2:3:2:2:5:4:2:2:2:3:2:2:2:13:4:3:2:2:2:2:3:3:2:3:2:2:6:4:4:4:2:3:2:3:2:14:4:3:2:2:2:2:2:3:2:3:3:2:3:6:4:5:4:3:2:15:4:3:2:2:2:2:2:2:2:5:3:3:2:2:4:3:2:2:4:4:2:2:2:2:16:4:3:2:2:2:2:2:2:2:2:2:4:3:4:8:2:2:3:3:2:17:4:2:12:4:4:9:2:3:3:2:18:4:2:11:3:5:2:3:6:3:3:2:2:19:4:2:11:2:3:7:2:4:4:3:2:20:4:2:11:2:2:4:2:3:2:2:2:2:4:3:2:21:4:2:11:2:2:2:4:4:4:3:3:2:22:4:2:11:2:2:2:3:2:2:2:2:2:5:2:2:2:2:2:23:4:2:11:2:2:2:2:3:4:2:2:2:3:2:2:24:4:2:11:2:2:2:2:2:6:2:3:2:25:4:2:11:2:2:2:2:2:3:5:2:2:2:2:2:26:4:2:11:2:2:2:2:2:2:4:3:2:27:4:2:11:2:2:2:2:2:5:2:2:2:2:2:28:4:2:11:2:2:2:3:3:3:2:29:4:2:10:8:3:2:30:4:2:10:5:2:2:2:3:2:31:4:2:11:2:5:2:2:2:2:2:32:4:2:11:2:4:2:2:2:2:33:4:2:11:2:3:2:2:2:34:4:2:12:3:2:35:4:2:10:3:2:2:36:4:2:8:4:2:2:2:2:37:4:3:2:2:2:2:4:3:2:38:4:3:2:2:2:2:2:2:2:3:2:39:4:2:8:2:2:2:2:2:2:2:2:40:5:4:2:2:2:3:2:41:4:3:4:3:2:42:4:2:4:3:2:43:4:3:3:2:2:44:3:2:3:3:2:46:3:2:3:2:46:5:2:2:2:2:2:48:2:3:2:48:3:3:3:8:2:2:6:5:2:2:3:7:2:2:3:2:3:2:3:3:2:2:3:3:4:5:2:2:2:2:2:3:2:7:4:2:4:4:3:2:5:2:4:4:4:3:3:2:6:4:3:3:2:8:4:2:2:2:2:5:2:2:2:2:2:3:2:2:2:3:2:4:2:3:5:2:2:4:4:2:2:2:9:3:5:4:5:2:3:3:3:2:3:2:3:2:2:2:2:2:3:2:2:2:3:2:3:2:2:10:3:5:2:2:2:2:4:2:4:7:2:4:3:2:4:3:2:4:3:2:11:3:4:4:3:2:2:4:4:3:2:3:2:3:2:3:2:2:2:3:4:3:2:2:12:3:4:3:4:5:2:3:2:3:2:2:2:2:2:3:2:2:2:2:3:2:3:2:3:2:13:3:4:3:3:3:2:5:2:5:5:2:3:2:4:2:2:3:3:2:14:3:4:3:3:2:2:4:2:3:2:2:2:3:2:2:4:2:2:2:2:2:2:2:2:3:2:15:3:4:3:2:9:2:3:2:3:4:2:2:3:2:4:3:2:2:16:3:4:3:2:6:2:2:2:5:3:3:3:2:5:3:3:2:17:3:4:3:2:5:3:3:2:2:5:2:7:4:3:2:18:3:4:3:2:5:2:4:5:2:2:2:4:2:2:2:3:3:2:19:3:4:3:2:5:2:3:3:2:4:3:3:2:3:3:3:2:20:3:4:3:2:5:2:3:2:2:3:7:2:2:3:3:2:21:3:4:3:2:5:2:2:8:3:2:2:4:3:2:22:3:4:3:2:5:2:2:5:6:2:3:3:2:2:23:3:4:3:2:5:2:2:5:3:2:3:4:3:2:24:3:4:3:2:5:2:2:5:2:3:2:3:3:2:2:25:3:4:3:2:5:2:2:5:2:3:2:3:3:2:26:3:4:3:2:5:2:2:5:2:2:2:3:3:2:27:3:4:3:2:5:2:2:5:2:2:4:2:2:2:28:3:4:3:2:5:2:2:4:3:2:3:2:2:29:3:4:3:2:5:2:2:6:3:2:2:30:3:4:3:2:5:2:2:5:3:2:2:31:3:4:3:2:5:2:3:2:2:3:2:2:32:3:4:3:2:4:5:3:3:2:33:3:4:3:2:5:2:3:2:3:2:34:3:4:3:2:5:5:2:2:2:2:35:3:4:3:2:4:3:3:2:2:36:3:4:3:2:7:2:2:2:2:2:2:37:3:4:4:6:2:2:2:2:2:38:3:4:4:2:2:3:2:2:39:3:4:3:5:2:2:2:2:40:3:4:4:2:3:2:41:3:4:2:3:3:2:42:3:5:3:2:2:43:3:2:2:2:2:3:2:44:7:2:2:2:2:3:2:2:47:4:2:2:3:3:3:2:47:2:2:3:8:2:6:4:2:3:2:4:2:3:3:3:3:3:2:2:2:3:2:2:2:2:2:4:4:2:4:2:2:3:2:7:3:4:2:2:2:2:2:3:2:2:2:3:2:2:3:2:2:4:3:6:7:2:4:2:2:2:8:3:3:2:2:2:5:2:2:3:3:2:2:3:2:2:2:4:2:5:2:3:2:6:2:2:2:2:2:2:9:3:2:4:3:2:2:2:6:3:2:6:3:4:3:2:3:2:2:2:2:2:2:3:2:10:3:2:3:4:2:2:3:3:3:6:3:3:4:3:2:3:3:2:3:3:2:2:11:3:2:3:3:2:2:2:3:3:2:2:3:4:3:2:2:2:2:2:2:4:2:2:2:3:2:3:2:12:3:2:3:2:4:2:3:2:3:3:4:4:4:3:2:2:4:2:3:2:3:2:13:3:2:3:2:3:3:3:2:2:4:2:9:3:4:6:2:2:2:2:2:2:14:3:2:3:2:3:2:4:2:2:3:2:2:2:2:2:3:5:4:6:2:2:2:2:2:2:15:3:2:3:2:3:2:3:2:2:2:2:3:4:2:2:2:2:2:2:4:3:2:3:3:2:16:3:2:3:2:3:2:2:4:2:2:3:2:2:2:3:4:2:3:3:3:2:3:2:17:3:2:3:2:3:2:2:3:3:2:2:5:2:2:2:2:2:2:2:4:2:2:3:2:18:3:2:3:2:3:2:2:3:2:3:2:4:2:3:3:2:4:3:3:2:2:19:3:2:3:2:3:2:2:3:2:2:3:3:9:2:2:3:3:2:20:3:2:3:2:3:2:2:3:2:2:2:4:5:3:2:2:3:3:2:2:21:3:2:3:2:3:2:2:3:2:2:2:3:2:4:5:2:2:2:3:2:22:3:2:3:2:3:2:2:3:2:2:2:2:6:3:3:4:2:2:2:23:3:2:3:2:3:2:2:3:2:2:2:2:4:3:3:3:3:2:2:24:3:2:3:2:3:2:2:3:2:2:2:2:4:2:2:2:3:2:3:2:25:3:2:3:2:3:2:2:3:2:2:2:2:3:5:2:3:2:2:26:3:2:3:2:3:2:2:3:2:2:2:2:3:4:2:2:3:2:27:3:2:3:2:3:2:2:3:2:2:2:2:3:3:2:2:3:2:28:3:2:3:2:3:2:2:3:2:2:2:2:2:5:2:2:2:2:2:29:3:2:3:2:3:2:2:3:2:2:2:4:3:2:2:2:30:3:2:3:2:3:2:2:3:2:2:2:4:2:3:2:31:3:2:3:2:3:2:2:2:7:3:2:2:32:3:2:3:2:3:2:2:3:2:2:2:2:3:2:2:33:3:2:3:2:3:2:2:2:5:3:2:2:34:3:2:3:2:3:2:2:3:3:3:2:2:35:3:2:3:2:2:7:2:3:2:36:3:2:3:2:3:2:2:3:3:2:2:37:3:2:3:2:2:3:4:2:2:2:2:38:3:2:3:2:4:2:3:2:2:39:3:2:3:3:2:2:2:3:2:40:3:2:3:2:2:2:3:2:2:41:3:2:2:3:3:3:2:42:3:3:2:2:3:2:2:43:3:2:2:2:3:2:2:44:2:3:3:3:2:47:2:3:2:2:46:3:2:3:2:46:2:2:3:2:2:48:3:3:5:2:2:48:2:3:8:2:6:3:3:3:2:2:9:3:3:3:2:3:4:2:9:2:6:2:2:2:2:2:2:7:3:2:2:3:2:4:3:2:3:3:3:3:2:3:2:2:3:3:2:4:2:6:2:2:3:2:8:2:5:6:5:2:2:2:2:4:2:4:4:2:3:3:3:2:4:3:2:2:2:9:2:4:5:2:2:2:4:2:2:4:2:3:2:2:2:3:2:5:4:3:3:3:2:2:10:2:4:3:2:3:2:2:4:4:2:4:2:2:2:2:6:3:3:3:2:2:2:3:2:11:2:4:2:4:3:2:3:2:2:2:2:4:3:5:2:3:2:3:2:2:2:4:2:2:2:2:12:2:4:2:3:3:3:2:2:10:3:2:2:2:2:6:4:3:2:13:2:4:2:3:2:3:3:2:2:3:7:4:4:2:2:4:2:2:3:2:2:14:2:4:2:3:2:2:3:3:2:2:2:2:3:2:3:3:2:3:2:5:2:2:3:2:2:15:2:4:2:3:2:2:2:3:2:4:5:2:3:3:3:2:3:2:2:2:3:2:2:16:2:4:2:3:2:2:2:2:3:2:3:2:2:3:7:3:2:4:3:2:17:2:4:2:3:2:2:2:2:2:2:7:3:3:2:2:2:2:2:3:3:2:2:2:18:2:4:2:3:2:2:2:2:2:2:2:3:3:3:2:4:2:2:2:2:2:2:3:2:2:19:2:4:2:3:2:2:2:2:2:2:2:2:2:2:2:2:2:6:2:4:3:2:20:2:4:2:2:11:4:2:2:2:4:3:2:3:2:2:21:2:4:2:2:11:2:2:2:5:3:3:2:3:2:22:2:4:2:2:10:5:2:3:3:3:2:3:2:23:2:4:2:2:10:4:3:2:2:2:3:3:2:2:24:2:4:2:2:10:4:2:2:2:4:3:2:2:25:2:4:2:2:10:4:2:2:2:4:2:2:2:2:26:2:4:2:2:10:4:2:2:2:2:3:2:2:27:2:4:2:2:10:3:3:2:3:2:2:2:28:2:4:2:2:10:4:3:3:2:2:29:2:4:2:2:10:4:2:2:3:2:30:2:4:2:2:10:3:2:2:3:2:31:2:4:2:2:9:3:2:2:3:2:32:2:4:2:2:12:2:2:2:2:2:2:2:2:2:2:2:2:33:2:4:4:2:2:2:2:2:2:2:2:2:3:2:34:2:4:2:2:8:2:2:3:2:35:2:4:2:2:9:2:2:2:2:2:2:2:2:2:36:2:4:3:7:3:2:37:2:4:2:2:7:2:2:2:2:2:2:2:38:2:4:3:3:3:3:2:2:39:2:4:2:3:3:2:3:2:40:2:4:2:2:3:3:2:2:41:2:3:4:2:2:3:2:42:2:4:4:2:2:2:2:43:3:2:2:2:3:2:2:44:2:4:3:2:44:4:3:2:2:2:48:3:2:49:47:2:2:3:3:3:8:2:6:2:7:4:6:4:3:2:2:2:2:2:5:2:5:2:2:4:2:2:3:2:2:2:7:2:3:3:3:4:2:2:2:3:7:5:2:4:3:3:2:4:4:2:2:3:2:8:2:2:7:2:2:2:4:2:9:3:6:4:2:3:2:3:2:3:2:2:9:2:2:4:2:2:3:4:2:4:2:2:2:2:5:6:2:2:2:3:2:2:2:3:3:2:10:2:2:3:3:3:4:2:2:4:2:2:7:2:2:3:2:4:2:2:2:4:3:2:11:2:2:3:2:5:4:2:2:10:4:4:3:3:2:2:3:3:2:12:2:2:3:2:3:4:3:5:2:2:3:3:2:4:6:2:2:3:3:2:2:13:2:2:3:2:3:2:4:3:2:3:2:2:2:2:5:9:3:3:2:2:14:2:2:3:2:3:2:2:4:2:2:5:4:3:2:6:3:2:3:3:2:15:2:2:3:2:3:2:2:2:3:4:2:2:5:3:2:3:4:2:2:2:2:2:3:2:16:2:2:3:2:3:2:2:2:2:3:2:2:2:4:2:8:2:2:2:2:3:2:2:2:17:2:2:3:2:3:2:2:2:2:2:2:2:3:8:2:2:2:2:2:4:3:2:18:2:2:3:2:2:10:2:2:2:2:3:2:2:6:3:3:2:19:2:2:3:2:2:9:2:2:3:2:5:2:4:4:2:2:2:2:20:2:2:3:2:2:8:4:5:2:2:3:2:2:4:2:2:2:2:21:2:2:3:2:2:8:4:2:2:2:2:2:3:2:5:2:2:2:2:2:22:2:2:3:2:2:8:3:4:2:3:4:2:3:2:2:2:23:2:2:3:2:2:8:3:3:4:2:2:2:2:3:2:2:2:24:2:2:3:2:2:8:3:3:2:7:3:2:25:2:2:3:2:2:8:3:3:2:4:2:3:2:2:2:26:2:2:3:2:2:8:3:3:2:3:2:3:2:2:2:27:2:2:3:2:2:8:3:2:7:2:2:2:2:2:2:2:28:2:2:3:2:2:8:5:3:3:2:2:29:2:2:3:2:2:8:3:2:3:3:2:2:30:2:2:3:2:2:8:4:2:2:2:3:2:31:2:2:3:2:2:8:3:2:2:3:2:2:32:2:2:3:2:2:7:6:2:2:2:2:2:2:33:2:2:3:2:3:2:2:2:2:4:2:3:2:34:2:2:3:2:2:7:2:3:2:2:2:35:2:2:3:2:3:2:2:2:3:2:3:2:2:36:2:2:3:2:3:2:2:2:2:2:2:3:2:37:2:2:3:2:2:5:2:3:2:38:2:2:3:2:2:6:2:2:2:2:2:2:39:2:2:3:3:2:2:2:3:2:2:40:2:2:3:3:2:2:2:3:2:41:2:2:2:3:3:3:2:42:2:2:4:3:2:2:43:2:2:2:2:3:2:2:2:44:3:2:2:2:3:2:45:2:2:3:2:2:2:45:3:2:4:8:3:2:47:2:6:3:7:2:5:2:3:2:2:2:2:4:4:3:5:3:3:3:2:3:2:2:2:5:2:2:2:5:3:2:2:5:5:2:2:3:3:3:4:8:2:2:2:2:3:4:3:2:2:2:2:2:2:3:4:2:2:2:6:3:4:3:2:2:8:4:3:7:2:2:2:5:2:2:2:2:3:3:2:2:2:7:3:2:3:5:3:2:4:4:2:2:4:2:2:4:2:2:2:5:3:2:3:3:2:2:8:3:2:2:2:4:3:4:2:2:2:3:2:3:4:5:2:4:2:4:5:2:2:2:2:2:9:2:7:5:2:3:5:5:6:3:2:3:2:3:2:2:2:3:2:2:10:2:6:2:3:2:4:2:2:2:3:2:3:2:3:3:5:2:2:2:2:2:3:2:3:2:11:2:5:4:4:4:2:2:2:4:2:2:2:5:2:5:2:2:2:2:3:2:2:12:2:5:3:4:3:3:2:4:2:3:2:8:3:2:4:3:2:13:2:5:3:3:2:2:3:2:2:3:7:5:4:2:2:3:3:2:2:14:2:5:3:2:4:2:2:3:3:3:2:2:4:4:2:3:2:2:2:3:2:2:15:2:5:3:2:3:2:7:2:3:2:2:2:2:2:2:4:3:3:2:2:2:16:2:5:3:2:3:2:2:4:2:2:2:2:2:3:3:2:2:3:2:3:3:2:17:2:5:3:2:3:2:2:2:2:3:2:8:2:4:2:3:2:2:2:18:2:5:3:2:2:7:4:5:2:2:2:4:2:2:3:2:19:2:5:3:2:2:6:4:3:3:3:3:2:3:3:2:20:2:5:3:2:2:6:3:2:2:3:2:2:4:3:3:2:21:2:5:3:2:2:6:2:4:2:2:3:3:4:2:2:2:2:22:2:5:3:2:2:6:2:3:2:9:2:2:2:2:2:2:2:2:2:23:2:5:3:2:2:6:2:4:2:3:2:3:3:2:24:2:5:3:2:2:6:2:3:2:2:2:2:2:2:3:2:2:25:2:5:3:2:2:6:2:2:6:2:3:2:2:26:2:5:3:2:2:6:2:3:2:2:2:2:3:2:2:27:2:5:3:2:2:6:2:2:6:2:2:2:2:2:2:28:2:5:3:2:2:6:2:5:3:2:29:2:5:3:2:2:6:2:3:2:2:3:2:30:2:5:3:2:2:5:6:2:2:2:2:2:2:31:2:5:3:2:3:2:2:3:2:2:3:2:2:32:2:5:3:2:2:6:2:3:2:2:33:2:5:3:2:2:4:3:3:2:34:2:5:3:2:2:6:2:2:2:2:2:2:35:2:5:3:3:3:2:2:3:2:36:2:5:3:2:3:2:2:3:2:37:2:5:2:4:3:2:2:2:38:2:5:3:3:3:2:39:2:5:2:4:2:2:2:2:40:3:2:2:2:2:2:2:3:2:41:2:5:3:2:2:2:42:2:3:2:2:3:2:2:43:4:3:2:2:2:43:4:2:3:3:2:2:46:2:3:2:2:46:3:3:7:2:2:2:4:3:3:2:3:6:3:2:5:3:2:9:5:4:2:3:2:2:2:3:2:2:4:7:3:3:2:5:3:5:3:3:3:2:2:2:3:3:2:2:2:2:2:5:2:2:2:2:2:5:3:3:2:2:2:3:2:2:2:2:4:3:2:6:4:3:2:3:2:2:7:3:2:2:2:6:2:3:4:2:2:2:5:2:2:2:2:2:5:2:3:2:3:2:2:2:4:2:2:2:2:4:2:2:2:2:7:2:2:3:2:6:2:3:4:2:2:4:5:3:3:5:3:3:2:3:2:2:8:2:2:2:2:3:3:3:3:4:3:2:5:2:3:2:3:2:2:4:2:2:2:2:3:2:2:8:8:3:4:4:3:2:3:3:2:2:3:3:2:2:7:2:3:2:2:9:7:2:3:3:2:2:6:4:4:6:3:2:4:2:3:2:2:10:6:5:2:3:3:2:2:2:2:2:9:2:3:2:2:4:2:3:2:11:6:4:2:2:2:3:3:3:2:2:2:2:3:3:2:5:2:2:4:2:2:2:2:12:6:3:4:2:2:3:3:3:3:2:2:2:3:2:3:7:2:2:2:2:2:2:2:13:6:3:3:3:2:2:3:3:2:5:2:3:2:4:3:2:3:2:2:14:6:3:3:2:3:2:2:3:2:5:5:5:3:2:3:2:15:6:3:3:2:2:3:2:2:3:2:2:3:2:4:2:6:2:2:2:2:2:2:16:6:3:3:2:2:2:3:2:2:2:4:2:2:2:2:4:3:2:3:2:17:6:3:3:2:2:2:2:3:2:2:2:2:2:2:4:2:5:2:2:2:2:2:18:6:3:3:2:2:2:2:2:2:5:4:3:2:3:3:2:2:19:6:3:3:2:2:2:2:2:2:2:4:2:2:2:4:3:2:2:2:20:6:3:3:2:2:2:2:2:2:2:2:2:5:2:2:2:2:3:2:21:6:3:2:13:6:2:2:2:2:2:2:22:6:3:2:13:4:2:3:2:23:6:3:2:11:3:4:2:2:2:2:24:6:3:2:13:2:3:2:2:25:6:3:2:11:2:2:3:2:2:26:6:3:2:11:3:2:2:2:27:6:3:2:12:2:2:2:2:2:2:2:2:2:2:2:2:28:6:4:10:2:3:2:29:6:3:3:2:2:2:2:2:3:2:3:2:30:6:3:2:9:2:2:2:2:2:2:2:2:2:31:6:4:5:2:4:2:2:2:32:6:3:3:2:2:3:2:3:2:33:6:3:3:2:4:2:2:2:2:34:6:3:2:4:3:2:2:35:6:3:4:2:3:2:36:6:3:2:4:2:2:2:37:6:3:2:2:3:2:38:8:2:3:2:39:5:3:3:2:2:40:7:3:2:2:2:2:3:2:42:4:3:2:2:44:3:2:2:2:44:3:3:2:2:2:43:4:8:2:2:2:2:3:2:2:3:4:2:3:8:4:5:2:4:3:3:2:2:2:2:8:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:7:7:2:2:2:3:2:2:4:6:6:2:2:4:3:3:7:2:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:4:4:3:3:5:5:5:4:3:4:4:3:3:4:3:8:3:4:7:3:3:3:3:3:7:3:4:3:50:3", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.23,0.23500000000000004,0.23,0.23,0.24288937809576214],2]]
+Shrunk 5525 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 788 tests
+{ seed: 12345, path: "787:0:0:0:1:1:0:0:4:2:0:3:1:2:1:0:4:0:0:0:0:1:4:1:0:1:0:1:0:0:1:1:0:0:5:5:5:5:5:5:5:5:1:10:3:1:3:1:1:2:2:9:2:1:1:10:1:1:2:2:2:4:4:3:5:3:3:3:4:3:3:3:6:5:3:3:3:3:4:5:4:3:3:4:3:3:6:3:3:3:3:3:5:5:8:4:4:5:5:4:5:4:6:4:4:4:5:4:7:4:11:5:4:4:4:4:4:6:5:5:0:0:0:0:0:3:1:0:1:0:4:0:1:0:1:1:4:0:0:2:1:0:1:0:0:0:5:2:0:2:2:2:6:3:6:6:4:2:2:2:3:2:6:4:3:2:3:2:7:2:2:2:3:8:2:7:2:2:2:2:7:3:4:2:3:3:2:2:5:2:3:3:2:2:4:2:5:2:2:3:2:7:6:7:3:3:3:2:2:2:2:6:2:3:3:3:3:3:3:2:3:3:2:2:8:5:6:2:2:2:2:6:2:3:6:3:3:5:2:2:2:3:2:2:2:3:2:9:5:3:3:2:4:2:6:2:4:3:3:2:2:3:2:3:2:4:2:3:3:2:2:10:5:3:2:2:2:2:2:2:3:2:2:2:4:6:5:4:3:2:2:3:2:2:3:2:11:5:2:4:4:3:3:2:6:2:2:4:3:2:2:3:3:2:3:2:2:3:2:12:5:2:4:2:2:5:3:2:2:4:3:2:5:2:2:3:2:4:3:2:2:2:13:5:2:3:6:4:2:3:2:3:4:3:2:3:2:3:3:4:2:2:2:2:14:5:2:3:5:2:2:3:4:4:5:3:6:2:3:2:3:2:15:5:2:3:4:4:2:3:2:3:2:2:2:6:2:2:2:3:3:3:2:2:16:5:2:3:4:3:3:2:2:3:2:2:3:2:2:5:3:3:2:3:2:2:17:5:2:3:4:3:2:2:5:3:3:4:3:2:2:2:3:2:3:2:18:5:2:3:4:3:2:2:2:3:2:6:2:2:4:2:3:2:3:2:19:5:2:3:4:3:2:2:2:2:2:2:2:2:2:3:2:5:2:3:2:2:2:20:5:2:3:4:2:7:4:3:2:3:2:2:2:3:2:2:2:21:5:2:3:4:2:7:2:2:4:4:3:2:3:2:2:22:5:2:3:4:2:6:6:3:2:2:2:3:2:2:2:23:5:2:3:4:2:6:5:2:2:2:2:2:2:3:2:2:24:5:2:3:4:2:6:4:4:2:2:2:3:2:2:25:5:2:3:4:2:6:4:2:4:2:2:3:2:26:5:2:3:4:2:6:4:2:5:2:2:2:2:2:27:5:2:3:4:2:6:6:2:3:2:2:28:5:2:3:4:2:6:3:4:3:2:29:5:2:3:4:2:6:2:4:3:2:30:5:2:3:4:2:6:3:2:2:3:2:31:5:2:3:4:2:6:2:3:2:2:2:32:5:2:3:4:2:6:2:2:3:2:33:5:2:3:4:2:6:3:2:34:5:2:3:4:2:3:4:2:2:2:2:35:5:2:3:4:3:4:2:2:2:2:36:5:2:3:4:5:2:2:2:2:2:37:5:2:3:5:2:2:3:2:38:5:2:3:3:4:2:2:2:2:39:5:2:3:5:2:2:2:2:2:40:5:3:2:4:2:2:2:2:41:5:4:2:2:3:2:42:5:2:3:3:2:2:43:5:2:2:2:3:2:44:4:2:3:2:2:2:46:3:3:2:2:2:46:2:2:2:3:2:2:49:3:3:3:2:47:3:3:8:2:6:6:5:3:2:2:3:2:5:2:2:2:2:3:2:5:2:3:3:5:3:2:3:2:2:7:5:2:3:2:7:3:2:2:2:3:2:2:2:3:3:6:4:2:5:3:2:2:2:8:4:4:3:4:4:2:3:3:2:4:2:2:2:2:2:3:2:3:5:2:4:3:2:9:4:3:3:4:2:2:2:2:3:2:2:2:2:5:6:2:6:2:2:2:2:3:2:2:2:10:4:3:2:3:4:2:2:2:5:2:3:3:6:3:2:2:3:2:2:2:4:2:2:2:2:11:4:3:2:2:3:3:7:6:6:2:2:2:3:2:2:2:2:2:2:3:2:2:12:4:3:2:2:2:3:3:4:2:2:2:4:2:3:2:2:5:4:2:2:2:3:2:2:2:13:4:3:2:2:2:2:3:3:2:3:2:2:6:4:4:4:2:3:2:3:2:14:4:3:2:2:2:2:2:3:2:3:3:2:3:6:4:5:4:3:2:15:4:3:2:2:2:2:2:2:2:5:3:3:2:2:4:3:2:2:4:4:2:2:2:2:16:4:3:2:2:2:2:2:2:2:2:2:4:3:4:8:2:2:3:3:2:17:4:2:12:4:4:9:2:3:3:2:18:4:2:11:3:5:2:3:6:3:3:2:2:19:4:2:11:2:3:7:2:4:4:3:2:20:4:2:11:2:2:4:2:3:2:2:2:2:4:3:2:21:4:2:11:2:2:2:4:4:4:3:3:2:22:4:2:11:2:2:2:3:2:2:2:2:2:5:2:2:2:2:2:23:4:2:11:2:2:2:2:3:4:2:2:2:3:2:2:24:4:2:11:2:2:2:2:2:6:2:3:2:25:4:2:11:2:2:2:2:2:3:5:2:2:2:2:2:26:4:2:11:2:2:2:2:2:2:4:3:2:27:4:2:11:2:2:2:2:2:5:2:2:2:2:2:28:4:2:11:2:2:2:3:3:3:2:29:4:2:10:8:3:2:30:4:2:10:5:2:2:2:3:2:31:4:2:11:2:5:2:2:2:2:2:32:4:2:11:2:4:2:2:2:2:33:4:2:11:2:3:2:2:2:34:4:2:12:3:2:35:4:2:10:3:2:2:36:4:2:8:4:2:2:2:2:37:4:3:2:2:2:2:4:3:2:38:4:3:2:2:2:2:2:2:2:3:2:39:4:2:8:2:2:2:2:2:2:2:2:40:5:4:2:2:2:3:2:41:4:3:4:3:2:42:4:2:4:3:2:43:4:3:3:2:2:44:3:2:3:3:2:46:3:2:3:2:46:5:2:2:2:2:2:48:2:3:2:48:3:3:3:8:2:2:6:5:2:2:3:7:2:2:3:2:3:2:3:3:2:2:3:3:4:5:2:2:2:2:2:3:2:7:4:2:4:4:3:2:5:2:4:4:4:3:3:2:6:4:3:3:2:8:4:2:2:2:2:5:2:2:2:2:2:3:2:2:2:3:2:4:2:3:5:2:2:4:4:2:2:2:9:3:5:4:5:2:3:3:3:2:3:2:3:2:2:2:2:2:3:2:2:2:3:2:3:2:2:10:3:5:2:2:2:2:4:2:4:7:2:4:3:2:4:3:2:4:3:2:11:3:4:4:3:2:2:4:4:3:2:3:2:3:2:3:2:2:2:3:4:3:2:2:12:3:4:3:4:5:2:3:2:3:2:2:2:2:2:3:2:2:2:2:3:2:3:2:3:2:13:3:4:3:3:3:2:5:2:5:5:2:3:2:4:2:2:3:3:2:14:3:4:3:3:2:2:4:2:3:2:2:2:3:2:2:4:2:2:2:2:2:2:2:2:3:2:15:3:4:3:2:9:2:3:2:3:4:2:2:3:2:4:3:2:2:16:3:4:3:2:6:2:2:2:5:3:3:3:2:5:3:3:2:17:3:4:3:2:5:3:3:2:2:5:2:7:4:3:2:18:3:4:3:2:5:2:4:5:2:2:2:4:2:2:2:3:3:2:19:3:4:3:2:5:2:3:3:2:4:3:3:2:3:3:3:2:20:3:4:3:2:5:2:3:2:2:3:7:2:2:3:3:2:21:3:4:3:2:5:2:2:8:3:2:2:4:3:2:22:3:4:3:2:5:2:2:5:6:2:3:3:2:2:23:3:4:3:2:5:2:2:5:3:2:3:4:3:2:24:3:4:3:2:5:2:2:5:2:3:2:3:3:2:2:25:3:4:3:2:5:2:2:5:2:3:2:3:3:2:26:3:4:3:2:5:2:2:5:2:2:2:3:3:2:27:3:4:3:2:5:2:2:5:2:2:4:2:2:2:28:3:4:3:2:5:2:2:4:3:2:3:2:2:29:3:4:3:2:5:2:2:6:3:2:2:30:3:4:3:2:5:2:2:5:3:2:2:31:3:4:3:2:5:2:3:2:2:3:2:2:32:3:4:3:2:4:5:3:3:2:33:3:4:3:2:5:2:3:2:3:2:34:3:4:3:2:5:5:2:2:2:2:35:3:4:3:2:4:3:3:2:2:36:3:4:3:2:7:2:2:2:2:2:2:37:3:4:4:6:2:2:2:2:2:38:3:4:4:2:2:3:2:2:39:3:4:3:5:2:2:2:2:40:3:4:4:2:3:2:41:3:4:2:3:3:2:42:3:5:3:2:2:43:3:2:2:2:2:3:2:44:7:2:2:2:2:3:2:2:47:4:2:2:3:3:3:2:47:2:2:3:8:2:6:4:2:3:2:4:2:3:3:3:3:3:2:2:2:3:2:2:2:2:2:4:4:2:4:2:2:3:2:7:3:4:2:2:2:2:2:3:2:2:2:3:2:2:3:2:2:4:3:6:7:2:4:2:2:2:8:3:3:2:2:2:5:2:2:3:3:2:2:3:2:2:2:4:2:5:2:3:2:6:2:2:2:2:2:2:9:3:2:4:3:2:2:2:6:3:2:6:3:4:3:2:3:2:2:2:2:2:2:3:2:10:3:2:3:4:2:2:3:3:3:6:3:3:4:3:2:3:3:2:3:3:2:2:11:3:2:3:3:2:2:2:3:3:2:2:3:4:3:2:2:2:2:2:2:4:2:2:2:3:2:3:2:12:3:2:3:2:4:2:3:2:3:3:4:4:4:3:2:2:4:2:3:2:3:2:13:3:2:3:2:3:3:3:2:2:4:2:9:3:4:6:2:2:2:2:2:2:14:3:2:3:2:3:2:4:2:2:3:2:2:2:2:2:3:5:4:6:2:2:2:2:2:2:15:3:2:3:2:3:2:3:2:2:2:2:3:4:2:2:2:2:2:2:4:3:2:3:3:2:16:3:2:3:2:3:2:2:4:2:2:3:2:2:2:3:4:2:3:3:3:2:3:2:17:3:2:3:2:3:2:2:3:3:2:2:5:2:2:2:2:2:2:2:4:2:2:3:2:18:3:2:3:2:3:2:2:3:2:3:2:4:2:3:3:2:4:3:3:2:2:19:3:2:3:2:3:2:2:3:2:2:3:3:9:2:2:3:3:2:20:3:2:3:2:3:2:2:3:2:2:2:4:5:3:2:2:3:3:2:2:21:3:2:3:2:3:2:2:3:2:2:2:3:2:4:5:2:2:2:3:2:22:3:2:3:2:3:2:2:3:2:2:2:2:6:3:3:4:2:2:2:23:3:2:3:2:3:2:2:3:2:2:2:2:4:3:3:3:3:2:2:24:3:2:3:2:3:2:2:3:2:2:2:2:4:2:2:2:3:2:3:2:25:3:2:3:2:3:2:2:3:2:2:2:2:3:5:2:3:2:2:26:3:2:3:2:3:2:2:3:2:2:2:2:3:4:2:2:3:2:27:3:2:3:2:3:2:2:3:2:2:2:2:3:3:2:2:3:2:28:3:2:3:2:3:2:2:3:2:2:2:2:2:5:2:2:2:2:2:29:3:2:3:2:3:2:2:3:2:2:2:4:3:2:2:2:30:3:2:3:2:3:2:2:3:2:2:2:4:2:3:2:31:3:2:3:2:3:2:2:2:7:3:2:2:32:3:2:3:2:3:2:2:3:2:2:2:2:3:2:2:33:3:2:3:2:3:2:2:2:5:3:2:2:34:3:2:3:2:3:2:2:3:3:3:2:2:35:3:2:3:2:2:7:2:3:2:36:3:2:3:2:3:2:2:3:3:2:2:37:3:2:3:2:2:3:4:2:2:2:2:38:3:2:3:2:4:2:3:2:2:39:3:2:3:3:2:2:2:3:2:40:3:2:3:2:2:2:3:2:2:41:3:2:2:3:3:3:2:42:3:3:2:2:3:2:2:43:3:2:2:2:3:2:2:44:2:3:3:3:2:47:2:3:2:2:46:3:2:3:2:46:2:2:3:2:2:48:3:3:5:2:2:48:2:3:8:2:6:3:3:3:2:2:9:3:3:3:2:3:4:2:9:2:6:2:2:2:2:2:2:7:3:2:2:3:2:4:3:2:3:3:3:3:2:3:2:2:3:3:2:4:2:6:2:2:3:2:8:2:5:6:5:2:2:2:2:4:2:4:4:2:3:3:3:2:4:3:2:2:2:9:2:4:5:2:2:2:4:2:2:4:2:3:2:2:2:3:2:5:4:3:3:3:2:2:10:2:4:3:2:3:2:2:4:4:2:4:2:2:2:2:6:3:3:3:2:2:2:3:2:11:2:4:2:4:3:2:3:2:2:2:2:4:3:5:2:3:2:3:2:2:2:4:2:2:2:2:12:2:4:2:3:3:3:2:2:10:3:2:2:2:2:6:4:3:2:13:2:4:2:3:2:3:3:2:2:3:7:4:4:2:2:4:2:2:3:2:2:14:2:4:2:3:2:2:3:3:2:2:2:2:3:2:3:3:2:3:2:5:2:2:3:2:2:15:2:4:2:3:2:2:2:3:2:4:5:2:3:3:3:2:3:2:2:2:3:2:2:16:2:4:2:3:2:2:2:2:3:2:3:2:2:3:7:3:2:4:3:2:17:2:4:2:3:2:2:2:2:2:2:7:3:3:2:2:2:2:2:3:3:2:2:2:18:2:4:2:3:2:2:2:2:2:2:2:3:3:3:2:4:2:2:2:2:2:2:3:2:2:19:2:4:2:3:2:2:2:2:2:2:2:2:2:2:2:2:2:6:2:4:3:2:20:2:4:2:2:11:4:2:2:2:4:3:2:3:2:2:21:2:4:2:2:11:2:2:2:5:3:3:2:3:2:22:2:4:2:2:10:5:2:3:3:3:2:3:2:23:2:4:2:2:10:4:3:2:2:2:3:3:2:2:24:2:4:2:2:10:4:2:2:2:4:3:2:2:25:2:4:2:2:10:4:2:2:2:4:2:2:2:2:26:2:4:2:2:10:4:2:2:2:2:3:2:2:27:2:4:2:2:10:3:3:2:3:2:2:2:28:2:4:2:2:10:4:3:3:2:2:29:2:4:2:2:10:4:2:2:3:2:30:2:4:2:2:10:3:2:2:3:2:31:2:4:2:2:9:3:2:2:3:2:32:2:4:2:2:12:2:2:2:2:2:2:2:2:2:2:2:2:33:2:4:4:2:2:2:2:2:2:2:2:2:3:2:34:2:4:2:2:8:2:2:3:2:35:2:4:2:2:9:2:2:2:2:2:2:2:2:2:36:2:4:3:7:3:2:37:2:4:2:2:7:2:2:2:2:2:2:2:38:2:4:3:3:3:3:2:2:39:2:4:2:3:3:2:3:2:40:2:4:2:2:3:3:2:2:41:2:3:4:2:2:3:2:42:2:4:4:2:2:2:2:43:3:2:2:2:3:2:2:44:2:4:3:2:44:4:3:2:2:2:48:3:2:49:47:2:2:3:3:3:8:2:6:2:7:4:6:4:3:2:2:2:2:2:5:2:5:2:2:4:2:2:3:2:2:2:7:2:3:3:3:4:2:2:2:3:7:5:2:4:3:3:2:4:4:2:2:3:2:8:2:2:7:2:2:2:4:2:9:3:6:4:2:3:2:3:2:3:2:2:9:2:2:4:2:2:3:4:2:4:2:2:2:2:5:6:2:2:2:3:2:2:2:3:3:2:10:2:2:3:3:3:4:2:2:4:2:2:7:2:2:3:2:4:2:2:2:4:3:2:11:2:2:3:2:5:4:2:2:10:4:4:3:3:2:2:3:3:2:12:2:2:3:2:3:4:3:5:2:2:3:3:2:4:6:2:2:3:3:2:2:13:2:2:3:2:3:2:4:3:2:3:2:2:2:2:5:9:3:3:2:2:14:2:2:3:2:3:2:2:4:2:2:5:4:3:2:6:3:2:3:3:2:15:2:2:3:2:3:2:2:2:3:4:2:2:5:3:2:3:4:2:2:2:2:2:3:2:16:2:2:3:2:3:2:2:2:2:3:2:2:2:4:2:8:2:2:2:2:3:2:2:2:17:2:2:3:2:3:2:2:2:2:2:2:2:3:8:2:2:2:2:2:4:3:2:18:2:2:3:2:2:10:2:2:2:2:3:2:2:6:3:3:2:19:2:2:3:2:2:9:2:2:3:2:5:2:4:4:2:2:2:2:20:2:2:3:2:2:8:4:5:2:2:3:2:2:4:2:2:2:2:21:2:2:3:2:2:8:4:2:2:2:2:2:3:2:5:2:2:2:2:2:22:2:2:3:2:2:8:3:4:2:3:4:2:3:2:2:2:23:2:2:3:2:2:8:3:3:4:2:2:2:2:3:2:2:2:24:2:2:3:2:2:8:3:3:2:7:3:2:25:2:2:3:2:2:8:3:3:2:4:2:3:2:2:2:26:2:2:3:2:2:8:3:3:2:3:2:3:2:2:2:27:2:2:3:2:2:8:3:2:7:2:2:2:2:2:2:2:28:2:2:3:2:2:8:5:3:3:2:2:29:2:2:3:2:2:8:3:2:3:3:2:2:30:2:2:3:2:2:8:4:2:2:2:3:2:31:2:2:3:2:2:8:3:2:2:3:2:2:32:2:2:3:2:2:7:6:2:2:2:2:2:2:33:2:2:3:2:3:2:2:2:2:4:2:3:2:34:2:2:3:2:2:7:2:3:2:2:2:35:2:2:3:2:3:2:2:2:3:2:3:2:2:36:2:2:3:2:3:2:2:2:2:2:2:3:2:37:2:2:3:2:2:5:2:3:2:38:2:2:3:2:2:6:2:2:2:2:2:2:39:2:2:3:3:2:2:2:3:2:2:40:2:2:3:3:2:2:2:3:2:41:2:2:2:3:3:3:2:42:2:2:4:3:2:2:43:2:2:2:2:3:2:2:2:44:3:2:2:2:3:2:45:2:2:3:2:2:2:45:3:2:4:8:3:2:47:2:6:3:7:2:5:2:3:2:2:2:2:4:4:3:5:3:3:3:2:3:2:2:2:5:2:2:2:5:3:2:2:5:5:2:2:3:3:3:4:8:2:2:2:2:3:4:3:2:2:2:2:2:2:3:4:2:2:2:6:3:4:3:2:2:8:4:3:7:2:2:2:5:2:2:2:2:3:3:2:2:2:7:3:2:3:5:3:2:4:4:2:2:4:2:2:4:2:2:2:5:3:2:3:3:2:2:8:3:2:2:2:4:3:4:2:2:2:3:2:3:4:5:2:4:2:4:5:2:2:2:2:2:9:2:7:5:2:3:5:5:6:3:2:3:2:3:2:2:2:3:2:2:10:2:6:2:3:2:4:2:2:2:3:2:3:2:3:3:5:2:2:2:2:2:3:2:3:2:11:2:5:4:4:4:2:2:2:4:2:2:2:5:2:5:2:2:2:2:3:2:2:12:2:5:3:4:3:3:2:4:2:3:2:8:3:2:4:3:2:13:2:5:3:3:2:2:3:2:2:3:7:5:4:2:2:3:3:2:2:14:2:5:3:2:4:2:2:3:3:3:2:2:4:4:2:3:2:2:2:3:2:2:15:2:5:3:2:3:2:7:2:3:2:2:2:2:2:2:4:3:3:2:2:2:16:2:5:3:2:3:2:2:4:2:2:2:2:2:3:3:2:2:3:2:3:3:2:17:2:5:3:2:3:2:2:2:2:3:2:8:2:4:2:3:2:2:2:18:2:5:3:2:2:7:4:5:2:2:2:4:2:2:3:2:19:2:5:3:2:2:6:4:3:3:3:3:2:3:3:2:20:2:5:3:2:2:6:3:2:2:3:2:2:4:3:3:2:21:2:5:3:2:2:6:2:4:2:2:3:3:4:2:2:2:2:22:2:5:3:2:2:6:2:3:2:9:2:2:2:2:2:2:2:2:2:23:2:5:3:2:2:6:2:4:2:3:2:3:3:2:24:2:5:3:2:2:6:2:3:2:2:2:2:2:2:3:2:2:25:2:5:3:2:2:6:2:2:6:2:3:2:2:26:2:5:3:2:2:6:2:3:2:2:2:2:3:2:2:27:2:5:3:2:2:6:2:2:6:2:2:2:2:2:2:28:2:5:3:2:2:6:2:5:3:2:29:2:5:3:2:2:6:2:3:2:2:3:2:30:2:5:3:2:2:5:6:2:2:2:2:2:2:31:2:5:3:2:3:2:2:3:2:2:3:2:2:32:2:5:3:2:2:6:2:3:2:2:33:2:5:3:2:2:4:3:3:2:34:2:5:3:2:2:6:2:2:2:2:2:2:35:2:5:3:3:3:2:2:3:2:36:2:5:3:2:3:2:2:3:2:37:2:5:2:4:3:2:2:2:38:2:5:3:3:3:2:39:2:5:2:4:2:2:2:2:40:3:2:2:2:2:2:2:3:2:41:2:5:3:2:2:2:42:2:3:2:2:3:2:2:43:4:3:2:2:2:43:4:2:3:3:2:2:46:2:3:2:2:46:3:3:7:2:2:2:4:3:3:2:3:6:3:2:5:3:2:9:5:4:2:3:2:2:2:3:2:2:4:7:3:3:2:5:3:5:3:3:3:2:2:2:3:3:2:2:2:2:2:5:2:2:2:2:2:5:3:3:2:2:2:3:2:2:2:2:4:3:2:6:4:3:2:3:2:2:7:3:2:2:2:6:2:3:4:2:2:2:5:2:2:2:2:2:5:2:3:2:3:2:2:2:4:2:2:2:2:4:2:2:2:2:7:2:2:3:2:6:2:3:4:2:2:4:5:3:3:5:3:3:2:3:2:2:8:2:2:2:2:3:3:3:3:4:3:2:5:2:3:2:3:2:2:4:2:2:2:2:3:2:2:8:8:3:4:4:3:2:3:3:2:2:3:3:2:2:7:2:3:2:2:9:7:2:3:3:2:2:6:4:4:6:3:2:4:2:3:2:2:10:6:5:2:3:3:2:2:2:2:2:9:2:3:2:2:4:2:3:2:11:6:4:2:2:2:3:3:3:2:2:2:2:3:3:2:5:2:2:4:2:2:2:2:12:6:3:4:2:2:3:3:3:3:2:2:2:3:2:3:7:2:2:2:2:2:2:2:13:6:3:3:3:2:2:3:3:2:5:2:3:2:4:3:2:3:2:2:14:6:3:3:2:3:2:2:3:2:5:5:5:3:2:3:2:15:6:3:3:2:2:3:2:2:3:2:2:3:2:4:2:6:2:2:2:2:2:2:16:6:3:3:2:2:2:3:2:2:2:4:2:2:2:2:4:3:2:3:2:17:6:3:3:2:2:2:2:3:2:2:2:2:2:2:4:2:5:2:2:2:2:2:18:6:3:3:2:2:2:2:2:2:5:4:3:2:3:3:2:2:19:6:3:3:2:2:2:2:2:2:2:4:2:2:2:4:3:2:2:2:20:6:3:3:2:2:2:2:2:2:2:2:2:5:2:2:2:2:3:2:21:6:3:2:13:6:2:2:2:2:2:2:22:6:3:2:13:4:2:3:2:23:6:3:2:11:3:4:2:2:2:2:24:6:3:2:13:2:3:2:2:25:6:3:2:11:2:2:3:2:2:26:6:3:2:11:3:2:2:2:27:6:3:2:12:2:2:2:2:2:2:2:2:2:2:2:2:28:6:4:10:2:3:2:29:6:3:3:2:2:2:2:2:3:2:3:2:30:6:3:2:9:2:2:2:2:2:2:2:2:2:31:6:4:5:2:4:2:2:2:32:6:3:3:2:2:3:2:3:2:33:6:3:3:2:4:2:2:2:2:34:6:3:2:4:3:2:2:35:6:3:4:2:3:2:36:6:3:2:4:2:2:2:37:6:3:2:2:3:2:38:8:2:3:2:39:5:3:3:2:2:40:7:3:2:2:2:2:3:2:42:4:3:2:2:44:3:2:2:2:44:3:3:2:2:2:43:4:8:2:2:2:2:3:2:2:3:4:2:3:8:4:5:2:4:3:3:2:2:2:2:8:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:7:7:2:2:2:3:2:2:4:6:6:2:2:4:3:3:7:2:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:4:4:3:3:5:5:5:4:3:4:4:3:3:4:3:8:3:4:7:3:3:3:3:3:7:3:4:3:50:3", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.23,0.23500000000000004,0.23,0.23,0.24288937809576214],2]]
+Shrunk 5525 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 788 tests
+{ seed: 12345, path: "787:0:0:0:1:1:0:0:4:2:0:3:1:2:1:0:4:0:0:0:0:1:4:1:0:1:0:1:0:0:1:1:0:0:5:5:5:5:5:5:5:5:1:10:3:1:3:1:1:2:2:9:2:1:1:10:1:1:2:2:2:4:4:3:5:3:3:3:4:3:3:3:6:5:3:3:3:3:4:5:4:3:3:4:3:3:6:3:3:3:3:3:5:5:8:4:4:5:5:4:5:4:6:4:4:4:5:4:7:4:11:5:4:4:4:4:4:6:5:5:0:0:0:0:0:3:1:0:1:0:4:0:1:0:1:1:4:0:0:2:1:0:1:0:0:0:5:2:0:2:2:2:6:3:6:6:4:2:2:2:3:2:6:4:3:2:3:2:7:2:2:2:3:8:2:7:2:2:2:2:7:3:4:2:3:3:2:2:5:2:3:3:2:2:4:2:5:2:2:3:2:7:6:7:3:3:3:2:2:2:2:6:2:3:3:3:3:3:3:2:3:3:2:2:8:5:6:2:2:2:2:6:2:3:6:3:3:5:2:2:2:3:2:2:2:3:2:9:5:3:3:2:4:2:6:2:4:3:3:2:2:3:2:3:2:4:2:3:3:2:2:10:5:3:2:2:2:2:2:2:3:2:2:2:4:6:5:4:3:2:2:3:2:2:3:2:11:5:2:4:4:3:3:2:6:2:2:4:3:2:2:3:3:2:3:2:2:3:2:12:5:2:4:2:2:5:3:2:2:4:3:2:5:2:2:3:2:4:3:2:2:2:13:5:2:3:6:4:2:3:2:3:4:3:2:3:2:3:3:4:2:2:2:2:14:5:2:3:5:2:2:3:4:4:5:3:6:2:3:2:3:2:15:5:2:3:4:4:2:3:2:3:2:2:2:6:2:2:2:3:3:3:2:2:16:5:2:3:4:3:3:2:2:3:2:2:3:2:2:5:3:3:2:3:2:2:17:5:2:3:4:3:2:2:5:3:3:4:3:2:2:2:3:2:3:2:18:5:2:3:4:3:2:2:2:3:2:6:2:2:4:2:3:2:3:2:19:5:2:3:4:3:2:2:2:2:2:2:2:2:2:3:2:5:2:3:2:2:2:20:5:2:3:4:2:7:4:3:2:3:2:2:2:3:2:2:2:21:5:2:3:4:2:7:2:2:4:4:3:2:3:2:2:22:5:2:3:4:2:6:6:3:2:2:2:3:2:2:2:23:5:2:3:4:2:6:5:2:2:2:2:2:2:3:2:2:24:5:2:3:4:2:6:4:4:2:2:2:3:2:2:25:5:2:3:4:2:6:4:2:4:2:2:3:2:26:5:2:3:4:2:6:4:2:5:2:2:2:2:2:27:5:2:3:4:2:6:6:2:3:2:2:28:5:2:3:4:2:6:3:4:3:2:29:5:2:3:4:2:6:2:4:3:2:30:5:2:3:4:2:6:3:2:2:3:2:31:5:2:3:4:2:6:2:3:2:2:2:32:5:2:3:4:2:6:2:2:3:2:33:5:2:3:4:2:6:3:2:34:5:2:3:4:2:3:4:2:2:2:2:35:5:2:3:4:3:4:2:2:2:2:36:5:2:3:4:5:2:2:2:2:2:37:5:2:3:5:2:2:3:2:38:5:2:3:3:4:2:2:2:2:39:5:2:3:5:2:2:2:2:2:40:5:3:2:4:2:2:2:2:41:5:4:2:2:3:2:42:5:2:3:3:2:2:43:5:2:2:2:3:2:44:4:2:3:2:2:2:46:3:3:2:2:2:46:2:2:2:3:2:2:49:3:3:3:2:47:3:3:8:2:6:6:5:3:2:2:3:2:5:2:2:2:2:3:2:5:2:3:3:5:3:2:3:2:2:7:5:2:3:2:7:3:2:2:2:3:2:2:2:3:3:6:4:2:5:3:2:2:2:8:4:4:3:4:4:2:3:3:2:4:2:2:2:2:2:3:2:3:5:2:4:3:2:9:4:3:3:4:2:2:2:2:3:2:2:2:2:5:6:2:6:2:2:2:2:3:2:2:2:10:4:3:2:3:4:2:2:2:5:2:3:3:6:3:2:2:3:2:2:2:4:2:2:2:2:11:4:3:2:2:3:3:7:6:6:2:2:2:3:2:2:2:2:2:2:3:2:2:12:4:3:2:2:2:3:3:4:2:2:2:4:2:3:2:2:5:4:2:2:2:3:2:2:2:13:4:3:2:2:2:2:3:3:2:3:2:2:6:4:4:4:2:3:2:3:2:14:4:3:2:2:2:2:2:3:2:3:3:2:3:6:4:5:4:3:2:15:4:3:2:2:2:2:2:2:2:5:3:3:2:2:4:3:2:2:4:4:2:2:2:2:16:4:3:2:2:2:2:2:2:2:2:2:4:3:4:8:2:2:3:3:2:17:4:2:12:4:4:9:2:3:3:2:18:4:2:11:3:5:2:3:6:3:3:2:2:19:4:2:11:2:3:7:2:4:4:3:2:20:4:2:11:2:2:4:2:3:2:2:2:2:4:3:2:21:4:2:11:2:2:2:4:4:4:3:3:2:22:4:2:11:2:2:2:3:2:2:2:2:2:5:2:2:2:2:2:23:4:2:11:2:2:2:2:3:4:2:2:2:3:2:2:24:4:2:11:2:2:2:2:2:6:2:3:2:25:4:2:11:2:2:2:2:2:3:5:2:2:2:2:2:26:4:2:11:2:2:2:2:2:2:4:3:2:27:4:2:11:2:2:2:2:2:5:2:2:2:2:2:28:4:2:11:2:2:2:3:3:3:2:29:4:2:10:8:3:2:30:4:2:10:5:2:2:2:3:2:31:4:2:11:2:5:2:2:2:2:2:32:4:2:11:2:4:2:2:2:2:33:4:2:11:2:3:2:2:2:34:4:2:12:3:2:35:4:2:10:3:2:2:36:4:2:8:4:2:2:2:2:37:4:3:2:2:2:2:4:3:2:38:4:3:2:2:2:2:2:2:2:3:2:39:4:2:8:2:2:2:2:2:2:2:2:40:5:4:2:2:2:3:2:41:4:3:4:3:2:42:4:2:4:3:2:43:4:3:3:2:2:44:3:2:3:3:2:46:3:2:3:2:46:5:2:2:2:2:2:48:2:3:2:48:3:3:3:8:2:2:6:5:2:2:3:7:2:2:3:2:3:2:3:3:2:2:3:3:4:5:2:2:2:2:2:3:2:7:4:2:4:4:3:2:5:2:4:4:4:3:3:2:6:4:3:3:2:8:4:2:2:2:2:5:2:2:2:2:2:3:2:2:2:3:2:4:2:3:5:2:2:4:4:2:2:2:9:3:5:4:5:2:3:3:3:2:3:2:3:2:2:2:2:2:3:2:2:2:3:2:3:2:2:10:3:5:2:2:2:2:4:2:4:7:2:4:3:2:4:3:2:4:3:2:11:3:4:4:3:2:2:4:4:3:2:3:2:3:2:3:2:2:2:3:4:3:2:2:12:3:4:3:4:5:2:3:2:3:2:2:2:2:2:3:2:2:2:2:3:2:3:2:3:2:13:3:4:3:3:3:2:5:2:5:5:2:3:2:4:2:2:3:3:2:14:3:4:3:3:2:2:4:2:3:2:2:2:3:2:2:4:2:2:2:2:2:2:2:2:3:2:15:3:4:3:2:9:2:3:2:3:4:2:2:3:2:4:3:2:2:16:3:4:3:2:6:2:2:2:5:3:3:3:2:5:3:3:2:17:3:4:3:2:5:3:3:2:2:5:2:7:4:3:2:18:3:4:3:2:5:2:4:5:2:2:2:4:2:2:2:3:3:2:19:3:4:3:2:5:2:3:3:2:4:3:3:2:3:3:3:2:20:3:4:3:2:5:2:3:2:2:3:7:2:2:3:3:2:21:3:4:3:2:5:2:2:8:3:2:2:4:3:2:22:3:4:3:2:5:2:2:5:6:2:3:3:2:2:23:3:4:3:2:5:2:2:5:3:2:3:4:3:2:24:3:4:3:2:5:2:2:5:2:3:2:3:3:2:2:25:3:4:3:2:5:2:2:5:2:3:2:3:3:2:26:3:4:3:2:5:2:2:5:2:2:2:3:3:2:27:3:4:3:2:5:2:2:5:2:2:4:2:2:2:28:3:4:3:2:5:2:2:4:3:2:3:2:2:29:3:4:3:2:5:2:2:6:3:2:2:30:3:4:3:2:5:2:2:5:3:2:2:31:3:4:3:2:5:2:3:2:2:3:2:2:32:3:4:3:2:4:5:3:3:2:33:3:4:3:2:5:2:3:2:3:2:34:3:4:3:2:5:5:2:2:2:2:35:3:4:3:2:4:3:3:2:2:36:3:4:3:2:7:2:2:2:2:2:2:37:3:4:4:6:2:2:2:2:2:38:3:4:4:2:2:3:2:2:39:3:4:3:5:2:2:2:2:40:3:4:4:2:3:2:41:3:4:2:3:3:2:42:3:5:3:2:2:43:3:2:2:2:2:3:2:44:7:2:2:2:2:3:2:2:47:4:2:2:3:3:3:2:47:2:2:3:8:2:6:4:2:3:2:4:2:3:3:3:3:3:2:2:2:3:2:2:2:2:2:4:4:2:4:2:2:3:2:7:3:4:2:2:2:2:2:3:2:2:2:3:2:2:3:2:2:4:3:6:7:2:4:2:2:2:8:3:3:2:2:2:5:2:2:3:3:2:2:3:2:2:2:4:2:5:2:3:2:6:2:2:2:2:2:2:9:3:2:4:3:2:2:2:6:3:2:6:3:4:3:2:3:2:2:2:2:2:2:3:2:10:3:2:3:4:2:2:3:3:3:6:3:3:4:3:2:3:3:2:3:3:2:2:11:3:2:3:3:2:2:2:3:3:2:2:3:4:3:2:2:2:2:2:2:4:2:2:2:3:2:3:2:12:3:2:3:2:4:2:3:2:3:3:4:4:4:3:2:2:4:2:3:2:3:2:13:3:2:3:2:3:3:3:2:2:4:2:9:3:4:6:2:2:2:2:2:2:14:3:2:3:2:3:2:4:2:2:3:2:2:2:2:2:3:5:4:6:2:2:2:2:2:2:15:3:2:3:2:3:2:3:2:2:2:2:3:4:2:2:2:2:2:2:4:3:2:3:3:2:16:3:2:3:2:3:2:2:4:2:2:3:2:2:2:3:4:2:3:3:3:2:3:2:17:3:2:3:2:3:2:2:3:3:2:2:5:2:2:2:2:2:2:2:4:2:2:3:2:18:3:2:3:2:3:2:2:3:2:3:2:4:2:3:3:2:4:3:3:2:2:19:3:2:3:2:3:2:2:3:2:2:3:3:9:2:2:3:3:2:20:3:2:3:2:3:2:2:3:2:2:2:4:5:3:2:2:3:3:2:2:21:3:2:3:2:3:2:2:3:2:2:2:3:2:4:5:2:2:2:3:2:22:3:2:3:2:3:2:2:3:2:2:2:2:6:3:3:4:2:2:2:23:3:2:3:2:3:2:2:3:2:2:2:2:4:3:3:3:3:2:2:24:3:2:3:2:3:2:2:3:2:2:2:2:4:2:2:2:3:2:3:2:25:3:2:3:2:3:2:2:3:2:2:2:2:3:5:2:3:2:2:26:3:2:3:2:3:2:2:3:2:2:2:2:3:4:2:2:3:2:27:3:2:3:2:3:2:2:3:2:2:2:2:3:3:2:2:3:2:28:3:2:3:2:3:2:2:3:2:2:2:2:2:5:2:2:2:2:2:29:3:2:3:2:3:2:2:3:2:2:2:4:3:2:2:2:30:3:2:3:2:3:2:2:3:2:2:2:4:2:3:2:31:3:2:3:2:3:2:2:2:7:3:2:2:32:3:2:3:2:3:2:2:3:2:2:2:2:3:2:2:33:3:2:3:2:3:2:2:2:5:3:2:2:34:3:2:3:2:3:2:2:3:3:3:2:2:35:3:2:3:2:2:7:2:3:2:36:3:2:3:2:3:2:2:3:3:2:2:37:3:2:3:2:2:3:4:2:2:2:2:38:3:2:3:2:4:2:3:2:2:39:3:2:3:3:2:2:2:3:2:40:3:2:3:2:2:2:3:2:2:41:3:2:2:3:3:3:2:42:3:3:2:2:3:2:2:43:3:2:2:2:3:2:2:44:2:3:3:3:2:47:2:3:2:2:46:3:2:3:2:46:2:2:3:2:2:48:3:3:5:2:2:48:2:3:8:2:6:3:3:3:2:2:9:3:3:3:2:3:4:2:9:2:6:2:2:2:2:2:2:7:3:2:2:3:2:4:3:2:3:3:3:3:2:3:2:2:3:3:2:4:2:6:2:2:3:2:8:2:5:6:5:2:2:2:2:4:2:4:4:2:3:3:3:2:4:3:2:2:2:9:2:4:5:2:2:2:4:2:2:4:2:3:2:2:2:3:2:5:4:3:3:3:2:2:10:2:4:3:2:3:2:2:4:4:2:4:2:2:2:2:6:3:3:3:2:2:2:3:2:11:2:4:2:4:3:2:3:2:2:2:2:4:3:5:2:3:2:3:2:2:2:4:2:2:2:2:12:2:4:2:3:3:3:2:2:10:3:2:2:2:2:6:4:3:2:13:2:4:2:3:2:3:3:2:2:3:7:4:4:2:2:4:2:2:3:2:2:14:2:4:2:3:2:2:3:3:2:2:2:2:3:2:3:3:2:3:2:5:2:2:3:2:2:15:2:4:2:3:2:2:2:3:2:4:5:2:3:3:3:2:3:2:2:2:3:2:2:16:2:4:2:3:2:2:2:2:3:2:3:2:2:3:7:3:2:4:3:2:17:2:4:2:3:2:2:2:2:2:2:7:3:3:2:2:2:2:2:3:3:2:2:2:18:2:4:2:3:2:2:2:2:2:2:2:3:3:3:2:4:2:2:2:2:2:2:3:2:2:19:2:4:2:3:2:2:2:2:2:2:2:2:2:2:2:2:2:6:2:4:3:2:20:2:4:2:2:11:4:2:2:2:4:3:2:3:2:2:21:2:4:2:2:11:2:2:2:5:3:3:2:3:2:22:2:4:2:2:10:5:2:3:3:3:2:3:2:23:2:4:2:2:10:4:3:2:2:2:3:3:2:2:24:2:4:2:2:10:4:2:2:2:4:3:2:2:25:2:4:2:2:10:4:2:2:2:4:2:2:2:2:26:2:4:2:2:10:4:2:2:2:2:3:2:2:27:2:4:2:2:10:3:3:2:3:2:2:2:28:2:4:2:2:10:4:3:3:2:2:29:2:4:2:2:10:4:2:2:3:2:30:2:4:2:2:10:3:2:2:3:2:31:2:4:2:2:9:3:2:2:3:2:32:2:4:2:2:12:2:2:2:2:2:2:2:2:2:2:2:2:33:2:4:4:2:2:2:2:2:2:2:2:2:3:2:34:2:4:2:2:8:2:2:3:2:35:2:4:2:2:9:2:2:2:2:2:2:2:2:2:36:2:4:3:7:3:2:37:2:4:2:2:7:2:2:2:2:2:2:2:38:2:4:3:3:3:3:2:2:39:2:4:2:3:3:2:3:2:40:2:4:2:2:3:3:2:2:41:2:3:4:2:2:3:2:42:2:4:4:2:2:2:2:43:3:2:2:2:3:2:2:44:2:4:3:2:44:4:3:2:2:2:48:3:2:49:47:2:2:3:3:3:8:2:6:2:7:4:6:4:3:2:2:2:2:2:5:2:5:2:2:4:2:2:3:2:2:2:7:2:3:3:3:4:2:2:2:3:7:5:2:4:3:3:2:4:4:2:2:3:2:8:2:2:7:2:2:2:4:2:9:3:6:4:2:3:2:3:2:3:2:2:9:2:2:4:2:2:3:4:2:4:2:2:2:2:5:6:2:2:2:3:2:2:2:3:3:2:10:2:2:3:3:3:4:2:2:4:2:2:7:2:2:3:2:4:2:2:2:4:3:2:11:2:2:3:2:5:4:2:2:10:4:4:3:3:2:2:3:3:2:12:2:2:3:2:3:4:3:5:2:2:3:3:2:4:6:2:2:3:3:2:2:13:2:2:3:2:3:2:4:3:2:3:2:2:2:2:5:9:3:3:2:2:14:2:2:3:2:3:2:2:4:2:2:5:4:3:2:6:3:2:3:3:2:15:2:2:3:2:3:2:2:2:3:4:2:2:5:3:2:3:4:2:2:2:2:2:3:2:16:2:2:3:2:3:2:2:2:2:3:2:2:2:4:2:8:2:2:2:2:3:2:2:2:17:2:2:3:2:3:2:2:2:2:2:2:2:3:8:2:2:2:2:2:4:3:2:18:2:2:3:2:2:10:2:2:2:2:3:2:2:6:3:3:2:19:2:2:3:2:2:9:2:2:3:2:5:2:4:4:2:2:2:2:20:2:2:3:2:2:8:4:5:2:2:3:2:2:4:2:2:2:2:21:2:2:3:2:2:8:4:2:2:2:2:2:3:2:5:2:2:2:2:2:22:2:2:3:2:2:8:3:4:2:3:4:2:3:2:2:2:23:2:2:3:2:2:8:3:3:4:2:2:2:2:3:2:2:2:24:2:2:3:2:2:8:3:3:2:7:3:2:25:2:2:3:2:2:8:3:3:2:4:2:3:2:2:2:26:2:2:3:2:2:8:3:3:2:3:2:3:2:2:2:27:2:2:3:2:2:8:3:2:7:2:2:2:2:2:2:2:28:2:2:3:2:2:8:5:3:3:2:2:29:2:2:3:2:2:8:3:2:3:3:2:2:30:2:2:3:2:2:8:4:2:2:2:3:2:31:2:2:3:2:2:8:3:2:2:3:2:2:32:2:2:3:2:2:7:6:2:2:2:2:2:2:33:2:2:3:2:3:2:2:2:2:4:2:3:2:34:2:2:3:2:2:7:2:3:2:2:2:35:2:2:3:2:3:2:2:2:3:2:3:2:2:36:2:2:3:2:3:2:2:2:2:2:2:3:2:37:2:2:3:2:2:5:2:3:2:38:2:2:3:2:2:6:2:2:2:2:2:2:39:2:2:3:3:2:2:2:3:2:2:40:2:2:3:3:2:2:2:3:2:41:2:2:2:3:3:3:2:42:2:2:4:3:2:2:43:2:2:2:2:3:2:2:2:44:3:2:2:2:3:2:45:2:2:3:2:2:2:45:3:2:4:8:3:2:47:2:6:3:7:2:5:2:3:2:2:2:2:4:4:3:5:3:3:3:2:3:2:2:2:5:2:2:2:5:3:2:2:5:5:2:2:3:3:3:4:8:2:2:2:2:3:4:3:2:2:2:2:2:2:3:4:2:2:2:6:3:4:3:2:2:8:4:3:7:2:2:2:5:2:2:2:2:3:3:2:2:2:7:3:2:3:5:3:2:4:4:2:2:4:2:2:4:2:2:2:5:3:2:3:3:2:2:8:3:2:2:2:4:3:4:2:2:2:3:2:3:4:5:2:4:2:4:5:2:2:2:2:2:9:2:7:5:2:3:5:5:6:3:2:3:2:3:2:2:2:3:2:2:10:2:6:2:3:2:4:2:2:2:3:2:3:2:3:3:5:2:2:2:2:2:3:2:3:2:11:2:5:4:4:4:2:2:2:4:2:2:2:5:2:5:2:2:2:2:3:2:2:12:2:5:3:4:3:3:2:4:2:3:2:8:3:2:4:3:2:13:2:5:3:3:2:2:3:2:2:3:7:5:4:2:2:3:3:2:2:14:2:5:3:2:4:2:2:3:3:3:2:2:4:4:2:3:2:2:2:3:2:2:15:2:5:3:2:3:2:7:2:3:2:2:2:2:2:2:4:3:3:2:2:2:16:2:5:3:2:3:2:2:4:2:2:2:2:2:3:3:2:2:3:2:3:3:2:17:2:5:3:2:3:2:2:2:2:3:2:8:2:4:2:3:2:2:2:18:2:5:3:2:2:7:4:5:2:2:2:4:2:2:3:2:19:2:5:3:2:2:6:4:3:3:3:3:2:3:3:2:20:2:5:3:2:2:6:3:2:2:3:2:2:4:3:3:2:21:2:5:3:2:2:6:2:4:2:2:3:3:4:2:2:2:2:22:2:5:3:2:2:6:2:3:2:9:2:2:2:2:2:2:2:2:2:23:2:5:3:2:2:6:2:4:2:3:2:3:3:2:24:2:5:3:2:2:6:2:3:2:2:2:2:2:2:3:2:2:25:2:5:3:2:2:6:2:2:6:2:3:2:2:26:2:5:3:2:2:6:2:3:2:2:2:2:3:2:2:27:2:5:3:2:2:6:2:2:6:2:2:2:2:2:2:28:2:5:3:2:2:6:2:5:3:2:29:2:5:3:2:2:6:2:3:2:2:3:2:30:2:5:3:2:2:5:6:2:2:2:2:2:2:31:2:5:3:2:3:2:2:3:2:2:3:2:2:32:2:5:3:2:2:6:2:3:2:2:33:2:5:3:2:2:4:3:3:2:34:2:5:3:2:2:6:2:2:2:2:2:2:35:2:5:3:3:3:2:2:3:2:36:2:5:3:2:3:2:2:3:2:37:2:5:2:4:3:2:2:2:38:2:5:3:3:3:2:39:2:5:2:4:2:2:2:2:40:3:2:2:2:2:2:2:3:2:41:2:5:3:2:2:2:42:2:3:2:2:3:2:2:43:4:3:2:2:2:43:4:2:3:3:2:2:46:2:3:2:2:46:3:3:7:2:2:2:4:3:3:2:3:6:3:2:5:3:2:9:5:4:2:3:2:2:2:3:2:2:4:7:3:3:2:5:3:5:3:3:3:2:2:2:3:3:2:2:2:2:2:5:2:2:2:2:2:5:3:3:2:2:2:3:2:2:2:2:4:3:2:6:4:3:2:3:2:2:7:3:2:2:2:6:2:3:4:2:2:2:5:2:2:2:2:2:5:2:3:2:3:2:2:2:4:2:2:2:2:4:2:2:2:2:7:2:2:3:2:6:2:3:4:2:2:4:5:3:3:5:3:3:2:3:2:2:8:2:2:2:2:3:3:3:3:4:3:2:5:2:3:2:3:2:2:4:2:2:2:2:3:2:2:8:8:3:4:4:3:2:3:3:2:2:3:3:2:2:7:2:3:2:2:9:7:2:3:3:2:2:6:4:4:6:3:2:4:2:3:2:2:10:6:5:2:3:3:2:2:2:2:2:9:2:3:2:2:4:2:3:2:11:6:4:2:2:2:3:3:3:2:2:2:2:3:3:2:5:2:2:4:2:2:2:2:12:6:3:4:2:2:3:3:3:3:2:2:2:3:2:3:7:2:2:2:2:2:2:2:13:6:3:3:3:2:2:3:3:2:5:2:3:2:4:3:2:3:2:2:14:6:3:3:2:3:2:2:3:2:5:5:5:3:2:3:2:15:6:3:3:2:2:3:2:2:3:2:2:3:2:4:2:6:2:2:2:2:2:2:16:6:3:3:2:2:2:3:2:2:2:4:2:2:2:2:4:3:2:3:2:17:6:3:3:2:2:2:2:3:2:2:2:2:2:2:4:2:5:2:2:2:2:2:18:6:3:3:2:2:2:2:2:2:5:4:3:2:3:3:2:2:19:6:3:3:2:2:2:2:2:2:2:4:2:2:2:4:3:2:2:2:20:6:3:3:2:2:2:2:2:2:2:2:2:5:2:2:2:2:3:2:21:6:3:2:13:6:2:2:2:2:2:2:22:6:3:2:13:4:2:3:2:23:6:3:2:11:3:4:2:2:2:2:24:6:3:2:13:2:3:2:2:25:6:3:2:11:2:2:3:2:2:26:6:3:2:11:3:2:2:2:27:6:3:2:12:2:2:2:2:2:2:2:2:2:2:2:2:28:6:4:10:2:3:2:29:6:3:3:2:2:2:2:2:3:2:3:2:30:6:3:2:9:2:2:2:2:2:2:2:2:2:31:6:4:5:2:4:2:2:2:32:6:3:3:2:2:3:2:3:2:33:6:3:3:2:4:2:2:2:2:34:6:3:2:4:3:2:2:35:6:3:4:2:3:2:36:6:3:2:4:2:2:2:37:6:3:2:2:3:2:38:8:2:3:2:39:5:3:3:2:2:40:7:3:2:2:2:2:3:2:42:4:3:2:2:44:3:2:2:2:44:3:3:2:2:2:43:4:8:2:2:2:2:3:2:2:3:4:2:3:8:4:5:2:4:3:3:2:2:2:2:8:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:7:7:2:2:2:3:2:2:4:6:6:2:2:4:3:3:7:2:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:3:4:4:3:3:5:5:5:4:3:4:4:3:3:4:3:8:3:4:7:3:3:3:3:3:7:3:4:3:50:3", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400,"currentSoc":86.05},[0.23,0.23500000000000004,0.23,0.23,0.24288937809576214],2]]
+Shrunk 5525 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 16
+- Failed: 1
+
+### Failed invariants
+- 16:pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 17
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 17
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 17
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 18
+- Failed: 0
+

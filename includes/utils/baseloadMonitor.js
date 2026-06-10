@@ -607,24 +607,24 @@ class BaseloadMonitor {
     const lang=this._lang();
     const msg={
       night_invalid:{
-        nl:`Baseload niet bijgewerkt: nacht bevatte fluctuaties (${vars.reasons}).`,
-        en:`Baseload not updated: night contained fluctuations (${vars.reasons}).`
+        nl:`Sluipverbruik niet bijgewerkt: afgelopen nacht te veel schommelingen (${vars.reasons}).`,
+        en:`Standby usage not updated: too many fluctuations last night (${vars.reasons}).`
       },
       night_no_samples:{
-        nl:`Baseload niet bijgewerkt: geen gegevens ontvangen.`,
-        en:`Baseload not updated: no data received.`
+        nl:`Sluipverbruik niet bijgewerkt: geen meetgegevens vannacht.`,
+        en:`Standby usage not updated: no measurements last night.`
       },
       baseload_changed:{
-        nl:`Baseload gewijzigd: ${vars.current} W (was ${vars.previous} W).`,
-        en:`Baseload changed: ${vars.current} W (was ${vars.previous} W).`
+        nl:`Sluipverbruik aangepast: ${vars.current} W (was ${vars.previous} W).`,
+        en:`Standby usage changed: ${vars.current} W (was ${vars.previous} W).`
       },
       baseload_unavailable:{
-        nl:`Baseload niet beschikbaar: geen geldige nachten.`,
-        en:`Baseload unavailable: no valid nights.`
+        nl:`Sluipverbruik nog onbekend: wacht op eerste rustige nacht.`,
+        en:`Standby usage still unknown: waiting for first quiet night.`
       },
       baseload_fallback:{
-        nl:`Baseload (fallback): ${vars.fallback} W.`,
-        en:`Fallback baseload: ${vars.fallback} W.`
+        nl:`Sluipverbruik geschat op ${vars.fallback} W (nog geen volledige nacht gemeten).`,
+        en:`Standby usage estimated at ${vars.fallback} W (no full night measured yet).`
       }
     }[key]?.[lang];
 
