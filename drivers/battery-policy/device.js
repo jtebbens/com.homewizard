@@ -578,6 +578,8 @@ class BatteryPolicyDevice extends Homey.Device {
 
     this._p1PollInterval = this.homey.setInterval(async () => {
       if (!this.p1Device) return;
+      if (this._p1PollInFlight) return; // Skip if previous poll still running (prevent pileup → OOM)
+      this._p1PollInFlight = true;
 
       try {
 
@@ -943,6 +945,8 @@ if (debug) this.log(
 
       } catch (err) {
         this.error('Error polling P1 capabilities:', err);
+      } finally {
+        this._p1PollInFlight = false;
       }
     // ✅ CPU FIX: Increased from 5s to 15s - heavy work (capability reads/writes, calculations)
     }, 15000);

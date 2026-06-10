@@ -152,7 +152,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
     // Stagger stats flush: 10s between devices, every 5min (settings writes are ~130ms each)
     const flushDelay = 300000 + safeIndex * 10000;
-    setTimeout(() => {
+    this._statsFlushStartTimeout = setTimeout(() => {
+      this._statsFlushStartTimeout = null;
       if (this.__deleted) return;
       this._flushFetchStats();
       this._statsFlushTimer = setInterval(() => this._flushFetchStats(), 300000);
@@ -161,7 +162,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
     // Start interval only after first poll completes (avoids double-firing)
-    setTimeout(() => {
+    this._firstPollTimeout = setTimeout(() => {
+      this._firstPollTimeout = null;
       if (this.__deleted) return;
       this.log(`🚀 First poll starting (after ${Math.round(offset/1000)}s delay)`);
       this.onPoll().catch(this.error);
@@ -210,7 +212,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   _startRecoveryPoller() {
-    if (this._recoveryInterval) return;
+    if (this._recoveryInterval || this._recoveryTimeout) return;
     const match = this.url && this.url.match(/https?:\/\/([^/:]+)/);
     if (!match) return;
     const ip = match[1];
@@ -248,6 +250,14 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
+    }
+    if (this._firstPollTimeout) {
+      clearTimeout(this._firstPollTimeout);
+      this._firstPollTimeout = null;
+    }
+    if (this._statsFlushStartTimeout) {
+      clearTimeout(this._statsFlushStartTimeout);
+      this._statsFlushStartTimeout = null;
     }
     if (this._debugFlushTimeout) {
       clearTimeout(this._debugFlushTimeout);
@@ -522,7 +532,7 @@ _flushFetchStats() {
 
     const timeSinceLastSuccess = Date.now() - this._lastSuccessfulPoll;
 
-    // Only mark unavailable after 3 consecutive failures AND 90 seconds since last success
+    // Only mark unavailable after 5 consecutive failures AND 120 seconds since last success
     // This prevents flapping on temporary WiFi glitches
     if (this._consecutiveFailures >= 5 && timeSinceLastSuccess > 120000) {
       let dr = null;
@@ -673,7 +683,7 @@ _flushFetchStats() {
         if (!state || typeof state !== 'object') throw new Error('Invalid JSON');
 
         cap('onoff', state.power_on);
-        cap('dim', state.brightness / 255);
+        if (Number.isFinite(state.brightness)) cap('dim', state.brightness / 255);
         cap('locked', state.switch_lock);
 
       } catch (err) {
@@ -779,11 +789,18 @@ _flushFetchStats() {
           this.onPollInterval = null;
         }
 
-        const interval = Number(newSettings.offset_polling);
-        // ✅ CPU FIX: Increased min interval from 2s to 5s (9 devices = high load)
-        if (interval >= 2) {
-          this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
+        // Apply same auto-scale clamp as onInit: min interval grows with device count
+        // to prevent fetchQueue overflow (2 req/poll, ~4 req/s throughput)
+        const deviceCount = this.driver.getDevices().length;
+        const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
+        const userInterval = Math.max(Number(newSettings.offset_polling) || 10, 2);
+        const interval = Math.max(userInterval, minInterval);
+        if (interval > userInterval) {
+          this.log(`⚠️ Polling interval auto-scaled: ${userInterval}s → ${interval}s (${deviceCount} devices)`);
         }
+        this.onPollInterval = setInterval(() => {
+          this.onPoll().catch(this.error);
+        }, interval * 1000);
       }
 
       if (key === 'cloud') {
