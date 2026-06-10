@@ -433,6 +433,11 @@ function onHomeyReady(Homey) {
   Homey.on('planning-update', data => {
     if (data) renderChart(data);
   });
+
+  // Poll fallback: dashboard widgets miss realtime broadcasts when the iframe
+  // suspends/backgrounds, leaving the widget frozen on a stale frame. Re-fetch
+  // every 60s (reads in-memory _widgetData, cheap) so it always self-heals.
+  setInterval(fetchAndRender, 60000);
 }
 </script>
 </body>
