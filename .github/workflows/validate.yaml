@@ -31,6 +31,20 @@ jobs:
       - name: Validate Homey App
         run: npx homey app validate --level=publish
 
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-node@v4
+          with:
+              node-version: 20.9.0
+              cache: 'npm'
+
+        - run: npm ci
+        - run: npm run test-unit
+
   lint-eslint:
     name: eslint
     runs-on: ubuntu-latest

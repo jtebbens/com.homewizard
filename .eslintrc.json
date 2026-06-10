@@ -22,6 +22,11 @@
     "no-new": "off",
     "no-trailing-spaces": "off",
     "no-restricted-syntax": "off",
+    "no-restricted-properties": ["error", {
+      "object": "process",
+      "property": "memoryUsage",
+      "message": "Throws ENOENT (uv_resident_set_memory) in the Homey sandbox. Use v8.getHeapStatistics(); if rss is truly needed, wrap in try/catch and add an eslint-disable line."
+    }],
     "no-tabs": "off",
     "no-undef": "off",
     "comma-dangle": "off",
