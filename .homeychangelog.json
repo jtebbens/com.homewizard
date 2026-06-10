@@ -1549,5 +1549,8 @@
   },
   "3.15.106": {
     "en": "Bugfix planning (again)"
+  },
+  "3.15.107": {
+    "en": "SDM230v2 token fix"
   }
 }
