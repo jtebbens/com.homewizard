@@ -392,7 +392,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
    * @param {*} value The value to check for changes
    * @returns {Promise<void>} A promise that resolves when the flow is triggered
    */
-  async _triggerFlowOnChange(flow_id, value) {
+  async _triggerFlowOnChange(flow_id, value, tokenName = flow_id) {
 
     // Ignore if value is undefined
     if (value === undefined) {
@@ -424,7 +424,7 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
     // Update value and trigger the flow
     this._triggerFlowPrevious[flow_id] = value;
-    flow.trigger(this, { [flow_id]: value }).catch(this.error);
+    flow.trigger(this, { [tokenName]: value }).catch(this.error);
   }
 
   async onPoll() {
@@ -508,8 +508,8 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
       await Promise.allSettled(setCapabilityPromises);
 
       // Trigger flows when values change
-      this._triggerFlowOnChange('meter_power.import', data.energy_import_kwh);
-      this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh);
+      this._triggerFlowOnChange('meter_power.import', data.energy_import_kwh, 'import_power');
+      this._triggerFlowOnChange('meter_power.export', data.energy_export_kwh, 'export_power');
       //await this._triggerFlowOnChange('measure_voltage', data.voltage_v);
       //await this._triggerFlowOnChange('measure_current', data.current_a);
 
