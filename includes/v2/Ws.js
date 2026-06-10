@@ -206,6 +206,9 @@ class WebSocketManager {
     // Clean up existing socket
     if (this.ws) {
       try {
+        // Detach handlers first: a late 'close' from the old socket would
+        // otherwise fire _scheduleReconnect() while this.ws is null (preflight window)
+        this.ws.removeAllListeners();
         if (this.ws.readyState === WebSocket.OPEN) this.ws.terminate();
         else this.ws.close();
       } catch (err) {
@@ -778,6 +781,9 @@ class WebSocketManager {
       return;
     }
     try {
+      // Detach handlers so the old socket's 'close' can't schedule a reconnect
+      // against the replacement socket
+      this.ws.removeAllListeners();
       if (state === WebSocket.OPEN) {
         this.log('🔄 Terminating active WebSocket');
         this.ws.terminate();

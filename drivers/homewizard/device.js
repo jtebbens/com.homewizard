@@ -30,6 +30,11 @@ function callnewAsync(
 
       let finished = false;
 
+      // Never undercut the legacy layer's adaptive abort (7-20s): if this outer
+      // timer fired first, the retry would open a second socket while the first
+      // request is still in flight — WIFI4 chips choke on concurrent connects.
+      const effectiveTimeout = Math.max(timeout, homewizard.getAdaptiveTimeoutFor(device_id) + 1000);
+
       const timeoutId = setTimeout(() => {
         if (finished) return;
         finished = true;
@@ -48,7 +53,7 @@ function callnewAsync(
           deviceInstance.syncLegacyDebugToSettings();
         }
         return reject(new Error(`Timeout calling ${uri_part} on device ${device_id}`));
-      }, timeout);
+      }, effectiveTimeout);
 
       homewizard.callnew(device_id, uri_part, (err, result) => {
         if (finished) return;

@@ -171,7 +171,12 @@ module.exports = (function() {
     }
 
 
-    homewizard.setDeviceInstance = function(device_id, deviceInstance) {
+    homewizard.getAdaptiveTimeoutFor = function(device_id) {
+    const device = self.devices[device_id];
+    return device ? getAdaptiveTimeout(device) : 7000;
+  };
+
+  homewizard.setDeviceInstance = function(device_id, deviceInstance) {
     if (!self.devices[device_id]) {
       // optioneel: in debug zien dat er iets mis is
       if (debug) console.log(`[homewizard.setDeviceInstance] Unknown device_id: ${device_id}`);
@@ -454,6 +459,15 @@ module.exports = (function() {
           await homewizard.poll(device_id);
         } catch (_) {}
       }, effectivePollSec * 1000);
+    }
+  };
+
+  homewizard.stoppoll = function() {
+    for (const device_id in self.polls) {
+      if (self.polls[device_id]) {
+        clearInterval(self.polls[device_id]);
+        self.polls[device_id] = null;
+      }
     }
   };
 

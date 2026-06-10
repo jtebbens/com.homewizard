@@ -19,7 +19,16 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
-    clearTimeout(timer);
+    // Keep the abort timer armed across the body read: fetch() resolves on
+    // headers, so a body-hang would otherwise block for the full TCP timeout
+    // (~75s). Timer is cleared once the body is consumed; if the caller never
+    // reads the body the timer fires once and aborts a dead response (no-op).
+    const finish = () => clearTimeout(timer);
+    for (const m of ['json', 'text', 'buffer', 'arrayBuffer']) {
+      if (typeof res[m] !== 'function') continue;
+      const orig = res[m].bind(res);
+      res[m] = () => orig().finally(finish);
+    }
     return res;
   } catch (err) {
     clearTimeout(timer);
