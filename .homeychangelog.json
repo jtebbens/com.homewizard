@@ -1552,5 +1552,8 @@
   },
   "3.15.107": {
     "en": "SDM230v2 token fix"
+  },
+  "3.15.108": {
+    "en": "P1 battery group fix when there is no battery, add-remove chain causing memory issues"
   }
 }
