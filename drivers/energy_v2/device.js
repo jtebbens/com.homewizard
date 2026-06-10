@@ -2220,7 +2220,7 @@ async _handleBatteries(data) {
   startPolling() {
     if (this.wsActive || this.onPollInterval) return;
 
-    const interval = this.getSettings().polling_interval || 10;
+    const interval = Math.max(3, this.getSettings().polling_interval || 10); // runtime floor 3s: stored 1s settings churn heap → OOM
     this.log(`⏱️ Polling gestart met interval: ${interval}s`);
 
     this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * interval);
@@ -2773,7 +2773,7 @@ async _setCapabilityValue(capability, value) {
       this.log('Polling_interval for P1 changed to:', MySettings.newSettings.polling_interval);
       clearInterval(this.onPollInterval);
       // this.onPollInterval = setInterval(this.onPoll.bind(this), MySettings.newSettings.polling_interval * 1000);
-      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * this.getSettings().polling_interval);
+      this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * Math.max(3, this.getSettings().polling_interval));
     }
     if ('mode' in MySettings.oldSettings 
       && MySettings.oldSettings.mode !== MySettings.newSettings.mode

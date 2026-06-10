@@ -128,8 +128,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     const myIndex = allDevices.indexOf(this);
     const safeIndex = myIndex >= 0 ? myIndex : 0;
 
-    const userInterval = Math.max(this.getSetting('offset_polling') || 10, 2);
-    const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
+    const userInterval = Math.max(this.getSetting('offset_polling') || 10, 3);
+    const minInterval = Math.max(3, Math.ceil(deviceCount / 2));
     const interval = Math.max(userInterval, minInterval);
 
     if (interval > userInterval) {
@@ -150,14 +150,18 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
 
     this.log(`⏱️ Polling interval ${interval}s (user: ${userInterval}s), spread offset ${Math.round(offset / 1000)}s (device ${safeIndex + 1}/${deviceCount})`);
 
-    // Stagger stats flush: 10s between devices, every 5min (settings writes are ~130ms each)
-    const flushDelay = 300000 + safeIndex * 10000;
-    this._statsFlushStartTimeout = setTimeout(() => {
-      this._statsFlushStartTimeout = null;
-      if (this.__deleted) return;
-      this._flushFetchStats();
-      this._statsFlushTimer = setInterval(() => this._flushFetchStats(), 300000);
-    }, flushDelay);
+    // Stats flush: settings.set allocates ~30 MB V8 heap per call (framework-internal).
+    // Only device 0 runs the timer and writes ONE aggregated blob for all sibling
+    // devices (see _flushFetchStats) → one 30MB alloc per cycle instead of one per
+    // device. Diagnostics only, no runtime use → every 30min.
+    if (safeIndex === 0) {
+      this._statsFlushStartTimeout = setTimeout(() => {
+        this._statsFlushStartTimeout = null;
+        if (this.__deleted) return;
+        this._flushFetchStats();
+        this._statsFlushTimer = setInterval(() => this._flushFetchStats(), 1800000);
+      }, 1800000);
+    }
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
 
@@ -365,21 +369,26 @@ _flushDebugLogs() {
 }
 
 _flushFetchStats() {
-  if (!this._fetchStats) return;
-  const t0 = Date.now();
-  // If the settings entry for this device was cleared (reset button), reset in-memory stats too
+  // Aggregate EVERY sibling device's in-memory stats into ONE settings.set.
+  // settings.set allocates ~30 MB V8 heap per call (framework-internal); writing once
+  // for all devices avoids N×30MB churn. Runs only on device 0 (see onInit gate).
   try {
-    const allStats = this.homey.settings.get('fetch_device_stats') || {};
-    if (!allStats[this.getName()]) {
-      this._fetchStats = {
-        total: 0, ok: 0, failed: 0, timeouts: 0,
-        avgResponseMs: 0, lastError: null, lastErrorAt: null,
-        since: new Date().toISOString(),
-        rssiAvg: null, rssiMin: null, rssiMax: null,
-      };
+    const stored = this.homey.settings.get('fetch_device_stats') || {};
+    const allStats = {};
+    for (const d of this.driver.getDevices()) {
+      if (!d._fetchStats) continue;
+      // reset-on-clear: entry cleared via reset button → reset that device's counters
+      if (!stored[d.getName()]) {
+        d._fetchStats = {
+          total: 0, ok: 0, failed: 0, timeouts: 0,
+          avgResponseMs: 0, lastError: null, lastErrorAt: null,
+          since: new Date().toISOString(),
+          rssiAvg: null, rssiMin: null, rssiMax: null,
+        };
+      }
+      allStats[d.getName()] = d._fetchStats;
     }
-    allStats[this.getName()] = this._fetchStats;
-    this.homey.settings.set('fetch_device_stats', allStats);
+    if (Object.keys(allStats).length) this.homey.settings.set('fetch_device_stats', allStats);
   } catch (_) {}
   // setStoreValue is redundant — data is already in homey.settings above
   //this.log(`💾 _flushFetchStats took ${Date.now() - t0}ms`);
@@ -792,8 +801,8 @@ _flushFetchStats() {
         // Apply same auto-scale clamp as onInit: min interval grows with device count
         // to prevent fetchQueue overflow (2 req/poll, ~4 req/s throughput)
         const deviceCount = this.driver.getDevices().length;
-        const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
-        const userInterval = Math.max(Number(newSettings.offset_polling) || 10, 2);
+        const minInterval = Math.max(3, Math.ceil(deviceCount / 2));
+        const userInterval = Math.max(Number(newSettings.offset_polling) || 10, 3);
         const interval = Math.max(userInterval, minInterval);
         if (interval > userInterval) {
           this.log(`⚠️ Polling interval auto-scaled: ${userInterval}s → ${interval}s (${deviceCount} devices)`);
