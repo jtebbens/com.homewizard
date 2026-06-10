@@ -128,8 +128,8 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     const myIndex = allDevices.indexOf(this);
     const safeIndex = myIndex >= 0 ? myIndex : 0;
 
-    const userInterval = Math.max(this.getSetting('offset_polling') || 10, 3);
-    const minInterval = Math.max(3, Math.ceil(deviceCount / 2));
+    const userInterval = Math.max(this.getSetting('offset_polling') || 10, 2);
+    const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
     const interval = Math.max(userInterval, minInterval);
 
     if (interval > userInterval) {
@@ -801,8 +801,8 @@ _flushFetchStats() {
         // Apply same auto-scale clamp as onInit: min interval grows with device count
         // to prevent fetchQueue overflow (2 req/poll, ~4 req/s throughput)
         const deviceCount = this.driver.getDevices().length;
-        const minInterval = Math.max(3, Math.ceil(deviceCount / 2));
-        const userInterval = Math.max(Number(newSettings.offset_polling) || 10, 3);
+        const minInterval = Math.max(2, Math.ceil(deviceCount / 2));
+        const userInterval = Math.max(Number(newSettings.offset_polling) || 10, 2);
         const interval = Math.max(userInterval, minInterval);
         if (interval > userInterval) {
           this.log(`⚠️ Polling interval auto-scaled: ${userInterval}s → ${interval}s (${deviceCount} devices)`);
