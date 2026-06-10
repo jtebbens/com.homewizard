@@ -1561,5 +1561,8 @@
   },
   "3.15.110": {
     "en": "Forcing 2s interval minimum and circuit breaker if interval window is outrun."
+  },
+  "3.15.111": {
+    "en": "uv_resident_set_memory error, not allowed -> fixed"
   }
 }
