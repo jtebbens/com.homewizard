@@ -114,7 +114,7 @@
         "en": "Polling interval"
       },
       "value": 10,
-      "min": 1,
+      "min": 2,
       "unit": {
         "en": "s"
       }
