@@ -1563,10 +1563,22 @@
           const lines = [];
 
           lines.push('═══════════════════════════════════════');
-          lines.push('   HomeWizard WebSocket Diagnostic Report');
+          lines.push('   HomeWizard Diagnostic Report');
           lines.push('═══════════════════════════════════════');
           lines.push(`Generated: ${now}`);
           lines.push('');
+
+          // App health snapshot (written by app.js every 15 min)
+          const health = s['app_health'];
+          if (health) {
+            lines.push('── App Health ──');
+            lines.push(`  Version: ${health.version}   Uptime: ${health.uptimeH}h (since ${health.startedAt})`);
+            lines.push(`  Heap: ${health.heapMB}/${health.heapTotalMB}MB  peak ${health.heapPeakMB}MB  ext ${health.externalMB}MB  limit ${health.heapLimitMB}MB`);
+            const devs = Object.entries(health.deviceCounts || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}×${v}`).join('  ');
+            lines.push(`  Devices: ${devs || 'none'}`);
+            lines.push(`  Snapshot: ${health.ts}`);
+            lines.push('');
+          }
 
           // Device snapshots
           const devIds = Object.keys(snapshots);
