@@ -34,6 +34,7 @@ function logMem(label) {
     const ext   = (hs.external_memory  / 1024 / 1024).toFixed(1);
     let rssPart = '';
     try {
+      // eslint-disable-next-line no-restricted-properties -- guarded: sandbox blocks rss
       const mu = process.memoryUsage();
       const rss = (mu.rss / 1024 / 1024).toFixed(1);
       const ab  = (mu.arrayBuffers / 1024 / 1024).toFixed(1);
