@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.15.108",
+  "version": "3.15.109",
   "platforms": [
     "local"
   ],
@@ -3456,7 +3456,7 @@
             "en": "Polling interval"
           },
           "value": 10,
-          "min": 1,
+          "min": 2,
           "unit": {
             "en": "s"
           }
@@ -3984,7 +3984,7 @@
             "en": "Polling interval"
           },
           "value": 10,
-          "min": 1,
+          "min": 2,
           "unit": {
             "en": "s"
           }
