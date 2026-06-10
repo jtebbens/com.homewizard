@@ -496,6 +496,8 @@ module.exports = class HomeWizardEnergyDevice630V2 extends Homey.Device {
 async onPoll() {
   // Circuit breaker: skip poll during backoff window (after repeated timeouts)
   if (this._backoffUntil && Date.now() < this._backoffUntil) return;
+  if (this._pollInFlight) return; // Skip if previous poll still running (prevent pileup → OOM)
+  this._pollInFlight = true;
 
   try {
     const settings = this.getSettings();
@@ -604,6 +606,8 @@ async onPoll() {
     } else {
       this._consecutiveErrors = 0;
     }
+  } finally {
+    this._pollInFlight = false;
   }
 }
 

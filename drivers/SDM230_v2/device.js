@@ -428,9 +428,11 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
   }
 
   async onPoll() {
+    if (this._pollInFlight) return; // Skip if previous poll still running (prevent pileup → OOM)
+    this._pollInFlight = true;
     try {
       const settings = this.getSettings();
-      
+
       // 1. Restore URL if runtime is empty
       if (!this.url) {
         if (settings.url) {
@@ -519,6 +521,8 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
     } catch (err) {
       this.error('Polling failed:', err);
       await this.setUnavailable(err).catch(this.error);
+    } finally {
+      this._pollInFlight = false;
     }
 }
 
