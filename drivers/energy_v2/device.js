@@ -18,14 +18,6 @@ const WebSocketManager = require('../../includes/v2/Ws');
 const wsDebug = require('../../includes/v2/wsDebug');
 const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 
-process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
 // Shared HTTPS agent (module-level) — maxSockets begrensd om RSS te beperken bij meerdere devices
 const agent = new https.Agent({
   rejectUnauthorized: false,
@@ -1391,9 +1383,12 @@ async _updateBatteryGroup() {
       'battery_group_charge_mode'
     ];
 
+    // Sequential + awaited: 8 parallel removeCapability calls spike V8 heap
+    // (device-doc IPC, cf. setSettings ~30 MB/call) and race in-flight
+    // setCapabilityValue from _handleBatteries (404 Invalid Capability).
     for (const cap of caps) {
       if (this.hasCapability(cap)) {
-        this.removeCapability(cap).catch(this.error);
+        await this.removeCapability(cap).catch(this.error);
       }
     }
 
@@ -1943,7 +1938,14 @@ _handleSystem(data) {
   
 }
 
-async _ensureBatteryCapabilities() {
+async _ensureBatteryCapabilities(force = false) {
+  // P1 without plugin battery (vendor battery_count = 0): don't create battery
+  // capabilities — _updateBatteryGroup would remove them again 2 min later,
+  // causing an add/remove ping-pong per restart and a 404 race on in-flight
+  // setCapabilityValue calls. Re-add happens lazily via _handleBatteries
+  // (force = true) when a battery appears.
+  if (!force && this._cacheGet('last_battery_state')?.battery_count === 0) return;
+
   const caps = [
     'measure_power.battery_group_power_w',
     'measure_power.battery_group_target_power_w',
@@ -2000,6 +2002,11 @@ async _handleBatteries(data) {
             : 1;
 
       payload.power_w = batteryCount * 800;
+    }
+
+    // --- Lazy re-add: caps were skipped/removed while battery_count = 0 ---
+    if ((payload.battery_count ?? 0) > 0 && !this.hasCapability('measure_power.battery_group_power_w')) {
+      await this._ensureBatteryCapabilities(true);
     }
 
     // --- Update capability battery_group_charge_mode ---
