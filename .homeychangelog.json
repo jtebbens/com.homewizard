@@ -1555,5 +1555,8 @@
   },
   "3.15.108": {
     "en": "P1 battery group fix when there is no battery, add-remove chain causing memory issues"
+  },
+  "3.15.109": {
+    "en": "Polling interval for SDM230v2 and SDM630v2 is 1s for user which is hard for fetch method, added guards to slow down."
   }
 }
