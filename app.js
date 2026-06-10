@@ -104,8 +104,10 @@ class HomeWizardApp extends Homey.App {
 
     // Support diagnostics: periodic app-health snapshot (version, uptime, heap,
     // device inventory) surfaced in the settings "Copy Diagnostics" report.
+    // First write deferred 90s: devices bump _deviceCounts during driver init,
+    // which runs after app onInit — an immediate snapshot reports "Devices: none".
     this._startedAt = Date.now();
-    this._writeHealthSnapshot();
+    this.homey.setTimeout(() => this._writeHealthSnapshot(), 90 * 1000);
     this.homey.setInterval(() => this._writeHealthSnapshot(), 15 * 60 * 1000);
   }
 
