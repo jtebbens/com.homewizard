@@ -2174,13 +2174,10 @@ if (debug) this.log(
     const pvCapacityW = inputs.settings?.pv_capacity_w || 0;
     const pvPR        = inputs.settings?.pv_performance_ratio || 0.75;
     const yfs          = this.learningEngine?.getSolarYieldFactorsSmoothed();
-    const maxYfs       = this.learningEngine?.getSolarSlotMaxYieldFactors();
-    const maxRads      = this.learningEngine?.data?.solar_slot_max_radiation;
     const learnedSlots = this.learningEngine?.getSolarLearnedSlotCount() ?? 0;
 
     if (Array.isArray(inputs.weather?.hourlyForecast)) {
 
-      let clearSkyCeilingApplied = 0;
       pvForecast = inputs.weather.hourlyForecast
         .filter(h => typeof h.radiationWm2 === 'number')
         .map(h => {
@@ -2192,26 +2189,9 @@ if (debug) this.log(
           const s0 = d.getUTCHours() * 4;
           const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
           const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          let rawPvW = learnedSlots >= 10
+          const rawPvW = learnedSlots >= 10
             ? Math.round(h.radiationWm2 * yf)
             : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2)) : 0;
-
-          // Clear-sky ceiling: EMA converges toward average, not peak — on clear days after
-          // cloudy periods yield factors are biased low. When current radiation is near the
-          // historical max for this slot, apply a floor based on the peak yield factor ever
-          // observed (×0.95 for degradation margin). Prevents systematic underprediction.
-          if (learnedSlots >= 10 && maxYfs && maxRads) {
-            const maxYf4 = [maxYfs[s0], maxYfs[s0+1], maxYfs[s0+2], maxYfs[s0+3]].filter(v => v > 0);
-            const maxRad4 = [maxRads[s0], maxRads[s0+1], maxRads[s0+2], maxRads[s0+3]].filter(v => v > 0);
-            if (maxYf4.length > 0 && maxRad4.length > 0) {
-              const avgMaxYf  = maxYf4.reduce((a, b) => a + b, 0) / maxYf4.length;
-              const avgMaxRad = maxRad4.reduce((a, b) => a + b, 0) / maxRad4.length;
-              if (h.radiationWm2 >= avgMaxRad * 0.70) {
-                const clearSkyFloor = Math.round(h.radiationWm2 * avgMaxYf * 0.95);
-                if (clearSkyFloor > rawPvW) { rawPvW = clearSkyFloor; clearSkyCeilingApplied++; }
-              }
-            }
-          }
 
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
@@ -2219,9 +2199,6 @@ if (debug) this.log(
           return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0 };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
-      if (clearSkyCeilingApplied > 0) {
-        this.log(`[PV clear-sky ceiling] applied to ${clearSkyCeilingApplied} slots`);
-      }
 
       // Per-model pvForecast (ECMWF/GFS/ICON/KNMI) for per-model accuracy tracking.
       // Uses perModelWm2 from hourlyForecast (aligned to standardData indices, no time-map lookup).

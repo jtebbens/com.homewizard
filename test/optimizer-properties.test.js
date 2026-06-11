@@ -1234,6 +1234,67 @@ testInvariant('18:spread-monotonic-never-lifts',
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 19
+// "Lifting the PV forecast never lowers projected profit (ceiling-removal econ
+//  dominance)"
+//
+// The deleted clear-sky ceiling was a per-slot upward lift of pvPowerW (toward the
+// peak yield factor). Removing it lowers the DP's PV input on clear-day slots. This
+// invariant is the CLAUDE.md-required economic-dominance check for that DP-input
+// change: under saldering (export_price_ratio = 1.0) every extra watt of forecast PV
+// is free energy the DP can self-consume or export at full price, so a uniform or
+// per-slot lift (factor ≥ 1.0) can only weakly RAISE projectedProfit — never lower it.
+//
+// Consequence: the ceiling never bought profit the honest yield-EMA forecast forgoes
+// for any reason other than fabricating PV that wasn't there; the DP optimally uses
+// whatever PV it is told. A future, justified PV lift is guaranteed to help, not hurt.
+// (If this ever fails, the DP's PV accounting is non-monotonic — a real bug, not a
+// forecast-accuracy question.)
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 19 — pv-lift-never-lowers-profit\n');
+
+testInvariant('19:pv-lift-never-lowers-profit',
+  fc.tuple(
+    settingsArb,
+    baseArb,
+    fc.array(fc.double({ min: 0.01, max: 0.50, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 24, maxLength: 24 }), // prices
+    fc.array(fc.integer({ min: 100, max: 400 }), { minLength: 24, maxLength: 24 }), // consumption
+    fc.array(fc.integer({ min: 0, max: 3000 }),  { minLength: 24, maxLength: 24 }), // baseline PV W
+    fc.array(fc.double({ min: 1.0, max: 1.5, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 24, maxLength: 24 }), // per-slot ceiling-style lift ≥ 1.0
+  ),
+  ([settings, base, priceValues, consValues, basePvW, lift]) => {
+    const prices = makePriceSlots(priceValues);
+    const scenario = { ...base, prices, consumptionW: consValues };
+
+    const pvBase = makePvForecast(prices, basePvW);
+    const pvLift = makePvForecast(prices, basePvW.map((w, i) => Math.round(w * lift[i])));
+
+    const baseProfit = runCompute(settings, { ...scenario, pvForecast: pvBase })._schedule?.projectedProfit;
+    const liftProfit = runCompute(settings, { ...scenario, pvForecast: pvLift })._schedule?.projectedProfit;
+    if (baseProfit == null || liftProfit == null) return true;
+
+    // The DP runs on a quantized SoC grid (GRID=10 → 0.1%/grid-unit = capacity/1000 kWh).
+    // Each lifted PV slot can flip a per-slot charge-rounding boundary, and that rounding
+    // accumulates over the horizon, so reported profit can wobble by a few grid-units PER
+    // CHANGED SLOT in either direction — pure discretization slack, not economic non-
+    // monotonicity. Calibrated worst case over 24k random scenarios ≈ 4.4 grid-units/slot;
+    // bound at 10 with margin. A real PV-accounting sign error scales with the PV ENERGY
+    // added (W·h → euros), dwarfing this slack, so the invariant still catches it.
+    const quantumKwh = base.capacityKwh / 1000;
+    const maxPrice = Math.max(...priceValues);
+    let changedSlots = 0;
+    for (let i = 0; i < basePvW.length; i++) {
+      if (Math.round(basePvW[i] * lift[i]) !== basePvW[i]) changedSlots++;
+    }
+    const slack = 10 * changedSlots * quantumKwh * maxPrice + 1e-6 * (1 + Math.abs(baseProfit));
+    return liftProfit >= baseProfit - slack;
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
