@@ -1155,8 +1155,9 @@ testInvariant('17:abundant-tomorrow-pv-waives-reserve',
     fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // pre-PV prices
     fc.integer({ min: 2, max: 6 }),  // PV block length
     fc.array(fc.double({ min: 0.05, max: 0.45, noNaN: true, noDefaultInfinity: true }), { minLength: 1, maxLength: 6 }), // post-PV tail prices
+    fc.option(fc.double({ min: 0, max: 0.25, noNaN: true, noDefaultInfinity: true }), { nil: undefined }), // agreeing-model spread — must never break the waiver
   ),
-  ([settings, base, prePrices, pvLen, tailPrices]) => {
+  ([settings, base, prePrices, pvLen, tailPrices, spreadRel]) => {
     const { maxChargeW, capacityKwh } = base;
     const minDischargePrice = 0.220;
     const pvPrices = Array(pvLen).fill(0.10);
@@ -1173,8 +1174,8 @@ testInvariant('17:abundant-tomorrow-pv-waives-reserve',
     // Worst-case sunset cv (→ cv-conf 0) but tomorrow's surplus covers 2× the usable span.
     const usableSpanKwh = ((settings.max_soc - settings.min_soc) / 100) * capacityKwh;
     const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(
-      0.60, undefined, usableSpanKwh * 2, usableSpanKwh);
-    if (refillConfidence < 1.0) return false; // lift must fully waive when surplus ≥ span
+      0.60, undefined, usableSpanKwh * 2, usableSpanKwh, spreadRel);
+    if (refillConfidence < 1.0) return false; // lift must fully waive when surplus ≥ span (agreeing spread ≤0.25 is a no-op)
 
     const scenario = { ...base, prices, pvForecast, consumptionW, minDischargePrice };
     const baseSlots  = runCompute(settings, { ...scenario, refillConfidence: 1.0 })._schedule?.slots;
@@ -1189,6 +1190,46 @@ testInvariant('17:abundant-tomorrow-pv-waives-reserve',
       if (priceValues[t] <= laterMax) continue;
       if (derSlots[t].action !== 'discharge') return false;
     }
+    return true;
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 18
+// "Forward model-spread only ever lowers refill confidence — and agreement
+//  (spread ≤ 0.25) is an exact no-op"
+//
+// The spread cap is the only forward-looking input to the reserve (cv/ratio look
+// backward, the pvRefill lift trusts tomorrow's point forecast). Forbidden by
+// construction:
+//   (a) disagreement INCREASING confidence anywhere — would weaken the reserve
+//       exactly when uncertainty rises (incl. re-lifting above the pvRefill
+//       waiver or the same-day terms);
+//   (b) agreement being a silent behaviour change — spread ≤ 0.25 must return
+//       the exact no-spread confidence, hence the exact same DP schedule
+//       (schedule-level identity follows from scalar identity; the compute-level
+//       interplay is exercised by Invariant 17's randomized agreeing spread).
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 18 — spread-cap-monotonic-and-agreement-noop\n');
+
+testInvariant('18:spread-monotonic-never-lifts',
+  fc.tuple(
+    fc.option(fc.double({ min: 0, max: 1.0, noNaN: true, noDefaultInfinity: true }), { nil: undefined }),   // cv
+    fc.option(fc.double({ min: 0.2, max: 1.3, noNaN: true, noDefaultInfinity: true }), { nil: undefined }), // ratio
+    fc.double({ min: 0, max: 12, noNaN: true, noDefaultInfinity: true }),   // pvKwhTomorrow
+    fc.double({ min: 0.5, max: 12, noNaN: true, noDefaultInfinity: true }), // usableSpanKwh
+    fc.double({ min: 0, max: 1.2, noNaN: true, noDefaultInfinity: true }),  // spread sample A
+    fc.double({ min: 0, max: 1.2, noNaN: true, noDefaultInfinity: true }),  // spread sample B
+  ),
+  ([cv, ratio, pvKwh, span, sA, sB]) => {
+    const conf = (s) => OptimizationEngine.refillConfidenceFromForecast(cv, ratio, pvKwh, span, s);
+    const noSpread = conf(undefined);
+    const lo = Math.min(sA, sB);
+    const hi = Math.max(sA, sB);
+    if (conf(lo) > noSpread + 1e-12) return false;         // never lifts above no-spread conf
+    if (conf(hi) > conf(lo) + 1e-12) return false;         // monotonic non-increasing in spread
+    if (lo <= 0.25 && conf(lo) !== noSpread) return false; // agreement = exact no-op
     return true;
   }
 );
