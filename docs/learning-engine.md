@@ -15,6 +15,7 @@
 - `pv_performance_ratio` is **irrelevant** once ≥ 10 slots are learned — the yield factors absorb capacity, orientation, PR and shading
 - `getRadiationBiasFactor()` returns 1.0 until ≥ 3 daily samples are recorded (prevents bad single-day ratios from taking effect)
 - **`getRadiationBiasFactor()` returns 1.0 when `learnedSlots >= 10`** — yield factors already absorb the Open-Meteo vs actual relationship; applying bias on top double-counts the correction. Do NOT remove this guard.
+- **Dead code (left in place per project convention):** `solar_slot_max_radiation` (~line 778) and `getSolarSlotMaxYieldFactors()` (~line 860) — their only consumer was the clear-sky ceiling block in `battery-policy/device.js`, removed during the 2026-06 pipeline collapse.
 
 ## Radiation Bias
 
@@ -25,6 +26,12 @@
 - Factor clamps at 2.0 (max). If still at 2.0 after several weeks of operation, Open-Meteo structurally underestimates GTI for this location — monitor in spring as yield data accumulates
 - **Cache caveat:** `getRadiationBiasFactor()` is only called inside `_processForecast()`. When weather is restored from settings cache, `_processForecast()` is skipped — bias baked into cache is from the original fetch moment
 - Startup log: `[LearningEngine] radiation_bias_factor=X.XXX (N samples, M yield slots — ACTIVE / inactive: yield factors in use)`
+
+## Daily PV Bias
+
+- `recordDailyPvBiasFromPredictions(yDateStr, avgCloudPct, knmiKt)` updates `pv_daily_bias` / `pv_daily_bias_clear` (per-cloud-cover-band ratios) from yesterday's `pv_predictions`.
+- `getDailyPvBiasFactor(avgCloudPct, knmiKt)` classifies today clear/overcast (prefers KNMI `kt`, falls back to OM cloud%) and returns the matching ratio.
+- **`getDailyPvBiasFactor()` returns 1.0 when `learnedSlots >= 10`** — same yield-absorbs-bias guard as `getRadiationBiasFactor()` (line 722); yield factors are learned against forecast radiation so they already encode this bias. Applying the daily-bias EMA on top would double-count it. Do NOT remove this guard.
 
 ## Solar Yield Slots & DST
 

@@ -93,10 +93,26 @@ Optimizer slot-level PV uses weighted blend of OM and Solcast (when both availab
 
 Chart shows both lines separately (Open-Meteo dashed blue, Solcast dashed green) plus the blended "PV Verwachting" (dashed orange) and actual (solid yellow).
 
+## PV forecast pipeline (post-collapse, single source)
+
+After the 2026-06 pipeline-collapse (removed Cabauw decorrelation scaffold + clear-sky ceiling), `pvForecast` is built once per `_recomputeOptimizer` and reused everywhere — no per-consumer re-derivation:
+
+1. **Radiation** — Open-Meteo 4-model ensemble blend (`_mergeApiResponses`, with spread discount) → `shortwave_radiation` per slot.
+2. **Base pvForecast** (device.js ~2174–2200) — `radiation × yieldFactorSmoothed` when `learnedSlots ≥ 10`, else `pvCapacity × PR × (radiation/1000) × tempFactor`. Capped at `pvCapacityW` (installed-system ceiling only; the separate clear-sky ceiling was removed — yield factors already encode real-world ceiling).
+3. **Daily bias** — `getDailyPvBiasFactor(cloud, kt)` (cloud/kt-aware EMA, capped toward 1.0 above 75% cloud). Returns `1.0` once `learnedSlots ≥ 10` (yield factors already absorb the correction — see [[learning-engine.md]]).
+4. **PV-accuracy conservatism** — discount when `pv_accuracy_score < 0.80`.
+5. **Intraday corrector + cloudGate** (device.js ~2531–2593) — rain/precip-aware per-slot trim.
+6. → single `pvForecast` array feeds:
+   - **DP optimizer**: `_getPvForSlot(pvForecast, t)` → `optimizationEngine.compute()` (device.js ~2766/2876)
+   - **Planning chart**: `buildPlanningSchedule(slots, pvForecast, ...)` — same array, no separate chart snapshot
+   - **Explainability**: `_planSlot.pvForecastW` ← read from the DP schedule produced in step 6
+
+All three consumers see the same post-correction values by construction (Property-suite invariant 19 checks PV-lift never lowers projected profit).
+
 ## Bias factors
 
 - `radiation_bias_factor` — EMA daily ratio actual/forecast (α=0.15, clamped 0.3–2.0). Skipped when ≥10 yield slots learned (yield factors already absorb bias).
-- `pv_daily_bias` / `pv_daily_bias_clear` — per-cloud-cover-band ratios from `recordDailyPvBiasFromPredictions`. Applied as cloud-aware discount in optimizer DP when overcast forecast risks early stop-charging.
+- `pv_daily_bias` / `pv_daily_bias_clear` — per-cloud-cover-band ratios from `recordDailyPvBiasFromPredictions`. Applied as cloud-aware discount in optimizer DP when overcast forecast risks early stop-charging. Skipped (returns 1.0) once ≥10 yield slots learned — same yield-absorbs-bias guard as `radiation_bias_factor`.
 - `pvCloudFactor` — applied in DP under heavy cloud cover; prevents grid-charge stopping too early on overcast morning.
 
 ## Logging cheatsheet
