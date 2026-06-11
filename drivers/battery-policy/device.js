@@ -2414,6 +2414,26 @@ if (debug) this.log(
       const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
       inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
         pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
+
+      // Forward model-spread over the same 24h window: relative std of the per-model
+      // ensemble radiation, radiation-weighted (Σstd/Σmean) so disagreement at high-PV
+      // slots dominates and dawn/dusk noise barely counts. Feeds the refill-reserve
+      // confidence as the only forward-looking uncertainty signal (cv/ratio are
+      // backward-looking and miss "clear today, models split about tomorrow").
+      let _spreadStdSum = 0, _spreadMeanSum = 0;
+      for (const h of inputs.weather.hourlyForecast ?? []) {
+        const tMs = (h.time instanceof Date ? h.time : new Date(h.time)).getTime();
+        if (tMs <= nowMs || tMs > nowMs + 24 * 3600_000) continue;
+        const vals = Object.values(h.perModelWm2 ?? {}).filter(v => typeof v === 'number');
+        if (vals.length < 2) continue;
+        const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+        if (mean < 30) continue; // skip near-dark slots (relative spread is noise there)
+        _spreadStdSum += Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length);
+        _spreadMeanSum += mean;
+      }
+      inputs.weather.pvSpreadTomorrow = _spreadMeanSum > 0
+        ? Math.round((_spreadStdSum / _spreadMeanSum) * 100) / 100
+        : undefined;
     }
 
     // Snapshot blended forecast before discounts (used for accuracy tracking below).
@@ -2864,13 +2884,15 @@ if (debug) this.log(
     // and ignores tomorrow's actual forecast. Pass tomorrow's within-horizon PV surplus so
     // an abundant forecast lifts confidence and waives a reserve that guards a vanished risk.
     const _cvConf = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
-    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh);
+    const _pvSpread = inputs.weather?.pvSpreadTomorrow;
+    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh, _pvSpread);
     this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
     const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
     const _cvStr = typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a';
+    const _spreadNote = typeof _pvSpread === 'number' ? ` spread=${_pvSpread.toFixed(2)}` : '';
     if (refillConfidence < 1.0) {
       const floorAddPct = ((1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0))).toFixed(0);
-      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
+      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
     } else if (_cvConf < 1.0) {
       this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
     }

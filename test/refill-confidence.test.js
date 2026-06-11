@@ -95,5 +95,45 @@ test('tomorrow-PV lift never lowers confidence below same-day terms', () => {
   assert.strictEqual(f(0.10, undefined, 0.1, 2.69), 1.0);
 });
 
+// ── Forward model-spread cap: ensemble disagreement about tomorrow ───────────
+// The bug this guards: cv/ratio are backward-looking (today's accuracy) and the
+// pvKwhTomorrow lift trusts the point forecast. On a clear day before a cloudy
+// one, both said "confident" → floor 0 → overnight drain → morning PV miss.
+// Model spread over tomorrow's window is the only forward uncertainty signal:
+// high disagreement caps confidence even when today's accuracy was perfect.
+test('good today + abundant tomorrow + models disagree (spread 0.60) → conf capped 0.3', () => {
+  const noSpread = f(0.10, 1.0, 8.0, 2.69);
+  assert.strictEqual(noSpread, 1.0, 'precondition: conf 1.0 without spread');
+  const c = f(0.10, 1.0, 8.0, 2.69, 0.60);
+  assert.ok(approx(c, (0.75 - 0.60) / 0.50), `expected ~0.30, got ${c.toFixed(3)}`);
+});
+
+test('models agree (spread 0.10) → no-op, waiver intact', () => {
+  assert.strictEqual(f(0.55, undefined, 8.0, 2.69, 0.10), 1.0);
+});
+
+test('spread undefined (no ensemble / cold start) → no penalty', () => {
+  assert.strictEqual(f(0.10, 1.0, 8.0, 2.69, undefined), 1.0);
+});
+
+test('extreme disagreement (spread ≥ 0.75) → confidence 0', () => {
+  assert.strictEqual(f(0.10, 1.0, 8.0, 2.69, 0.80), 0);
+});
+
+test('spread cap never raises confidence', () => {
+  // already-low same-day confidence + agreeing models stays low
+  const base = f(0.50, 0.50);
+  assert.strictEqual(f(0.50, 0.50, 0, 0, 0.05), base);
+});
+
+test('monotonic: more disagreement never yields more confidence', () => {
+  let prev = Infinity;
+  for (const s of [0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0]) {
+    const c = f(0.10, 1.0, 8.0, 2.69, s);
+    assert.ok(c <= prev + 1e-9, `conf rose at spread=${s}: ${c} > ${prev}`);
+    prev = c;
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
