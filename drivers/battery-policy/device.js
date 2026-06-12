@@ -2136,6 +2136,22 @@ if (debug) this.log(
   }
 
   /**
+   * Daytime-masked relative PV forecast bias = Σ(actual − forecast) / Σ(actual)
+   * over the last 96 history slots where either actual or forecast > 50W.
+   * Positive = under-forecast (PV beats forecast). null if < 4 daytime samples.
+   */
+  _computePvRelBias() {
+    const hist = (this.homey.settings.get('policy_mode_history') || []).slice(-96);
+    let sAct = 0, sErr = 0, n = 0;
+    for (const e of hist) {
+      if (e.pvFcW == null || e.pvW == null) continue;
+      if (e.pvW <= 50 && e.pvFcW <= 50) continue;
+      sAct += e.pvW; sErr += e.pvW - e.pvFcW; n++;
+    }
+    return (sAct > 0 && n >= 4) ? sErr / sAct : null;
+  }
+
+  /**
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
@@ -2480,13 +2496,20 @@ if (debug) this.log(
 
     // PV conservatism: if accuracy score is low, discount pvForecast to avoid over-optimistic planning.
     // Discount kicks in below 0.80 accuracy, linear from 1.0 (at 0.80) to 0.80 (at 0).
+    // Bias-gate: the discount guards against OVER-forecast. When the measured daytime PV bias
+    // shows the forecast running LOW (relBias > 0.05), a further discount only makes the
+    // under-forecast worse — skip it. Null bias (cold start) falls back to the original discount.
     if (pvForecast && this.learningEngine) {
       const pvAcc = this.learningEngine.data?.pv_accuracy_score ?? 1.0;
-      if (pvAcc < 0.80) {
+      const _relBias = this._computePvRelBias();
+      const _underForecast = _relBias != null && _relBias > 0.05;
+      if (pvAcc < 0.80 && !_underForecast) {
         const factor = Math.max(0.80, 0.80 + 0.20 * (pvAcc / 0.80));
         _pvAccFactor = factor;
         pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * factor) }));
         this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism factor=${factor.toFixed(2)} applied`);
+      } else if (pvAcc < 0.80 && _underForecast) {
+        this.log(`[PV accuracy] score=${pvAcc.toFixed(2)} → conservatism discount SKIPPED — forecast running low (relBias +${_relBias.toFixed(2)})`);
       }
     }
     // Cloud uncertainty discount for DP pvCoverage projection: when cloud cover is high,
@@ -2906,18 +2929,9 @@ if (debug) this.log(
       const _fmt = m => `MAE ${m.mae}W bias ${m.bias > 0 ? '+' : ''}${m.bias}W (n${m.n})`;
       const _pv = _acc('pvFcW', 'pvW');
       const _co = _acc('consumFcW', 'consumW');
-      // Phase-0 observe: daytime-masked relative PV bias = Σ(act−fc)/Σ(act) over slots
-      // where either >50W. Positive = under-forecast (PV beats forecast). Calibration data
-      // for a future refill-confidence wire-up — NOT yet fed back into confidence.
-      const _pvRelBias = (() => {
-        let sAct = 0, sErr = 0;
-        for (const e of _hist) {
-          if (e.pvFcW == null || e.pvW == null) continue;
-          if (e.pvW <= 50 && e.pvFcW <= 50) continue;
-          sAct += e.pvW; sErr += e.pvW - e.pvFcW;
-        }
-        return sAct > 0 ? sErr / sAct : null;
-      })();
+      // Daytime-masked relative PV bias (positive = under-forecast). Now also gates the
+      // conservatism discount upstream (see _computePvRelBias / [PV accuracy] block).
+      const _pvRelBias = this._computePvRelBias();
       if (_pv || _co) {
         const _rb = _pvRelBias != null ? ` relBias ${_pvRelBias > 0 ? '+' : ''}${_pvRelBias.toFixed(2)}` : '';
         this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'}${_rb} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
