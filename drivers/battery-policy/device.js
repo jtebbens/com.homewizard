@@ -2970,26 +2970,35 @@ if (debug) this.log(
         const _psSlotH = planningSchedule.length > 1
           ? (new Date(planningSchedule[1].timestamp).getTime() - new Date(planningSchedule[0].timestamp).getTime()) / 3_600_000
           : slotMs / 3_600_000;
-        let netPvKwh = 0;
+        // Split surplus + DP-projected peak SoC by Amsterdam calendar day (today vs tomorrow).
+        // socMax comes straight from the DP schedule (no re-sim) so the UI never diverges from
+        // what the optimizer actually plans.
+        const _nlDate  = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const todayNL  = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        let netPvTodayKwh = 0, netPvTomorrowKwh = 0;
+        let socMaxToday = soc, socMaxTomorrow = null;
         for (const ps of planningSchedule) {
+          const isToday = _nlDate(ps.timestamp) === todayNL;
           const hwm = ps.hwMode;
-          if (hwm !== 'zero_charge_only' && hwm !== 'pv_trickle' && hwm !== 'to_full') continue;
-          netPvKwh += Math.min(maxChargePowerW, Math.max(0, (ps.pvW ?? 0) - (ps.consumptionW ?? 0))) * _psSlotH / 1000;
+          if (hwm === 'zero_charge_only' || hwm === 'pv_trickle' || hwm === 'to_full') {
+            const sv = Math.min(maxChargePowerW, Math.max(0, (ps.pvW ?? 0) - (ps.consumptionW ?? 0))) * _psSlotH / 1000;
+            if (isToday) netPvTodayKwh += sv; else netPvTomorrowKwh += sv;
+          }
+          if (ps.socProjected != null) {
+            if (isToday) socMaxToday = Math.max(socMaxToday, ps.socProjected);
+            else socMaxTomorrow = Math.max(socMaxTomorrow ?? 0, ps.socProjected);
+          }
         }
-        const remainingKwh  = Math.max(0, (1 - soc / 100) * capacityKwh);
-        const rteForSurplus = learnedRte ?? 0.75;
-        const fillFraction  = remainingKwh > 0.1
-          ? Math.min(1, (netPvKwh * rteForSurplus) / remainingKwh)
-          : 1;
-        this.log(`☀️ PV-surplus: ${netPvKwh.toFixed(2)} kWh netto → ${(fillFraction * 100).toFixed(0)}% van restcapaciteit (${remainingKwh.toFixed(1)} kWh, SoC ${soc}%)`);
-        const chargeSlots = planningSchedule.filter(s => s.hwMode === 'to_full').length;
+        const remainingKwh = Math.max(0, (1 - soc / 100) * capacityKwh);
+        const _gridToday    = planningSchedule.filter(s => s.hwMode === 'to_full' && _nlDate(s.timestamp) === todayNL).length;
+        const _gridTomorrow = planningSchedule.filter(s => s.hwMode === 'to_full' && _nlDate(s.timestamp) !== todayNL).length;
+        this.log(`☀️ PV-surplus: vandaag ${netPvTodayKwh.toFixed(2)}kWh→SoC≤${Math.round(socMaxToday)}% | morgen ${netPvTomorrowKwh.toFixed(2)}kWh→SoC≤${socMaxTomorrow != null ? Math.round(socMaxTomorrow) : '—'}% (rest ${remainingKwh.toFixed(1)}kWh, SoC ${soc}%)`);
         this._setLive('pv_surplus_forecast', {
-          netPvKwh:      Math.round(netPvKwh * 100) / 100,
-          remainingKwh:  Math.round(remainingKwh * 100) / 100,
-          fillFraction:  Math.round(fillFraction * 100) / 100,
+          today:    { netPvKwh: Math.round(netPvTodayKwh * 100) / 100,    socMax: Math.round(socMaxToday),                              chargeSlots: _gridToday },
+          tomorrow: { netPvKwh: Math.round(netPvTomorrowKwh * 100) / 100, socMax: socMaxTomorrow != null ? Math.round(socMaxTomorrow) : null, chargeSlots: _gridTomorrow },
+          remainingKwh: Math.round(remainingKwh * 100) / 100,
           soc,
-          chargeSlots,
-          updatedAt:     new Date().toISOString(),
+          updatedAt:    new Date().toISOString(),
         });
       }
 

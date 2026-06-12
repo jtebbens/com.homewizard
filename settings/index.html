@@ -2779,37 +2779,33 @@
     function renderPvSurplus(settings) {
       const block = document.getElementById('pv-surplus-block');
       const data  = settings['pv_surplus_forecast'];
-      if (!block || !data) return;
+      if (!block || !data || !data.today) return;
 
-      const { netPvKwh, remainingKwh, fillFraction, soc, chargeSlots } = data;
-      if (netPvKwh == null || remainingKwh == null || fillFraction == null) return;
+      const { today, tomorrow, soc } = data;
 
-      const pct = Math.round(fillFraction * 100);
-      const hasGridCharge = chargeSlots != null && chargeSlots > 0;
-      let icon, color, msg;
+      // One honest line per day, sourced from the DP-projected peak SoC (socMax).
+      // "vol" only when the optimizer actually plans to reach ~100%; grid top-up
+      // slots are named separately so solar isn't credited for grid charging.
+      const dayMsg = (d, label) => {
+        if (!d || d.socMax == null) return null;
+        const kwh  = (d.netPvKwh ?? 0).toFixed(1);
+        const grid = d.chargeSlots > 0 ? `${d.chargeSlots} netlaadslot${d.chargeSlots > 1 ? 's' : ''}` : null;
+        const src  = grid ? `${kwh} kWh zon + ${grid}` : `${kwh} kWh zon-surplus`;
+        if (d.socMax >= 99)         return `${label}: batterij wordt vol (${src}).`;
+        if (d.socMax > (soc ?? 0))  return `${label}: batterij tot ~${d.socMax}% (${src}).`;
+        return `${label}: nauwelijks aanvulling via zon (blijft ~${d.socMax}%).`;
+      };
 
-      if (remainingKwh < 0.5) {
-        icon = '🔋'; color = '#20F29B';
-        msg = `Batterij vrijwel vol (${soc}% SoC) — geen aanvulling nodig.`;
-      } else if (pct >= 95) {
-        icon = '☀️'; color = '#20F29B';
-        msg = `Batterij wordt volledig vol van zonne-energie (verwacht netto ${netPvKwh.toFixed(1)} kWh surplus).`;
-      } else if (pct >= 60) {
-        icon = '🌤️'; color = '#FCD34D';
-        msg = `Batterij wordt ~${pct}% vol van zon (${netPvKwh.toFixed(1)} kWh netto, ruimte ${remainingKwh.toFixed(1)} kWh).${hasGridCharge ? ` Aanvulling via net gepland (${chargeSlots} slot${chargeSlots > 1 ? 's' : ''}).` : ''}`;
-      } else if (hasGridCharge) {
-        icon = '⚡'; color = '#FCD34D';
-        msg = `PV-surplus beperkt (${netPvKwh.toFixed(1)} kWh, ~${pct}% van restcapaciteit). Laden via net gepland: ${chargeSlots} slot${chargeSlots > 1 ? 's' : ''}.`;
-      } else if (pct >= 15) {
-        icon = '🌤️'; color = '#FCD34D';
-        msg = `Batterij laadt ~${pct}% bij via zonnepanelen (${netPvKwh.toFixed(1)} kWh surplus, ruimte ${remainingKwh.toFixed(1)} kWh). Geen goedkope netlaadslots.`;
-      } else {
-        icon = '☁️'; color = 'var(--muted)';
-        msg = `PV-surplus beperkt: ${netPvKwh.toFixed(1)} kWh verwacht (~${pct}% van restcapaciteit ${remainingKwh.toFixed(1)} kWh). Geen goedkope laadslots gevonden.`;
-      }
+      const lines = [dayMsg(today, 'Vandaag'), dayMsg(tomorrow, 'Morgen')].filter(Boolean);
+      if (!lines.length) return;
+
+      const todayFull = today.socMax != null && today.socMax >= 99;
+      const todayLift = today.socMax != null && today.socMax > (soc ?? 0);
+      const icon  = todayFull ? '☀️' : (todayLift ? '🌤️' : '☁️');
+      const color = todayFull ? '#20F29B' : (todayLift ? '#FCD34D' : 'var(--muted)');
 
       block.style.display = 'block';
-      block.innerHTML = `<span style="color:${color};">${icon} <strong>Zonne-energie vandaag:</strong></span> ${msg}`;
+      block.innerHTML = `<span style="color:${color};">${icon} <strong>Zonne-energie:</strong></span> ` + lines.join(' ');
     }
 
     /* ══════════════════════════════════════════════════════════
