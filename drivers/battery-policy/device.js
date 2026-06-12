@@ -2906,8 +2906,21 @@ if (debug) this.log(
       const _fmt = m => `MAE ${m.mae}W bias ${m.bias > 0 ? '+' : ''}${m.bias}W (n${m.n})`;
       const _pv = _acc('pvFcW', 'pvW');
       const _co = _acc('consumFcW', 'consumW');
+      // Phase-0 observe: daytime-masked relative PV bias = Σ(act−fc)/Σ(act) over slots
+      // where either >50W. Positive = under-forecast (PV beats forecast). Calibration data
+      // for a future refill-confidence wire-up — NOT yet fed back into confidence.
+      const _pvRelBias = (() => {
+        let sAct = 0, sErr = 0;
+        for (const e of _hist) {
+          if (e.pvFcW == null || e.pvW == null) continue;
+          if (e.pvW <= 50 && e.pvFcW <= 50) continue;
+          sAct += e.pvW; sErr += e.pvW - e.pvFcW;
+        }
+        return sAct > 0 ? sErr / sAct : null;
+      })();
       if (_pv || _co) {
-        this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
+        const _rb = _pvRelBias != null ? ` relBias ${_pvRelBias > 0 ? '+' : ''}${_pvRelBias.toFixed(2)}` : '';
+        this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'}${_rb} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
       }
     }
 
