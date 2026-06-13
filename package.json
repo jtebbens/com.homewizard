@@ -10,7 +10,7 @@
   },
   "scripts": {
     "test": "athom app run",
-    "test-unit": "node test/smoke-boot.test.js && node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/ensemble-spread.test.js && node test/terminal-value.test.js && node test/optimizer-properties.test.js && node test/dp-refill-reserve.test.js && node test/refill-confidence.test.js && node test/daily-bias-regression.test.js && node test/stale-feed-degradation.test.js && node test/policy-planning.test.js && node test/mapper-properties.test.js && node test/policy-min-price-override.test.js && node test/chart-renderer.test.js && node test/battery-soc-drift.test.js && node test/conservatism-bias-gate.test.js",
+    "test-unit": "node test/smoke-boot.test.js && node test/xadi-provider.test.js && node test/weather-attenuation.test.js && node test/ensemble-spread.test.js && node test/terminal-value.test.js && node test/optimizer-properties.test.js && node test/dp-refill-reserve.test.js && node test/refill-confidence.test.js && node test/daily-bias-regression.test.js && node test/stale-feed-degradation.test.js && node test/policy-planning.test.js && node test/mapper-properties.test.js && node test/policy-min-price-override.test.js && node test/chart-renderer.test.js && node test/battery-soc-drift.test.js && node test/conservatism-bias-gate.test.js && node test/reserve-floor-breach-trigger.test.js",
     "test-properties": "node test/optimizer-properties.test.js",
     "smoke": "node test/smoke-boot.test.js",
     "release": "npm run test-unit && homey app publish",

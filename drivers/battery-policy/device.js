@@ -703,6 +703,8 @@ if (debug) this.log(
           await this.setCapabilityValue('grid_power_mirror', gridPower);
         }
 
+        this._checkReserveFloorTrigger(soc);
+
         // ── Reactive peak shaving trigger ─────────────────────────────────────
         // Fire extra policy run when load exceeds peak_shaving_threshold within
         // peak_hours window — reacts within 15s instead of waiting up to 15 min.
@@ -952,6 +954,24 @@ if (debug) this.log(
     }, 15000);
 
     this.log('✅ P1 capability polling started (15s interval)');
+  }
+
+  // ── Reactive reserve-floor breach trigger ───────────────────────────────
+  // The overnight refill-reserve floor (_lastReserveFloorPct) is recomputed only
+  // at each full replan (~30min). zero_discharge_only's load-following discharge
+  // rate can overshoot that floor before the next replan catches it, causing a
+  // same-price discharge→charge churn. React within ~15s instead.
+  _checkReserveFloorTrigger(soc) {
+    const floorPct = this._lastReserveFloorPct;
+    if (floorPct == null || soc >= floorPct) return false;
+    const hwModeNow = this.p1Device?.getCapabilityValue('battery_group_charge_mode') ?? '';
+    if (!hwModeNow.includes('discharge')) return false;
+    const nowMs = Date.now();
+    if (this._lastFloorTriggerTs && nowMs - this._lastFloorTriggerTs < 2 * 60 * 1000) return false;
+    this._lastFloorTriggerTs = nowMs;
+    this.log(`🛡️ SoC ${soc}% < reserve floor ${floorPct.toFixed(0)}% during ${hwModeNow} → reactive policy run`);
+    this._runPolicyCheck().catch(e => this.error('[FLOOR] reactive trigger:', e));
+    return true;
   }
 
   _schedulePolicyCheck() {
@@ -2891,10 +2911,14 @@ if (debug) this.log(
     const _cvStr = typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a';
     const _spreadNote = typeof _pvSpread === 'number' ? ` spread=${_pvSpread.toFixed(2)}` : '';
     if (refillConfidence < 1.0) {
-      const floorAddPct = ((1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0))).toFixed(0);
-      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct}% (until next strong-PV refill)`);
-    } else if (_cvConf < 1.0) {
-      this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
+      const floorAddPct = (1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0));
+      this._lastReserveFloorPct = (_s.min_soc ?? 0) + floorAddPct;
+      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct.toFixed(0)}% (until next strong-PV refill)`);
+    } else {
+      this._lastReserveFloorPct = (_s.min_soc ?? 0);
+      if (_cvConf < 1.0) {
+        this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
+      }
     }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence);
 
