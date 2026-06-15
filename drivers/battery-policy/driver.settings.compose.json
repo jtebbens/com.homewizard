@@ -417,6 +417,17 @@
         "value": false
       },
       {
+        "id": "pv_unbiased_blend",
+        "type": "checkbox",
+        "label": { "en": "Unbiased OM+Solcast blend (50/50)", "nl": "Ongewogen OM+Solcast-mix (50/50)" },
+        "hint": {
+          "en": "Blend Open-Meteo and Solcast with a fixed 50/50 weight instead of accuracy-derived weights. A fixed average cancels the opposite biases of the two models (OM under-, Solcast over-forecasts) and measured ~10% lower error on the 300-sample buffer (2026-06-15). Disable to fall back to learned accuracy weights.",
+          "nl": "Mix Open-Meteo en Solcast met een vaste 50/50-weging in plaats van op nauwkeurigheid gebaseerde gewichten. Een vaste middeling heft de tegengestelde afwijkingen van beide modellen op (OM onder-, Solcast overvoorspelt) en mat ~10% lagere fout op de 300-samplebuffer (2026-06-15). Uitschakelen valt terug op geleerde nauwkeurigheidsgewichten."
+        },
+        "value": true,
+        "visible": { "when": "solcast_enabled", "is": true }
+      },
+      {
         "id": "solcast_resource_id",
         "type": "text",
         "label": { "en": "Solcast Resource ID", "nl": "Solcast Resource ID" },
