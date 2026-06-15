@@ -116,6 +116,19 @@ class HomeWizardApp extends Homey.App {
       const hs = v8.getHeapStatistics();
       const heapMB = +(hs.used_heap_size / 1048576).toFixed(1);
       this._heapPeakMB = Math.max(this._heapPeakMB || 0, heapMB);
+      // settings.set costs ~30 MB transient V8 heap (framework-internal). A +30 MB
+      // spike on top of an already-elevated boot heap trips the OOM limit (~70 MB).
+      // Skip when heap is high — peak is still tracked above; retry shortly.
+      // (Same 40 MB gate the policy device uses for its queued writes.)
+      if (heapMB > 40) {
+        if (!this._healthRetryTimer) {
+          this._healthRetryTimer = this.homey.setTimeout(() => {
+            this._healthRetryTimer = null;
+            this._writeHealthSnapshot();
+          }, 60 * 1000);
+        }
+        return;
+      }
       this.homey.settings.set('app_health', {
         version: this.homey.manifest.version,
         startedAt: new Date(this._startedAt).toISOString(),
