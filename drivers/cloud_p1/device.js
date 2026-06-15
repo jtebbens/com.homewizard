@@ -226,6 +226,9 @@ class CloudP1Device extends Device {
         return;
       }
       
+      // [GASDIAG] temp: dump gas-related fields to confirm legacy vs external source
+      this.log('[GASDIAG] keys=' + Object.keys(state).join(',') + ' | total_gas_m3=' + JSON.stringify(state.total_gas_m3) + ' | gas_timestamp=' + JSON.stringify(state.gas_timestamp) + ' | external=' + JSON.stringify(state.external));
+
       // Clear any warnings - we're receiving data successfully
       this.unsetWarning().catch(this.error);
 
