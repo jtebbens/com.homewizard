@@ -105,8 +105,11 @@ test('planning does not grid-charge (to_full) on low SoC when PV forecast is str
   });
   assert.notStrictEqual(mapped.hwMode, 'to_full',
     `Strong PV (553W) at low SoC must not project grid charge, got ${mapped.hwMode} (${mapped.reason})`);
-  assert.strictEqual(mapped.hwMode, 'pv_trickle',
-    `Expected pv_trickle (PV-only peak-shave), got ${mapped.hwMode} (${mapped.reason})`);
+  // PV 553W < load 673W = net deficit, no surplus to store → standby (battery idle, PV cuts
+  // grid draw). The to_full guard above is the real regression target; the earlier pv_trickle
+  // assertion here codified the clamped-netSurplus bug and is now standby.
+  assert.strictEqual(mapped.hwMode, 'standby',
+    `Net-deficit PV must map to standby (idle), got ${mapped.hwMode} (${mapped.reason})`);
 });
 
 test('planning still grid-charges (to_full) on low SoC when PV forecast is weak', () => {
@@ -128,6 +131,51 @@ test('planning still grid-charges (to_full) on low SoC when PV forecast is weak'
   });
   assert.strictEqual(mapped.hwMode, 'to_full',
     `Weak PV (120W) at low SoC should still grid-charge, got ${mapped.hwMode} (${mapped.reason})`);
+});
+
+test('planning maps preserve to standby (not pv_trickle) when PV is well below load', () => {
+  // Regression: morning slot — DP preserve, soc 36%, weak PV (108W) far below load (384W),
+  // battery idle while the house draws from grid. The clamped netSurplusW made the old
+  // `>= -50` guard always true, mislabelling this as pv_trickle ('Sprokkelen') — read by
+  // the user as a charge wedged between discharges. A real deficit must show standby.
+  const engine = makeEngine();
+  const mapped = engine._mapActionToHwModeForPlanning('preserve', {
+    price: 0.275,
+    soc: 36,
+    pvW: 108,
+    consumptionW: 384,
+    tariffType: 'dynamic',
+    userPolicyMode: 'balanced',
+    maxChargePrice: 0.12,
+    minDischargePrice: 0.25,
+    minSoc: 0,
+    maxSoc: 100,
+    futurePrices: [],
+    battChargePowerW: 800,
+  });
+  assert.strictEqual(mapped.hwMode, 'standby',
+    `Weak PV (108W) ≪ load (384W) must map to standby, got ${mapped.hwMode} (${mapped.reason})`);
+});
+
+test('planning maps preserve to pv_trickle only on a real PV surplus (PV > load)', () => {
+  // Guard: when PV exceeds load there IS surplus to trickle into the battery → pv_trickle.
+  const engine = makeEngine();
+  const mapped = engine._mapActionToHwModeForPlanning('preserve', {
+    price: 0.275,
+    soc: 36,
+    pvW: 500,
+    consumptionW: 400,
+    tariffType: 'dynamic',
+    userPolicyMode: 'balanced',
+    maxChargePrice: 0.12,
+    minDischargePrice: 0.25,
+    minSoc: 0,
+    maxSoc: 100,
+    futurePrices: [],
+    battChargePowerW: 800,
+  });
+  assert.strictEqual(mapped.hwMode, 'pv_trickle',
+    `PV surplus (500W > 400W load) should trickle, got ${mapped.hwMode} (${mapped.reason})`);
 });
 
 test('planning schedule uses actual battery capacity for SoC projection', () => {
