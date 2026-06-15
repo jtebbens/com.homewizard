@@ -5737,3 +5737,3671 @@ PASS — 1000 scenarios, no counterexample.
 - Passed: 18
 - Failed: 0
 
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 46 tests
+{ seed: 12345, path: "45:0:0:0:7:0:1:1:0:0:0:3:0:0:1:3:0:0:2:1:4:1:0:0:0:1:2:0:1:0:0:4:2:1:1:2:2:2:3:2:5:2:2:2:3:3:3:2:3:2:3:2:3:2:2:2:3:4:3:3:3:3:4:2:2:3:3:2:2:3:2:4:3:2:6:2:2:3:5:2:3:2:2:2:2:6:3:4:2:4:4:5:5:2:3:2:2:5:2:2:2:5:2:5:3:3:2:6:2:5:4:2:4:2:3:2:2:3:2:4:3:2:5:3:3:2:2:2:3:2:2:6:2:3:2:3:3:2:2:3:3:2:3:4:3:2:2:2:2:7:3:5:2:4:2:2:2:2:4:5:2:2:5:2:2:5:5:3:5:2:2:3:2:4:3:3:3:3:5:3:2:3:2:8:3:2:2:5:4:3:3:2:3:2:2:2:2:3:2:3:2:3:2:2:3:3:4:3:2:3:2:2:5:2:2:2:2:3:2:8:3:5:3:4:3:2:2:2:4:2:2:2:2:4:2:53:2:2:5:2:5:5:2:2:3:7:2:5:2:3:2:3:3:6:3:2:2:2:3:3:4:3:2:57:4:6:2:2:2:4:6:4:2:6:6:3:2:2:2:3:2:3:2:6:3:2:6:2:4:2:4:2:9:2:2:2:6:6:4:3:2:2:3:2:3:5:2:2:3:3:2:3:0:6:2:0:0:1:0:1:3:0:3:2:1:0:0:2:0:1:0:1:0:0:2:0:0:0:1:1:1:1:5:3:1:1:1:2:2:2:2:53:2:2:2:57:54:4:3:2:2:55:3:0:0:15:0:0:2:1:1:0:1:1:1:1:1:1:1:1:0:1:0:1:0:4:0:2:2:2:53:2:2:2:3:0:9:0:0:0:0:0:0:1:4:1:0:0:0:2:1:0:0:4:5:1:0:0:2:1:7:4:4:53:5:4:5:4:5:0:0:0:15:0:0:2:0:2:1:2:1:0:1:0:0:0:0:0:0:1:1:4:2:0:4:51:4:4:4:4:4:6:0:0:7:1:0:0:0:0:0:1:0:0:2:0:0:0:0:0:2:1:2:1:2:1:0:0:0:7:1:1:1:1:6:2:3:3:3:3:53:5:3:3:4:0:0:0:6:3:0:0:0:0:0:0:3:0:2:0:4:0:0:4:0:1:0:1:2:0:0:0:3:1:1:1:5:3:1:2:50:3:3:2:2:3:0:0:9:0:1:2:0:1:3:0:0:0:1:2:3:0:0:2:0:5:1:1:2:0:1:1:8:1:1:2:2:50:2:2:3:2:2:2:3:0:12:0:1:6:0:0:0:0:1:2:0:1:2:0:3:0:1:1:0:1:1:0:0:2:51:5:2:3:0:9:3:1:0:3:1:0:1:0:4:1:0:0:1:3:2:0:1:0:0:0:0:0:1:1:8:1:2:2:52:2:2:3:3:0:13:1:0:2:1:0:0:0:2:3:1:0:0:0:3:4:1:2:1:0:2:2:51:5:3:0:0:7:2:0:1:1:1:0:0:1:1:0:2:1:0:0:0:1:0:1:2:3:1:1:0:0:0:0:0:0:1:1:6:2:1:1:2:2:2:50:3:2:2:2:2:2:3:0:8:0:0:1:2:1:0:4:0:0:1:2:1:0:0:6:2:0:5:2:7:4:2:3:54:4:3:3:4:0:0:0:0:6:3:4:0:1:0:0:2:0:2:0:1:0:2:0:0:1:0:0:3:0:0:0:1:0:1:0:0:1:5:2:1:1:2:51:5:2:3:0:11:3:2:0:0:0:0:0:0:1:0:2:0:2:1:0:1:0:0:0:1:0:0:2:0:0:0:0:0:1:2:2:52:2:2:3:3:0:7:1:1:1:2:1:0:2:0:0:0:0:2:0:1:0:0:0:3:0:2:0:0:3:3:1:6:1:1:1:1:2:2:49:2:4:2:2:3:0:0:6:2:1:1:1:1:2:1:1:1:0:7:2:1:1:1:0:0:0:0:4:1:5:1:1:2:2:2:2:49:3:3:3:2:2:3:0:0:6:0:1:0:1:4:0:3:0:4:0:2:0:0:3:2:2:1:4:0:0:1:1:4:7:0:0:6:0:0:0:1:0:1:0:4:0:2:0:1:1:0:3:1:0:1:0:0:3:1:1:1:0:0:0:1:1:2:1:2:52:2:2:4:0:6:2:0:1:0:2:0:0:3:0:1:2:2:0:5:0:0:0:0:0:0:0:1:1:1:1:0:1:1:5:3:1:2:2:2:2:52:2:2:2:2:3:0:5:2:1:0:0:3:1:0:1:0:0:1:0:3:0:0:2:5:0:2:1:2:0:2:5:3:3:2:3:3:52:3:3:5:4:0:0:0:0:5:1:1:2:4:7:3:1:4:0:0:6:0:0:0:0:0:0:0:1:4:1:2:1:2:2:49:4:3:3:3:0:0:0:11:1:0:0:2:0:1:0:1:2:0:3:0:0:0:0:2:0:0:2:0:0:4:2:3:3:53:6:4:0:0:0:0:5:1:0:1:0:0:0:3:0:5:0:2:0:3:1:1:0:0:3:0:0:2:0:1:2:4:5:2:4:0:0:0:0:6:1:1:2:0:0:0:0:0:6:0:0:0:0:2:0:0:2:2:0:0:0:2:0:0:0:2:0:0:1:4:2:1:1:2:52:3:2:2:3:3:3:0:15:0:3:1:0:0:1:0:0:3:1:0:0:4:1:7:0:0:0:2:2:49:3:4:3:2:3:3:3:3:3:3:3:3:3:14:0:5:5:1:1:0:0:1:3:5:1:0:3:0:1:1:1:0:0:0:0:4:0:1:3:3:1:1:5:0:8:3:0:2:0:0:0:3:4:0:0:2:0:0:2:0:0:0:0:2:2:0:0:1:1:5:3:50:3:3:3:4:3:3:3:4:0:0:0:9:7:0:3:0:0:4:0:0:0:0:0:1:1:5:1:1:0:2:2:2:50:2:2:2:7:0:0:12:6:5:0:0:0:0:0:0:0:5:2:1:1:1:1:1:0:0:2:2:2:2:2:50:3:2:2:2:2:2:3:0:0:13:6:3:7:0:2:0:0:2:2:0:4:0:0:0:0:2:50:2:4:2:2:2:4:0:15:6:3:1:4:1:1:1:0:0:0:0:0:0:5:1:1:7:56:7:7:9:7:9:0:17:6:3:1:1:2:1:0:0:0:1:1:1:1:0:10:59:10:11:11:14:0:0:0:0:0:0:21:6:3:1:1:1:0:0:5:0:2:1:0:7:7:55:9:9:8:0:22:6:3:1:1:1:0:0:1:3:0:0:0:0:1:7:54:9:8:8:7:8:0:23:6:3:1:1:1:0:0:1:0:1:3:1:7:57:7:7:8:7:8:0:24:6:3:1:1:1:0:0:1:0:0:0:2:1:7:55:8:12:0:26:6:3:1:1:1:0:0:0:5:0:7:7:7:7:7:7:56:8:8:7:8:0:27:6:3:1:1:1:0:0:0:4:0:7:7:56:7:9:7:8:0:28:6:3:1:1:1:0:0:0:3:0:7:7:56:7:7:7:7:7:9:0:30:6:3:1:1:1:0:0:0:2:7:7:56:8:7:8:7:9:0:33:0:0:4:1:1:1:3:2:7:57:12:0:35:6:3:1:1:0:0:8:7:7:10:0:0:0:38:6:3:1:1:7:7:55:9:7:7:7:7:12:0:43:6:9:56:14:9:9:11:0:0:0:0:0:46:0:0:0:0:1:7:54:8:7:7:7:7:8:0:0:0:47:0:0:0:0:0:0:7:7:7:56:7:9:8:0:0:48:0:0:0:0:0:7:7:7:56:11:9:0:0:50:0:0:0:0:7:55:7:7:7:7:7:8:0:51:0:0:7:7:7:57:7:7:9:0:0:52:7:7:7:7:56:7:7:8:7:8:0:0:60:60:107:62:61:61:61:53:7:7:55:8:8:7:9:8:8:9:8:8:8:8:0:15:0:0:1:0:0:1:1:0:0:1:0:0:1:0:0:6:1:1:0:0:0:1:1:7:7:7:55:7:7:7:7:8:8:8:0:4:0:1:0:2:0:2:3:0:1:0:1:0:1:2:0:0:0:1:0:0:0:7:0:0:0:0:0:0:1:1:1:48:1:2:3:1:1:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":4.337541907821307,"maxChargeW":400,"maxDischargeW":400,"currentSoc":0},[0.01858582619367003,0.01858582619367003,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.4999999999999978,0.01858582619367003,0.49999999999999944,0.01858582619367003,0.018585826193670066,0.01,0.01,0.01,0.01,0.01,0.4999999999999988,0.49999999999999956,0.4999999999999987,0.01,0.01,0.01,0.4658444218739229],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],[0,0,0,0,0,0,0,0,0,0,0,0,0.999999999,0,0,0,0,0,0,0,0,0,0,0]]]
+Shrunk 1853 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 46 tests
+{ seed: 12345, path: "45:0:0:0:7:0:1:1:0:0:0:3:0:0:1:3:0:0:2:1:4:1:0:0:0:1:2:0:1:0:0:4:2:1:1:2:2:2:3:2:5:2:2:2:3:3:3:2:3:2:3:2:3:2:2:2:3:4:3:3:3:3:4:2:2:3:3:2:2:3:2:4:3:2:6:2:2:3:5:2:3:2:2:2:2:6:3:4:2:4:4:5:5:2:3:2:2:5:2:2:2:5:2:5:3:3:2:6:2:5:4:2:4:2:3:2:2:3:2:4:3:2:5:3:3:2:2:2:3:2:2:6:2:3:2:3:3:2:2:3:3:2:3:4:3:2:2:2:2:7:3:5:2:4:2:2:2:2:4:5:2:2:5:2:2:5:5:3:5:2:2:3:2:4:3:3:3:3:5:3:2:3:2:8:3:2:2:5:4:3:3:2:3:2:2:2:2:3:2:3:2:3:2:2:3:3:4:3:2:3:2:2:5:2:2:2:2:3:2:8:3:5:3:4:3:2:2:2:4:2:2:2:2:4:2:53:2:2:5:2:5:5:2:2:3:7:2:5:2:3:2:3:3:6:3:2:2:2:3:3:4:3:2:57:4:6:2:2:2:4:6:4:2:6:6:3:2:2:2:3:2:3:2:6:3:2:6:2:4:2:4:2:9:2:2:2:6:6:4:3:2:2:3:2:3:5:2:2:3:3:2:3:0:6:2:0:0:1:0:1:3:0:3:2:1:0:0:2:0:1:0:1:0:0:2:0:0:0:1:1:1:1:5:3:1:1:1:2:2:2:2:53:2:2:2:57:54:4:3:2:2:55:3:0:0:15:0:0:2:1:1:0:1:1:1:1:1:1:1:1:0:1:0:1:0:4:0:2:2:2:53:2:2:2:3:0:9:0:0:0:0:0:0:1:4:1:0:0:0:2:1:0:0:4:5:1:0:0:2:1:7:4:4:53:5:4:5:4:5:0:0:0:15:0:0:2:0:2:1:2:1:0:1:0:0:0:0:0:0:1:1:4:2:0:4:51:4:4:4:4:4:6:0:0:7:1:0:0:0:0:0:1:0:0:2:0:0:0:0:0:2:1:2:1:2:1:0:0:0:7:1:1:1:1:6:2:3:3:3:3:53:5:3:3:4:0:0:0:6:3:0:0:0:0:0:0:3:0:2:0:4:0:0:4:0:1:0:1:2:0:0:0:3:1:1:1:5:3:1:2:50:3:3:2:2:3:0:0:9:0:1:2:0:1:3:0:0:0:1:2:3:0:0:2:0:5:1:1:2:0:1:1:8:1:1:2:2:50:2:2:3:2:2:2:3:0:12:0:1:6:0:0:0:0:1:2:0:1:2:0:3:0:1:1:0:1:1:0:0:2:51:5:2:3:0:9:3:1:0:3:1:0:1:0:4:1:0:0:1:3:2:0:1:0:0:0:0:0:1:1:8:1:2:2:52:2:2:3:3:0:13:1:0:2:1:0:0:0:2:3:1:0:0:0:3:4:1:2:1:0:2:2:51:5:3:0:0:7:2:0:1:1:1:0:0:1:1:0:2:1:0:0:0:1:0:1:2:3:1:1:0:0:0:0:0:0:1:1:6:2:1:1:2:2:2:50:3:2:2:2:2:2:3:0:8:0:0:1:2:1:0:4:0:0:1:2:1:0:0:6:2:0:5:2:7:4:2:3:54:4:3:3:4:0:0:0:0:6:3:4:0:1:0:0:2:0:2:0:1:0:2:0:0:1:0:0:3:0:0:0:1:0:1:0:0:1:5:2:1:1:2:51:5:2:3:0:11:3:2:0:0:0:0:0:0:1:0:2:0:2:1:0:1:0:0:0:1:0:0:2:0:0:0:0:0:1:2:2:52:2:2:3:3:0:7:1:1:1:2:1:0:2:0:0:0:0:2:0:1:0:0:0:3:0:2:0:0:3:3:1:6:1:1:1:1:2:2:49:2:4:2:2:3:0:0:6:2:1:1:1:1:2:1:1:1:0:7:2:1:1:1:0:0:0:0:4:1:5:1:1:2:2:2:2:49:3:3:3:2:2:3:0:0:6:0:1:0:1:4:0:3:0:4:0:2:0:0:3:2:2:1:4:0:0:1:1:4:7:0:0:6:0:0:0:1:0:1:0:4:0:2:0:1:1:0:3:1:0:1:0:0:3:1:1:1:0:0:0:1:1:2:1:2:52:2:2:4:0:6:2:0:1:0:2:0:0:3:0:1:2:2:0:5:0:0:0:0:0:0:0:1:1:1:1:0:1:1:5:3:1:2:2:2:2:52:2:2:2:2:3:0:5:2:1:0:0:3:1:0:1:0:0:1:0:3:0:0:2:5:0:2:1:2:0:2:5:3:3:2:3:3:52:3:3:5:4:0:0:0:0:5:1:1:2:4:7:3:1:4:0:0:6:0:0:0:0:0:0:0:1:4:1:2:1:2:2:49:4:3:3:3:0:0:0:11:1:0:0:2:0:1:0:1:2:0:3:0:0:0:0:2:0:0:2:0:0:4:2:3:3:53:6:4:0:0:0:0:5:1:0:1:0:0:0:3:0:5:0:2:0:3:1:1:0:0:3:0:0:2:0:1:2:4:5:2:4:0:0:0:0:6:1:1:2:0:0:0:0:0:6:0:0:0:0:2:0:0:2:2:0:0:0:2:0:0:0:2:0:0:1:4:2:1:1:2:52:3:2:2:3:3:3:0:15:0:3:1:0:0:1:0:0:3:1:0:0:4:1:7:0:0:0:2:2:49:3:4:3:2:3:3:3:3:3:3:3:3:3:14:0:5:5:1:1:0:0:1:3:5:1:0:3:0:1:1:1:0:0:0:0:4:0:1:3:3:1:1:5:0:8:3:0:2:0:0:0:3:4:0:0:2:0:0:2:0:0:0:0:2:2:0:0:1:1:5:3:50:3:3:3:4:3:3:3:4:0:0:0:9:7:0:3:0:0:4:0:0:0:0:0:1:1:5:1:1:0:2:2:2:50:2:2:2:7:0:0:12:6:5:0:0:0:0:0:0:0:5:2:1:1:1:1:1:0:0:2:2:2:2:2:50:3:2:2:2:2:2:3:0:0:13:6:3:7:0:2:0:0:2:2:0:4:0:0:0:0:2:50:2:4:2:2:2:4:0:15:6:3:1:4:1:1:1:0:0:0:0:0:0:5:1:1:7:56:7:7:9:7:9:0:17:6:3:1:1:2:1:0:0:0:1:1:1:1:0:10:59:10:11:11:14:0:0:0:0:0:0:21:6:3:1:1:1:0:0:5:0:2:1:0:7:7:55:9:9:8:0:22:6:3:1:1:1:0:0:1:3:0:0:0:0:1:7:54:9:8:8:7:8:0:23:6:3:1:1:1:0:0:1:0:1:3:1:7:57:7:7:8:7:8:0:24:6:3:1:1:1:0:0:1:0:0:0:2:1:7:55:8:12:0:26:6:3:1:1:1:0:0:0:5:0:7:7:7:7:7:7:56:8:8:7:8:0:27:6:3:1:1:1:0:0:0:4:0:7:7:56:7:9:7:8:0:28:6:3:1:1:1:0:0:0:3:0:7:7:56:7:7:7:7:7:9:0:30:6:3:1:1:1:0:0:0:2:7:7:56:8:7:8:7:9:0:33:0:0:4:1:1:1:3:2:7:57:12:0:35:6:3:1:1:0:0:8:7:7:10:0:0:0:38:6:3:1:1:7:7:55:9:7:7:7:7:12:0:43:6:9:56:14:9:9:11:0:0:0:0:0:46:0:0:0:0:1:7:54:8:7:7:7:7:8:0:0:0:47:0:0:0:0:0:0:7:7:7:56:7:9:8:0:0:48:0:0:0:0:0:7:7:7:56:11:9:0:0:50:0:0:0:0:7:55:7:7:7:7:7:8:0:51:0:0:7:7:7:57:7:7:9:0:0:52:7:7:7:7:56:7:7:8:7:8:0:0:60:60:107:62:61:61:61:53:7:7:55:8:8:7:9:8:8:9:8:8:8:8:0:15:0:0:1:0:0:1:1:0:0:1:0:0:1:0:0:6:1:1:0:0:0:1:1:7:7:7:55:7:7:7:7:8:8:8:0:4:0:1:0:2:0:2:3:0:1:0:1:0:1:2:0:0:0:1:0:0:0:7:0:0:0:0:0:0:1:1:1:48:1:2:3:1:1:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":4.337541907821307,"maxChargeW":400,"maxDischargeW":400,"currentSoc":0},[0.01858582619367003,0.01858582619367003,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.4999999999999978,0.01858582619367003,0.49999999999999944,0.01858582619367003,0.018585826193670066,0.01,0.01,0.01,0.01,0.01,0.4999999999999988,0.49999999999999956,0.4999999999999987,0.01,0.01,0.01,0.4658444218739229],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],[0,0,0,0,0,0,0,0,0,0,0,0,0.999999999,0,0,0,0,0,0,0,0,0,0,0]]]
+Shrunk 1853 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 19
+- Failed: 1
+
+### Failed invariants
+- 8:pv-self-consumption-before-grid
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 6 tests
+{ seed: 12345, path: "5:0:2:1:8:3:1:4:1:1:1:2:1:1:3:1:4:3:1:3:4:2:2:1:3:2:2:3:0:0:1:0:1:8:2:2:1:5:2:7:2:1:4:5:5:1:2:2:1:2:1:6:0:0:0:10:0:3:4:0:2:2:1:0:2:0:0:1:3:1:2:1:0:0:1:1:0:0:7:2:1:1:2:0:0:0:0:0:2:0:0:2:7:4:2:1:0:4:0:0:0:0:0:9:4:1:0:0:0:3:3:0:4:1:3:0:2:1:1:0:1:0:1:1:0:10:4:0:3:1:4:1:0:1:3:3:0:3:0:0:1:2:1:0:0:10:4:0:2:2:1:0:0:3:1:2:0:0:0:0:1:0:0:0:2:0:0:2:0:1:0:10:4:0:2:0:1:0:0:1:0:2:0:1:1:1:2:0:2:0:0:0:4:7:0:0:7:4:0:1:2:2:3:3:1:1:0:3:0:1:1:0:2:0:0:0:0:0:2:0:0:8:1:0:4:1:1:2:1:0:1:0:3:1:1:0:3:0:1:0:4:2:2:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:2:6:2:2:3:2:2:3:2:4:2:3:4:5:6:2:4:4:7:11:51:6:3:45:2:3:6:4:45:2:3:2:2:4:5:43:5:2:2:2:2:3:3:6:3:45:2:2:4:2:4:2:2:42:6:9:4:2:2:39:8:9:2:2:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:17:1:0:0:0:10:4:0:0:0:0:0:0:1:0:0:0:7:4:0:0:0:0:0:0:1:0:0:0:1:1:0:0:10:3:6:0:1:0:0:1:2:1:0:2:0:0:1:0:1:2:3:7:0:0:0:7:3:5:0:0:0:0:0:0:0:1:0:0:1:0:0:0:0:8:3:4:0:2:0:3:2:3:1:0:1:2:2:1:0:0:1:1:1:0:1:2:1:0:1:6:0:0:2:0:0:0:5:6:2:2:0:0:2:0:0:3:2:3:1:0:0:0:0:3:0:1:0:0:0:0:2:2:2:2:3:1:0:10:3:2:0:0:1:2:0:1:1:5:0:0:0:0:2:0:0:1:11:0:0:0:0:0:0:0:0:6:2:2:1:2:1:0:0:0:0:0:0:0:1:0:0:1:0:6:0:0:1:0:0:0:0:2:0:3:0:0:1:6:1:2:3:1:2:0:0:2:0:1:0:1:0:2:1:2:1:0:1:2:0:0:0:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:10:3:2:2:2:3:3:5:4:2:4:2:2:2:5:3:2:2:5:2:3:2:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.6405286343612338,"maxChargeW":931,"maxDischargeW":400,"currentSoc":0},[0.01,0.01,0.24999999999999992,0.01,0.01,0.01,0.2499999999999999,0.01,0.01,0.01,0.07928259715139858,0.01,0.4999999999999972,0.01,0.4411407814765257,0.23563998294493232,0.10430340591763426,0.010000000000000021,0.12483228647410136,0.010000000000000026,0.025338488054366882,0.01,0.01,0.01],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],0.4677765843179376]]
+Shrunk 670 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 6 tests
+{ seed: 12345, path: "5:0:2:1:8:3:1:4:1:1:1:2:1:1:3:1:4:3:1:3:4:2:2:1:3:2:2:3:0:0:1:0:1:8:2:2:1:5:2:7:2:1:4:5:5:1:2:2:1:2:1:6:0:0:0:10:0:3:4:0:2:2:1:0:2:0:0:1:3:1:2:1:0:0:1:1:0:0:7:2:1:1:2:0:0:0:0:0:2:0:0:2:7:4:2:1:0:4:0:0:0:0:0:9:4:1:0:0:0:3:3:0:4:1:3:0:2:1:1:0:1:0:1:1:0:10:4:0:3:1:4:1:0:1:3:3:0:3:0:0:1:2:1:0:0:10:4:0:2:2:1:0:0:3:1:2:0:0:0:0:1:0:0:0:2:0:0:2:0:1:0:10:4:0:2:0:1:0:0:1:0:2:0:1:1:1:2:0:2:0:0:0:4:7:0:0:7:4:0:1:2:2:3:3:1:1:0:3:0:1:1:0:2:0:0:0:0:0:2:0:0:8:1:0:4:1:1:2:1:0:1:0:3:1:1:0:3:0:1:0:4:2:2:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:2:6:2:2:3:2:2:3:2:4:2:3:4:5:6:2:4:4:7:11:51:6:3:45:2:3:6:4:45:2:3:2:2:4:5:43:5:2:2:2:2:3:3:6:3:45:2:2:4:2:4:2:2:42:6:9:4:2:2:39:8:9:2:2:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:17:1:0:0:0:10:4:0:0:0:0:0:0:1:0:0:0:7:4:0:0:0:0:0:0:1:0:0:0:1:1:0:0:10:3:6:0:1:0:0:1:2:1:0:2:0:0:1:0:1:2:3:7:0:0:0:7:3:5:0:0:0:0:0:0:0:1:0:0:1:0:0:0:0:8:3:4:0:2:0:3:2:3:1:0:1:2:2:1:0:0:1:1:1:0:1:2:1:0:1:6:0:0:2:0:0:0:5:6:2:2:0:0:2:0:0:3:2:3:1:0:0:0:0:3:0:1:0:0:0:0:2:2:2:2:3:1:0:10:3:2:0:0:1:2:0:1:1:5:0:0:0:0:2:0:0:1:11:0:0:0:0:0:0:0:0:6:2:2:1:2:1:0:0:0:0:0:0:0:1:0:0:1:0:6:0:0:1:0:0:0:0:2:0:3:0:0:1:6:1:2:3:1:2:0:0:2:0:1:0:1:0:2:1:2:1:0:1:2:0:0:0:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:10:3:2:2:2:3:3:5:4:2:4:2:2:2:5:3:2:2:5:2:3:2:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.6405286343612338,"maxChargeW":931,"maxDischargeW":400,"currentSoc":0},[0.01,0.01,0.24999999999999992,0.01,0.01,0.01,0.2499999999999999,0.01,0.01,0.01,0.07928259715139858,0.01,0.4999999999999972,0.01,0.4411407814765257,0.23563998294493232,0.10430340591763426,0.010000000000000021,0.12483228647410136,0.010000000000000026,0.025338488054366882,0.01,0.01,0.01],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],0.4677765843179376]]
+Shrunk 670 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 46 tests
+{ seed: 12345, path: "45:0:0:0:7:0:1:1:0:0:0:3:0:0:1:3:0:0:2:1:4:1:0:0:0:1:2:0:1:0:0:4:2:1:1:2:2:2:3:2:5:2:2:2:3:3:3:2:3:2:3:2:3:2:2:2:3:4:3:3:3:3:4:2:2:3:3:2:2:3:2:4:3:2:6:2:2:3:5:2:3:2:2:2:2:6:3:4:2:4:4:5:5:2:3:2:2:5:2:2:2:5:2:5:3:3:2:6:2:5:4:2:4:2:3:2:2:3:2:4:3:2:5:3:3:2:2:2:3:2:2:6:2:3:2:3:3:2:2:3:3:2:3:4:3:2:2:2:2:7:3:5:2:4:2:2:2:2:4:5:2:2:5:2:2:5:5:3:5:2:2:3:2:4:3:3:3:3:5:3:2:3:2:8:3:2:2:5:4:3:3:2:3:2:2:2:2:3:2:3:2:3:2:2:3:3:4:3:2:3:2:2:5:2:2:2:2:3:2:8:3:5:3:4:3:2:2:2:4:2:2:2:2:4:2:53:2:2:5:2:5:5:2:2:3:7:2:5:2:3:2:3:3:6:3:2:2:2:3:3:4:3:2:57:4:6:2:2:2:4:6:4:2:6:6:3:2:2:2:3:2:3:2:6:3:2:6:2:4:2:4:2:9:2:2:2:6:6:4:3:2:2:3:2:3:5:2:2:3:3:2:3:0:6:2:0:0:1:0:1:3:0:3:2:1:0:0:2:0:1:0:1:0:0:2:0:0:0:1:1:1:1:5:3:1:1:1:2:2:2:2:53:2:2:2:57:54:4:3:2:2:55:3:0:0:15:0:0:2:1:1:0:1:1:1:1:1:1:1:1:0:1:0:1:0:4:0:2:2:2:53:2:2:2:3:0:9:0:0:0:0:0:0:1:4:1:0:0:0:2:1:0:0:4:5:1:0:0:2:1:7:4:4:53:5:4:5:4:5:0:0:0:15:0:0:2:0:2:1:2:1:0:1:0:0:0:0:0:0:1:1:4:2:0:4:51:4:4:4:4:4:6:0:0:7:1:0:0:0:0:0:1:0:0:2:0:0:0:0:0:2:1:2:1:2:1:0:0:0:7:1:1:1:1:6:2:3:3:3:3:53:5:3:3:4:0:0:0:6:3:0:0:0:0:0:0:3:0:2:0:4:0:0:4:0:1:0:1:2:0:0:0:3:1:1:1:5:3:1:2:50:3:3:2:2:3:0:0:9:0:1:2:0:1:3:0:0:0:1:2:3:0:0:2:0:5:1:1:2:0:1:1:8:1:1:2:2:50:2:2:3:2:2:2:3:0:12:0:1:6:0:0:0:0:1:2:0:1:2:0:3:0:1:1:0:1:1:0:0:2:51:5:2:3:0:9:3:1:0:3:1:0:1:0:4:1:0:0:1:3:2:0:1:0:0:0:0:0:1:1:8:1:2:2:52:2:2:3:3:0:13:1:0:2:1:0:0:0:2:3:1:0:0:0:3:4:1:2:1:0:2:2:51:5:3:0:0:7:2:0:1:1:1:0:0:1:1:0:2:1:0:0:0:1:0:1:2:3:1:1:0:0:0:0:0:0:1:1:6:2:1:1:2:2:2:50:3:2:2:2:2:2:3:0:8:0:0:1:2:1:0:4:0:0:1:2:1:0:0:6:2:0:5:2:7:4:2:3:54:4:3:3:4:0:0:0:0:6:3:4:0:1:0:0:2:0:2:0:1:0:2:0:0:1:0:0:3:0:0:0:1:0:1:0:0:1:5:2:1:1:2:51:5:2:3:0:11:3:2:0:0:0:0:0:0:1:0:2:0:2:1:0:1:0:0:0:1:0:0:2:0:0:0:0:0:1:2:2:52:2:2:3:3:0:7:1:1:1:2:1:0:2:0:0:0:0:2:0:1:0:0:0:3:0:2:0:0:3:3:1:6:1:1:1:1:2:2:49:2:4:2:2:3:0:0:6:2:1:1:1:1:2:1:1:1:0:7:2:1:1:1:0:0:0:0:4:1:5:1:1:2:2:2:2:49:3:3:3:2:2:3:0:0:6:0:1:0:1:4:0:3:0:4:0:2:0:0:3:2:2:1:4:0:0:1:1:4:7:0:0:6:0:0:0:1:0:1:0:4:0:2:0:1:1:0:3:1:0:1:0:0:3:1:1:1:0:0:0:1:1:2:1:2:52:2:2:4:0:6:2:0:1:0:2:0:0:3:0:1:2:2:0:5:0:0:0:0:0:0:0:1:1:1:1:0:1:1:5:3:1:2:2:2:2:52:2:2:2:2:3:0:5:2:1:0:0:3:1:0:1:0:0:1:0:3:0:0:2:5:0:2:1:2:0:2:5:3:3:2:3:3:52:3:3:5:4:0:0:0:0:5:1:1:2:4:7:3:1:4:0:0:6:0:0:0:0:0:0:0:1:4:1:2:1:2:2:49:4:3:3:3:0:0:0:11:1:0:0:2:0:1:0:1:2:0:3:0:0:0:0:2:0:0:2:0:0:4:2:3:3:53:6:4:0:0:0:0:5:1:0:1:0:0:0:3:0:5:0:2:0:3:1:1:0:0:3:0:0:2:0:1:2:4:5:2:4:0:0:0:0:6:1:1:2:0:0:0:0:0:6:0:0:0:0:2:0:0:2:2:0:0:0:2:0:0:0:2:0:0:1:4:2:1:1:2:52:3:2:2:3:3:3:0:15:0:3:1:0:0:1:0:0:3:1:0:0:4:1:7:0:0:0:2:2:49:3:4:3:2:3:3:3:3:3:3:3:3:3:14:0:5:5:1:1:0:0:1:3:5:1:0:3:0:1:1:1:0:0:0:0:4:0:1:3:3:1:1:5:0:8:3:0:2:0:0:0:3:4:0:0:2:0:0:2:0:0:0:0:2:2:0:0:1:1:5:3:50:3:3:3:4:3:3:3:4:0:0:0:9:7:0:3:0:0:4:0:0:0:0:0:1:1:5:1:1:0:2:2:2:50:2:2:2:7:0:0:12:6:5:0:0:0:0:0:0:0:5:2:1:1:1:1:1:0:0:2:2:2:2:2:50:3:2:2:2:2:2:3:0:0:13:6:3:7:0:2:0:0:2:2:0:4:0:0:0:0:2:50:2:4:2:2:2:4:0:15:6:3:1:4:1:1:1:0:0:0:0:0:0:5:1:1:7:56:7:7:9:7:9:0:17:6:3:1:1:2:1:0:0:0:1:1:1:1:0:10:59:10:11:11:14:0:0:0:0:0:0:21:6:3:1:1:1:0:0:5:0:2:1:0:7:7:55:9:9:8:0:22:6:3:1:1:1:0:0:1:3:0:0:0:0:1:7:54:9:8:8:7:8:0:23:6:3:1:1:1:0:0:1:0:1:3:1:7:57:7:7:8:7:8:0:24:6:3:1:1:1:0:0:1:0:0:0:2:1:7:55:8:12:0:26:6:3:1:1:1:0:0:0:5:0:7:7:7:7:7:7:56:8:8:7:8:0:27:6:3:1:1:1:0:0:0:4:0:7:7:56:7:9:7:8:0:28:6:3:1:1:1:0:0:0:3:0:7:7:56:7:7:7:7:7:9:0:30:6:3:1:1:1:0:0:0:2:7:7:56:8:7:8:7:9:0:33:0:0:4:1:1:1:3:2:7:57:12:0:35:6:3:1:1:0:0:8:7:7:10:0:0:0:38:6:3:1:1:7:7:55:9:7:7:7:7:12:0:43:6:9:56:14:9:9:11:0:0:0:0:0:46:0:0:0:0:1:7:54:8:7:7:7:7:8:0:0:0:47:0:0:0:0:0:0:7:7:7:56:7:9:8:0:0:48:0:0:0:0:0:7:7:7:56:11:9:0:0:50:0:0:0:0:7:55:7:7:7:7:7:8:0:51:0:0:7:7:7:57:7:7:9:0:0:52:7:7:7:7:56:7:7:8:7:8:0:0:60:60:107:62:61:61:61:53:7:7:55:8:8:7:9:8:8:9:8:8:8:8:0:15:0:0:1:0:0:1:1:0:0:1:0:0:1:0:0:6:1:1:0:0:0:1:1:7:7:7:55:7:7:7:7:8:8:8:0:4:0:1:0:2:0:2:3:0:1:0:1:0:1:2:0:0:0:1:0:0:0:7:0:0:0:0:0:0:1:1:1:48:1:2:3:1:1:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":4.337541907821307,"maxChargeW":400,"maxDischargeW":400,"currentSoc":0},[0.01858582619367003,0.01858582619367003,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.4999999999999978,0.01858582619367003,0.49999999999999944,0.01858582619367003,0.018585826193670066,0.01,0.01,0.01,0.01,0.01,0.4999999999999988,0.49999999999999956,0.4999999999999987,0.01,0.01,0.01,0.4658444218739229],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],[0,0,0,0,0,0,0,0,0,0,0,0,0.999999999,0,0,0,0,0,0,0,0,0,0,0]]]
+Shrunk 1853 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 46 tests
+{ seed: 12345, path: "45:0:0:0:7:0:1:1:0:0:0:3:0:0:1:3:0:0:2:1:4:1:0:0:0:1:2:0:1:0:0:4:2:1:1:2:2:2:3:2:5:2:2:2:3:3:3:2:3:2:3:2:3:2:2:2:3:4:3:3:3:3:4:2:2:3:3:2:2:3:2:4:3:2:6:2:2:3:5:2:3:2:2:2:2:6:3:4:2:4:4:5:5:2:3:2:2:5:2:2:2:5:2:5:3:3:2:6:2:5:4:2:4:2:3:2:2:3:2:4:3:2:5:3:3:2:2:2:3:2:2:6:2:3:2:3:3:2:2:3:3:2:3:4:3:2:2:2:2:7:3:5:2:4:2:2:2:2:4:5:2:2:5:2:2:5:5:3:5:2:2:3:2:4:3:3:3:3:5:3:2:3:2:8:3:2:2:5:4:3:3:2:3:2:2:2:2:3:2:3:2:3:2:2:3:3:4:3:2:3:2:2:5:2:2:2:2:3:2:8:3:5:3:4:3:2:2:2:4:2:2:2:2:4:2:53:2:2:5:2:5:5:2:2:3:7:2:5:2:3:2:3:3:6:3:2:2:2:3:3:4:3:2:57:4:6:2:2:2:4:6:4:2:6:6:3:2:2:2:3:2:3:2:6:3:2:6:2:4:2:4:2:9:2:2:2:6:6:4:3:2:2:3:2:3:5:2:2:3:3:2:3:0:6:2:0:0:1:0:1:3:0:3:2:1:0:0:2:0:1:0:1:0:0:2:0:0:0:1:1:1:1:5:3:1:1:1:2:2:2:2:53:2:2:2:57:54:4:3:2:2:55:3:0:0:15:0:0:2:1:1:0:1:1:1:1:1:1:1:1:0:1:0:1:0:4:0:2:2:2:53:2:2:2:3:0:9:0:0:0:0:0:0:1:4:1:0:0:0:2:1:0:0:4:5:1:0:0:2:1:7:4:4:53:5:4:5:4:5:0:0:0:15:0:0:2:0:2:1:2:1:0:1:0:0:0:0:0:0:1:1:4:2:0:4:51:4:4:4:4:4:6:0:0:7:1:0:0:0:0:0:1:0:0:2:0:0:0:0:0:2:1:2:1:2:1:0:0:0:7:1:1:1:1:6:2:3:3:3:3:53:5:3:3:4:0:0:0:6:3:0:0:0:0:0:0:3:0:2:0:4:0:0:4:0:1:0:1:2:0:0:0:3:1:1:1:5:3:1:2:50:3:3:2:2:3:0:0:9:0:1:2:0:1:3:0:0:0:1:2:3:0:0:2:0:5:1:1:2:0:1:1:8:1:1:2:2:50:2:2:3:2:2:2:3:0:12:0:1:6:0:0:0:0:1:2:0:1:2:0:3:0:1:1:0:1:1:0:0:2:51:5:2:3:0:9:3:1:0:3:1:0:1:0:4:1:0:0:1:3:2:0:1:0:0:0:0:0:1:1:8:1:2:2:52:2:2:3:3:0:13:1:0:2:1:0:0:0:2:3:1:0:0:0:3:4:1:2:1:0:2:2:51:5:3:0:0:7:2:0:1:1:1:0:0:1:1:0:2:1:0:0:0:1:0:1:2:3:1:1:0:0:0:0:0:0:1:1:6:2:1:1:2:2:2:50:3:2:2:2:2:2:3:0:8:0:0:1:2:1:0:4:0:0:1:2:1:0:0:6:2:0:5:2:7:4:2:3:54:4:3:3:4:0:0:0:0:6:3:4:0:1:0:0:2:0:2:0:1:0:2:0:0:1:0:0:3:0:0:0:1:0:1:0:0:1:5:2:1:1:2:51:5:2:3:0:11:3:2:0:0:0:0:0:0:1:0:2:0:2:1:0:1:0:0:0:1:0:0:2:0:0:0:0:0:1:2:2:52:2:2:3:3:0:7:1:1:1:2:1:0:2:0:0:0:0:2:0:1:0:0:0:3:0:2:0:0:3:3:1:6:1:1:1:1:2:2:49:2:4:2:2:3:0:0:6:2:1:1:1:1:2:1:1:1:0:7:2:1:1:1:0:0:0:0:4:1:5:1:1:2:2:2:2:49:3:3:3:2:2:3:0:0:6:0:1:0:1:4:0:3:0:4:0:2:0:0:3:2:2:1:4:0:0:1:1:4:7:0:0:6:0:0:0:1:0:1:0:4:0:2:0:1:1:0:3:1:0:1:0:0:3:1:1:1:0:0:0:1:1:2:1:2:52:2:2:4:0:6:2:0:1:0:2:0:0:3:0:1:2:2:0:5:0:0:0:0:0:0:0:1:1:1:1:0:1:1:5:3:1:2:2:2:2:52:2:2:2:2:3:0:5:2:1:0:0:3:1:0:1:0:0:1:0:3:0:0:2:5:0:2:1:2:0:2:5:3:3:2:3:3:52:3:3:5:4:0:0:0:0:5:1:1:2:4:7:3:1:4:0:0:6:0:0:0:0:0:0:0:1:4:1:2:1:2:2:49:4:3:3:3:0:0:0:11:1:0:0:2:0:1:0:1:2:0:3:0:0:0:0:2:0:0:2:0:0:4:2:3:3:53:6:4:0:0:0:0:5:1:0:1:0:0:0:3:0:5:0:2:0:3:1:1:0:0:3:0:0:2:0:1:2:4:5:2:4:0:0:0:0:6:1:1:2:0:0:0:0:0:6:0:0:0:0:2:0:0:2:2:0:0:0:2:0:0:0:2:0:0:1:4:2:1:1:2:52:3:2:2:3:3:3:0:15:0:3:1:0:0:1:0:0:3:1:0:0:4:1:7:0:0:0:2:2:49:3:4:3:2:3:3:3:3:3:3:3:3:3:14:0:5:5:1:1:0:0:1:3:5:1:0:3:0:1:1:1:0:0:0:0:4:0:1:3:3:1:1:5:0:8:3:0:2:0:0:0:3:4:0:0:2:0:0:2:0:0:0:0:2:2:0:0:1:1:5:3:50:3:3:3:4:3:3:3:4:0:0:0:9:7:0:3:0:0:4:0:0:0:0:0:1:1:5:1:1:0:2:2:2:50:2:2:2:7:0:0:12:6:5:0:0:0:0:0:0:0:5:2:1:1:1:1:1:0:0:2:2:2:2:2:50:3:2:2:2:2:2:3:0:0:13:6:3:7:0:2:0:0:2:2:0:4:0:0:0:0:2:50:2:4:2:2:2:4:0:15:6:3:1:4:1:1:1:0:0:0:0:0:0:5:1:1:7:56:7:7:9:7:9:0:17:6:3:1:1:2:1:0:0:0:1:1:1:1:0:10:59:10:11:11:14:0:0:0:0:0:0:21:6:3:1:1:1:0:0:5:0:2:1:0:7:7:55:9:9:8:0:22:6:3:1:1:1:0:0:1:3:0:0:0:0:1:7:54:9:8:8:7:8:0:23:6:3:1:1:1:0:0:1:0:1:3:1:7:57:7:7:8:7:8:0:24:6:3:1:1:1:0:0:1:0:0:0:2:1:7:55:8:12:0:26:6:3:1:1:1:0:0:0:5:0:7:7:7:7:7:7:56:8:8:7:8:0:27:6:3:1:1:1:0:0:0:4:0:7:7:56:7:9:7:8:0:28:6:3:1:1:1:0:0:0:3:0:7:7:56:7:7:7:7:7:9:0:30:6:3:1:1:1:0:0:0:2:7:7:56:8:7:8:7:9:0:33:0:0:4:1:1:1:3:2:7:57:12:0:35:6:3:1:1:0:0:8:7:7:10:0:0:0:38:6:3:1:1:7:7:55:9:7:7:7:7:12:0:43:6:9:56:14:9:9:11:0:0:0:0:0:46:0:0:0:0:1:7:54:8:7:7:7:7:8:0:0:0:47:0:0:0:0:0:0:7:7:7:56:7:9:8:0:0:48:0:0:0:0:0:7:7:7:56:11:9:0:0:50:0:0:0:0:7:55:7:7:7:7:7:8:0:51:0:0:7:7:7:57:7:7:9:0:0:52:7:7:7:7:56:7:7:8:7:8:0:0:60:60:107:62:61:61:61:53:7:7:55:8:8:7:9:8:8:9:8:8:8:8:0:15:0:0:1:0:0:1:1:0:0:1:0:0:1:0:0:6:1:1:0:0:0:1:1:7:7:7:55:7:7:7:7:8:8:8:0:4:0:1:0:2:0:2:3:0:1:0:1:0:1:2:0:0:0:1:0:0:0:7:0:0:0:0:0:0:1:1:1:48:1:2:3:1:1:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":4.337541907821307,"maxChargeW":400,"maxDischargeW":400,"currentSoc":0},[0.01858582619367003,0.01858582619367003,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.018585826193670035,0.4999999999999978,0.01858582619367003,0.49999999999999944,0.01858582619367003,0.018585826193670066,0.01,0.01,0.01,0.01,0.01,0.4999999999999988,0.49999999999999956,0.4999999999999987,0.01,0.01,0.01,0.4658444218739229],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],[0,0,0,0,0,0,0,0,0,0,0,0,0.999999999,0,0,0,0,0,0,0,0,0,0,0]]]
+Shrunk 1853 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 18
+- Failed: 2
+
+### Failed invariants
+- 1b:pv-strong-threshold-straddling
+- 8:pv-self-consumption-before-grid
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 6 tests
+{ seed: 12345, path: "5:0:2:1:8:3:1:4:1:1:1:2:1:1:3:1:4:3:1:3:4:2:2:1:3:2:2:3:0:0:1:0:1:8:2:2:1:5:2:7:2:1:4:5:5:1:2:2:1:2:1:6:0:0:0:10:0:3:4:0:2:2:1:0:2:0:0:1:3:1:2:1:0:0:1:1:0:0:7:2:1:1:2:0:0:0:0:0:2:0:0:2:7:4:2:1:0:4:0:0:0:0:0:9:4:1:0:0:0:3:3:0:4:1:3:0:2:1:1:0:1:0:1:1:0:10:4:0:3:1:4:1:0:1:3:3:0:3:0:0:1:2:1:0:0:10:4:0:2:2:1:0:0:3:1:2:0:0:0:0:1:0:0:0:2:0:0:2:0:1:0:10:4:0:2:0:1:0:0:1:0:2:0:1:1:1:2:0:2:0:0:0:4:7:0:0:7:4:0:1:2:2:3:3:1:1:0:3:0:1:1:0:2:0:0:0:0:0:2:0:0:8:1:0:4:1:1:2:1:0:1:0:3:1:1:0:3:0:1:0:4:2:2:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:2:6:2:2:3:2:2:3:2:4:2:3:4:5:6:2:4:4:7:11:51:6:3:45:2:3:6:4:45:2:3:2:2:4:5:43:5:2:2:2:2:3:3:6:3:45:2:2:4:2:4:2:2:42:6:9:4:2:2:39:8:9:2:2:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:17:1:0:0:0:10:4:0:0:0:0:0:0:1:0:0:0:7:4:0:0:0:0:0:0:1:0:0:0:1:1:0:0:10:3:6:0:1:0:0:1:2:1:0:2:0:0:1:0:1:2:3:7:0:0:0:7:3:5:0:0:0:0:0:0:0:1:0:0:1:0:0:0:0:8:3:4:0:2:0:3:2:3:1:0:1:2:2:1:0:0:1:1:1:0:1:2:1:0:1:6:0:0:2:0:0:0:5:6:2:2:0:0:2:0:0:3:2:3:1:0:0:0:0:3:0:1:0:0:0:0:2:2:2:2:3:1:0:10:3:2:0:0:1:2:0:1:1:5:0:0:0:0:2:0:0:1:11:0:0:0:0:0:0:0:0:6:2:2:1:2:1:0:0:0:0:0:0:0:1:0:0:1:0:6:0:0:1:0:0:0:0:2:0:3:0:0:1:6:1:2:3:1:2:0:0:2:0:1:0:1:0:2:1:2:1:0:1:2:0:0:0:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:10:3:2:2:2:3:3:5:4:2:4:2:2:2:5:3:2:2:5:2:3:2:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.6405286343612338,"maxChargeW":931,"maxDischargeW":400,"currentSoc":0},[0.01,0.01,0.24999999999999992,0.01,0.01,0.01,0.2499999999999999,0.01,0.01,0.01,0.07928259715139858,0.01,0.4999999999999972,0.01,0.4411407814765257,0.23563998294493232,0.10430340591763426,0.010000000000000021,0.12483228647410136,0.010000000000000026,0.025338488054366882,0.01,0.01,0.01],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],0.4677765843179376]]
+Shrunk 670 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 6 tests
+{ seed: 12345, path: "5:0:2:1:8:3:1:4:1:1:1:2:1:1:3:1:4:3:1:3:4:2:2:1:3:2:2:3:0:0:1:0:1:8:2:2:1:5:2:7:2:1:4:5:5:1:2:2:1:2:1:6:0:0:0:10:0:3:4:0:2:2:1:0:2:0:0:1:3:1:2:1:0:0:1:1:0:0:7:2:1:1:2:0:0:0:0:0:2:0:0:2:7:4:2:1:0:4:0:0:0:0:0:9:4:1:0:0:0:3:3:0:4:1:3:0:2:1:1:0:1:0:1:1:0:10:4:0:3:1:4:1:0:1:3:3:0:3:0:0:1:2:1:0:0:10:4:0:2:2:1:0:0:3:1:2:0:0:0:0:1:0:0:0:2:0:0:2:0:1:0:10:4:0:2:0:1:0:0:1:0:2:0:1:1:1:2:0:2:0:0:0:4:7:0:0:7:4:0:1:2:2:3:3:1:1:0:3:0:1:1:0:2:0:0:0:0:0:2:0:0:8:1:0:4:1:1:2:1:0:1:0:3:1:1:0:3:0:1:0:4:2:2:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:5:3:2:4:2:7:3:3:3:2:2:2:3:2:2:6:2:4:5:8:5:2:3:2:2:6:2:2:3:2:2:3:2:4:2:3:4:5:6:2:4:4:7:11:51:6:3:45:2:3:6:4:45:2:3:2:2:4:5:43:5:2:2:2:2:3:3:6:3:45:2:2:4:2:4:2:2:42:6:9:4:2:2:39:8:9:2:2:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:11:17:1:0:0:0:10:4:0:0:0:0:0:0:1:0:0:0:7:4:0:0:0:0:0:0:1:0:0:0:1:1:0:0:10:3:6:0:1:0:0:1:2:1:0:2:0:0:1:0:1:2:3:7:0:0:0:7:3:5:0:0:0:0:0:0:0:1:0:0:1:0:0:0:0:8:3:4:0:2:0:3:2:3:1:0:1:2:2:1:0:0:1:1:1:0:1:2:1:0:1:6:0:0:2:0:0:0:5:6:2:2:0:0:2:0:0:3:2:3:1:0:0:0:0:3:0:1:0:0:0:0:2:2:2:2:3:1:0:10:3:2:0:0:1:2:0:1:1:5:0:0:0:0:2:0:0:1:11:0:0:0:0:0:0:0:0:6:2:2:1:2:1:0:0:0:0:0:0:0:1:0:0:1:0:6:0:0:1:0:0:0:0:2:0:3:0:0:1:6:1:2:3:1:2:0:0:2:0:1:0:1:0:2:1:2:1:0:1:2:0:0:0:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:2:10:3:2:2:2:3:3:5:4:2:4:2:2:2:5:3:2:2:5:2:3:2:2:2:2:2", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.6405286343612338,"maxChargeW":931,"maxDischargeW":400,"currentSoc":0},[0.01,0.01,0.24999999999999992,0.01,0.01,0.01,0.2499999999999999,0.01,0.01,0.01,0.07928259715139858,0.01,0.4999999999999972,0.01,0.4411407814765257,0.23563998294493232,0.10430340591763426,0.010000000000000021,0.12483228647410136,0.010000000000000026,0.025338488054366882,0.01,0.01,0.01],[100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100],0.4677765843179376]]
+Shrunk 670 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 19
+- Failed: 1
+
+### Failed invariants
+- 1b:pv-strong-threshold-straddling
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 1
+
+### Failed invariants
+- 16b:priciest-first-with-reserve-floor
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 1
+
+### Failed invariants
+- 16b:priciest-first-with-reserve-floor
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 7 tests
+{ seed: 12345, path: "6:0:0:0:0:0:0:0:0:0", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":100,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400},0.23,0.005,250]]
+Shrunk 9 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 7 tests
+{ seed: 12345, path: "6:0:0:0:0:0:0:0:0:0", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":100,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400},0.23,0.005,250]]
+Shrunk 9 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 7 tests
+{ seed: 12345, path: "6:0:0:0:0:0:0:0:0:0", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":100,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400},0.23,0.005,250]]
+Shrunk 9 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 7 tests
+{ seed: 12345, path: "6:0:0:0:0:0:0:0:0:0", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":100,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1,"maxChargeW":400,"maxDischargeW":400},0.23,0.005,250]]
+Shrunk 9 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 16 tests
+{ seed: 12345, path: "15:2:2:0:2:0:0:2:2:0:0:0:1:0:0:5:0:1:2:1:0:0:1:1:1:4:1:0:0:9:0:0:0:0:0:3:5:0:0:0:1:0:0:1:2:0:1:1:0:0:1:0:2:0:0:1:1:3:0:0:7:0:1:0:0:0:1:0:1:4:3:1:2:0:5:0:0:3:0:1:1:0:0:5:0:10:1:4:1:0:0:0:3:1:0:0:0:5:0:0:0:5:1:0:1:0:9:1:2:1:4:3:1:4:3:3:2:2:2:1:1:1:1:1:1:5:0:8:2:3:1:0:0:3:0:1:1:4:0:2:2:0:1:0:5:0:11:10:10:10:11:10:10:0:0:13:2:0:1:1:0:2:1:0:1:0:2:0:2:0:0:2:5:1:1:1:0:47:4:4:16:5:3:1:3:0:54:51:2:1:2:3:2:2:1:1:2:6:1:5:5:0:11:1:0:0:0:2:6:0:0:0:0:1:4:1:0:0:0:3:3:0:6:0:0:11:4:1:1:0:2:2:0:2:0:0:2:1:4:0:0:2:0:1:22:10:10:9:10:9:9:10:10:10:9:10:10:9:10:9:9:12:9:9:10:13:16:14:15:18:14:14:17:14:15:19:16:15:14:14:14:14:16:15:15:15:14:14:14:15:14:15:14:15:15:0:0:8:1:0:1:3:1:0:1:0:0:5:0:2:0:1:0:0:0:5:3:0:0:1:1:1:0:58:50:0:7:7:7:7:7:9:7:7:0:0:48:14:14:9:10:9:10:9:13:11:9:11:10:10:11:9:10:9:9:9:12:106:60:61:65:64:62:63:61:61:63:62:64:64:64:62:62:62:61:61:63:61:62:61:61:70:63:69:63:69:63:69:63:69:63:69:64:65", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8394343044260328,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":2.4088188406063193,"maxChargeW":907,"maxDischargeW":490,"currentSoc":71.75},[0.2374702323810312,0.23,0.23747023238103118,0.23,0.23777427528862244],3,0.7423529411764707]]
+Shrunk 393 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 1
+
+### Failed invariants
+- 16b:priciest-first-with-reserve-floor
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 138 tests
+{ seed: 12345, path: "137:2:1:4:0:6:2:1:1:1:1:1:0:0:6:0:1:1:0:0:0:0:0:0:0:3:0:0:7:2:0:0:1:3:1:1:0:0:0:2:1:0:1:0:0:0:0:1:0:0:0:1:1:1:0:0:0:2:0:0:9:1:0:0:1:1:0:1:0:1:2:2:2:0:1:2:2:1:0:4:0:0:0:2:0:40:0:3:0:1:1:0:0:8:0:8:0:5:4:1:0:2:0:0:1:1:0:0:0:0:2:0:2:3:1:0:0:1:0:0:9:0:0:0:1:1:0:1:0:1:0:1:2:1:0:0:0:6:0:3:0:1:0:1:9:5:5:0:7:1:0:3:1:1:0:0:0:10:1:3:2:0:0:0:0:1:1:7:6:6:6:6:6:6:7:8:7:8:6:6:6:6:6:7:6:6:12:7:6:8:26:20:21:19:20:19:20:20:20:19:19:21:20:21:20:19:21:19:19:20:20:19:19:19:71:23:27:23:25:25:27:25:23:26:23:28:24:23:30:25:24:23:23:32:25:25:25:25:24:24:28:26:24:24:24:24:25:24:24:24:24:30:24:25:24:24:31:24:24:29:25:24:24:24:26:25:24:26:25:25:24:25:24:25:25:25:30:25:24:25:24:24:24:26:24:24:31:24:27:25:24:24:26:24:24:24:24:26:24:24:24:24:24:25:24:25:26:25:25:25:25:24:27:24:24:34:24:26:29:24:24:25:26:24:24:24:24:25:25:26:24:24:24:26:24:24:27:24:24:24:24:35:24:26:27:27:27:24:24:25:26:24:25:24:26:24:27:27:24:24:24:24:37:24:26:27:25:24:30:24:25:24:25:24:24:24:26:25:24:24:24:24:32:24:45:24:26:27:25", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8073921607871221,"min_soc":0,"max_soc":95,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":3.71689497716895,"maxChargeW":894,"maxDischargeW":407,"currentSoc":62.65},[0.24609230394253706,0.24617578309398339,0.24447449198319074,0.2544744919777039,0.2409353045712073,0.23636911463350915],3,0.36756032535103617]]
+Shrunk 388 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 138 tests
+{ seed: 12345, path: "137:2:1:4:0:6:2:1:1:1:1:1:0:0:6:0:1:1:0:0:0:0:0:0:0:3:0:0:7:2:0:0:1:3:1:1:0:0:0:2:1:0:1:0:0:0:0:1:0:0:0:1:1:1:0:0:0:2:0:0:9:1:0:0:1:1:0:1:0:1:2:2:2:0:1:2:2:1:0:4:0:0:0:2:0:40:0:3:0:1:1:0:0:8:0:8:0:5:4:1:0:2:0:0:1:1:0:0:0:0:2:0:2:3:1:0:0:1:0:0:9:0:0:0:1:1:0:1:0:1:0:1:2:1:0:0:0:6:0:3:0:1:0:1:9:5:5:0:7:1:0:3:1:1:0:0:0:10:1:3:2:0:0:0:0:1:1:7:6:6:6:6:6:6:7:8:7:8:6:6:6:6:6:7:6:6:12:7:6:8:26:20:21:19:20:19:20:20:20:19:19:21:20:21:20:19:21:19:19:20:20:19:19:19:71:23:27:23:25:25:27:25:23:26:23:28:24:23:30:25:24:23:23:32:25:25:25:25:24:24:28:26:24:24:24:24:25:24:24:24:24:30:24:25:24:24:31:24:24:29:25:24:24:24:26:25:24:26:25:25:24:25:24:25:25:25:30:25:24:25:24:24:24:26:24:24:31:24:27:25:24:24:26:24:24:24:24:26:24:24:24:24:24:25:24:25:26:25:25:25:25:24:27:24:24:34:24:26:29:24:24:25:26:24:24:24:24:25:25:26:24:24:24:26:24:24:27:24:24:24:24:35:24:26:27:27:27:24:24:25:26:24:25:24:26:24:27:27:24:24:24:24:37:24:26:27:25:24:30:24:25:24:25:24:24:24:26:25:24:24:24:24:32:24:45:24:26:27:25", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.8073921607871221,"min_soc":0,"max_soc":95,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":3.71689497716895,"maxChargeW":894,"maxDischargeW":407,"currentSoc":62.65},[0.24609230394253706,0.24617578309398339,0.24447449198319074,0.2544744919777039,0.2409353045712073,0.23636911463350915],3,0.36756032535103617]]
+Shrunk 388 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 20
+- Failed: 1
+
+### Failed invariants
+- 16b:priciest-first-with-reserve-floor
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 21
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 21
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 21
+- Failed: 0
+

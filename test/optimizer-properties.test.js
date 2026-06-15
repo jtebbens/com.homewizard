@@ -103,7 +103,10 @@ function testInvariant(name, arb, predFn, runs = RUNS) {
   try {
     fc.assert(
       fc.property(arb, predFn),
-      { numRuns: runs, seed: SEED, verbose: false }
+      // Cap shrinking: some arbitraries (tiny-magnitude doubles, multi-array tuples)
+      // shrink for tens of minutes and freeze the whole suite. Bound it so a real
+      // failure reports a (possibly unshrunk) counterexample within seconds.
+      { numRuns: runs, seed: SEED, verbose: false, interruptAfterTimeLimit: 10000, markInterruptAsFailure: true }
     );
     console.log('✓ PASS');
     log(`## ✓ ${name}\nPASS — ${runs} scenarios, no counterexample.\n`);
@@ -1028,15 +1031,20 @@ testInvariant('15:refill-reserve-floor-never-sacrifices-pricier-slot',
     if (!baseSlots || !floorSlots) return true;
 
     const N = priceValues.length;
+    // The floor holds a reserve, so it inherently discharges FEWER slots than the
+    // unconstrained base — it cannot be required to match every suffix-maximum base
+    // discharges (that would forbid having a reserve at all). The price-blindness bug
+    // the floor must never commit is suppressing discharge at THE single strict global
+    // price-max: the one slot where holding energy is unambiguously value-destroying
+    // (no later slot can ever pay more, and the base proves discharge there is feasible).
+    let maxIdx = -1, maxPrice = -Infinity;
     for (let t = 0; t < N; t++) {
-      if (baseSlots[t].action !== 'discharge') continue;
-      // strict price-max of the remaining horizon (t+1 … end)?
-      let laterMax = -Infinity;
-      for (let u = t + 1; u < N; u++) laterMax = Math.max(laterMax, priceValues[u]);
-      if (priceValues[t] <= laterMax) continue; // held energy could serve a ≥-priced later slot
-      // t is the strict max ahead → floor must not suppress discharge here.
-      if (floorSlots[t].action !== 'discharge') return false;
+      if (priceValues[t] > maxPrice) { maxPrice = priceValues[t]; maxIdx = t; }
     }
+    // strict global max (unique) and base discharges there → floor must too.
+    const strictGlobalMax = priceValues.filter(p => p >= maxPrice - 1e-9).length === 1;
+    if (strictGlobalMax && baseSlots[maxIdx].action === 'discharge'
+        && floorSlots[maxIdx].action !== 'discharge') return false;
     return true;
   }
 );
@@ -1113,6 +1121,85 @@ testInvariant('16:pre-pv-window-spends-priciest-first',
     for (let t = 0; t < preLen; t++) {
       if (slots[t].action !== 'discharge') continue;
       // Any LATER eligible slot in the same pre-PV window held at a MEANINGFULLY higher price?
+      for (let u = t + 1; u < preLen; u++) {
+        if (priceValues[u] < minDischargePrice) continue;
+        if (priceValues[u] <= priceValues[t] + PRICE_EPS) continue;
+        if (slots[u].action !== 'discharge') return false; // cheaper t discharged, pricier u stranded
+      }
+    }
+    return true;
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 16b
+// "Priciest-first holds even with the reserve floor active"
+//
+// Invariant 16 pins refillConfidence = 1.0, so the reserve floor never binds. But the
+// floor changes the BUDGET (init − floor), not the SELECTION: of the energy actually
+// discharged in the pre-PV window, it must still land on the priciest eligible slots.
+//
+// Live miss 2026-06-14 21:29: with the floor active, the post-DP reorder assigned the
+// window price-max but that single high-net-load slot's delta overshot the budget down
+// to the floor, so the budget-neutral guard reverted the whole reorder — stranding
+// discharge on the CHEAPER slots the backward-DP had picked chronologically. The fix
+// clamps every reorder slot to max(reserveFloor, dpEndTarget).
+//
+// Structure: [overnight window | strong-PV midday | EXPENSIVE evening tail]. The pricey
+// tail sets releasedPeak above the window prices, so the floor actually binds on the
+// window (the tail is outside the reorder window — it spends the reserve). Equal loads →
+// equal net caps → priciest-first is unambiguous within the window.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 16b — priciest-first-with-reserve-floor\n');
+
+testInvariant('16b:priciest-first-with-reserve-floor',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 60, max: 94, noNaN: true, noDefaultInfinity: true }),
+    }),
+    // 4–7 overnight slots, all eligible, non-monotone.
+    fc.array(fc.double({ min: 0.230, max: 0.300, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 4, maxLength: 7 }),
+    fc.integer({ min: 2, max: 5 }), // strong-PV block length
+    fc.double({ min: 0.30, max: 0.75, noNaN: true, noDefaultInfinity: true }), // low refillConfidence → floor active
+  ),
+  ([settings, base, prePrices, pvLen, refillConfidence]) => {
+    const { maxChargeW } = base;
+    const minDischargePrice = 0.220;
+
+    // [overnight window | strong-PV block (cheap) | EXPENSIVE evening tail]. The tail price
+    // exceeds every window price → releasedPeak high → reserve floor binds on the window.
+    const pvPrices   = Array(pvLen).fill(0.10);
+    const tailPrices = [0.360, 0.380];
+    const priceValues = [...prePrices, ...pvPrices, ...tailPrices];
+    const prices = makePriceSlots(priceValues);
+
+    const pvWValues = [
+      ...prePrices.map(() => 0),
+      ...pvPrices.map(() => maxChargeW + 800), // strong PV → window boundary
+      ...tailPrices.map(() => 0),
+    ];
+    const pvForecast = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 500); // equal load → net caps equal
+
+    const eng = runCompute(settings, {
+      ...base, prices, pvForecast, consumptionW, minDischargePrice,
+      refillConfidence,
+      pvKwhTomorrow: 0, // not abundant → floor not waived
+    });
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+
+    const preLen = prePrices.length; // overnight window = [0, preLen)
+    for (let t = 0; t < preLen; t++) if (slots[t].action === 'charge') return true;
+    const PRICE_EPS = 0.005;
+    for (let t = 0; t < preLen; t++) {
+      if (slots[t].action !== 'discharge') continue;
       for (let u = t + 1; u < preLen; u++) {
         if (priceValues[u] < minDischargePrice) continue;
         if (priceValues[u] <= priceValues[t] + PRICE_EPS) continue;
