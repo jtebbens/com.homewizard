@@ -2320,6 +2320,10 @@ if (debug) this.log(
         this._pvForecastSC = solcastByHourMs;
 
         const { wOM: baseWom, wSC: baseWsc } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
+        // Lever A: fixed 50/50 OM↔SC. getPvBlendWeights already returns 0.5/0.5 here, but the
+        // per-day divergence penalty and per-slot p10-pessimism below would still shift it —
+        // bypass both so the blend is exactly the measured unbiased average. Toggle off to revert.
+        const unbiasedBlend = this.getSetting('pv_unbiased_blend') !== false;
 
         const todayNLDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const tomorrowNLDate = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -2340,6 +2344,7 @@ if (debug) this.log(
           }
         }
         const getDayWeights = (dk, applyDivergence = true) => {
+          if (unbiasedBlend) return { wOM: 0.5, wSC: 0.5, div: null };
           const t = dayTotals[dk];
           // SC satellite/ML lag on approaching weather fronts applies mainly to today's
           // remaining hours. Tomorrow's SC forecast uses its ML model which is less prone
@@ -2367,13 +2372,11 @@ if (debug) this.log(
           if (scSlots?.p50?.length > 0) {
             const scP50 = Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length);
             const scP10 = Math.round(scSlots.p10.reduce((a, b) => a + b, 0) / scSlots.p10.length);
-            // OM already sees cloud cover via NWP; when SC p50 is ≥10% above OM for this slot,
-            // SC is likely missing the cloud → use pessimistic p10 instead.
-            const useP10 = scP50 > 0 && scP10 > 0 && scP50 > slot.pvPowerW * 1.10;
-            const scAvg = useP10 ? scP10 : scP50;
-            blendedW = Math.round(wOM * slot.pvPowerW + wSC * scAvg);
-            if (byDay[dayKey]) { byDay[dayKey].sc += scAvg; if (useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
-            scEffectiveSlots.push({ ts: slot.timestamp, w: scAvg, dayKey });
+            const r = BatteryPolicyDevice._blendOmScSlot({
+              omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
+            blendedW = r.blendedW;
+            if (byDay[dayKey]) { byDay[dayKey].sc += r.scAvg; if (r.useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
+            scEffectiveSlots.push({ ts: slot.timestamp, w: r.scAvg, dayKey });
           } else {
             blendedW = slot.pvPowerW;
           }
@@ -3404,6 +3407,24 @@ if (debug) this.log(
     this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
+  }
+
+  /**
+   * Per-slot OM↔Solcast blend (pure, for property-testing).
+   * Lever A — `unbiased`: a fixed 50/50 of raw OM & Solcast-p50 (no learned weights, no
+   * p10-pessimism) cancels the two models' opposite biases and measured ~10% lower MAE than
+   * accuracy-weighting on the 300-sample buffer (2026-06-15). Biased path keeps the learned
+   * weights and the p10 cloud-miss guard (use SC p10 when its p50 sits ≥10% above OM, where
+   * SC likely missed cloud the OM NWP ensemble already saw).
+   * @param {{omW:number, scP50:number, scP10:number, wOM:number, wSC:number, unbiased:boolean}} a
+   * @returns {{blendedW:number, scAvg:number, useP10:boolean}}
+   */
+  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased }) {
+    const useP10 = !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
+    const scAvg = useP10 ? scP10 : scP50;
+    const w_om = unbiased ? 0.5 : wOM;
+    const w_sc = unbiased ? 0.5 : wSC;
+    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10 };
   }
 
   /**
