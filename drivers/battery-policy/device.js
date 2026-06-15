@@ -2587,25 +2587,34 @@ if (debug) this.log(
         // Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
         // The CV guard above can't catch a clear-morning→cloudy-afternoon turn — consistent
         // morning samples give low CV → full correction → the upward ratio re-inflates PV the
-        // model already (correctly) lowered for the cloudy afternoon. Damp the upward push toward
-        // 1.0 as forecast cloud rises (gate 1.0 at ≤70% → 0 at full overcast); same 70/30 ramp as
-        // the pvCoverage cloud discount below. Downward correction is left intact.
-        const cloudGate = (correctedMeanRatio > 1.0 && _pvBiasCloud != null && _pvBiasCloud > 70)
-          ? Math.max(0, 1 - (_pvBiasCloud - 70) / 30)
-          : 1.0;
+        // model already (correctly) lowered for the cloudy afternoon. Damp the upward push as
+        // forecast cloud rises (1.0 at ≤70% → 0 at full overcast). KNMI clearness overrides a
+        // false-overcast so it doesn't suppress a legitimate upward correction. See
+        // _knmiAwareCloudGate. Downward correction is left intact.
+        const cloudGate = BatteryPolicyDevice._knmiAwareCloudGate(
+          correctedMeanRatio, _pvBiasCloud, this.weatherForecaster?.getTodayKt() ?? null);
         const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
 
         this._lastIntradayPvRatio = ratio;
         this.setCapabilityValue('bias_factor', parseFloat(ratio.toFixed(2))).catch(this.error);
         if (Math.abs(ratio - 1.0) > 0.10) {
-          const futureSlotsCount = pvForecast.filter(s => new Date(s.timestamp) > now).length;
+          // Counterfactual isolation (temp instrumentation, remove after 2026-06-19 A/B):
+          // sum today's remaining-slot PV BEFORE the intraday ratio (= what naïef om+sc would
+          // plan) so the corrector's kWh contribution can be checked against actual yield.
+          const todayFuture = pvForecast.filter(s =>
+            new Date(s.timestamp) > now &&
+            new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === todayNLDate);
+          const futureSlotsCount = todayFuture.length;
+          const kwhBefore = todayFuture.reduce((s, sl) => s + sl.pvPowerW, 0) * 0.25 / 1000;
           pvForecast = pvForecast.map(slot => {
             if (new Date(slot.timestamp) <= now) return slot;
             const slotDate = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
             if (slotDate !== todayNLDate) return slot;
             return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
           });
-          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} cloudGate=${cloudGate.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots`);
+          const kwhAfter = kwhBefore * ratio;
+          const dKwh = kwhAfter - kwhBefore;
+          this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} cvWeight=${cvWeight.toFixed(2)} cloudGate=${cloudGate.toFixed(2)} → applied ratio=${ratio.toFixed(2)} to ${futureSlotsCount} slots | today-future PV ${kwhBefore.toFixed(1)}→${kwhAfter.toFixed(1)}kWh (Δ${dKwh >= 0 ? '+' : ''}${dKwh.toFixed(1)})`);
         } else {
           this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
         }
@@ -3387,6 +3396,27 @@ if (debug) this.log(
     this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
+  }
+
+  /**
+   * Cloud-uncertainty gate for the intraday PV correction, with KNMI clearness override.
+   * Damps the UPWARD correction as OM cloud cover rises above 70% (a clear-morning ratio
+   * shouldn't re-inflate PV the model already lowered for a cloudy afternoon). But OM cloud%
+   * can be a false-overcast (model miss): when KNMI's measured clearness index says the sky
+   * is actually clear (kt ≥ 0.65, same threshold as getDailyPvBiasFactor), the OM cloud
+   * reading is untrusted and the gate is released so a legitimate upward correction isn't
+   * suppressed. Returns a factor in [0,1]; only ever relaxes (≥) the OM-only gate, never tightens.
+   * @param {number} correctedMeanRatio - intraday actual/post-bias ratio (>1 = under-forecast)
+   * @param {number|null} effectiveCloud - OM effective cloud cover 0–100 (max of total, low×1.2)
+   * @param {number|null} knmiKt - KNMI clearness index for today, or null
+   * @returns {number} gate factor in [0,1]
+   */
+  static _knmiAwareCloudGate(correctedMeanRatio, effectiveCloud, knmiKt) {
+    const knmiClear = knmiKt != null && knmiKt >= 0.65;
+    if (correctedMeanRatio > 1.0 && effectiveCloud != null && effectiveCloud > 70 && !knmiClear) {
+      return Math.max(0, 1 - (effectiveCloud - 70) / 30);
+    }
+    return 1.0;
   }
 
   /**
