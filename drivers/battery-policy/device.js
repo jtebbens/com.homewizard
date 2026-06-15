@@ -79,6 +79,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.lastRecommendation = null;
     this._liveState = {}; // in-memory store for rebuildable UI state (served via api.js)
     this._lastPvEstimateW = 0; // For EMA smoothing
+    this._lastEffectivePvW = 0; // Cached _estimatePvProduction output (flow-when-fresh, else grid/sun fallback); used by OVERSCHOT consumers so a stale flow feed doesn't read 0
     this._pvProductionW = null; // User-provided PV production via flow card
     this._lastLoggedPvW = null; // Suppress repeat PV log lines when value unchanged
     this._pvProductionTimestamp = null; // When the PV data was last updated
@@ -3726,6 +3727,9 @@ if (debug) this.log(
       batteryPower: batteryState.groupPower,
       sunScore
     });
+    // Cache the effective PV (flow-when-fresh, else grid/sun fallback) so OVERSCHOT
+    // consumers that can't pass ctx (e.g. _checkFavorableWindow) don't read raw 0 on a stale feed.
+    this._lastEffectivePvW = pvEstimateW;
 
     const p1 = {
       resolved_gridPower: batteryState.gridPower,
@@ -4009,8 +4013,10 @@ if (debug) this.log(
       : null;
     const isCheap = cheapThreshold !== null && currentPrice !== null && currentPrice <= cheapThreshold;
 
-    // PV surplus: significant solar production (>500W means PV is covering meaningful load)
-    const isPvSurplus = (this._pvProductionW ?? 0) > 500;
+    // PV surplus: significant solar production (>500W means PV is covering meaningful load).
+    // Prefer the cached effective PV (flow-when-fresh, else grid/sun fallback) so a stale flow
+    // feed doesn't read 0 while PV is genuinely producing; fall back to raw flow value if unset.
+    const isPvSurplus = (this._lastEffectivePvW || (this._pvProductionW ?? 0)) > 500;
 
     const isFavorable = isCheap || isPvSurplus;
 
