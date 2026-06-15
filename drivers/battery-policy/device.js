@@ -1792,6 +1792,13 @@ if (debug) this.log(
           if (_dpAction && _dpAction !== result.policyMode && !_isPvCharge) {
             this.log(`⚠️ PLAN AFWIJKING: DP gepland ${_dpAction} maar policy koos ${result.policyMode} → hwMode ${applyMode}`);
           }
+          // Mapper-level block: DP planned charge but the hwMode does not charge (price > ceiling,
+          // no PV). Not caught above because policyMode tracks dpAction; the divergence is at the
+          // mapper. Surfaces whether the DP ever plans charge above maxChargePrice (open question).
+          const _chargeModes = ['to_full', 'zero_charge_only', 'pv_trickle'];
+          if (_dpAction === 'charge' && !_chargeModes.includes(applyMode)) {
+            this.log(`⚠️ PLAN AFWIJKING (mapper): DP gepland charge maar hwMode ${applyMode} (laadt niet) — prijs €${(result.debug?.price ?? '?')} > plafond, geen PV`);
+          }
         } else {
           if (result.confidence < minConfidence) {
             this.log(`⏸️ Not applied: confidence ${result.confidence.toFixed(1)}% below threshold ${minConfidence}%`);
