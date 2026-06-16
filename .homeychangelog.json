@@ -1573,5 +1573,8 @@
   },
   "3.16.0": {
     "en": "Improved PV-forecast accuracy: removed outdated clear-sky cap, fixed daily-bias correction once learning converges, refill-reserve now scales with forecast spread."
+  },
+  "3.16.1": {
+    "en": "Energy_v2 Amp 5s interval update (was 30s), Open-meteo weather forecast tuning."
   }
 }
