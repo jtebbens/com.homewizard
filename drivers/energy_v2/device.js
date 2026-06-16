@@ -167,17 +167,11 @@ async function applyMeasurementCapabilities(device, m) {
       'measure_power.l3': m.power_l3_w,
     };
     
-    // Medium-frequency capabilities: update every 10 seconds
+    // Medium-frequency capabilities: update every 10 seconds.
+    // NOTE: voltage/current per phase moved to _measurementVoltageCurrent (5s gate,
+    // per-frame path) — they no longer ride this 30s-gated full refresh.
     const mediumFreqCapabilities = {
-      'measure_voltage': m.voltage_v,
-      'measure_current': m.current_a,
       'measure_frequency': m.frequency_hz,
-      'measure_voltage.l1': m.voltage_l1_v,
-      'measure_voltage.l2': m.voltage_l2_v,
-      'measure_voltage.l3': m.voltage_l3_v,
-      'measure_current.l1': m.current_l1_a,
-      'measure_current.l2': m.current_l2_a,
-      'measure_current.l3': m.current_l3_a,
       'tariff': m.tariff,
     };
     
@@ -1708,6 +1702,7 @@ async _handleMeasurement(m) {
 
   this._measurementPower(m, tasks);
   this._measurementPhases(m, tasks, settings, homeyLang);
+  this._measurementVoltageCurrent(m, tasks, now);
   this._measurementFullRefresh(m, tasks, now);
   this._measurementFlows(m, now);
   this._measurementNetPower(m, tasks);
@@ -1820,6 +1815,28 @@ _measurementPhases(m, tasks, settings, homeyLang) {
     cap('net_load_phase3_pct', load3);
     this._handlePhaseOverload('l3', load3, homeyLang);
   }
+}
+
+_measurementVoltageCurrent(m, tasks, now) {
+  // Voltage/current get a dedicated 5s gate (was 30s via _measurementFullRefresh).
+  // APIv1 polled these at the poll interval; users expect near-realtime amps/voltage.
+  // 5s is the responsiveness/CPU trade-off; value-dedup avoids redundant writes.
+  if (this._lastVoltageCurrentUpdate && now - this._lastVoltageCurrentUpdate < 5000) return;
+  this._lastVoltageCurrentUpdate = now;
+  const cap = (name, value) => {
+    if (value === undefined) return;
+    if (this.getCapabilityValue(name) !== value) {
+      tasks.push(updateCapability(this, name, value).catch(this.error));
+    }
+  };
+  cap('measure_voltage', m.voltage_v);
+  cap('measure_current', m.current_a);
+  cap('measure_voltage.l1', m.voltage_l1_v);
+  cap('measure_voltage.l2', m.voltage_l2_v);
+  cap('measure_voltage.l3', m.voltage_l3_v);
+  cap('measure_current.l1', m.current_l1_a);
+  cap('measure_current.l2', m.current_l2_a);
+  cap('measure_current.l3', m.current_l3_a);
 }
 
 _measurementFullRefresh(m, tasks, now) {
