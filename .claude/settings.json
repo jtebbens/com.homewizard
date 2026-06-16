@@ -6,5 +6,14 @@
       "Bash(npm run test-unit)",
       "Bash(npm run lint-check)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Edit|Write",
+      "hooks": [{
+        "type": "command",
+        "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.js|*.ts|*.tsx) node --check \"$f\" 2>/dev/null && npx eslint \"$f\" --max-warnings 0 ;; esac"
+      }]
+    }]
   }
 }
