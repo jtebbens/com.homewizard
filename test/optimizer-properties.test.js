@@ -47,10 +47,11 @@ function makePriceSlots(prices, slotHours = 1) {
   }));
 }
 
-function makePvForecast(priceSlots, pvWValues) {
+function makePvForecast(priceSlots, pvWValues, spreadFracValues = null) {
   return priceSlots.map((slot, i) => ({
     timestamp: slot.timestamp,
-    pvPowerW: pvWValues[i] ?? 0
+    pvPowerW: pvWValues[i] ?? 0,
+    spreadFrac: spreadFracValues ? (spreadFracValues[i] ?? 0) : 0
   }));
 }
 
@@ -70,7 +71,8 @@ function runCompute(settings, scenario) {
     scenario.pvKwhTomorrow ?? 0,
     scenario.terminalPvKwhTomorrow ?? scenario.pvKwhTomorrow ?? 0,
     scenario.pvCloudFactor ?? 1.0,
-    scenario.refillConfidence ?? 1.0
+    scenario.refillConfidence ?? 1.0,
+    scenario.pvTimingRobust ?? false
   );
   return eng;
 }
@@ -1379,6 +1381,73 @@ testInvariant('19:pv-lift-never-lowers-profit',
     }
     const slack = 10 * changedSlots * quantumKwh * maxPrice + 1e-6 * (1 + Math.abs(baseProfit));
     return liftProfit >= baseProfit - slack;
+  }
+);
+
+// ─── Invariant 20 — spread-band is a monotone, agreement-preserving discount ──
+// The band may only LOWER a slot's PV (assumed-PV discount for conservatism), must be a
+// no-op where models agree (spreadFrac 0, incl. the predictable dawn/dusk ramp), and must
+// be monotone: more disagreement → never more assumed PV. Tests the real kernel helper.
+log('## Invariant 20 — spread-band-monotone-agreement-preserving\n');
+
+testInvariant('20:spread-band-monotone',
+  fc.tuple(
+    fc.array(fc.integer({ min: 0, max: 4000 }), { minLength: 1, maxLength: 96 }),
+    fc.array(fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }), { minLength: 96, maxLength: 96 }),
+    fc.array(fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }), { minLength: 96, maxLength: 96 }),
+  ),
+  ([pv, sLo, sHiRaw]) => {
+    // sHi pointwise ≥ sLo (more disagreement).
+    const sHi = sLo.map((v, i) => Math.max(v, sHiRaw[i]));
+    const outLo = OptimizationEngine._applyPvSpreadBand(pv, sLo, 1.0);
+    const outZero = OptimizationEngine._applyPvSpreadBand(pv, pv.map(() => 0), 1.0);
+    const outHi = OptimizationEngine._applyPvSpreadBand(pv, sHi, 1.0);
+    for (let i = 0; i < pv.length; i++) {
+      if (outLo[i] > pv[i]) return false;            // never raises PV
+      if (outZero[i] !== pv[i]) return false;        // spread 0 → identity
+      if (outHi[i] > outLo[i] + 1e-9) return false;  // monotone: more spread → ≤ PV
+      if (outLo[i] < -1e-9) return false;            // clamped ≥ 0
+    }
+    return true;
+  }
+);
+
+// ─── Invariant 21 — spread-band never suppresses peak-slot discharge ──────────
+// The band only lowers assumed PV → can only raise the discharge-rate cap, never lower it.
+// So it must never turn the strict global price-max slot from discharge into non-discharge:
+// that slot is the most valuable place to discharge and the DP optimizes globally, so the
+// conservative PV must not strand it. Spread is injected so the band actually bites.
+log('## Invariant 21 — spread-band-never-suppresses-peak-discharge\n');
+
+testInvariant('21:spread-band-keeps-peak-discharge',
+  fc.tuple(
+    settingsArb,
+    baseArb,
+    fc.array(fc.double({ min: 0.05, max: 0.40, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 24, maxLength: 24 }),
+    fc.array(fc.integer({ min: 100, max: 600 }), { minLength: 24, maxLength: 24 }),
+    fc.array(fc.integer({ min: 0, max: 3000 }), { minLength: 24, maxLength: 24 }),
+    fc.array(fc.double({ min: 0, max: 0.6, noNaN: true, noDefaultInfinity: true }), { minLength: 24, maxLength: 24 }),
+    fc.integer({ min: 0, max: 23 }),
+  ),
+  ([settings, base, priceValues, consValues, pvValues, spreadValues, peakIdx]) => {
+    // Make peakIdx the unique strict global price-max.
+    const prices = priceValues.slice();
+    prices[peakIdx] = 0.60;
+    const priceSlots = makePriceSlots(prices);
+    const pvForecast = makePvForecast(priceSlots, pvValues, spreadValues);
+    const scenario = {
+      prices: priceSlots, currentSoc: Math.max(60, base.currentSoc),
+      capacityKwh: base.capacityKwh, maxChargeW: base.maxChargeW, maxDischargeW: base.maxDischargeW,
+      pvForecast, consumptionW: consValues,
+    };
+    const baseEng = runCompute(settings, scenario);
+    if (!baseEng._schedule) return true;
+    const baseAct = baseEng._schedule.slots[peakIdx]?.action;
+    if (baseAct !== 'discharge') return true; // only constrain when baseline discharges at the peak
+    const robEng = runCompute(settings, { ...scenario, pvTimingRobust: true });
+    if (!robEng._schedule) return true;
+    return robEng._schedule.slots[peakIdx]?.action === 'discharge';
   }
 );
 

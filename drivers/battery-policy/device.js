@@ -2240,7 +2240,7 @@ if (debug) this.log(
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
           const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
-          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0 };
+          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0 };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
@@ -2940,7 +2940,10 @@ if (debug) this.log(
         this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
       }
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence);
+    // pvTimingRobust spread-band (internal device-setting, no UI knob): discount the
+    // discharge-cap PV by per-slot ensemble disagreement. Off unless explicitly set true.
+    const pvTimingRobust = this.getSetting('pv_timing_robust') === true;
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust);
 
     // Compact planning summary — always visible in user diagnostics.
     {
