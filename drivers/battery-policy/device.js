@@ -3964,6 +3964,13 @@ if (debug) this.log(
 
       this.log(`🔍 Actual HW mode: ${actualMode}, desired: ${targetMode}`);
 
+      // Detect external steering: HW mode differs from what we last commanded, and it is
+      // neither predictive (HW-cloud/SlimLaden, legitimate) nor a change we made ourselves.
+      // Could be a 3rd-party EMS app or a firmware mode-glitch — diagnose-only log, no card.
+      if (this._lastCommandedMode && actualMode !== this._lastCommandedMode && actualMode !== 'predictive') {
+        this.log(`⚠️ [EXT-CTRL] Unexpected HW mode change: last commanded "${this._lastCommandedMode}", HW now "${actualMode}" (not us, not predictive) — external EMS app or firmware`);
+      }
+
       // ⭐ HW Slim laden actief → policy engine niet overrulen.
       // Exception: EV-charging gate (force) MUST block discharge even in predictive,
       // otherwise the EV drains the home battery via nul-op-de-meter (see _enforceEvGate).
@@ -3975,6 +3982,7 @@ if (debug) this.log(
       // ⭐ Als al correct → niets doen
       if (actualMode === targetMode) {
         this.log(`ℹ️ Battery already in correct HW mode (${actualMode}), no change needed`);
+        this._lastCommandedMode = targetMode;
         return true;
       }
 
@@ -3984,6 +3992,7 @@ if (debug) this.log(
 
       if (result) {
         this.log(`✅ Battery mode successfully changed to: ${targetMode}`);
+        this._lastCommandedMode = targetMode;
         await this._triggerModeApplied(targetMode, confidence);
         return true;
       } else {
