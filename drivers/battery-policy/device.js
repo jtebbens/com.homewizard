@@ -1340,7 +1340,7 @@ if (debug) this.log(
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
             this._setLive('policy_pv_forecast_om', omFcByDay);
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
-            const satFcByDay = this._buildSatForecastForChart(weatherData, yfs, pvCapW);
+            const satFcByDay = this._buildSatForecastForChart(this.weatherData, yfs, pvCapW);
             if (satFcByDay) this._setLive('policy_pv_forecast_sat', satFcByDay);
           }
         }
