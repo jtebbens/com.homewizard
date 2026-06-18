@@ -2891,7 +2891,7 @@
       const section = document.getElementById('pv-accuracy-section');
       if (!section || !st) return;
 
-      const { accOM, accSC, wOM, wSC, pvAccuracy } = st;
+      const { accOM, accSC, accSAT, wOM, wSC, pvAccuracy } = st;
       const { pvPredictions, modelAcc } = pvc ?? {};
       _pvModelAcc = modelAcc ?? null;
       if (!pvPredictions || pvPredictions.length === 0) return;
@@ -2907,6 +2907,7 @@
           _pvPill('Algeheel', pvAccuracy, '%', 70, 85) +
           _pvPill('Open-Meteo', accOM, '%', 70, 85) +
           _pvPill('Solcast', accSC, '%', 70, 85) +
+          _pvPill('Satelliet', accSAT, '%', 70, 85) +
           (wOM != null && wSC != null
             ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
                 <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
@@ -2968,13 +2969,21 @@
             return s + (1 - e);
           }, 0) / scEnt.length * 100)
         : null;
+      const satEnt   = entries.filter(p => p.sat != null);
+      const daySAT   = satEnt.length
+        ? Math.round(satEnt.reduce((s, p) => {
+            const e = Math.abs(p.actual - p.sat) / Math.max(p.actual, p.sat, 1);
+            return s + (1 - e);
+          }, 0) / satEnt.length * 100)
+        : null;
 
       const dayPillsEl = document.getElementById('pv-accuracy-day-pills');
       if (dayPillsEl) {
         dayPillsEl.innerHTML =
           _pvPill('Blended', dayAcc, '%', 70, 85) +
           _pvPill('Open-Meteo', dayOM, '%', 70, 85) +
-          _pvPill('Solcast', daySC, '%', 70, 85);
+          _pvPill('Solcast', daySC, '%', 70, 85) +
+          _pvPill('Satelliet', daySAT, '%', 70, 85);
       }
 
       // Per-model daily accuracy (MF/GFS/ICON/KNMI) from day's entries
