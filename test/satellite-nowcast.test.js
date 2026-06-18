@@ -175,6 +175,7 @@ console.log('\n_fetchSatelliteNowcast:');
     assert.strictEqual(slot.satGhiWm2, 400);
     // radiationWm2 = 400 * 1.2 * 1.0(wxFactor) = 480
     assert.strictEqual(slot.radiationWm2, 480);
+    assert.strictEqual(slot.satRadWm2, 480);
   });
 
   test('does NOT override slots beyond 3h lead', () => {

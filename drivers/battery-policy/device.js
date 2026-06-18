@@ -3456,8 +3456,10 @@ if (debug) this.log(
         const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
         if (t === hourMs && h.satGhiWm2 != null && yfs) {
           const utcH = new Date(hourMs).getUTCHours();
-          const yf = yfs[utcH] ?? 0;
-          satW = Math.round(h.satGhiWm2 * yf);
+          const s0 = utcH * 4;
+          const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
+          const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
+          satW = Math.round((h.satRadWm2 ?? h.satGhiWm2) * yf);
           break;
         }
       }
@@ -4556,12 +4558,12 @@ if (debug) this.log(
       const t = s.time instanceof Date ? s.time : new Date(s.time);
       const amsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
       const dayIdx = amsDate > nowAmsDate ? 1 : 0;
-      const h = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-      const s0 = h * 4;
+      const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+      const s0 = t.getUTCHours() * 4;
       const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
       const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-      const raw = Math.round(s.satGhiWm2 * yf);
-      result[dayIdx][h] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
+      const raw = Math.round((s.satRadWm2 ?? s.satGhiWm2) * yf);
+      result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
   }
