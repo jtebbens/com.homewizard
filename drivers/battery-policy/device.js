@@ -64,6 +64,10 @@ class BatteryPolicyDevice extends Homey.Device {
     await this.learningEngine.initialize();
 
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
+    const satUrl = this.getSetting('satellite_endpoint_url');
+    if (satUrl) {
+      this.weatherForecaster.startSatelliteLoop(satUrl, this.getSetting('satellite_api_key') || '');
+    }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = null; // lazy-loaded on first policy check
@@ -1336,6 +1340,8 @@ if (debug) this.log(
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
             this._setLive('policy_pv_forecast_om', omFcByDay);
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
+            const satFcByDay = this._buildSatForecastForChart(weatherData, yfs, pvCapW);
+            if (satFcByDay) this._setLive('policy_pv_forecast_sat', satFcByDay);
           }
         }
       } else {
@@ -2414,6 +2420,7 @@ if (debug) this.log(
         const wTm = weightsTomorrow, dTm = wTm.div != null    ? ` div=${wTm.div.toFixed(2)}`    : '';
         this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh [w_om=${wTd.wOM.toFixed(2)} w_sc=${wTd.wSC.toFixed(2)}${dTd}${accLog}]`);
         this.log(`[PV blend] tomorrow: OM=${fmt(tm.om)}kWh${scTomorrow} → blended=${fmt(tm.bl)}kWh [w_om=${wTm.wOM.toFixed(2)} w_sc=${wTm.wSC.toFixed(2)}${dTm}]`);
+        this._logOmTrend();
       } else {
         this._pvForecastSC = null;
       }
@@ -3263,6 +3270,40 @@ if (debug) this.log(
   }
 
   /**
+   * OM-standalone forecast-quality tracker (observe-only). Logs OM/SC/blend same-slot
+   * MAE+bias and the MAE-optimal OM weight from the pv_predictions buffer (midday actual
+   * >300W), over the full buffer and the last 50 samples. OM's MAE is independent of the
+   * fixed 50/50 blend weight, so this surfaces whether OM-the-forecast is actually
+   * improving and whether its optimal weight is earning >0.50 (→ revisit the blend).
+   */
+  _logOmTrend() {
+    const buf = this.learningEngine?.data?.pv_predictions;
+    if (!Array.isArray(buf)) return;
+    const stat = (rows, fn) => {
+      let ae = 0, se = 0;
+      for (const r of rows) { const e = fn(r) - r.actual; ae += Math.abs(e); se += e; }
+      return { mae: Math.round(ae / rows.length), bias: Math.round(se / rows.length) };
+    };
+    const optW = (rows) => {
+      let bw = 0.5, bm = Infinity;
+      for (let w = 0; w <= 1.0001; w += 0.05) {
+        let ae = 0;
+        for (const r of rows) ae += Math.abs(w * r.om + (1 - w) * r.sc - r.actual);
+        if (ae < bm) { bm = ae; bw = w; }
+      }
+      return bw;
+    };
+    const all = buf.filter(r => typeof r.actual === 'number' && r.actual > 300
+      && typeof r.om === 'number' && typeof r.sc === 'number');
+    if (all.length < 20) { this.log(`[OM trend] n=${all.length} midday samples (<20, need more)`); return; }
+    const line = (lbl, rows) => {
+      const o = stat(rows, r => r.om), s = stat(rows, r => r.sc), b = stat(rows, r => r.predicted);
+      return `${lbl} n=${rows.length} OM=${o.mae}/${o.bias} SC=${s.mae}/${s.bias} blend=${b.mae}/${b.bias} optW_om=${optW(rows).toFixed(2)}`;
+    };
+    this.log(`[OM trend] ${line('all', all)} | ${line('last50', all.slice(-50))} (MAE/bias W; OM standalone, independent of fixed 50/50)`);
+  }
+
+  /**
    * Update PV production from flow card (user-provided data)
    * @param {number} powerW - PV production in watts
    */
@@ -3407,7 +3448,22 @@ if (debug) this.log(
         if (mW != null) perModelW[m] = mW;
       }
     }
-    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW).catch(e =>
+    let satW = null;
+    const satForecast = this.weatherData?.hourlyForecast;
+    if (Array.isArray(satForecast)) {
+      const yfs = this.learningEngine?.getSolarYieldFactorsSmoothed();
+      for (const h of satForecast) {
+        const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
+        if (t === hourMs && h.satGhiWm2 != null && yfs) {
+          const utcH = new Date(hourMs).getUTCHours();
+          const yf = yfs[utcH] ?? 0;
+          satW = Math.round(h.satGhiWm2 * yf);
+          break;
+        }
+      }
+    }
+
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
   }
@@ -3685,8 +3741,9 @@ if (debug) this.log(
     const rte = this.efficiencyEstimator.getEfficiency();
     const rteInsightsObj = this.efficiencyEstimator.getEfficiencyInsights();
     const { wOM, wSC } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
-    const accOM = this.learningEngine?.data?.pv_accuracy_om ?? null;
-    const accSC = this.learningEngine?.data?.pv_accuracy_sc ?? null;
+    const accOM  = this.learningEngine?.data?.pv_accuracy_om ?? null;
+    const accSC  = this.learningEngine?.data?.pv_accuracy_sc ?? null;
+    const accSAT = this.learningEngine?.data?.pv_accuracy_sat ?? null;
     const pvPredictions = this.learningEngine?.data?.pv_predictions?.slice(-864) ?? [];
     const _mAcc = this.learningEngine?.data?.pv_model_accuracy ?? {};
     const modelAcc = {
@@ -3704,6 +3761,7 @@ if (debug) this.log(
       cycles:         this.efficiencyEstimator.getCycleCount(),
       accOM:          accOM != null ? +(accOM * 100).toFixed(1) : null,
       accSC:          accSC != null ? +(accSC * 100).toFixed(1) : null,
+      accSAT:         accSAT != null ? +(accSAT * 100).toFixed(1) : null,
       wOM:            +(wOM * 100).toFixed(0),
       wSC:            +(wSC * 100).toFixed(0),
       updatedAt:      new Date().toISOString(),
@@ -4146,6 +4204,14 @@ if (debug) this.log(
       this._solcastProvider?.invalidateCache();
     }
 
+    if (changedKeys.includes('satellite_endpoint_url') || changedKeys.includes('satellite_api_key')) {
+      this.weatherForecaster.stopSatelliteLoop();
+      const satUrl = newSettings.satellite_endpoint_url;
+      if (satUrl) {
+        this.weatherForecaster.startSatelliteLoop(satUrl, newSettings.satellite_api_key || '');
+      }
+    }
+
     // Update internal modules
     this.policyEngine.updateSettings(newSettings);
     this.tariffManager.updateSettings(newSettings);
@@ -4453,10 +4519,11 @@ if (debug) this.log(
       const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
       const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
       const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
+      const pvForecastSAT = this._liveState.policy_pv_forecast_sat ?? null;
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       const pvScDayStart = this.homey.settings.get('policy_sc_daystart') ?? null;
 
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
         await this._initPvCamera();
@@ -4477,6 +4544,28 @@ if (debug) this.log(
   }
 
 
+  _buildSatForecastForChart(weatherData, yfs, pvCapW) {
+    const slots = weatherData?.hourlyForecast;
+    if (!Array.isArray(slots)) return null;
+    const hasSat = slots.some(s => typeof s.satGhiWm2 === 'number');
+    if (!hasSat) return null;
+    const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const result = [{}, {}];
+    for (const s of slots) {
+      if (typeof s.satGhiWm2 !== 'number') continue;
+      const t = s.time instanceof Date ? s.time : new Date(s.time);
+      const amsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const dayIdx = amsDate > nowAmsDate ? 1 : 0;
+      const h = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+      const s0 = h * 4;
+      const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
+      const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
+      const raw = Math.round(s.satGhiWm2 * yf);
+      result[dayIdx][h] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
+    }
+    return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
+  }
+
   async _initPvCamera() {
     if (this.planningImagePv) return;
     this.planningImagePv = await this.homey.images.createImage();
@@ -4487,12 +4576,13 @@ if (debug) this.log(
       const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
       const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
       const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
+      const pvForecastSAT = this._liveState.policy_pv_forecast_sat ?? null;
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       if (!pvActual && !pvForecast) { stream.end(); return; }
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       try {
-        await ChartRenderer.streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
+        await ChartRenderer.streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
       } catch (e) {
         this.error('PV chart stream error:', e.message);
         if (!stream.destroyed) stream.end();
@@ -4508,9 +4598,10 @@ if (debug) this.log(
     const pvForecastOM = this._liveState.policy_pv_forecast_om ?? null;
     const pvForecastSC = this._liveState.policy_pv_forecast_sc ?? null;
     const pvForecastSCEffective = this._liveState.policy_pv_forecast_sc_effective ?? null;
+    const pvForecastSAT = this._liveState.policy_pv_forecast_sat ?? null;
     const pvCapW       = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
       await this.planningImagePv.update();
     }
   }
