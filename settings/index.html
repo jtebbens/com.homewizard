@@ -566,7 +566,8 @@
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
           <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>Open-Meteo</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>Solcast</span>
-          <span><span style="display:inline-block;width:12px;height:2px;background:#e879f9;vertical-align:middle;margin-right:4px;"></span>Blended</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#E879F9;vertical-align:middle;margin-right:4px;"></span>Satelliet</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#d1d5db;vertical-align:middle;margin-right:4px;"></span>Blended</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
         </div>
         <!-- Per-model OM chart -->
@@ -3051,9 +3052,9 @@
           datasets: [
             mkDataset('Open-Meteo', omData,    '#60a5fa', [4, 2]),
             mkDataset('Solcast',    scData,    '#f59e0b', [4, 2]),
-            ...(satData.some(v => v != null) ? [mkDataset('Satelliet', satData, '#E879F9', [4, 2])] : []),
             mkDataset('Blended',   blendData, '#d1d5db'),
             mkDataset('Werkelijk', actualData,'#20F29B'),
+            ...(satData.some(v => v != null) ? [mkDataset('Satelliet', satData, '#E879F9', [4, 2])] : []),
           ],
         },
         options: {
