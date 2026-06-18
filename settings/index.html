@@ -3008,11 +3008,12 @@
       const fmtTime = ts => new Date(ts).toLocaleTimeString('nl-NL', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam'
       });
-      const labels = [], omData = [], scData = [], blendData = [], actualData = [];
+      const labels = [], omData = [], scData = [], satData = [], blendData = [], actualData = [];
       for (const p of entries) {
         labels.push(fmtTime(p.timestamp));
         omData.push(p.om     ?? null);
         scData.push(p.sc     ?? null);
+        satData.push(p.sat   ?? null);
         blendData.push(p.predicted);
         actualData.push(p.actual);
       }
@@ -3050,7 +3051,8 @@
           datasets: [
             mkDataset('Open-Meteo', omData,    '#60a5fa', [4, 2]),
             mkDataset('Solcast',    scData,    '#f59e0b', [4, 2]),
-            mkDataset('Blended',   blendData, '#e879f9'),
+            ...(satData.some(v => v != null) ? [mkDataset('Satelliet', satData, '#E879F9', [4, 2])] : []),
+            mkDataset('Blended',   blendData, '#a78bfa'),
             mkDataset('Werkelijk', actualData,'#20F29B'),
           ],
         },
