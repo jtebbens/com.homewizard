@@ -1451,6 +1451,100 @@ testInvariant('21:spread-band-keeps-peak-discharge',
   }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 22
+// "Terminal value never suppresses discharge at the priciest reachable future slot"
+//
+// The horizon-end terminal value is a proxy for the worth of energy carried past the
+// horizon. It must be referenced to prices the battery can still REACH from horizon-end
+// (the forward tail), not the whole horizon. When an early-horizon price spike (today's
+// evening) contaminated the top-quartile, the terminal credit per kWh exceeded the net
+// discharge revenue at the final day's own peak, so the DP hoarded a full battery through
+// that peak instead of discharging it (live 2026-06-18: 100% SoC held through €0.386 peak
+// while terminal was credited from today's unreachable €0.699 spike).
+//
+// Structure (matches the live ~30h horizon): [unreachable early spike | long cheap
+// overnight | strong-PV midday refill | moderate evening tail]. The horizon spans > 24h
+// and the spike sits in the first (N−24) slots, so the trailing-24h forward window the
+// terminal reference uses EXCLUDES the spike. (For a < 24h horizon the spike-as-prior is
+// defensible — no next-day data exists — so the bug, and this invariant, do not apply.)
+// The spike is strictly higher than every tail price; the midday block refills the battery
+// to full; terminalPvKwhTomorrow = 0 forces terminalFactor = 1 (no post-horizon PV discount
+// — the worst case for hoarding). With the forward-only terminal reference, the strictly
+// priciest eligible slot in the evening tail must DISCHARGE: terminal hold value
+// (tail-top-quartile × 0.8 × RTE) can never beat discharging at the tail's own max price.
+// refillConfidence = 1.0 → no reserve floor, so a held peak can only be the terminal bug.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge\n');
+
+testInvariant('22:terminal-never-suppresses-priciest-reachable-discharge',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 60, max: 94, noNaN: true, noDefaultInfinity: true }),
+    }),
+    // Early spike: 3 slots strictly above every tail price (unreachable from the tail).
+    fc.array(fc.double({ min: 0.55, max: 0.70, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 3, maxLength: 3 }),
+    // Evening tail: 4–6 eligible slots, all below the spike, non-monotone.
+    fc.array(fc.double({ min: 0.270, max: 0.450, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 4, maxLength: 6 }),
+    fc.integer({ min: 3, max: 5 }), // strong-PV refill block length
+  ),
+  ([settings, base, earlyPrices, tailPrices, pvLen]) => {
+    const { maxChargeW } = base;
+    const minDischargePrice = 0.220;
+
+    // [early spike | long cheap overnight | strong-PV midday | evening tail].
+    // 20 cheap overnight slots push the total horizon past 24h so the trailing-24h terminal
+    // window excludes the spike (the regime where the bug exists — the live case was ~30h).
+    const nightPrices = Array(20).fill(0.10);
+    const pvPrices    = Array(pvLen).fill(0.10);
+    const priceValues = [...earlyPrices, ...nightPrices, ...pvPrices, ...tailPrices];
+    const prices = makePriceSlots(priceValues);
+
+    const pvWValues = [
+      ...earlyPrices.map(() => 0),
+      ...nightPrices.map(() => 0),
+      ...pvPrices.map(() => maxChargeW + 800), // surplus ≥ charge power → refills battery to full
+      ...tailPrices.map(() => 0),
+    ];
+    const pvForecast   = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 300); // equal load → revenue driven by price alone
+
+    const eng = runCompute(settings, {
+      ...base, prices, pvForecast, consumptionW, minDischargePrice,
+      pvKwhTomorrow: base.capacityKwh * 2,   // plenty in-horizon PV → battery refills before tail
+      terminalPvKwhTomorrow: 0,              // no post-horizon PV → terminalFactor = 1 (worst case)
+      refillConfidence: 1.0,                 // no reserve floor → a held peak can only be the bug
+    });
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+
+    const tailStart = earlyPrices.length + nightPrices.length + pvLen;
+    // Strictly priciest eligible tail slot (skip if a near-tie at the top → ambiguous).
+    const PRICE_EPS = 0.005;
+    let maxIdx = -1, maxPrice = -Infinity;
+    for (let t = tailStart; t < priceValues.length; t++) {
+      if (priceValues[t] < minDischargePrice) continue;
+      if (priceValues[t] > maxPrice) { maxPrice = priceValues[t]; maxIdx = t; }
+    }
+    if (maxIdx === -1) return true;
+    for (let t = tailStart; t < priceValues.length; t++) {
+      if (t !== maxIdx && priceValues[t] >= maxPrice - PRICE_EPS) return true; // tie → skip
+    }
+    // Battery must actually carry charge into the tail (else 'preserve' is a SoC artefact,
+    // not the terminal bug). The midday surplus guarantees this, but assert it explicitly.
+    if ((slots[tailStart - 1]?.socProjected ?? 0) < 20) return true;
+
+    return slots[maxIdx].action === 'discharge';
+  }
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
