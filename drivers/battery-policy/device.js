@@ -4611,24 +4611,35 @@ if (debug) this.log(
   }
 
   _buildSatForecastForChart(weatherData, yfs, pvCapW) {
+    // Satellite GHI observations live only in the rolling in-memory hourlyForecast and are
+    // wiped on restart / forecast-cache refresh, so the chart's sat line lost every past hour
+    // on each restart. Persist raw satGhiWm2 keyed by hour-epoch and build the line from the
+    // merged store, so past observations survive restarts. Pre-today entries are pruned (also
+    // avoids the dayIdx 0/1 hour-bucket collision with today).
+    const store = this.homey.settings.get('policy_pv_sat_obs') || {};
     const slots = weatherData?.hourlyForecast;
-    if (!Array.isArray(slots)) return null;
-    const hasSat = slots.some(s => typeof s.satGhiWm2 === 'number');
-    if (!hasSat) return null;
-    const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    if (Array.isArray(slots)) {
+      for (const s of slots) {
+        if (typeof s.satGhiWm2 !== 'number') continue;
+        const t = s.time instanceof Date ? s.time : new Date(s.time);
+        store[String(t.getTime())] = s.satGhiWm2;
+      }
+    }
+    const todayAms = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
     const result = [{}, {}];
-    for (const s of slots) {
-      if (typeof s.satGhiWm2 !== 'number') continue;
-      const t = s.time instanceof Date ? s.time : new Date(s.time);
+    for (const key of Object.keys(store)) {
+      const t = new Date(Number(key));
       const amsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      const dayIdx = amsDate > nowAmsDate ? 1 : 0;
+      if (amsDate < todayAms) { delete store[key]; continue; }
+      const dayIdx = amsDate > todayAms ? 1 : 0;
       const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
       const s0 = t.getUTCHours() * 4;
       const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
       const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-      const raw = Math.round(this._satGhiToPanelGhi(s.satGhiWm2, t) * yf);
+      const raw = Math.round(this._satGhiToPanelGhi(store[key], t) * yf);
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
+    this.homey.settings.set('policy_pv_sat_obs', store);
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
   }
 
