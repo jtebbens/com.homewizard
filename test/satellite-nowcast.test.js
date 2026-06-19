@@ -121,9 +121,10 @@ console.log('\n_fetchSatelliteNowcast:');
 
   console.log('\n_applySatelliteOverlay:');
 
-  test('averages 15-min readings into hourly slot', () => {
+  // Observation-only: overlay stores raw satGhiWm2 for accuracy/learning and
+  // must NOT mutate radiationWm2/radiationSpreadFrac (DP stays on Open-Meteo).
+  test('averages 15-min readings into satGhiWm2, leaves radiationWm2 untouched', () => {
     const wf = makeWF();
-    const now = new Date('2026-06-18T10:00:00Z');
     const slot = makeSlot(10, 200);
     wf.cache = { hourlyForecast: [slot] };
 
@@ -140,11 +141,10 @@ console.log('\n_fetchSatelliteNowcast:');
 
     wf._applySatelliteOverlay(satData);
     assert.strictEqual(slot.satGhiWm2, 500); // avg(400,600,500,500)
-    // wxFactor for code=0 = 1.0, biasFactor=1.0 → radiation = 500
-    assert.strictEqual(slot.radiationWm2, 500);
+    assert.strictEqual(slot.radiationWm2, 200); // observation-only: unchanged
   });
 
-  test('sets radiationSpreadFrac to 0.05 for satellite slots', () => {
+  test('does NOT mutate radiationSpreadFrac (observation-only)', () => {
     const wf = makeWF();
     const slot = makeSlot(10, 200);
     slot.radiationSpreadFrac = 0.35;
@@ -157,10 +157,10 @@ console.log('\n_fetchSatelliteNowcast:');
     };
 
     wf._applySatelliteOverlay(satData);
-    assert.strictEqual(slot.radiationSpreadFrac, 0.05);
+    assert.strictEqual(slot.radiationSpreadFrac, 0.35); // unchanged
   });
 
-  test('stores raw satGhiWm2 on slot', () => {
+  test('stores raw satGhiWm2 on slot, no radiation/satRad mutation', () => {
     const wf = makeWF({ biasFactor: 1.2 });
     const slot = makeSlot(10, 200);
     wf.cache = { hourlyForecast: [slot] };
@@ -172,13 +172,12 @@ console.log('\n_fetchSatelliteNowcast:');
     };
 
     wf._applySatelliteOverlay(satData);
-    assert.strictEqual(slot.satGhiWm2, 400);
-    // radiationWm2 = 400 * 1.2 * 1.0(wxFactor) = 480
-    assert.strictEqual(slot.radiationWm2, 480);
-    assert.strictEqual(slot.satRadWm2, 480);
+    assert.strictEqual(slot.satGhiWm2, 400); // raw GHI, no bias applied
+    assert.strictEqual(slot.radiationWm2, 200); // unchanged
+    assert.strictEqual(slot.satRadWm2, undefined); // not set anymore
   });
 
-  test('does NOT override slots beyond 3h lead', () => {
+  test('does NOT touch slots beyond 3h lead', () => {
     const wf = makeWF();
     const slot = makeSlot(14, 200);
     wf.cache = { hourlyForecast: [slot] };
@@ -195,7 +194,7 @@ console.log('\n_fetchSatelliteNowcast:');
     assert.strictEqual(slot.radiationSpreadFrac, 0.3); // unchanged
   });
 
-  test('overrides slots within 3h lead', () => {
+  test('sets satGhiWm2 for slots within 3h lead only', () => {
     const wf = makeWF();
     const slot12 = makeSlot(12, 200);
     const slot14 = makeSlot(14, 300);
@@ -211,12 +210,51 @@ console.log('\n_fetchSatelliteNowcast:');
     };
 
     wf._applySatelliteOverlay(satData);
-    // slot12: 2h lead → overridden
+    // slot12: 2h lead → satGhiWm2 set, radiationWm2 untouched
     assert.strictEqual(slot12.satGhiWm2, 600);
-    assert.strictEqual(slot12.radiationSpreadFrac, 0.05);
-    // slot14: 4h lead → NOT overridden
+    assert.strictEqual(slot12.radiationWm2, 200);
+    // slot14: 4h lead → not touched
     assert.strictEqual(slot14.radiationWm2, 300);
     assert.strictEqual(slot14.satGhiWm2, undefined);
+  });
+
+  // Forward-only guard: a slot whose hour starts before the satellite issue must
+  // NOT be back-filled. The pre-issue hour only catches the dim edge curve point,
+  // which would project to ~0 W and record a fake sat=0 (100% miss) in the pill.
+  test('does NOT back-fill a slot starting before the issue', () => {
+    const wf = makeWF();
+    const slot = makeSlot(9, 200); // 09:00Z, one hour before issue
+    wf.cache = { hourlyForecast: [slot] };
+
+    const issue = new Date('2026-06-18T10:00:00Z');
+    const satData = {
+      issue: issue.toISOString(),
+      curve: [{ t: '2026-06-18T09:30:00Z', wm2: 150 }], // edge point inside h=9
+    };
+
+    wf._applySatelliteOverlay(satData);
+    assert.strictEqual(slot.satGhiWm2, undefined); // excluded → accuracy stores null
+    assert.strictEqual(slot.radiationWm2, 200); // unchanged
+  });
+
+  test('mid-hour issue skips that hour\'s pre-issue start, keeps next hour', () => {
+    const wf = makeWF();
+    const slot10 = makeSlot(10, 200); // 10:00Z, issue lands mid-hour → lead -30min
+    const slot11 = makeSlot(11, 200); // 11:00Z → lead +30min, forward
+    wf.cache = { hourlyForecast: [slot10, slot11] };
+
+    const issue = new Date('2026-06-18T10:30:00Z');
+    const satData = {
+      issue: issue.toISOString(),
+      curve: [
+        { t: '2026-06-18T10:30:00Z', wm2: 300 }, // inside h=10 but pre-issue-start
+        { t: '2026-06-18T11:00:00Z', wm2: 700 },
+      ],
+    };
+
+    wf._applySatelliteOverlay(satData);
+    assert.strictEqual(slot10.satGhiWm2, undefined); // pre-issue hour skipped
+    assert.strictEqual(slot11.satGhiWm2, 700); // forward hour kept
   });
 
   test('in-place mutation: cache.hourlyForecast identity preserved', () => {
