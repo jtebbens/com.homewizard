@@ -2565,6 +2565,11 @@ if (debug) this.log(
       cloudFactor: _pvCloudFactor !== 1.0 ? Math.round(_pvCloudFactor * 100) / 100 : null,
       net: Math.round(_pvDailyBiasFactor * _pvAccFactor * 1000) / 1000,
     });
+    // Day-level PV correction (daily-bias × accuracy-conservatism) applied to the
+    // operational forecast. The per-model accuracy chart samples raw NWP output and was
+    // therefore structurally below "Werkelijk"; _recordPvAccuracySample applies this factor
+    // (× the live intraday ratio) so the per-model curves track actual.
+    this._pvDayCorrectionFactor = _pvDailyBiasFactor * _pvAccFactor;
 
     // Intraday PV scaling: correct today's remaining forecast from actual production.
     // Uses pv_predictions already tracked by learning engine — no new API calls.
@@ -3442,10 +3447,21 @@ if (debug) this.log(
 
     const perModelW = {};
     if (this._pvForecastPerModel) {
+      // Apply the same corrections the operational forecast received so the per-model
+      // curves track actual instead of sitting structurally low: daily-bias × accFactor
+      // (day-level) × the live intraday ratio (today actual-vs-forecast scaling — the
+      // dominant lift on under-forecast days, e.g. ratio 1.45). Cap at the inverter
+      // ceiling like the operational forecast.
+      const corr = (this._pvDayCorrectionFactor ?? 1.0) * (this._lastIntradayPvRatio ?? 1.0);
+      const capW = this.getSetting('pv_capacity_w') || 0;
       for (const [m, fc] of Object.entries(this._pvForecastPerModel)) {
         const mIdx = this.optimizationEngine._buildPvIndex(fc);
         const mW = mIdx ? this.optimizationEngine._getPvForSlot(mIdx, nowMs) : null;
-        if (mW != null) perModelW[m] = mW;
+        if (mW != null) {
+          let cW = Math.round(mW * corr);
+          if (capW > 0) cW = Math.min(cW, capW);
+          perModelW[m] = cW;
+        }
       }
     }
     let satW = null;
