@@ -3489,7 +3489,7 @@ if (debug) this.log(
           const s0 = utcH * 4;
           const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
           const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          satW = Math.round(this._satGhiToPanelGhi(h.satGhiWm2, new Date(hourMs)) * yf);
+          satW = Math.round(this._satGhiToPanel(h.satGhiWm2, new Date(hourMs), h.gtiOverGhi) * yf);
           break;
         }
       }
@@ -4610,6 +4610,14 @@ if (debug) this.log(
     return satGhiWm2;
   }
 
+  // Satellite GHI → panel plane. Prefer the OM ensemble's own per-slot GTI/GHI ratio
+  // (gtiOverGhi) so the sat line shares the operational forecast's transposition geometry;
+  // fall back to the standalone Erbs transposition only when the ratio is unavailable.
+  _satGhiToPanel(satGhiWm2, date, gtiOverGhi) {
+    if (typeof gtiOverGhi === 'number' && gtiOverGhi > 0) return satGhiWm2 * gtiOverGhi;
+    return this._satGhiToPanelGhi(satGhiWm2, date);
+  }
+
   _buildSatForecastForChart(weatherData, yfs, pvCapW) {
     // Satellite GHI observations live only in the rolling in-memory hourlyForecast and are
     // wiped on restart / forecast-cache refresh, so the chart's sat line lost every past hour
@@ -4618,10 +4626,12 @@ if (debug) this.log(
     // avoids the dayIdx 0/1 hour-bucket collision with today).
     const store = this.homey.settings.get('policy_pv_sat_obs') || {};
     const slots = weatherData?.hourlyForecast;
+    const ratioByEpoch = {};
     if (Array.isArray(slots)) {
       for (const s of slots) {
-        if (typeof s.satGhiWm2 !== 'number') continue;
         const t = s.time instanceof Date ? s.time : new Date(s.time);
+        if (typeof s.gtiOverGhi === 'number') ratioByEpoch[String(t.getTime())] = s.gtiOverGhi;
+        if (typeof s.satGhiWm2 !== 'number') continue;
         store[String(t.getTime())] = s.satGhiWm2;
       }
     }
@@ -4636,7 +4646,7 @@ if (debug) this.log(
       const s0 = t.getUTCHours() * 4;
       const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
       const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-      const raw = Math.round(this._satGhiToPanelGhi(store[key], t) * yf);
+      const raw = Math.round(this._satGhiToPanel(store[key], t, ratioByEpoch[key]) * yf);
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     this.homey.settings.set('policy_pv_sat_obs', store);
