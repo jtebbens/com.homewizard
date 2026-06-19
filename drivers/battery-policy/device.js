@@ -1360,8 +1360,13 @@ if (debug) this.log(
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
             this._setLive('policy_pv_forecast_om', _scaleChartFc(omFcByDay));
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
-            const satFcByDay = this._buildSatForecastForChart(this.weatherData, yfs, pvCapW);
-            if (satFcByDay) this._setLive('policy_pv_forecast_sat', _scaleChartFc(satFcByDay));
+            // Satellite chart line suppressed: the raw satellite GHI over-reads (~20% in the
+            // morning) and, run through the OM-calibrated yield factor, plots structurally too
+            // high (sat_PV = actual × satGHI/OM_GHI). Re-enable once a satellite-specific yield
+            // calibration exists (see project_satellite_nowcast_parked). Observation tracking
+            // (satGhiWm2 persist + recordPvAccuracy satW) stays so that calibration can be
+            // learned later. _buildSatForecastForChart is now unused.
+            this._setLive('policy_pv_forecast_sat', null);
           }
         }
       } else {
