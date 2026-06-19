@@ -4626,12 +4626,21 @@ if (debug) this.log(
     // avoids the dayIdx 0/1 hour-bucket collision with today).
     const store = this.homey.settings.get('policy_pv_sat_obs') || {};
     const slots = weatherData?.hourlyForecast;
+    const profiles = weatherData?.dailyProfiles;
+    // Transposition ratio comes from dailyProfiles (full day incl. past hours); hourlyForecast
+    // is forward-only, so using it would leave morning store entries on the Erbs fallback.
     const ratioByEpoch = {};
+    if (Array.isArray(profiles)) {
+      for (const p of profiles) {
+        if (typeof p.gtiOverGhi !== 'number') continue;
+        const t = p.time instanceof Date ? p.time : new Date(p.time);
+        ratioByEpoch[String(t.getTime())] = p.gtiOverGhi;
+      }
+    }
     if (Array.isArray(slots)) {
       for (const s of slots) {
-        const t = s.time instanceof Date ? s.time : new Date(s.time);
-        if (typeof s.gtiOverGhi === 'number') ratioByEpoch[String(t.getTime())] = s.gtiOverGhi;
         if (typeof s.satGhiWm2 !== 'number') continue;
+        const t = s.time instanceof Date ? s.time : new Date(s.time);
         store[String(t.getTime())] = s.satGhiWm2;
       }
     }
