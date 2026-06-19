@@ -10183,3 +10183,6514 @@ PASS — 1000 scenarios, no counterexample.
 - Passed: 23
 - Failed: 0
 
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 261 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 261 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 417 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 417 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 293 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 293 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 334 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 334 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 171 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 171 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 331 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 331 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 400 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 400 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 322 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 322 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 372 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 372 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 179 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 179 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 250 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 250 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 746 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 746 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 365 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 365 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 595 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 595 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 599 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 599 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 367 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 367 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 140 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 140 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 221 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 221 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 282 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 282 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 422 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 422 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 307 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 307 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 339 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 339 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 174 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 174 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 343 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 343 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 429 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 429 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 347 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 347 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 377 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 377 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 182 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 182 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 252 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 252 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 760 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 760 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 367 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 367 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 610 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 610 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 593 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 593 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 132 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 132 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 218 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 218 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 426 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 426 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 302 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 302 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 329 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 329 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 320 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 320 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 410 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 410 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 325 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 325 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 357 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 357 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 174 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 174 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 168 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 168 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 245 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 245 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 731 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 731 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 358 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 358 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 602 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 602 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 568 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 568 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 352 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 352 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 139 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 139 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 212 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 212 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 283 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 283 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 427 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 427 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 311 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 311 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 336 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 336 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 346 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 346 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 411 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 411 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 324 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 324 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 153 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 153 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 169 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 169 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 245 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 245 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 733 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 733 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 352 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 352 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 244 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 244 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 363 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 363 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 258 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 258 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 296 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 296 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 153 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 153 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 300 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 300 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 369 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 369 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 304 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 304 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 325 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 325 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 144 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 144 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 215 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 215 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 642 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 642 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 307 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 307 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 533 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 533 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 520 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 520 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 317 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 317 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 124 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 124 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 190 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 190 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 258 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 258 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 384 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 384 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 310 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 310 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 162 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 162 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 318 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 318 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 385 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 385 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 320 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 320 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 341 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 341 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 163 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 163 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 230 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 230 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 681 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 681 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 332 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 332 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 551 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 551 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 535 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 535 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 332 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 332 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 128 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 128 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 199 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 199 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 278 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 364 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 293 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 293 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 336 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 336 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 170 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 170 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 329 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 329 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 409 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 409 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 299 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 299 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 250 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 250 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 313 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 313 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 207 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 207 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 122 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 122 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 224 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 224 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 132 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 132 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 215 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 215 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 198 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 198 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 139 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 139 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 565 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 565 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 211 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 211 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 193 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 193 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 311 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 311 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 400 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 400 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 252 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 252 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 271 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 271 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 190 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 190 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 319 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 319 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 99 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 99 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 114 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 114 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 169 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 169 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 117 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 117 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 154 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 154 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 204 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 204 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 549 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 549 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 242 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 242 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 341 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 341 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 550 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 550 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 321 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 321 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 380 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 380 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 150 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 150 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 181 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 181 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 221 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 221 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 82 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 82 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 224 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 224 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 128 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 128 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 21:spread-band-keeps-peak-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 100 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 100 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+
+---
+## Summary
+- Passed: 4
+- Failed: 19
+
+### Failed invariants
+- 1:no-grid-charge-full-pv
+- 1b:pv-strong-threshold-straddling
+- 2:fill-to-max-on-negative-prices
+- 3:soc-trace-consistency
+- 6:rte-no-double-apply-soc
+- 7:soc-bounds-safety
+- 8:pv-self-consumption-before-grid
+- 9:schedule-feasibility
+- 10:expected-profit-self-sufficiency-bounds
+- 11:expected-profit-matches-compute
+- 12:export-ratio-zero-effect-without-pv
+- 13:export-ratio-lower-ratio-reduces-profit
+- 14:night-discharge-defers-to-better-price
+- 15:refill-reserve-floor-never-sacrifices-pricier-slot
+- 16:pre-pv-window-spends-priciest-first
+- 16b:priciest-first-with-reserve-floor
+- 17:abundant-tomorrow-pv-waives-reserve
+- 19:pv-lift-never-lowers-profit
+- 21:spread-band-keeps-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 178 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 178 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 177 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 177 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 1:no-grid-charge-full-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 127 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 127 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 166 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 166 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 130 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 130 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 1b:pv-strong-threshold-straddling
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 172 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 172 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 75 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 75 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 146 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 146 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 2:fill-to-max-on-negative-prices
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 141 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 141 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 86 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 86 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 71 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 71 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 3:soc-trace-consistency
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 155 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 155 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✗ 13:export-ratio-lower-ratio-reduces-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 116 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 116 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 156 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 156 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 6:rte-no-double-apply-soc
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 67 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 67 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 7 — soc-bounds-safety
+
+## ✗ 14:night-discharge-defers-to-better-price
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 314 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 314 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 186 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 186 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 7:soc-bounds-safety
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✗ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 175 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 171 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 171 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 8:pv-self-consumption-before-grid
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 193 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 193 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 9 — schedule-feasibility
+
+## ✗ 16:pre-pv-window-spends-priciest-first
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 248 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 248 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 195 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 195 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 9:schedule-feasibility
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 167 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✗ 16b:priciest-first-with-reserve-floor
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 268 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 268 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 76 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 76 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 10:expected-profit-self-sufficiency-bounds
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 149 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✗ 17:abundant-tomorrow-pv-waives-reserve
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 155 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 155 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✗ 12:export-ratio-zero-effect-without-pv
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 85 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 85 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✗ 11:expected-profit-matches-compute
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 80 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 80 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✗ 19:pv-lift-never-lowers-profit
+FAIL
+
+### Counterexample
+```json
+Error: Property interrupted after 63 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+### Error
+```
+Property interrupted after 63 tests
+{ seed: 12345 }
+
+Hint: Enable verbose mode at level VeryVerbose in order to check all generated values and their associated status
+```
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✗ 22:terminal-never-suppresses-priciest-reachable-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 2 tests
+{ seed: 12345, path: "1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:1:1:0:0:0:1:5:0:0:0:2:1:1:0:2:2:0:1:0:3:0:0:0:0:0:0:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.5,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.55,0.55,0.55],[0.27,0.27,0.27,0.2750000000000001],3]]
+Shrunk 44 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 2 tests
+{ seed: 12345, path: "1:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:1:1:0:0:0:1:5:0:0:0:2:1:1:0:2:2:0:1:0:3:0:0:0:0:0:0:2:1", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.5,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.55,0.55,0.55],[0.27,0.27,0.27,0.2750000000000001],3]]
+Shrunk 44 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 1
+
+### Failed invariants
+- 22:terminal-never-suppresses-priciest-reachable-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✗ 22:terminal-never-suppresses-priciest-reachable-discharge
+FAIL
+
+### Counterexample
+```json
+Error: Property failed after 57 tests
+{ seed: 12345, path: "56:0:0:0:0:0:0:0:0:0:1:4:5:0:0:3:0:0:1:0:0:0:1:0:1:0:0:3:3:2:0:1:204:154:155:203:155:155:157:0:0:0:0:3:3:0:0:1:4:1:0:2:0:0:0:0:2:0:0:0:0:0:0:1:1:0:0:0:0:1:0:149:155", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.5,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.5706188148760692,0.6999999999999994,0.6540792030744804],[0.3028043342665983,0.3737079534601879,0.27,0.34353559920989585,0.3251986878894118],3]]
+Shrunk 72 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+### Error
+```
+Property failed after 57 tests
+{ seed: 12345, path: "56:0:0:0:0:0:0:0:0:0:1:4:5:0:0:3:0:0:1:0:0:0:1:0:1:0:0:3:3:2:0:1:204:154:155:203:155:155:157:0:0:0:0:3:3:0:0:1:4:1:0:2:0:0:0:0:2:0:0:0:0:0:0:1:1:0:0:0:0:1:0:149:155", endOnFailure: true }
+Counterexample: [[{"battery_efficiency":0.5,"min_soc":0,"max_soc":85,"cycle_cost_per_kwh":0,"export_price_ratio":1},{"capacityKwh":1.5,"maxChargeW":400,"maxDischargeW":400,"currentSoc":60},[0.5706188148760692,0.6999999999999994,0.6540792030744804],[0.3028043342665983,0.3737079534601879,0.27,0.34353559920989585,0.3251986878894118],3]]
+Shrunk 72 time(s)
+
+Hint: Enable verbose mode in order to have the list of all failing values encountered during the run
+```
+
+
+---
+## Summary
+- Passed: 23
+- Failed: 1
+
+### Failed invariants
+- 22:terminal-never-suppresses-priciest-reachable-discharge
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
+## Invariant 1 — no-grid-charge-on-full-pv
+
+## ✓ 1:no-grid-charge-full-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 1b — pvStrongCoverage threshold straddling
+
+## ✓ 1b:pv-strong-threshold-straddling
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 2 — fill-to-max-on-negative-prices
+
+## ✓ 2:fill-to-max-on-negative-prices
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 3 — soc-trace-consistency
+
+### Fix iteration 1: clamp currentSoc to max_soc in generator
+
+## ✓ 3:soc-trace-consistency
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 4 — cycle-counter-monotonic
+
+## ✓ 4:cycle-counter-monotonic
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 5 — policy-mode-history-per-slot
+
+## ✓ 5:policy-mode-history-per-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 6 — rte-no-double-apply-soc
+
+### Fix iteration 1: compare SoC DELTA while trajectories are synced, not absolute SoC
+
+Rationale: different RTE values lead to different economic decisions at some slots.
+
+Once actions diverge, absolute socProjected legitimately differs. The real invariant
+
+is: given same starting SoC AND same action, the SoC delta is RTE-independent.
+
+We track sync status and only compare deltas while both engines are on the same path.
+
+## ✓ 6:rte-no-double-apply-soc
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 7 — soc-bounds-safety
+
+## ✓ 7:soc-bounds-safety
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 8 — pv-self-consumption-before-grid
+
+## ✓ 8:pv-self-consumption-before-grid
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 9 — schedule-feasibility
+
+## ✓ 9:schedule-feasibility
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 10 — computeExpectedProfit-self-sufficiency-bounds
+
+## ✓ 10:expected-profit-self-sufficiency-bounds
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 11 — computeExpectedProfit-profit-matches-compute
+
+## ✓ 11:expected-profit-matches-compute
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 12 — exportPriceRatio-zero-effect-without-pv
+
+## ✓ 12:export-ratio-zero-effect-without-pv
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 13 — exportPriceRatio-lower-ratio-reduces-profit
+
+## ✓ 13:export-ratio-lower-ratio-reduces-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 14 — night-discharge-defers-to-better-price
+
+## ✓ 14:night-discharge-defers-to-better-price
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 15 — refill-reserve-floor-never-sacrifices-pricier-slot
+
+## ✓ 15:refill-reserve-floor-never-sacrifices-pricier-slot
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16 — pre-pv-window-spends-priciest-first
+
+## ✓ 16:pre-pv-window-spends-priciest-first
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 16b — priciest-first-with-reserve-floor
+
+## ✓ 16b:priciest-first-with-reserve-floor
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 17 — abundant-tomorrow-pv-waives-reserve
+
+## ✓ 17:abundant-tomorrow-pv-waives-reserve
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 18 — spread-cap-monotonic-and-agreement-noop
+
+## ✓ 18:spread-monotonic-never-lifts
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 19 — pv-lift-never-lowers-profit
+
+## ✓ 19:pv-lift-never-lowers-profit
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 20 — spread-band-monotone-agreement-preserving
+
+## ✓ 20:spread-band-monotone
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 21 — spread-band-never-suppresses-peak-discharge
+
+## ✓ 21:spread-band-keeps-peak-discharge
+PASS — 1000 scenarios, no counterexample.
+
+## Invariant 22 — terminal-never-suppresses-priciest-reachable-discharge
+
+## ✓ 22:terminal-never-suppresses-priciest-reachable-discharge
+PASS — 1000 scenarios, no counterexample.
+
+
+---
+## Summary
+- Passed: 24
+- Failed: 0
+
