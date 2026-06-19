@@ -1337,11 +1337,31 @@ if (debug) this.log(
                 this.log(`[Solcast] Chart forecast error: ${err.message}`);
               }
             }
+            // Apply the same corrections the operational forecast got to the raw model
+            // overlays (OM, satellite), so they track actual instead of sitting structurally
+            // low on under-forecast days. Today (idx 0): daily-bias × accFactor × intraday
+            // ratio; tomorrow (idx 1): bias × accFactor only (intraday is a today-specific
+            // actual-vs-forecast scaling). Cap at the panel ceiling like the operational line.
+            const _dayCorr  = this._pvDayCorrectionFactor ?? 1.0;
+            const _intraday = this._lastIntradayPvRatio ?? 1.0;
+            const _scaleChartFc = (byDay) => {
+              if (!byDay) return byDay;
+              for (let d = 0; d < 2; d++) {
+                const f = d === 0 ? _dayCorr * _intraday : _dayCorr;
+                if (f === 1) continue;
+                for (const h of Object.keys(byDay[d])) {
+                  let w = Math.round(byDay[d][h] * f);
+                  if (pvCapW > 0) w = Math.min(w, pvCapW);
+                  byDay[d][h] = w;
+                }
+              }
+              return byDay;
+            };
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
-            this._setLive('policy_pv_forecast_om', omFcByDay);
+            this._setLive('policy_pv_forecast_om', _scaleChartFc(omFcByDay));
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
             const satFcByDay = this._buildSatForecastForChart(this.weatherData, yfs, pvCapW);
-            if (satFcByDay) this._setLive('policy_pv_forecast_sat', satFcByDay);
+            if (satFcByDay) this._setLive('policy_pv_forecast_sat', _scaleChartFc(satFcByDay));
           }
         }
       } else {
@@ -3445,23 +3465,17 @@ if (debug) this.log(
       ? Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length)
       : null;
 
+    // RAW per-model PV — drives the per-model accuracy EMA (pv_model_accuracy → getModelWeights →
+    // ensemble blend). Must stay raw: the model-weight ranking is judged against actual, and the
+    // correction factor (≈ actual / ensemble-mean) collapses all models toward the mean, ranking
+    // by closeness-to-mean instead of closeness-to-truth (circular). See recordPvAccuracy `chartW`
+    // for the corrected display values.
     const perModelW = {};
     if (this._pvForecastPerModel) {
-      // Apply the same corrections the operational forecast received so the per-model
-      // curves track actual instead of sitting structurally low: daily-bias × accFactor
-      // (day-level) × the live intraday ratio (today actual-vs-forecast scaling — the
-      // dominant lift on under-forecast days, e.g. ratio 1.45). Cap at the inverter
-      // ceiling like the operational forecast.
-      const corr = (this._pvDayCorrectionFactor ?? 1.0) * (this._lastIntradayPvRatio ?? 1.0);
-      const capW = this.getSetting('pv_capacity_w') || 0;
       for (const [m, fc] of Object.entries(this._pvForecastPerModel)) {
         const mIdx = this.optimizationEngine._buildPvIndex(fc);
         const mW = mIdx ? this.optimizationEngine._getPvForSlot(mIdx, nowMs) : null;
-        if (mW != null) {
-          let cW = Math.round(mW * corr);
-          if (capW > 0) cW = Math.min(cW, capW);
-          perModelW[m] = cW;
-        }
+        if (mW != null) perModelW[m] = mW;
       }
     }
     let satW = null;
@@ -3481,7 +3495,26 @@ if (debug) this.log(
       }
     }
 
-    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW).catch(e =>
+    // Corrected display values for the accuracy chart only — same correction the operational
+    // forecast got (daily-bias × accFactor × intraday ratio), capped at panel capacity. Applied
+    // to OM, per-model and satellite (which share the yield-factor under-forecast offset), NOT to
+    // Solcast (independent provider that over-forecasts; the intraday under-forecast ratio doesn't
+    // apply). These feed the chart fields in pv_predictions, never the accuracy/weight EMAs.
+    const _corr = (this._pvDayCorrectionFactor ?? 1.0) * (this._lastIntradayPvRatio ?? 1.0);
+    const _capW = this.getSetting('pv_capacity_w') || 0;
+    const _scale = (w) => {
+      if (w == null) return null;
+      let v = Math.round(w * _corr);
+      if (_capW > 0) v = Math.min(v, _capW);
+      return v;
+    };
+    const chartW = _corr === 1 ? null : {
+      om: _scale(omW),
+      sat: _scale(satW),
+      perModel: Object.fromEntries(Object.entries(perModelW).map(([m, w]) => [m, _scale(w)])),
+    };
+
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW, chartW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
   }
@@ -4541,7 +4574,7 @@ if (debug) this.log(
       const pvCapW       = this.getSetting('pv_capacity_w') || 0;
       const pvScDayStart = this.homey.settings.get('policy_sc_daystart') ?? null;
 
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._correctedDayStartForChart(), pvScDayStart, pvCapacityW: pvCapW };
 
       if (!this.planningImagePv) {
         await this._initPvCamera();
@@ -4599,6 +4632,30 @@ if (debug) this.log(
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
   }
 
+  /**
+   * Day-start PV forecast scaled by the same corrections the operational forecast and the
+   * OM/SAT chart overlays get (daily-bias × accFactor for all slots, × intraday ratio for
+   * today), so every PV-chart comparison line is on the same footing. Returns a COPY — the
+   * original `_pvDayStartForecast` stays raw because it's the reference `predictedW` for the
+   * intraday-ratio calculation; correcting it in place would feed the correction into itself.
+   */
+  _correctedDayStartForChart() {
+    const src = this._pvDayStartForecast;
+    if (!Array.isArray(src)) return null;
+    const dayCorr  = this._pvDayCorrectionFactor ?? 1.0;
+    const intraday = this._lastIntradayPvRatio ?? 1.0;
+    const capW     = this.getSetting('pv_capacity_w') || 0;
+    const today    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    return src.map(s => {
+      const isToday = new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === today;
+      const f = isToday ? dayCorr * intraday : dayCorr;
+      if (f === 1) return s;
+      let w = Math.round(s.pvPowerW * f);
+      if (capW > 0) w = Math.min(w, capW);
+      return { ...s, pvPowerW: w };
+    });
+  }
+
   async _initPvCamera() {
     if (this.planningImagePv) return;
     this.planningImagePv = await this.homey.images.createImage();
@@ -4615,7 +4672,7 @@ if (debug) this.log(
       let _h = 0; try { _h = require('v8').getHeapStatistics().used_heap_size / 1048576; } catch (_) {}
       if (_h > 38) { this.log(`[MEM] PV chart stream skipped — heap ${_h.toFixed(1)} MB > 38 MB`); stream.end(); return; }
       try {
-        await ChartRenderer.streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
+        await ChartRenderer.streamPvChart(stream, { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._correctedDayStartForChart(), pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW });
       } catch (e) {
         this.error('PV chart stream error:', e.message);
         if (!stream.destroyed) stream.end();
@@ -4634,7 +4691,7 @@ if (debug) this.log(
     const pvForecastSAT = this._liveState.policy_pv_forecast_sat ?? null;
     const pvCapW       = this.getSetting('pv_capacity_w') || 0;
     if (pvForecast || pvActual) {
-      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._pvDayStartForecast ?? null, pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
+      this._pvChartData = { pvActual, pvForecast, pvForecastOM, pvForecastSC, pvForecastSCEffective, pvForecastSAT, pvForecastDayStart: this._correctedDayStartForChart(), pvScDayStart: this.homey.settings.get('policy_sc_daystart') ?? null, pvCapacityW: pvCapW };
       await this.planningImagePv.update();
     }
   }
