@@ -3459,7 +3459,7 @@ if (debug) this.log(
           const s0 = utcH * 4;
           const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
           const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          satW = Math.round((h.satRadWm2 ?? h.satGhiWm2) * yf);
+          satW = Math.round(this._satGhiToPanelGhi(h.satGhiWm2, new Date(hourMs)) * yf);
           break;
         }
       }
@@ -4546,6 +4546,21 @@ if (debug) this.log(
   }
 
 
+  // Put satellite GHI on the same tilted plane OM uses, so the chart/accuracy
+  // sat line is comparable (OM feeds GTI to yieldFactor; raw GHI undershoots the
+  // east-tilt morning boost). Falls back to raw GHI when tilt/geo isn't set.
+  _satGhiToPanelGhi(satGhiWm2, date) {
+    const s = this.getSettings();
+    const tilt = s.pv_estimation_enabled && typeof s.pv_tilt === 'number' ? s.pv_tilt : null;
+    const azimuth = s.pv_estimation_enabled && typeof s.pv_azimuth === 'number' ? s.pv_azimuth : null;
+    const lat = s.weather_latitude;
+    const lon = s.weather_longitude;
+    if (typeof tilt === 'number' && typeof azimuth === 'number' && typeof lat === 'number' && typeof lon === 'number') {
+      return WeatherForecaster._ghiToGti(satGhiWm2, date, lat, lon, tilt, azimuth);
+    }
+    return satGhiWm2;
+  }
+
   _buildSatForecastForChart(weatherData, yfs, pvCapW) {
     const slots = weatherData?.hourlyForecast;
     if (!Array.isArray(slots)) return null;
@@ -4562,7 +4577,7 @@ if (debug) this.log(
       const s0 = t.getUTCHours() * 4;
       const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
       const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-      const raw = Math.round((s.satRadWm2 ?? s.satGhiWm2) * yf);
+      const raw = Math.round(this._satGhiToPanelGhi(s.satGhiWm2, t) * yf);
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
