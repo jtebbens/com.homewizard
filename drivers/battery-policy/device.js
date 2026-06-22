@@ -1339,20 +1339,18 @@ if (debug) this.log(
             }
             // Apply the same corrections the operational forecast got to the raw model
             // overlays (OM, satellite), so they track actual instead of sitting structurally
-            // low on under-forecast days. Today (idx 0): daily-bias × accFactor × intraday
-            // ratio; tomorrow (idx 1): bias × accFactor only (intraday is a today-specific
-            // actual-vs-forecast scaling). Cap at the panel ceiling like the operational line.
-            const _dayCorr  = this._pvDayCorrectionFactor ?? 1.0;
-            const _intraday = this._lastIntradayPvRatio ?? 1.0;
+            // low on under-forecast days. daily-bias applies to all hours; the intraday ratio
+            // is a today-specific actual-vs-forecast scaling for the REMAINING hours only —
+            // applying it to already-realised past hours retroactively inflates the curve
+            // (the accuracy chart freezes the ratio per slot at record time, so the overlays
+            // diverged). Cap at the panel ceiling like the operational line.
+            const _nowAmsHr = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
             const _scaleChartFc = (byDay) => {
               if (!byDay) return byDay;
               for (let d = 0; d < 2; d++) {
-                const f = d === 0 ? _dayCorr * _intraday : _dayCorr;
-                if (f === 1) continue;
                 for (const h of Object.keys(byDay[d])) {
-                  let w = Math.round(byDay[d][h] * f);
-                  if (pvCapW > 0) w = Math.min(w, pvCapW);
-                  byDay[d][h] = w;
+                  const applyIntraday = (d === 0 && parseInt(h) >= _nowAmsHr);
+                  byDay[d][h] = this._correctOverlayW(byDay[d][h], applyIntraday);
                 }
               }
               return byDay;
@@ -3441,6 +3439,23 @@ if (debug) this.log(
     return prev.r + (next.r - prev.r) * ratio;
   }
 
+  // Single source of truth for overlay-forecast correction (the OM/satellite chart
+  // lines AND the accuracy-chart corrected values). daily-bias always applies; the
+  // intraday ratio is a today-specific actual-vs-forecast scaling for REMAINING hours
+  // only — it must never retroactively inflate already-realised past hours. Both call
+  // sites (_scaleChartFc for the webcam, recordPvAccuracy chartW for the diag chart)
+  // route through here so the two surfaces cannot silently diverge.
+  _correctOverlayW(w, applyIntraday) {
+    if (w == null) return null;
+    const dayCorr  = this._pvDayCorrectionFactor ?? 1.0;
+    const intraday = this._lastIntradayPvRatio ?? 1.0;
+    const f = applyIntraday ? dayCorr * intraday : dayCorr;
+    const capW = this.getSetting('pv_capacity_w') || 0;
+    let v = Math.round(w * f);
+    if (capW > 0) v = Math.min(v, capW);
+    return v;
+  }
+
   _recordPvAccuracySample(now = new Date(), currentPrice = null) {
     if (!this.learningEngine || this._pvProductionW == null || !this._pvProductionTimestamp) return;
     if (!this._pvDayStartForecast || !Array.isArray(this._pvDayStartForecast) || this._pvDayStartForecast.length === 0) return;
@@ -3483,40 +3498,36 @@ if (debug) this.log(
         if (mW != null) perModelW[m] = mW;
       }
     }
+    // Satellite accuracy sample at 15-min resolution (matches Solcast cadence). The
+    // overlay retains the raw 15-min curve; look up the value for THIS 15-min bucket
+    // instead of the hourly slot, so the sat line has no gaps SC lacks. gtiOverGhi
+    // from the containing hour slot keeps the GHI→panel conversion identical.
     let satW = null;
-    const satForecast = this.weatherData?.hourlyForecast;
-    if (Array.isArray(satForecast)) {
-      const yfs = this.learningEngine?.getSolarYieldFactorsSmoothed();
-      for (const h of satForecast) {
-        const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
-        if (t === hourMs && h.satGhiWm2 != null && yfs) {
-          const utcH = new Date(hourMs).getUTCHours();
-          const s0 = utcH * 4;
-          const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
-          const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          satW = Math.round(this._satGhiToPanel(h.satGhiWm2, new Date(hourMs), h.gtiOverGhi) * yf);
-          break;
-        }
+    const sat15 = this.weatherForecaster?.getSatGhiAt?.(bucketMs);
+    const yfs = this.learningEngine?.getSolarYieldFactorsSmoothed();
+    if (sat15 != null && yfs) {
+      const slotIdx = Math.floor((bucketMs % 86_400_000) / 900_000) % 96;
+      const yf = (yfs[slotIdx] != null && yfs[slotIdx] > 0) ? yfs[slotIdx] : 0;
+      if (yf > 0) {
+        const hourSlot = (this.weatherData?.hourlyForecast || []).find(h => {
+          const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
+          return t === hourMs;
+        });
+        satW = Math.round(this._satGhiToPanel(sat15, new Date(bucketMs), hourSlot?.gtiOverGhi) * yf);
       }
     }
 
-    // Corrected display values for the accuracy chart only — same correction the operational
-    // forecast got (daily-bias × accFactor × intraday ratio), capped at panel capacity. Applied
-    // to OM, per-model and satellite (which share the yield-factor under-forecast offset), NOT to
-    // Solcast (independent provider that over-forecasts; the intraday under-forecast ratio doesn't
-    // apply). These feed the chart fields in pv_predictions, never the accuracy/weight EMAs.
+    // Corrected display values for the accuracy chart only — routed through the shared
+    // _correctOverlayW so the diag chart and the webcam overlay cannot diverge. This is the
+    // current (today, remaining) slot, so the intraday ratio applies. Applied to OM, per-model
+    // and satellite (which share the yield-factor under-forecast offset), NOT to Solcast
+    // (independent provider that over-forecasts). These feed the chart fields in pv_predictions,
+    // never the accuracy/weight EMAs.
     const _corr = (this._pvDayCorrectionFactor ?? 1.0) * (this._lastIntradayPvRatio ?? 1.0);
-    const _capW = this.getSetting('pv_capacity_w') || 0;
-    const _scale = (w) => {
-      if (w == null) return null;
-      let v = Math.round(w * _corr);
-      if (_capW > 0) v = Math.min(v, _capW);
-      return v;
-    };
     const chartW = _corr === 1 ? null : {
-      om: _scale(omW),
-      sat: _scale(satW),
-      perModel: Object.fromEntries(Object.entries(perModelW).map(([m, w]) => [m, _scale(w)])),
+      om: this._correctOverlayW(omW, true),
+      sat: this._correctOverlayW(satW, true),
+      perModel: Object.fromEntries(Object.entries(perModelW).map(([m, w]) => [m, this._correctOverlayW(w, true)])),
     };
 
     this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW, chartW).catch(e =>
