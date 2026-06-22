@@ -4726,6 +4726,45 @@
         {
           "type": "group",
           "label": {
+            "en": "Satellite Nowcast (experimental)",
+            "nl": "Satelliet Nowcast (experimenteel)"
+          },
+          "visible": {
+            "when": "pv_estimation_enabled",
+            "is": true
+          },
+          "children": [
+            {
+              "id": "satellite_endpoint_url",
+              "type": "text",
+              "label": {
+                "en": "Satellite endpoint URL",
+                "nl": "Satelliet endpoint URL"
+              },
+              "hint": {
+                "en": "URL to satellite nowcast JSON endpoint. Leave empty to disable.",
+                "nl": "URL naar satelliet nowcast JSON-endpoint. Laat leeg om uit te schakelen."
+              },
+              "value": ""
+            },
+            {
+              "id": "satellite_api_key",
+              "type": "text",
+              "label": {
+                "en": "Satellite API key",
+                "nl": "Satelliet API-sleutel"
+              },
+              "hint": {
+                "en": "Secret key for X-PV-Token authentication header.",
+                "nl": "Geheime sleutel voor X-PV-Token authenticatie header."
+              },
+              "value": ""
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
             "en": "KNMI Station Data",
             "nl": "KNMI Stationsdata"
           },
