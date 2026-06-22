@@ -2881,6 +2881,17 @@
       </div>`;
     }
 
+    // Satellite accuracy is suppressed until it has its own yield calibration (F2):
+    // satW = satGHI × the OM-trained yield factor, which over-reads, so the % would
+    // penalise the borrowed magnitude rather than the nowcast skill (same reason the
+    // forecast line is suppressed). Show "kalibreert" instead of a misleading number.
+    function _pvPillCalibrating(label) {
+      return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
+        <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
+        <span style="font-size:12px;font-weight:bold;color:var(--dim);">kalibreert</span>
+      </div>`;
+    }
+
     function pvAccuracyNav(dir) {
       _pvAccuracyDayIdx = Math.max(0, Math.min(_pvAccuracyDays.length - 1, _pvAccuracyDayIdx + dir));
       _renderPvAccuracyDay();
@@ -2908,7 +2919,7 @@
           _pvPill('Algeheel', pvAccuracy, '%', 70, 85) +
           _pvPill('Open-Meteo', accOM, '%', 70, 85) +
           _pvPill('Solcast', accSC, '%', 70, 85) +
-          _pvPill('Satelliet', accSAT, '%', 70, 85) +
+          _pvPillCalibrating('Satelliet') +
           (wOM != null && wSC != null
             ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
                 <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
@@ -2984,7 +2995,7 @@
           _pvPill('Blended', dayAcc, '%', 70, 85) +
           _pvPill('Open-Meteo', dayOM, '%', 70, 85) +
           _pvPill('Solcast', daySC, '%', 70, 85) +
-          _pvPill('Satelliet', daySAT, '%', 70, 85);
+          _pvPillCalibrating('Satelliet');
       }
 
       // Per-model daily accuracy (MF/GFS/ICON/KNMI) from day's entries
