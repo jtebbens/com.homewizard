@@ -144,6 +144,27 @@ console.log('\n_fetchSatelliteNowcast:');
     assert.strictEqual(slot.radiationWm2, 200); // observation-only: unchanged
   });
 
+  // The hourly satGhiWm2 above loses resolution; the overlay also retains the raw
+  // 15-min curve so the accuracy sampler can match Solcast's 15-min cadence (no gaps).
+  test('retains per-15-min sat GHI (not just the hourly average) via getSatGhiAt', () => {
+    const wf = makeWF();
+    wf.cache = { hourlyForecast: [makeSlot(10, 200)] };
+    const satData = makeSatData(30, [400, 600, 500, 480]); // issue now-30m, 4×15-min
+
+    wf._applySatelliteOverlay(satData);
+
+    // each 15-min bucket returns its OWN value, not the hourly mean (495)
+    const buckets = satData.curve.map(c => new Date(c.t).getTime());
+    assert.strictEqual(wf.getSatGhiAt(buckets[0]), 400);
+    assert.strictEqual(wf.getSatGhiAt(buckets[1]), 600);
+    assert.strictEqual(wf.getSatGhiAt(buckets[2]), 500);
+    assert.strictEqual(wf.getSatGhiAt(buckets[3]), 480);
+    // a bucket inside the same hour but offset by a few minutes maps to its 15-min slot
+    assert.strictEqual(wf.getSatGhiAt(buckets[1] + 5 * 60_000), 600);
+    // a time with no curve point returns null (no faked carry)
+    assert.strictEqual(wf.getSatGhiAt(buckets[3] + 3600_000), null);
+  });
+
   test('does NOT mutate radiationSpreadFrac (observation-only)', () => {
     const wf = makeWF();
     const slot = makeSlot(10, 200);
