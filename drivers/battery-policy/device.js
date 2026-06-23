@@ -66,7 +66,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     const satUrl = this.getSetting('satellite_endpoint_url');
     if (satUrl) {
-      this.weatherForecaster.startSatelliteLoop(satUrl, this.getSetting('satellite_api_key') || '');
+      this.weatherForecaster.startSatelliteLoop(satUrl, this.getSetting('satellite_api_key') || '', () => this._onSatelliteOverlay());
     }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
@@ -4282,7 +4282,7 @@ if (debug) this.log(
       this.weatherForecaster.stopSatelliteLoop();
       const satUrl = newSettings.satellite_endpoint_url;
       if (satUrl) {
-        this.weatherForecaster.startSatelliteLoop(satUrl, newSettings.satellite_api_key || '');
+        this.weatherForecaster.startSatelliteLoop(satUrl, newSettings.satellite_api_key || '', () => this._onSatelliteOverlay());
       }
     }
 
@@ -4639,6 +4639,15 @@ if (debug) this.log(
   _satGhiToPanel(satGhiWm2, date, gtiOverGhi) {
     if (typeof gtiOverGhi === 'number' && gtiOverGhi > 0) return satGhiWm2 * gtiOverGhi;
     return this._satGhiToPanelGhi(satGhiWm2, date);
+  }
+
+  _onSatelliteOverlay() {
+    const pvCapW = this.getSetting('pv_capacity_w') || 0;
+    const sat = this._buildSatForecastForChart(this.weatherData, pvCapW);
+    this._setLive('policy_pv_forecast_sat', sat);
+    const keys = sat ? Object.keys(sat[0] || {}).length + Object.keys(sat[1] || {}).length : 0;
+    this.log(`[SAT chart] overlay→chart: ${keys} hours, cam=${!!this.planningImagePv}`);
+    if (sat && this.planningImagePv) this.planningImagePv.update().catch(() => {});
   }
 
   _buildSatForecastForChart(weatherData, pvCapW) {
