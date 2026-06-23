@@ -2919,7 +2919,7 @@
           _pvPill('Algeheel', pvAccuracy, '%', 70, 85) +
           _pvPill('Open-Meteo', accOM, '%', 70, 85) +
           _pvPill('Solcast', accSC, '%', 70, 85) +
-          _pvPillCalibrating('Satelliet') +
+          _pvPill('Satelliet', accSAT, '%', 70, 85) +
           (wOM != null && wSC != null
             ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
                 <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
@@ -2995,7 +2995,7 @@
           _pvPill('Blended', dayAcc, '%', 70, 85) +
           _pvPill('Open-Meteo', dayOM, '%', 70, 85) +
           _pvPill('Solcast', daySC, '%', 70, 85) +
-          _pvPillCalibrating('Satelliet');
+          _pvPill('Satelliet', daySAT, '%', 70, 85);
       }
 
       // Per-model daily accuracy (MF/GFS/ICON/KNMI) from day's entries
