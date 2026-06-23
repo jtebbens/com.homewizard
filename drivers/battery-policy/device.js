@@ -1358,13 +1358,8 @@ if (debug) this.log(
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
             this._setLive('policy_pv_forecast_om', _scaleChartFc(omFcByDay));
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
-            // Satellite chart line suppressed: the raw satellite GHI over-reads (~20% in the
-            // morning) and, run through the OM-calibrated yield factor, plots structurally too
-            // high (sat_PV = actual × satGHI/OM_GHI). Re-enable once a satellite-specific yield
-            // calibration exists (see project_satellite_nowcast_parked). Observation tracking
-            // (satGhiWm2 persist + recordPvAccuracy satW) stays so that calibration can be
-            // learned later. _buildSatForecastForChart is now unused.
-            this._setLive('policy_pv_forecast_sat', null);
+            this._setLive('policy_pv_forecast_sat',
+              this._buildSatForecastForChart(this.weatherData, pvCapW));
           }
         }
       } else {
@@ -2725,6 +2720,31 @@ if (debug) this.log(
       pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.min(s.pvPowerW, pvCapacityW) }));
     }
 
+    // Satellite nowcast: override 0-2h pvForecast with sat-derived panel-W.
+    const satDpActive = this.getSetting('satellite_dp_active') !== false;
+    if (pvForecast && this.getSetting('satellite_endpoint_url')) {
+      const _nowMs = Date.now();
+      const _SAT_MAX_LEAD_MS = 2 * 3600_000;
+      let _satCount = 0;
+      pvForecast = pvForecast.map(slot => {
+        const slotMs = new Date(slot.timestamp).getTime();
+        const lead = slotMs - _nowMs;
+        if (lead < -1800_000 || lead >= _SAT_MAX_LEAD_MS) return slot;
+        const hSlot = (this.weatherData?.hourlyForecast || []).find(h =>
+          (h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime()) === slotMs);
+        if (hSlot?.satPanelW == null) return slot;
+        const satPvW = pvCapacityW > 0 ? Math.min(hSlot.satPanelW, pvCapacityW) : hSlot.satPanelW;
+        if (!satDpActive) {
+          this.log(`[SAT shadow] h=${new Date(slotMs).getUTCHours()} sat=${satPvW}W om=${slot.pvPowerW}W`);
+          return slot;
+        }
+        _satCount++;
+        this.log(`[SAT DP] h=${new Date(slotMs).getUTCHours()} sat=${satPvW}W om=${slot.pvPowerW}W`);
+        return { ...slot, pvPowerW: satPvW, spreadFrac: 0 };
+      });
+      if (_satCount > 0) this.log(`[SAT DP] Override ${_satCount} slots (0-2h) with satellite PV`);
+    }
+
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
     // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
     // pvForecast doesn't contain because hourlyForecast only has slots > now.
@@ -3502,20 +3522,7 @@ if (debug) this.log(
     // overlay retains the raw 15-min curve; look up the value for THIS 15-min bucket
     // instead of the hourly slot, so the sat line has no gaps SC lacks. gtiOverGhi
     // from the containing hour slot keeps the GHI→panel conversion identical.
-    let satW = null;
-    const sat15 = this.weatherForecaster?.getSatGhiAt?.(bucketMs);
-    const yfs = this.learningEngine?.getSolarYieldFactorsSmoothed();
-    if (sat15 != null && yfs) {
-      const slotIdx = Math.floor((bucketMs % 86_400_000) / 900_000) % 96;
-      const yf = (yfs[slotIdx] != null && yfs[slotIdx] > 0) ? yfs[slotIdx] : 0;
-      if (yf > 0) {
-        const hourSlot = (this.weatherData?.hourlyForecast || []).find(h => {
-          const t = h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime();
-          return t === hourMs;
-        });
-        satW = Math.round(this._satGhiToPanel(sat15, new Date(bucketMs), hourSlot?.gtiOverGhi) * yf);
-      }
-    }
+    const satW = this.weatherForecaster?.getSatPanelWAt?.(bucketMs) ?? null;
 
     // Corrected display values for the accuracy chart only — routed through the shared
     // _correctOverlayW so the diag chart and the webcam overlay cannot diverge. This is the
@@ -4634,25 +4641,9 @@ if (debug) this.log(
     return this._satGhiToPanelGhi(satGhiWm2, date);
   }
 
-  _buildSatForecastForChart(weatherData, yfs, pvCapW) {
-    // Satellite GHI observations live only in the rolling in-memory hourlyForecast and are
-    // wiped on restart / forecast-cache refresh, so the chart's sat line lost every past hour
-    // on each restart. Persist raw satGhiWm2 keyed by hour-epoch and build the line from the
-    // merged store, so past observations survive restarts. Pre-today entries are pruned (also
-    // avoids the dayIdx 0/1 hour-bucket collision with today).
+  _buildSatForecastForChart(weatherData, pvCapW) {
     const store = this.homey.settings.get('policy_pv_sat_obs') || {};
     const slots = weatherData?.hourlyForecast;
-    const profiles = weatherData?.dailyProfiles;
-    // Transposition ratio comes from dailyProfiles (full day incl. past hours); hourlyForecast
-    // is forward-only, so using it would leave morning store entries on the Erbs fallback.
-    const ratioByEpoch = {};
-    if (Array.isArray(profiles)) {
-      for (const p of profiles) {
-        if (typeof p.gtiOverGhi !== 'number') continue;
-        const t = p.time instanceof Date ? p.time : new Date(p.time);
-        ratioByEpoch[String(t.getTime())] = p.gtiOverGhi;
-      }
-    }
     if (Array.isArray(slots)) {
       for (const s of slots) {
         if (typeof s.satGhiWm2 !== 'number') continue;
@@ -4668,10 +4659,8 @@ if (debug) this.log(
       if (amsDate < todayAms) { delete store[key]; continue; }
       const dayIdx = amsDate > todayAms ? 1 : 0;
       const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-      const s0 = t.getUTCHours() * 4;
-      const yf4 = yfs ? [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0) : [];
-      const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-      const raw = Math.round(this._satGhiToPanel(store[key], t, ratioByEpoch[key]) * yf);
+      const satYf = WeatherForecaster.getSatYieldFactor(t.getUTCHours());
+      const raw = satYf > 0 ? Math.round(store[key] * satYf) : 0;
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     this.homey.settings.set('policy_pv_sat_obs', store);

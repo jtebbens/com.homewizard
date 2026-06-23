@@ -313,6 +313,82 @@ console.log('\n_fetchSatelliteNowcast:');
     assert.strictEqual(slot.radiationWm2, 200); // unchanged
   });
 
+  // ── satPanelW via SAT_YIELD_FACTORS ──
+
+  console.log('\nsatPanelW / getSatPanelWAt / getSatYieldFactor:');
+
+  test('_applySatelliteOverlay sets satPanelW using SAT_YIELD_FACTORS', () => {
+    const wf = makeWF();
+    const slot = makeSlot(10, 200);
+    wf.cache = { hourlyForecast: [slot] };
+
+    const issue = new Date('2026-06-18T09:30:00Z');
+    const satData = {
+      issue: issue.toISOString(),
+      curve: [
+        { t: '2026-06-18T10:00:00Z', wm2: 400 },
+        { t: '2026-06-18T10:15:00Z', wm2: 600 },
+      ],
+    };
+
+    wf._applySatelliteOverlay(satData);
+    assert.strictEqual(slot.satGhiWm2, 500);
+    const expectedYf = WeatherForecaster.getSatYieldFactor(10);
+    assert.strictEqual(slot.satPanelW, Math.round(500 * expectedYf));
+  });
+
+  test('satPanelW is null for UTC hours outside SAT_YIELD_FACTORS', () => {
+    const wf = makeWF();
+    const slot = makeSlot(2, 100); // UTC 2 — no sat-YF entry
+    wf.cache = { hourlyForecast: [slot] };
+
+    const issue = new Date('2026-06-18T01:30:00Z');
+    const satData = {
+      issue: issue.toISOString(),
+      curve: [{ t: '2026-06-18T02:00:00Z', wm2: 50 }],
+    };
+
+    wf._applySatelliteOverlay(satData);
+    assert.strictEqual(slot.satGhiWm2, 50);
+    assert.strictEqual(slot.satPanelW, null);
+  });
+
+  test('getSatPanelWAt returns panel W using sat-YF', () => {
+    const wf = makeWF();
+    wf.cache = { hourlyForecast: [makeSlot(12, 200)] };
+    const satData = makeSatData(5, [300, 400, 350, 380]);
+    wf._applySatelliteOverlay(satData);
+
+    const bucket0 = new Date(satData.curve[0].t).getTime();
+    const utcH = new Date(bucket0).getUTCHours();
+    const expectedYf = WeatherForecaster.getSatYieldFactor(utcH);
+    const result = wf.getSatPanelWAt(bucket0);
+    assert.strictEqual(result, Math.round(300 * expectedYf));
+  });
+
+  test('getSatPanelWAt returns null for missing bucket', () => {
+    const wf = makeWF();
+    wf.cache = { hourlyForecast: [] };
+    const result = wf.getSatPanelWAt(Date.now() + 99_999_999);
+    assert.strictEqual(result, null);
+  });
+
+  test('getSatPanelWAt returns null for hour without sat-YF', () => {
+    const wf = makeWF();
+    const t = new Date('2026-06-18T02:00:00Z');
+    const key = String(Math.floor(t.getTime() / 900_000) * 900_000);
+    wf._satGhi15min = { [key]: 100 };
+    const result = wf.getSatPanelWAt(t.getTime());
+    assert.strictEqual(result, null);
+  });
+
+  test('static getSatYieldFactor returns known values', () => {
+    assert.strictEqual(WeatherForecaster.getSatYieldFactor(10), 3.640);
+    assert.strictEqual(WeatherForecaster.getSatYieldFactor(18), 1.001);
+    assert.strictEqual(WeatherForecaster.getSatYieldFactor(0), 0);
+    assert.strictEqual(WeatherForecaster.getSatYieldFactor(23), 0);
+  });
+
   // ── startSatelliteLoop / stopSatelliteLoop ──
 
   console.log('\nstartSatelliteLoop / stopSatelliteLoop:');

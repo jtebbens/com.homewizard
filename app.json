@@ -4759,6 +4759,19 @@
                 "nl": "Geheime sleutel voor X-PV-Token authenticatie header."
               },
               "value": ""
+            },
+            {
+              "id": "satellite_dp_active",
+              "type": "checkbox",
+              "label": {
+                "en": "Use satellite in DP optimizer",
+                "nl": "Gebruik satelliet in DP-optimizer"
+              },
+              "hint": {
+                "en": "Override 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast).",
+                "nl": "Overschrijf 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast)."
+              },
+              "value": true
             }
           ]
         },
