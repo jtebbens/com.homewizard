@@ -96,6 +96,10 @@ class BatteryPolicyDevice extends Homey.Device {
     this._todayGridImportKwh = 0;     // accumulated grid import today (kWh)
     this._todayConsumptionKwh = 0;    // accumulated house consumption today (kWh)
     this._lastSelfSuffWrite = 0;      // throttle: last settings write for today_self_sufficiency
+    this._cachedTodayNL = null;        // cached YYYY-MM-DD Amsterdam, refreshed per minute
+    this._cachedTodayNLTs = 0;
+    this._cachedPsThreshold = this.getSetting('peak_shaving_threshold') ?? 0;
+    this._cachedPsHours = this.getSetting('peak_hours') || '';
     this._morningPlannedProfit = null; // first DP profit of the day, captured after sunrise
     this._modeHistory = this.homey.settings.get(`batt_mode_hist_${this.getData().id}`) || [];
     this._isPredictiveMode = false;
@@ -704,8 +708,8 @@ if (debug) this.log(
           this.log(`🔄 SoC updated: ${currentSoc}% → ${soc}%`);
         }
 
-        // Mirror grid power
-        if (currentPower !== gridPower) {
+        // Mirror grid power (throttled — skip updates < 5W to reduce Homey API churn)
+        if (currentPower == null || Math.abs(currentPower - gridPower) >= 5) {
           await this.setCapabilityValue('grid_power_mirror', gridPower);
         }
 
@@ -715,9 +719,9 @@ if (debug) this.log(
         // Fire extra policy run when load exceeds peak_shaving_threshold within
         // peak_hours window — reacts within 15s instead of waiting up to 15 min.
         {
-          const psThreshold = this.getSetting('peak_shaving_threshold') ?? 0;
+          const psThreshold = this._cachedPsThreshold;
           if (psThreshold > 0) {
-            const psHours       = this.getSetting('peak_hours') || '';
+            const psHours       = this._cachedPsHours;
             const [psStart, psEnd] = psHours.split('-').map(s => parseInt(s, 10));
             const nowHourNL     = parseInt(new Date().toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false }), 10);
             const inPsWindow    = psHours && !isNaN(psStart) && !isNaN(psEnd)
@@ -769,7 +773,12 @@ if (debug) this.log(
         // 📊 SELF-SUFFICIENCY: Accumulate actual daily energy
         // ------------------------------------------------------
         const POLL_H = 15 / 3600; // poll interval (15s) expressed in hours
-        const todayNL = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+        const _nowMs = Date.now();
+        if (_nowMs - this._cachedTodayNLTs > 60_000) {
+          this._cachedTodayNL = new Date(_nowMs).toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+          this._cachedTodayNLTs = _nowMs;
+        }
+        const todayNL = this._cachedTodayNL;
         if (this._todayDate && this._todayDate !== todayNL) {
           this._captureDailyProfit(this._todayDate);
           this._morningPlannedProfit = null;
@@ -4321,6 +4330,10 @@ if (debug) this.log(
         this.weatherForecaster.startSatelliteLoop(satUrl, newSettings.satellite_api_key || '', () => this._onSatelliteOverlay());
       }
     }
+
+    // Refresh cached settings used in hot poll loop
+    if (changedKeys.includes('peak_shaving_threshold')) this._cachedPsThreshold = newSettings.peak_shaving_threshold ?? 0;
+    if (changedKeys.includes('peak_hours')) this._cachedPsHours = newSettings.peak_hours || '';
 
     // Update internal modules
     this.policyEngine.updateSettings(newSettings);
