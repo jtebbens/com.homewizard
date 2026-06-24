@@ -2517,8 +2517,7 @@ if (debug) this.log(
     // because it diverged in shape from the DP series after per-slot corrections.)
     const pvForecastChart = pvForecast ? [...pvForecast] : null;
 
-    // Daily PV level bias: correct systematic over/under-prediction learned across days.
-    // Pass today's avg cloudcover so the clear-sky EMA is used on sunny days.
+    const simplified = this.getSetting('pv_correction_simplified') === true;
     let _pvDailyBiasFactor = 1.0;
     let _pvAccFactor = 1.0;
     let _pvBiasCloud = null;
@@ -2528,8 +2527,6 @@ if (debug) this.log(
       const cloudLowVals = Array.isArray(hf) ? hf.map(h => h.cloudCoverLow).filter(v => typeof v === 'number') : [];
       const todayAvgCloud    = cloudVals.length > 0    ? cloudVals.reduce((a, b) => a + b, 0) / cloudVals.length       : null;
       const todayAvgCloudLow = cloudLowVals.length > 0 ? cloudLowVals.reduce((a, b) => a + b, 0) / cloudLowVals.length : null;
-      // Low clouds (stratus/cumulus) are more impactful than high cirrus — amplify by ×1.2
-      // and use the higher of total or amplified low-cloud cover as effective cloud cover.
       const effectiveCloud = (todayAvgCloud != null && todayAvgCloudLow != null)
         ? Math.min(100, Math.max(todayAvgCloud, todayAvgCloudLow * 1.2))
         : todayAvgCloud;
@@ -2538,31 +2535,40 @@ if (debug) this.log(
       const dailyBias = this.getSetting('pv_weathertype_bias') === false
         ? 1.0
         : this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
-      // On overcast days (>75% cloud), upward bias adds planning uncertainty: forecast errors
-      // inflate remaining PV estimates and cause the DP to stop grid-charging prematurely.
-      // Linearly reduce any upward bias back to 1.0 between 75% and 100% cloud cover.
       let cappedDailyBias = dailyBias;
       if (dailyBias > 1.0 && effectiveCloud != null && effectiveCloud > 75) {
         const cloudFrac = Math.min(1, (effectiveCloud - 75) / 25);
         cappedDailyBias = Math.max(1.0, 1.0 + (dailyBias - 1.0) * (1 - cloudFrac));
       }
       _pvDailyBiasFactor = cappedDailyBias;
-      if (cappedDailyBias !== 1.0) {
-        pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) }));
+
+      if (!simplified) {
+        // Legacy path: apply dailyBias to ALL slots (today + tomorrow).
+        if (cappedDailyBias !== 1.0) {
+          pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) }));
+        }
+      } else {
+        // Simplified path: dailyBias only on tomorrow's slots (today handled by intradayRatio).
+        const todayNL = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        if (cappedDailyBias !== 1.0) {
+          pvForecast = pvForecast.map(s => {
+            const slotDate = new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            if (slotDate === todayNL) return s;
+            return { ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) };
+          });
+        }
       }
       const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
       const capLabel   = cappedDailyBias !== dailyBias ? ` (capped from ${dailyBias.toFixed(3)})` : '';
       if (cappedDailyBias !== 1.0 || dailyBias !== 1.0) {
-        this.log(`[PV daily bias] factor=${cappedDailyBias.toFixed(3)} applied${cloudLabel}${capLabel}`);
+        this.log(`[PV daily bias] factor=${cappedDailyBias.toFixed(3)}${simplified ? ' (tomorrow-only)' : ''} applied${cloudLabel}${capLabel}`);
       }
     }
 
     // PV conservatism: if accuracy score is low, discount pvForecast to avoid over-optimistic planning.
-    // Discount kicks in below 0.80 accuracy, linear from 1.0 (at 0.80) to 0.80 (at 0).
-    // Bias-gate: the discount guards against OVER-forecast. When the measured daytime PV bias
-    // shows the forecast running LOW (relBias > 0.05), a further discount only makes the
-    // under-forecast worse — skip it. Null bias (cold start) falls back to the original discount.
-    if (pvForecast && this.learningEngine) {
+    // Simplified mode skips this — accFactor overlaps with dailyBias and intradayRatio
+    // already absorbs the real error for today's slots.
+    if (pvForecast && this.learningEngine && !simplified) {
       const pvAcc = this.learningEngine.data?.pv_accuracy_score ?? 1.0;
       const _relBias = this._computePvRelBias();
       const _underForecast = _relBias != null && _relBias > 0.05;
@@ -2589,12 +2595,12 @@ if (debug) this.log(
       cloud: _pvBiasCloud != null ? Math.round(_pvBiasCloud) : null,
       cloudFactor: _pvCloudFactor !== 1.0 ? Math.round(_pvCloudFactor * 100) / 100 : null,
       net: Math.round(_pvDailyBiasFactor * _pvAccFactor * 1000) / 1000,
+      simplified,
     });
-    // Day-level PV correction (daily-bias × accuracy-conservatism) applied to the
-    // operational forecast. The per-model accuracy chart samples raw NWP output and was
-    // therefore structurally below "Werkelijk"; _recordPvAccuracySample applies this factor
-    // (× the live intraday ratio) so the per-model curves track actual.
-    this._pvDayCorrectionFactor = _pvDailyBiasFactor * _pvAccFactor;
+    // Day-level PV correction for chart overlays. In simplified mode, accFactor is not
+    // applied (it is redundant with intradayRatio for today, and for tomorrow the daily
+    // bias alone is the best available correction).
+    this._pvDayCorrectionFactor = simplified ? _pvDailyBiasFactor : _pvDailyBiasFactor * _pvAccFactor;
 
     // Intraday PV scaling: correct today's remaining forecast from actual production.
     // Uses pv_predictions already tracked by learning engine — no new API calls.
@@ -2617,11 +2623,10 @@ if (debug) this.log(
         const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
 
         // p.predicted is the pre-bias day-start forecast; pvForecast here is post-bias.
-        // ratio_needed = actual / post_bias = (pre_bias × meanRatio) / (pre_bias × biasCorrFactor)
-        //              = meanRatio / biasCorrFactor
-        // Example: actual=3000W, pre-bias=2000W, biasCorrFactor=0.826 →
-        //   meanRatio=1.5, post_bias=1652W, corrected=1.5/0.826=1.816 → 1652×1.816=2999W ✓
-        const biasCorrFactor = _pvDailyBiasFactor * _pvAccFactor;
+        // In simplified mode, today's slots have no dailyBias/accFactor applied, so
+        // biasCorrFactor=1 and meanRatio passes through directly (actual/pre_bias).
+        // In legacy mode: ratio_needed = meanRatio / biasCorrFactor to undo the bias.
+        const biasCorrFactor = simplified ? 1.0 : _pvDailyBiasFactor * _pvAccFactor;
         const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
 
         // Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
@@ -2666,6 +2671,23 @@ if (debug) this.log(
         } else {
           this.log(`[PV intraday] ${todayPreds.length} samples, meanRatio=${meanRatio.toFixed(2)} corrected=${correctedMeanRatio.toFixed(2)} cv=${cv.toFixed(2)} → ratio=${ratio.toFixed(2)} within 10% threshold, no scaling`);
         }
+      }
+    }
+
+    // Shadow-run: when simplified is OFF, log what the simplified path would produce
+    // vs legacy so the delta can be monitored before switching.
+    if (pvForecast && !simplified && (_pvDailyBiasFactor !== 1.0 || _pvAccFactor !== 1.0)) {
+      const todayNL = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const todayTotalLegacy = pvForecast.filter(s =>
+        new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === todayNL &&
+        new Date(s.timestamp) > now
+      ).reduce((s, sl) => s + sl.pvPowerW, 0);
+      const netLegacy = _pvDailyBiasFactor * _pvAccFactor;
+      const netSimplified = 1.0; // simplified skips both for today
+      if (netLegacy !== 1.0) {
+        const todayTotalSimpl = Math.round(todayTotalLegacy / netLegacy);
+        const deltaKwh = (todayTotalSimpl - todayTotalLegacy) * 0.25 / 1000;
+        this.log(`[PV simplified shadow] today-future: legacy=${todayTotalLegacy}W simplified=${todayTotalSimpl}W Δ=${deltaKwh >= 0 ? '+' : ''}${deltaKwh.toFixed(2)}kWh (intradayRatio handles correction instead)`);
       }
     }
 
@@ -4691,11 +4713,9 @@ if (debug) this.log(
   }
 
   /**
-   * Day-start PV forecast scaled by the same corrections the operational forecast and the
-   * OM/SAT chart overlays get (daily-bias × accFactor for all slots, × intraday ratio for
-   * today), so every PV-chart comparison line is on the same footing. Returns a COPY — the
-   * original `_pvDayStartForecast` stays raw because it's the reference `predictedW` for the
-   * intraday-ratio calculation; correcting it in place would feed the correction into itself.
+   * Day-start PV forecast scaled by the same corrections the chart overlays get
+   * (_pvDayCorrectionFactor × intraday ratio for today, _pvDayCorrectionFactor for
+   * tomorrow). Returns a COPY — the original stays raw as the intraday-ratio reference.
    */
   _correctedDayStartForChart() {
     const src = this._pvDayStartForecast;
