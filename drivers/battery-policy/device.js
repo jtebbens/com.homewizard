@@ -3118,9 +3118,6 @@ if (debug) this.log(
       // Use mapped hwModes (not raw DP actions) so mapper overrides like standby→to_full
       // are counted correctly. Filter: hwModes that actually charge the battery from PV.
       if (pvForecast && consumptionWPerSlot) {
-        const _psSlotH = planningSchedule.length > 1
-          ? (new Date(planningSchedule[1].timestamp).getTime() - new Date(planningSchedule[0].timestamp).getTime()) / 3_600_000
-          : slotMs / 3_600_000;
         // Split surplus + DP-projected peak SoC by Amsterdam calendar day (today vs tomorrow).
         // socMax comes straight from the DP schedule (no re-sim) so the UI never diverges from
         // what the optimizer actually plans.
@@ -3128,11 +3125,13 @@ if (debug) this.log(
         const todayNL  = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         let netPvTodayKwh = 0, netPvTomorrowKwh = 0;
         let socMaxToday = soc, socMaxTomorrow = null;
-        for (const ps of planningSchedule) {
+        for (let i = 0; i < planningSchedule.length; i++) {
+          const ps = planningSchedule[i];
           const isToday = _nlDate(ps.timestamp) === todayNL;
           const hwm = ps.hwMode;
           if (hwm === 'zero_charge_only' || hwm === 'pv_trickle' || hwm === 'to_full') {
-            const sv = Math.min(maxChargePowerW, Math.max(0, (ps.pvW ?? 0) - (ps.consumptionW ?? 0))) * _psSlotH / 1000;
+            const nextSoc = planningSchedule[i + 1]?.socProjected ?? ps.socProjected;
+            const sv = Math.max(0, nextSoc - ps.socProjected) / 100 * capacityKwh;
             if (isToday) netPvTodayKwh += sv; else netPvTomorrowKwh += sv;
           }
           if (ps.socProjected != null) {
