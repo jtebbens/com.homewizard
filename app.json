@@ -4643,6 +4643,23 @@
                 "when": "pv_estimation_enabled",
                 "is": true
               }
+            },
+            {
+              "id": "pv_weathertype_bias",
+              "type": "checkbox",
+              "label": {
+                "en": "Weather-type PV correction",
+                "nl": "Weertype PV-correctie"
+              },
+              "hint": {
+                "en": "Adjust the PV forecast up or down based on weather type (clear/overcast/mixed). Clear days typically produce more than average yield factors predict; overcast days less. Learned automatically from daily actual-vs-forecast ratios per weather class.",
+                "nl": "Pas de PV-voorspelling aan op basis van weertype (helder/bewolkt/wisselend). Heldere dagen produceren doorgaans meer dan de gemiddelde opbrengstfactoren voorspellen; bewolkte dagen minder. Automatisch geleerd uit dagelijkse werkelijk-vs-voorspelling-ratio's per weercategorie."
+              },
+              "value": true,
+              "visible": {
+                "when": "pv_estimation_enabled",
+                "is": true
+              }
             }
           ]
         },
