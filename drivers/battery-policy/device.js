@@ -1160,6 +1160,10 @@ if (debug) this.log(
       this.weatherForecaster.pvCapacityW = devSettings.pv_capacity_w || 0;
       this.weatherData = await this.weatherForecaster.fetchForecast(latitude, longitude, pvTilt, pvAzimuth);
 
+      if (this.learningEngine) {
+        await this.learningEngine.checkPanelGeometry(pvTilt, pvAzimuth);
+      }
+
       // Buienradar: 5-min precipitation radar for next 2 hours (fire-and-forget, non-critical)
       this.weatherForecaster.fetchBuienradar(latitude, longitude)
         .then(data => {
