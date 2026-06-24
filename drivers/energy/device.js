@@ -105,7 +105,9 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
 
     this.agent = new http.Agent({
       keepAlive: true,
-      keepAliveMsecs: 10000
+      keepAliveMsecs: 10000,
+      maxSockets: 2,
+      maxFreeSockets: 1,
     });
 
     // Get effective URL (manual IP overrides discovery)

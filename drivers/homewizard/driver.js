@@ -214,7 +214,9 @@ class HomeWizardDriver extends Homey.Driver {
       const url = `http://${device.settings.homewizard_ip}/${device.settings.homewizard_pass}/get-status/`;
 
       try {
-        const json = await fetch(url).then((res) => res.json());
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const json = await fetch(url, { signal: controller.signal }).then((res) => res.json()).finally(() => clearTimeout(timer));
 
         this.log(`Calling ${url}`);
 

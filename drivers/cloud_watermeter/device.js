@@ -8,7 +8,15 @@ const TSDB_URL = 'https://tsdb-reader.homewizard.com';
 const TOKEN_REFRESH_MARGIN = 60; // seconds
 const MAX_RETRY_ATTEMPTS = 5;
 const INITIAL_RETRY_DELAY = 30000; // 30 seconds
+const FETCH_TIMEOUT_MS = 10000;
 const debug = false
+
+function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
 
 module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
 
@@ -123,13 +131,12 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
     const credentials = Buffer.from(`${this.username}:${this.password}`).toString('base64');
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${credentials}`,
           'User-Agent': 'HomeWizardHomey/1.0',
         },
-        timeout: 10000,
       });
 
       if (!response.ok) {
@@ -189,7 +196,7 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
           if (debug) this.log(`Fetching water data from TSDB...`);
         }
 
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -197,7 +204,6 @@ module.exports = class HomeWizardCloudWatermeterDevice extends Homey.Device {
             'User-Agent': 'HomeWizardHomey/1.0',
           },
           body: JSON.stringify(payload),
-          timeout: 10000,
         });
 
         if (!response.ok) {

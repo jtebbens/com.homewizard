@@ -8,6 +8,14 @@ const HOMES_API_URL = 'https://homes.api.homewizard.com';
 const GRAPHQL_URL = 'https://api.homewizard.energy/v1/graphql';
 const TSDB_URL = 'https://tsdb-reader.homewizard.com';
 const TOKEN_REFRESH_MARGIN = 60; // seconds before expiry to refresh
+const FETCH_TIMEOUT_MS = 10000;
+
+function fetchWithTimeout(url, options = {}, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(timer));
+}
 
 module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
 
@@ -27,13 +35,12 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
     const credentials = Buffer.from(`${username}:${password}`).toString('base64');
     
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${credentials}`,
           'User-Agent': 'HomeWizardHomey/1.0',
         },
-        timeout: 10000,
       });
 
       if (!response.ok) {
@@ -61,14 +68,13 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
     const url = `${HOMES_API_URL}/locations`;
     
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'User-Agent': 'HomeWizardHomey/1.0',
         },
-        timeout: 10000,
       });
 
       if (!response.ok) {
@@ -123,7 +129,7 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
    */
   async callGraphQL(token, payload) {
     try {
-      const response = await fetch(GRAPHQL_URL, {
+      const response = await fetchWithTimeout(GRAPHQL_URL, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -131,7 +137,6 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
           'User-Agent': 'HomeWizardHomey/1.0',
         },
         body: JSON.stringify(payload),
-        timeout: 10000,
       });
 
       if (!response.ok) {
@@ -174,7 +179,7 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
     };
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -182,7 +187,6 @@ module.exports = class HomeWizardCloudWatermeterDriver extends Homey.Driver {
           'User-Agent': 'HomeWizardHomey/1.0',
         },
         body: JSON.stringify(payload),
-        timeout: 10000,
       });
 
       if (!response.ok) {

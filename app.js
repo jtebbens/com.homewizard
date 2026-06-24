@@ -108,7 +108,7 @@ class HomeWizardApp extends Homey.App {
     // which runs after app onInit — an immediate snapshot reports "Devices: none".
     this._startedAt = Date.now();
     this.homey.setTimeout(() => this._writeHealthSnapshot(), 90 * 1000);
-    this.homey.setInterval(() => this._writeHealthSnapshot(), 15 * 60 * 1000);
+    this._healthInterval = this.homey.setInterval(() => this._writeHealthSnapshot(), 15 * 60 * 1000);
   }
 
   _writeHealthSnapshot() {
@@ -168,40 +168,28 @@ class HomeWizardApp extends Homey.App {
   }
 
   _setupGlobalErrorHandlers() {
-    // Track unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('💥 UNHANDLED PROMISE REJECTION:');
-      console.error('   Promise:', promise);
-      console.error('   Reason:', reason?.stack || reason);
-      
-      // Log to Homey
-      this.error('💥 Unhandled Promise Rejection:', reason?.stack || reason);
+    if (process.__hwErrorHandlersInstalled) return;
+    process.__hwErrorHandlersInstalled = true;
+
+    process.on('unhandledRejection', (reason) => {
+      console.error('💥 UNHANDLED PROMISE REJECTION:', reason?.stack || reason);
     });
 
-    // Track uncaught exceptions
     process.on('uncaughtException', (err) => {
-      console.error('💥 UNCAUGHT EXCEPTION:');
-      console.error('   Error:', err?.stack || err);
-      
-      // Log to Homey
-      this.error('💥 Uncaught Exception:', err?.stack || err);
+      console.error('💥 UNCAUGHT EXCEPTION:', err?.stack || err);
     });
 
-    // Track warning events (like MaxListenersExceededWarning)
     process.on('warning', (warning) => {
       console.warn('⚠️ PROCESS WARNING:', warning.name, warning.message);
-      console.warn('   Stack:', warning.stack);
-      
-      this.log('⚠️ Warning:', warning.name, warning.message);
     });
 
     this.log('✅ Global error handlers installed');
   }
 
   async onUninit() {
-    if (this._memInterval) {
-      clearInterval(this._memInterval);
-      this._memInterval = null;
+    if (this._healthInterval) {
+      this.homey.clearInterval(this._healthInterval);
+      this._healthInterval = null;
     }
   }
   
