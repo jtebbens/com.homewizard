@@ -2530,7 +2530,9 @@ if (debug) this.log(
         : todayAvgCloud;
       _pvBiasCloud = effectiveCloud;
       const todayKt   = this.weatherForecaster?.getTodayKt() ?? null;
-      const dailyBias = this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
+      const dailyBias = this.getSetting('pv_weathertype_bias') === false
+        ? 1.0
+        : this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
       // On overcast days (>75% cloud), upward bias adds planning uncertainty: forecast errors
       // inflate remaining PV estimates and cause the DP to stop grid-charging prematurely.
       // Linearly reduce any upward bias back to 1.0 between 75% and 100% cloud cover.
