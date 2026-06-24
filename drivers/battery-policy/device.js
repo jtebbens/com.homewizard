@@ -96,6 +96,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._todayGridImportKwh = 0;     // accumulated grid import today (kWh)
     this._todayConsumptionKwh = 0;    // accumulated house consumption today (kWh)
     this._lastSelfSuffWrite = 0;      // throttle: last settings write for today_self_sufficiency
+    this._morningPlannedProfit = null; // first DP profit of the day, captured after sunrise
     this._modeHistory = this.homey.settings.get(`batt_mode_hist_${this.getData().id}`) || [];
     this._isPredictiveMode = false;
     this._policyEnabledBeforePredictive = null; // saved state for auto-restore when predictive ends
@@ -769,6 +770,10 @@ if (debug) this.log(
         // ------------------------------------------------------
         const POLL_H = 15 / 3600; // poll interval (15s) expressed in hours
         const todayNL = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
+        if (this._todayDate && this._todayDate !== todayNL) {
+          this._captureDailyProfit(this._todayDate);
+          this._morningPlannedProfit = null;
+        }
         if (this._todayDate !== todayNL) {
           this._todayDate = todayNL;
           this._todayGridImportKwh = 0;
@@ -3014,6 +3019,13 @@ if (debug) this.log(
       const _profit = this.optimizationEngine._schedule?.todayProjectedProfit ?? this.optimizationEngine._schedule?.projectedProfit ?? 0;
       this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
       this.setCapabilityValue('policy_profit_eur', parseFloat(_profit.toFixed(2))).catch(this.error);
+      if (this._morningPlannedProfit == null) {
+        const h = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+        if (h >= 6 && h <= 10) {
+          this._morningPlannedProfit = parseFloat(_profit.toFixed(3));
+          this.log(`📅 Morning planned profit captured: €${this._morningPlannedProfit.toFixed(3)}`);
+        }
+      }
       this.setCapabilityValue('plan_summary', `${_cnt.charge}↑ ${_cnt.discharge}↓ ${_cnt.preserve}=`).catch(this.error);
     }
 
@@ -4817,6 +4829,44 @@ if (debug) this.log(
 
   async _buildModeChartBody() {
     this._modeChartBody = ChartRenderer.buildModeChartBody(this._modeHistory);
+  }
+
+  _computeDailyProfit(dateStr) {
+    const hist = this.homey.settings.get('policy_mode_history') || [];
+    let revenue = 0, cost = 0, slots = 0;
+    for (const h of hist) {
+      const d = new Date(h.ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      if (d !== dateStr || h.price == null || h.battW == null) continue;
+      slots++;
+      const kwh = Math.abs(h.battW) * (15 / 60) / 1000;
+      if (h.battW < -10) revenue += kwh * h.price;
+      else if (h.battW > 10) cost += kwh * h.price;
+    }
+    return { revenue: +revenue.toFixed(3), cost: +cost.toFixed(3), profit: +(revenue - cost).toFixed(3), slots };
+  }
+
+  _captureDailyProfit(dateStr) {
+    try {
+      const actual = this._computeDailyProfit(dateStr);
+      const planned = this._morningPlannedProfit;
+      const entry = {
+        date: dateStr,
+        planned: planned ?? null,
+        actual: actual.profit,
+        revenue: actual.revenue,
+        cost: actual.cost,
+        gap: planned != null ? +(actual.profit - planned).toFixed(3) : null,
+        slots: actual.slots,
+      };
+      const history = this.homey.settings.get('policy_daily_profit') || [];
+      history.push(entry);
+      if (history.length > 30) history.splice(0, history.length - 30);
+      this._queueSettingsPersist('policy_daily_profit', history);
+      const gapStr = entry.gap != null ? ` gap €${entry.gap > 0 ? '+' : ''}${entry.gap.toFixed(3)}` : '';
+      this.log(`📅 Daily profit ${dateStr}: planned €${(planned ?? 0).toFixed(3)} actual €${actual.profit.toFixed(3)}${gapStr} (${actual.slots} slots, rev €${actual.revenue.toFixed(3)} cost €${actual.cost.toFixed(3)})`);
+    } catch (e) {
+      this.error('Daily profit capture failed:', e);
+    }
   }
 
   _recordModeHistory(mode) {
