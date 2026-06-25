@@ -1257,9 +1257,14 @@ if (debug) this.log(
             let pvPowerW;
             if (learnedSlots >= 10 && yfs) {
               const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
-              const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-              const raw = Math.round(h.radiationWm2 * yf);
-              pvPowerW  = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
+              if (yf4.length > 0) {
+                const yf  = yf4.reduce((a, b) => a + b, 0) / yf4.length;
+                const raw = Math.round(h.radiationWm2 * yf);
+                pvPowerW  = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
+              } else {
+                // No learned sub-slots for this hour (e.g. early sunrise) — PR fallback
+                pvPowerW  = pvCapW > 0 ? Math.min(pvCapW, Math.round(pvCapW * PR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2))) : 0;
+              }
             } else {
               pvPowerW  = pvCapW > 0 ? Math.min(pvCapW, Math.round(pvCapW * PR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2))) : 0;
             }
@@ -2274,10 +2279,13 @@ if (debug) this.log(
           // 04:15–04:59 carry the real production — causing forecast to start 1h late.
           const s0 = d.getUTCHours() * 4;
           const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
-          const yf  = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-          const rawPvW = learnedSlots >= 10
-            ? Math.round(h.radiationWm2 * yf)
-            : pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2)) : 0;
+          let rawPvW;
+          if (learnedSlots >= 10 && yf4.length > 0) {
+            const yf = yf4.reduce((a, b) => a + b, 0) / yf4.length;
+            rawPvW = Math.round(h.radiationWm2 * yf);
+          } else {
+            rawPvW = pvCapacityW > 0 ? Math.round(pvCapacityW * pvPR * (h.radiationWm2 / 1000) * _pvTempFactor(h.temp, h.radiationWm2)) : 0;
+          }
 
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
@@ -2303,9 +2311,8 @@ if (debug) this.log(
               const d = h.time instanceof Date ? h.time : new Date(h.time);
               const s0 = d.getUTCHours() * 4;
               const yf4 = [yfs[s0], yfs[s0+1], yfs[s0+2], yfs[s0+3]].filter(v => v != null && v > 0);
-              const yf = yf4.length > 0 ? yf4.reduce((a, b) => a + b, 0) / yf4.length : 0;
-              const pvW = learnedSlots >= 10 && yf > 0
-                ? Math.round(rad * yf)
+              const pvW = (learnedSlots >= 10 && yf4.length > 0)
+                ? Math.round(rad * (yf4.reduce((a, b) => a + b, 0) / yf4.length))
                 : Math.round(pvCapacityW * pvPR * (rad / 1000));
               return { timestamp: d.toISOString(), pvPowerW: Math.max(0, pvCapacityW > 0 ? Math.min(pvW, pvCapacityW) : pvW) };
             })
