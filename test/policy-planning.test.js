@@ -213,6 +213,85 @@ test('planning schedule uses actual battery capacity for SoC projection', () => 
     `Expected ~30% SoC after 1h @ 1600W on 5.376kWh, got ${schedule[1].socProjected}%`);
 });
 
+test('planning maps trickle to standby when PV < consumption (no surplus)', () => {
+  const engine = makeEngine();
+  const mapped = engine._mapActionToHwModeForPlanning('trickle', {
+    price: 0.328,
+    soc: 0,
+    pvW: 151,
+    consumptionW: 508,
+    tariffType: 'dynamic',
+    userPolicyMode: 'balanced',
+    maxChargePrice: 0.12,
+    minDischargePrice: 0.22,
+    minSoc: 0,
+    maxSoc: 100,
+    futurePrices: [],
+    battChargePowerW: 800,
+  });
+  assert.strictEqual(mapped.hwMode, 'standby',
+    `Trickle without surplus (151W < 508W) must be standby, got ${mapped.hwMode} (${mapped.reason})`);
+});
+
+test('planning maps trickle to pv_trickle when PV > consumption (real surplus)', () => {
+  const engine = makeEngine();
+  const mapped = engine._mapActionToHwModeForPlanning('trickle', {
+    price: 0.328,
+    soc: 0,
+    pvW: 600,
+    consumptionW: 400,
+    tariffType: 'dynamic',
+    userPolicyMode: 'balanced',
+    maxChargePrice: 0.12,
+    minDischargePrice: 0.22,
+    minSoc: 0,
+    maxSoc: 100,
+    futurePrices: [],
+    battChargePowerW: 800,
+  });
+  assert.strictEqual(mapped.hwMode, 'pv_trickle',
+    `Trickle with surplus (600W > 400W) must be pv_trickle, got ${mapped.hwMode} (${mapped.reason})`);
+});
+
+test('runtime maps trickle to standby when no net PV surplus', () => {
+  const engine = makeEngine();
+  const mode = engine._mapPolicyToHwMode('trickle', {
+    policyMode: 'balanced',
+    dynamicMaxChargePrice: 0.291,
+    battery: { stateOfCharge: 0, maxChargePowerW: 800 },
+    tariff: { currentPrice: 0.328 },
+    p1: {
+      resolved_gridPower: 357,
+      battery_power: 0,
+      pv_power_estimated: 151,
+      avg_consumption_w: 508,
+    },
+    weather: {},
+  });
+  assert.strictEqual(mode, 'standby',
+    `Trickle without surplus must be standby, got ${mode}`);
+});
+
+test('runtime maps trickle to zero_charge_only when PV surplus exists', () => {
+  const engine = makeEngine();
+  engine._pvStickyUntil = Date.now() + 300_000;
+  const mode = engine._mapPolicyToHwMode('trickle', {
+    policyMode: 'balanced',
+    dynamicMaxChargePrice: 0.291,
+    battery: { stateOfCharge: 10, maxChargePowerW: 800 },
+    tariff: { currentPrice: 0.328 },
+    p1: {
+      resolved_gridPower: -100,
+      battery_power: 0,
+      pv_power_estimated: 600,
+      avg_consumption_w: 400,
+    },
+    weather: {},
+  });
+  assert.strictEqual(mode, 'zero_charge_only',
+    `Trickle with surplus must be zero_charge_only, got ${mode}`);
+});
+
 test('dynamic charge ceiling tracks the known future peak, not the min-discharge break-even', () => {
   // Regression: a known day-ahead evening peak (€0.36) makes charging at €0.18 profitable
   // (0.36 × RTE − margin ≈ €0.257 break-even). The old maxByDischarge clamp pinned the
