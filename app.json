@@ -4765,19 +4765,6 @@
               "value": ""
             },
             {
-              "id": "satellite_api_key",
-              "type": "text",
-              "label": {
-                "en": "Satellite API key",
-                "nl": "Satelliet API-sleutel"
-              },
-              "hint": {
-                "en": "Secret key for X-PV-Token authentication header.",
-                "nl": "Geheime sleutel voor X-PV-Token authenticatie header."
-              },
-              "value": ""
-            },
-            {
               "id": "satellite_dp_active",
               "type": "checkbox",
               "label": {

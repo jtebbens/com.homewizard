@@ -66,7 +66,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     const satUrl = this.getSetting('satellite_endpoint_url');
     if (satUrl) {
-      this.weatherForecaster.startSatelliteLoop(satUrl, this.getSetting('satellite_api_key') || '', () => this._onSatelliteOverlay());
+      this.weatherForecaster.startSatelliteLoop(satUrl, '', () => this._onSatelliteOverlay());
     }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
@@ -4326,11 +4326,11 @@ if (debug) this.log(
       this._solcastProvider?.invalidateCache();
     }
 
-    if (changedKeys.includes('satellite_endpoint_url') || changedKeys.includes('satellite_api_key')) {
+    if (changedKeys.includes('satellite_endpoint_url')) {
       this.weatherForecaster.stopSatelliteLoop();
       const satUrl = newSettings.satellite_endpoint_url;
       if (satUrl) {
-        this.weatherForecaster.startSatelliteLoop(satUrl, newSettings.satellite_api_key || '', () => this._onSatelliteOverlay());
+        this.weatherForecaster.startSatelliteLoop(satUrl, '', () => this._onSatelliteOverlay());
       }
     }
 
