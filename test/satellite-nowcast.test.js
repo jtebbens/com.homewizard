@@ -393,22 +393,20 @@ console.log('\n_fetchSatelliteNowcast:');
 
   console.log('\nstartSatelliteLoop / stopSatelliteLoop:');
 
-  test('startSatelliteLoop sets _satUrl and _satToken', () => {
+  test('startSatelliteLoop sets _satUrl', () => {
     const wf = makeWF();
     wf.cache = { hourlyForecast: [] };
-    wf.startSatelliteLoop('http://example.com/sat', 'secret123');
+    wf.startSatelliteLoop('http://example.com/sat', '', () => {});
     assert.strictEqual(wf._satUrl, 'http://example.com/sat');
-    assert.strictEqual(wf._satToken, 'secret123');
     wf.stopSatelliteLoop();
   });
 
   test('stopSatelliteLoop clears state', () => {
     const wf = makeWF();
     wf.cache = { hourlyForecast: [] };
-    wf.startSatelliteLoop('http://example.com/sat', 'tok');
+    wf.startSatelliteLoop('http://example.com/sat', '', () => {});
     wf.stopSatelliteLoop();
     assert.strictEqual(wf._satUrl, null);
-    assert.strictEqual(wf._satToken, null);
     assert.strictEqual(wf._satInterval, null);
     assert.strictEqual(wf._satFetching, false);
   });
@@ -416,11 +414,10 @@ console.log('\n_fetchSatelliteNowcast:');
   test('double-start clears previous interval', () => {
     const wf = makeWF();
     wf.cache = { hourlyForecast: [] };
-    wf.startSatelliteLoop('http://a', 'tok1');
+    wf.startSatelliteLoop('http://a', '', () => {});
     const int1 = wf._satInterval;
-    wf.startSatelliteLoop('http://b', 'tok2');
+    wf.startSatelliteLoop('http://b', '', () => {});
     assert.strictEqual(wf._satUrl, 'http://b');
-    assert.strictEqual(wf._satToken, 'tok2');
     // Old interval should have been cleared (new one is different)
     assert.notStrictEqual(wf._satInterval, int1);
     wf.stopSatelliteLoop();
