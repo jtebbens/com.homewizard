@@ -389,6 +389,56 @@ console.log('\n_fetchSatelliteNowcast:');
     assert.strictEqual(WeatherForecaster.getSatYieldFactor(23), 0);
   });
 
+  // ── getSat15minCurve / getNextSatDip ──
+
+  console.log('\ngetSat15minCurve / getNextSatDip:');
+
+  test('getSat15minCurve returns ordered future buckets with panelW', () => {
+    const wf = makeWF();
+    // Use a UTC hour with a known yield factor (10 UTC = YF 3.640)
+    const base = new Date('2026-06-18T10:00:00Z').getTime();
+    const buckets = {};
+    for (let i = 0; i < 8; i++) buckets[String(base + i * 900_000)] = 100;
+    // Add one past bucket that should be excluded
+    buckets[String(base - 900_000)] = 999;
+    wf._satGhi15min = buckets;
+    const nowMs = base + 1; // just after base bucket start
+    const curve = wf.getSat15minCurve(nowMs, 2 * 3600_000);
+    assert.ok(curve.length >= 1, 'curve must have entries');
+    assert.ok(curve.every(e => e.ms >= Math.ceil(nowMs / 900_000) * 900_000), 'all buckets are future');
+    assert.ok(curve.every(e => typeof e.panelW === 'number' && e.panelW > 0), 'all have panelW');
+    assert.ok(!curve.some(e => e.ms === base - 900_000), 'past bucket excluded');
+  });
+
+  test('getNextSatDip detects dip and returns null on all-clear', () => {
+    const wf = makeWF();
+    // YF at 10 UTC = 3.640; dipThresholdW = 0.15 * 800 = 120W → GHI must be < 33 W/m²
+    const base = new Date('2026-06-18T10:00:00Z').getTime();
+    // Pattern: clear (200 W/m²) → dip (10 W/m² × 2 buckets) → clear (200 W/m²)
+    wf._satGhi15min = {
+      [String(base)]:             200,
+      [String(base + 900_000)]:   10,  // dip start
+      [String(base + 1_800_000)]: 10,  // dip continues
+      [String(base + 2_700_000)]: 200, // clear resumes
+      [String(base + 3_600_000)]: 200,
+    };
+    const nowMs = base - 1; // just before first bucket
+    const dip = wf.getNextSatDip(nowMs, 0.15, 800);
+    assert.ok(dip !== null, 'dip detected');
+    assert.strictEqual(dip.dipStartMs, base + 900_000);
+    assert.strictEqual(dip.dipEndMs,   base + 2_700_000);
+    assert.ok(dip.minPanelW < 120, 'minPanelW below threshold');
+    assert.ok(dip.leadMin >= 0, 'leadMin non-negative');
+
+    // All-clear: all GHI = 200 → no dip
+    wf._satGhi15min = {
+      [String(base)]:             200,
+      [String(base + 900_000)]:   200,
+      [String(base + 1_800_000)]: 200,
+    };
+    assert.strictEqual(wf.getNextSatDip(nowMs, 0.15, 800), null);
+  });
+
   // ── startSatelliteLoop / stopSatelliteLoop ──
 
   console.log('\nstartSatelliteLoop / stopSatelliteLoop:');

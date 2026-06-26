@@ -2792,6 +2792,8 @@ if (debug) this.log(
         return { ...slot, pvPowerW: satPvW, spreadFrac: 0 };
       });
       if (_satCount > 0) this.log(`[SAT DP] Override ${_satCount} slots (0-2h) with satellite PV`);
+      const _satDip = this.weatherForecaster?.getNextSatDip?.(Date.now(), 0.15, maxChargePowerW);
+      if (_satDip) this.log(`[SAT DIP] dip in ${_satDip.leadMin}min @ ${new Date(_satDip.dipStartMs).toISOString()} → ${new Date(_satDip.dipEndMs).toISOString()} min=${_satDip.minPanelW}W`);
     }
 
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
