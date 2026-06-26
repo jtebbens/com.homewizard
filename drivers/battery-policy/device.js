@@ -3590,6 +3590,10 @@ if (debug) this.log(
     // instead of the hourly slot, so the sat line has no gaps SC lacks. gtiOverGhi
     // from the containing hour slot keeps the GHI→panel conversion identical.
     const satW = this.weatherForecaster?.getSatPanelWAt?.(bucketMs) ?? null;
+    const satGhiWm2 = this.weatherForecaster?.getSatGhiAt?.(bucketMs) ?? null;
+    if (satGhiWm2 != null && satGhiWm2 > 0 && actualW != null) {
+      this.learningEngine.recordSatYield(new Date(bucketMs).getUTCHours(), satGhiWm2, actualW);
+    }
 
     // Corrected display values for the accuracy chart only — routed through the shared
     // _correctOverlayW so the diag chart and the webcam overlay cannot diverge. This is the

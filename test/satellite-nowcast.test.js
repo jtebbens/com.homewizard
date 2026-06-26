@@ -473,6 +473,54 @@ console.log('\n_fetchSatelliteNowcast:');
     wf.stopSatelliteLoop();
   });
 
+  // ── SAT yield factor learning ──
+
+  console.log('\nSAT yield factor learning:');
+
+  test('recordSatYield → getSatYieldFactor EMA convergence', () => {
+    const LearningEngine = require('../lib/learning-engine');
+    const le = new LearningEngine({ log: () => {} }, {});
+    le.data = {};
+
+    // First sample: alpha=1.0, so ema == yf exactly
+    le.recordSatYield(10, 500, 1500); // yf = 1500/500 = 3.0
+    const v1 = le.getSatYieldFactor(10);
+    assert.ok(Math.abs(v1 - 3.0) < 0.001, `first sample: expected 3.0 got ${v1}`);
+
+    // Second sample: alpha=0.10, ema = 0.1*2.0 + 0.9*3.0 = 2.9
+    le.recordSatYield(10, 500, 1000); // yf = 1000/500 = 2.0
+    const v2 = le.getSatYieldFactor(10);
+    assert.ok(Math.abs(v2 - 2.9) < 0.001, `second sample: expected 2.9 got ${v2}`);
+
+    // Third sample
+    le.recordSatYield(10, 500, 1450); // yf = 2.9
+    const v3 = le.getSatYieldFactor(10);
+    assert.ok(v3 > 2.88 && v3 < 2.92, `third sample in range: ${v3}`);
+
+    // Different hour: independent
+    assert.strictEqual(le.getSatYieldFactor(11), null);
+  });
+
+  test('getSatPanelWAt falls back to hardcoded when no learned YF', () => {
+    const { SAT_YIELD_FACTORS } = (() => {
+      // Re-derive the expected value using the same hardcoded table
+      const wf = makeWF({ learningEngine: { getRadiationBiasFactor: () => 1.0, getSatYieldFactor: () => null } });
+      return { SAT_YIELD_FACTORS: wf };
+    })();
+    // Bucket at UTC 10:00 with GHI=400
+    const wfNoLE = makeWF({ learningEngine: { getRadiationBiasFactor: () => 1.0, getSatYieldFactor: () => null } });
+    const wfLearn = makeWF({ learningEngine: { getRadiationBiasFactor: () => 1.0, getSatYieldFactor: (h) => h === 10 ? 3.5 : null } });
+    const bucketMs = new Date('2026-06-18T10:00:00Z').getTime();
+    wfNoLE._satGhi15min = { [bucketMs]: 400 };
+    wfLearn._satGhi15min = { [bucketMs]: 400 };
+    const noLeResult = wfNoLE.getSatPanelWAt(bucketMs);
+    const leResult   = wfLearn.getSatPanelWAt(bucketMs);
+    // no-LE uses hardcoded SAT_YIELD_FACTORS[10] = 3.640 → 400*3.640 = 1456
+    assert.ok(noLeResult != null && noLeResult > 1400 && noLeResult < 1500, `hardcoded fallback: ${noLeResult}`);
+    // learned LE uses 3.5 → 400*3.5 = 1400
+    assert.strictEqual(leResult, 1400);
+  });
+
   // ── Summary ──
 
   console.log(`\n${passed} passed, ${failed} failed`);
