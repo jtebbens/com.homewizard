@@ -1213,6 +1213,171 @@ testInvariant('16b:priciest-first-with-reserve-floor',
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 16c
+// "Reorder budget uses DP terminal SoC, not minSoc, when wEnd = N"
+//
+// When no strong-PV slot or charge slot terminates the reorder window before the
+// horizon end, wEnd = N. The bug (pre-fix): rawEndG collapsed to minSocG, making
+// the budget windowStartSocG − minSocG too large. Extra cheap-afternoon slots
+// were pulled in (ranked above even cheaper night slots), starting discharge
+// earlier than the DP intended.
+//
+// Live miss 2026-06-26: discharge started at 16:00 (€0.246) instead of 19:00
+// (€0.381). wEnd reached N because tomorrow's pvCoverage never hit pvStrongCoverage
+// (cloudy or no PV data); rawEndG = minSocG → budget 0.90 → 4+ slots → 16:00 added.
+//
+// Structure: [cheap-ish afternoon (above minDischarge) | expensive evening | cheap night]
+// Zero PV everywhere → wEnd = N guaranteed.
+// Invariant: no discharged afternoon slot may hold a pricier undischarged evening slot.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 16c — reorder-wend-n-no-extra-discharge\n');
+
+testInvariant('16c:reorder-wend-n-no-extra-discharge',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.0, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 70, max: 100, noNaN: true, noDefaultInfinity: true }),
+    }),
+    // 2–4 cheap-ish afternoon slots: above minDischargePrice but below the evening peaks
+    fc.array(fc.double({ min: 0.230, max: 0.290, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 2, maxLength: 4 }),
+  ),
+  ([settings, base, afternoonPrices]) => {
+    const minDischargePrice = 0.220;
+
+    // Structure: [afternoon (€0.23–0.29) | evening peak (€0.36/0.41/0.46) | cheap night (€0.14)]
+    // Zero PV throughout → pvCoverage = 0 everywhere → wEnd = N in the reorder block.
+    const eveningPrices = [0.360, 0.410, 0.460];
+    const nightPrices   = Array(18).fill(0.140); // below minDischargePrice → ineligible
+    const priceValues   = [...afternoonPrices, ...eveningPrices, ...nightPrices];
+    const prices        = makePriceSlots(priceValues);
+    const pvForecast    = makePvForecast(prices, priceValues.map(() => 0)); // zero PV → wEnd = N
+
+    const eng = runCompute(settings, {
+      ...base, prices, pvForecast, minDischargePrice,
+      pvKwhTomorrow: 0,
+      refillConfidence: 1.0, // no reserve floor → holding pricier slot can only be the bug
+    });
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+
+    const aLen = afternoonPrices.length;
+    // Skip if a charge slot appears in the afternoon block (different reorder path)
+    for (let t = 0; t < aLen; t++) if (slots[t].action === 'charge') return true;
+
+    const PRICE_EPS = 0.005;
+    // For each discharged afternoon slot, every evening slot with a strictly higher price
+    // must also discharge. Violating this means a cheaper afternoon slot displaced a pricier
+    // evening slot from the discharge set — the wEnd=N budget over-expansion bug.
+    for (let t = 0; t < aLen; t++) {
+      if (slots[t].action !== 'discharge') continue;
+      for (let e = 0; e < eveningPrices.length; e++) {
+        if (eveningPrices[e] <= afternoonPrices[t] + PRICE_EPS) continue;
+        if (slots[aLen + e].action !== 'discharge') return false; // pricier evening slot stranded
+      }
+    }
+    return true;
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 16d
+// "Reorder must not rollback when in-window trickle slot inflates terminal SoC"
+//
+// wEnd < N (strong-PV slot terminates the discharge window before horizon end).
+// The last slot before wEnd is a trickle slot (pvCoverage ∈ (0, pvStrong)),
+// action=preserve, price below minDischarge (so NOT in eligible set).
+//
+// Old bug: after priciest-first budget assigns evening slots and skips cheap early
+// slots, the forward simulation processes the trickle slot. Battery entered the
+// trickle slot at dpEndTargetG (floor), trickle adds pvCov×chargeDelta GRID units
+// → socGw = dpEndTargetG + trickle_delta. Rollback check fired on
+// |socGw - dpEndTargetG| > 1 → reverted to original DP order → cheap early slots
+// stayed as discharge, priciest evening slots missed (2026-06-26: 16:00€0.246
+// discharged, 21:00€0.495 stranded).
+//
+// Fix: rollback only on socGw < dpEndSocG - 1 (over-discharge). Higher socGw from
+// in-window PV/trickle is correct and must not trigger rollback.
+//
+// Invariant: for every discharged slot, all eligible slots in the window with
+// strictly higher price must also be discharged.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 16d — trickle-in-window-no-rollback\n');
+
+testInvariant('16d:trickle-in-window-no-rollback',
+  fc.tuple(
+    settingsArb,
+    fc.record({
+      capacityKwh:   fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+      maxChargeW:    fc.integer({ min: 400, max: 3000 }),
+      maxDischargeW: fc.integer({ min: 400, max: 3000 }),
+      currentSoc:    fc.double({ min: 70, max: 95, noNaN: true, noDefaultInfinity: true }),
+    }),
+    // 2–3 cheap early slots (eligible, cheaper than evening)
+    fc.array(fc.double({ min: 0.230, max: 0.290, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 2, maxLength: 3 }),
+    // 2–4 pricey evening slots
+    fc.array(fc.double({ min: 0.350, max: 0.580, noNaN: true, noDefaultInfinity: true }),
+             { minLength: 2, maxLength: 4 }),
+    // trickle pvCoverage: strictly between 0 and pvStrongCoverage (400/maxChargeW)
+    fc.integer({ min: 10, max: 35 }), // percent of pvStrongCoverage to use as pvCov fraction
+  ),
+  ([settings, base, cheapPrices, priceyPrices, tricklePct]) => {
+    const { maxChargeW } = base;
+    const minDischargePrice = 0.220;
+    const pvStrongW = 400; // fixed per optimizer constant
+    // trickle pvCov is below pvStrong threshold → slot stays in window, action = trickle not discharge
+    const tricklePvW = Math.floor((pvStrongW * tricklePct) / 100); // 0 < tricklePvW < pvStrongW
+
+    // Structure: [cheap | pricey | trickle (pvCov < pvStrong, price below min) | strong-PV (terminates window) | tail]
+    const tricklePrice = 0.10; // below minDischargePrice → not in eligible set
+    const pvOnPrice    = 0.10;
+    const tailPrice    = 0.10;
+    const windowPrices = [...cheapPrices, ...priceyPrices, tricklePrice];
+    const priceValues  = [...windowPrices, pvOnPrice, tailPrice, tailPrice];
+    const prices       = makePriceSlots(priceValues);
+
+    const wLen = windowPrices.length; // window slots [0, wLen)
+    const pvWValues = [
+      ...windowPrices.map((_, i) => (i === wLen - 1 ? tricklePvW : 0)), // last window slot = trickle
+      maxChargeW + 800, // strong PV → terminates window (wEnd = wLen)
+      0, 0,
+    ];
+    const pvForecast = makePvForecast(prices, pvWValues);
+    const consumptionW = priceValues.map(() => 500);
+
+    const eng = runCompute(settings, {
+      ...base, prices, pvForecast, consumptionW, minDischargePrice,
+      refillConfidence: 1.0,
+    });
+    if (!eng._schedule) return true;
+    const slots = eng._schedule.slots;
+
+    // Skip if any charge slot in window (separate code path)
+    for (let t = 0; t < wLen; t++) if (slots[t].action === 'charge') return true;
+
+    const PRICE_EPS = 0.005;
+    // Economic dominance: if a slot is discharged, every eligible slot in the window
+    // with strictly higher price must also be discharged.
+    for (let t = 0; t < wLen; t++) {
+      if (slots[t].action !== 'discharge') continue;
+      if (priceValues[t] < minDischargePrice) continue;
+      for (let u = 0; u < wLen; u++) {
+        if (priceValues[u] < minDischargePrice) continue; // not eligible
+        if (priceValues[u] <= priceValues[t] + PRICE_EPS) continue; // not strictly pricier
+        if (slots[u].action !== 'discharge') return false; // cheaper slot discharged, pricier stranded
+      }
+    }
+    return true;
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INVARIANT 17
 // "Abundant tomorrow-PV waives the overnight reserve — sunset cv-noise cannot
 //  strand a high-priced discharge"
