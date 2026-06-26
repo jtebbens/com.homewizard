@@ -3439,6 +3439,18 @@ if (debug) this.log(
       this.learningEngine.updateSolarYieldFactor(new Date(), powerW, radiation);
     }
 
+    // SAT yield-factor learning: independent of forecast-accuracy gates (no 100W floor).
+    // Own bucket dedup so one sample per 15-min bucket per PV update cadence.
+    const nowMs = Date.now();
+    const satBucketMs = Math.floor(nowMs / 900_000) * 900_000;
+    if (this._lastSatYfBucket !== satBucketMs && this.weatherForecaster && this.learningEngine) {
+      const satGhiWm2 = this.weatherForecaster.getSatGhiAt?.(satBucketMs) ?? null;
+      if (satGhiWm2 != null && satGhiWm2 > 0) {
+        this._lastSatYfBucket = satBucketMs;
+        this.learningEngine.recordSatYield(new Date(satBucketMs).getUTCHours(), satGhiWm2, powerW);
+      }
+    }
+
     // Record PV forecast accuracy from live PV updates too, not only during policy runs.
     // Samples are deduplicated per 15-minute bucket.
     this._recordPvAccuracySample(new Date(), this._lastTariffInfo?.currentPrice ?? null);
@@ -3590,10 +3602,6 @@ if (debug) this.log(
     // instead of the hourly slot, so the sat line has no gaps SC lacks. gtiOverGhi
     // from the containing hour slot keeps the GHI→panel conversion identical.
     const satW = this.weatherForecaster?.getSatPanelWAt?.(bucketMs) ?? null;
-    const satGhiWm2 = this.weatherForecaster?.getSatGhiAt?.(bucketMs) ?? null;
-    if (satGhiWm2 != null && satGhiWm2 > 0 && actualW != null) {
-      this.learningEngine.recordSatYield(new Date(bucketMs).getUTCHours(), satGhiWm2, actualW);
-    }
 
     // Corrected display values for the accuracy chart only — routed through the shared
     // _correctOverlayW so the diag chart and the webcam overlay cannot diverge. This is the
