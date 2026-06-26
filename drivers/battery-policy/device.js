@@ -3168,22 +3168,17 @@ if (debug) this.log(
         const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
         const _existing   = _preExistingPvForecast ?? [{}, {}];
-        const _nowHourNL  = parseInt(_fcNow.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
         const _pvDayCorr  = this._pvDayCorrectionFactor ?? 1.0;
-        // Past-hour base: use policy_pv_forecast_om (written once at startup, never
-        // re-scaled by DP) to avoid compounding dayCorr on successive DP runs.
+        // Display base: policy_pv_forecast_om (written once at startup, never re-scaled by
+        // DP) × dayCorr for ALL today hours. Intraday correction is DP-internal planning;
+        // applying it to display creates a step-change at nowHour (past=1.49×, future=0.73×).
         const _rawOmFc    = (this._liveState?.policy_pv_forecast_om
           ?? this.homey.settings.get('policy_pv_forecast_om')
           ?? [{}, {}]);
         const pvFcByDay   = [
           Object.fromEntries(
-            Object.entries(_existing[0] ?? {}).map(([h, w]) => {
-              if (parseInt(h, 10) < _nowHourNL) {
-                const base   = _rawOmFc[0]?.[h] ?? 0;
-                const scaled = Math.round(base * _pvDayCorr);
-                return [h, pvCapacityW > 0 ? Math.min(scaled, pvCapacityW) : scaled];
-              }
-              return [h, w];
+            Object.entries(_rawOmFc[0] ?? {}).map(([h, w]) => {
+              return [h, Math.round((w || 0) * _pvDayCorr)];
             })
           ),
           { ..._existing[1] ?? {} },
@@ -3194,7 +3189,7 @@ if (debug) this.log(
           const st    = new Date(fc.timestamp);
           const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
           const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
-          if (sIdx < 0) continue;
+          if (sIdx < 0 || sIdx === 0) continue;  // today: keep smooth OM×dayCorr display
           const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
           pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + fc.pvPowerW;
           pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
@@ -3206,7 +3201,7 @@ if (debug) this.log(
         }
         const _chartTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
         const _chartTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-        this.log(`[PV chart] DP forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (past dayCorr×${_pvDayCorr.toFixed(2)}+future), morgen ${_chartTomKwh.toFixed(1)} kWh`);
+        this.log(`[PV chart] DP forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (OM×dayCorr${_pvDayCorr.toFixed(2)}, smooth), morgen ${_chartTomKwh.toFixed(1)} kWh`);
         this._setLive('policy_pv_forecast_hourly', pvFcByDay);
       }
 
