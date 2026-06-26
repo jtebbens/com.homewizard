@@ -3170,11 +3170,17 @@ if (debug) this.log(
         const _existing   = _preExistingPvForecast ?? [{}, {}];
         const _nowHourNL  = parseInt(_fcNow.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
         const _pvDayCorr  = this._pvDayCorrectionFactor ?? 1.0;
+        // Past-hour base: use policy_pv_forecast_om (written once at startup, never
+        // re-scaled by DP) to avoid compounding dayCorr on successive DP runs.
+        const _rawOmFc    = (this._liveState?.policy_pv_forecast_om
+          ?? this.homey.settings.get('policy_pv_forecast_om')
+          ?? [{}, {}]);
         const pvFcByDay   = [
           Object.fromEntries(
             Object.entries(_existing[0] ?? {}).map(([h, w]) => {
               if (parseInt(h, 10) < _nowHourNL) {
-                const scaled = Math.round((w || 0) * _pvDayCorr);
+                const base   = _rawOmFc[0]?.[h] ?? 0;
+                const scaled = Math.round(base * _pvDayCorr);
                 return [h, pvCapacityW > 0 ? Math.min(scaled, pvCapacityW) : scaled];
               }
               return [h, w];
