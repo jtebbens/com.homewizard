@@ -354,15 +354,15 @@ console.log('\n_fetchSatelliteNowcast:');
   });
 
   test('getSatPanelWAt returns panel W using sat-YF', () => {
+    // Use a fixed bucket at UTC h=10 (always in SAT_YIELD_FACTORS table) to avoid
+    // time-of-day dependency where current UTC hour has no table entry.
     const wf = makeWF();
-    wf.cache = { hourlyForecast: [makeSlot(12, 200)] };
-    const satData = makeSatData(5, [300, 400, 350, 380]);
-    wf._applySatelliteOverlay(satData);
+    const fixedMs = new Date('2026-06-18T10:00:00Z').getTime(); // UTC h=10, aligned 15-min bucket
+    wf._satGhi15min = { [String(fixedMs)]: 300 };
 
-    const bucket0 = new Date(satData.curve[0].t).getTime();
-    const utcH = new Date(bucket0).getUTCHours();
-    const expectedYf = WeatherForecaster.getSatYieldFactor(utcH);
-    const result = wf.getSatPanelWAt(bucket0);
+    const expectedYf = WeatherForecaster.getSatYieldFactor(10);
+    const result = wf.getSatPanelWAt(fixedMs);
+    assert.ok(expectedYf > 0, 'h=10 must have a sat-YF');
     assert.strictEqual(result, Math.round(300 * expectedYf));
   });
 
