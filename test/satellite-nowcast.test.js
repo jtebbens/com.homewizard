@@ -149,20 +149,33 @@ console.log('\n_fetchSatelliteNowcast:');
   test('retains per-15-min sat GHI (not just the hourly average) via getSatGhiAt', () => {
     const wf = makeWF();
     wf.cache = { hourlyForecast: [makeSlot(10, 200)] };
-    const satData = makeSatData(30, [400, 600, 500, 480]); // issue now-30m, 4×15-min
+    // Anchor to a 15-min boundary (floor of current time) so bucket arithmetic is
+    // deterministic — the original test used Date.now() unaligned, making the
+    // "+5min within same bucket" assertion fail ~1/3 of the time when the offset
+    // happened to cross a bucket boundary.
+    const anchorMs = Math.floor(Date.now() / 900_000) * 900_000 - 1_800_000;
+    const satData = {
+      issue: new Date(anchorMs).toISOString(),
+      lat: 52.02, lon: 5.04, fetched_utc: new Date().toISOString(),
+      curve: [
+        { t: new Date(anchorMs).toISOString(), wm2: 400 },
+        { t: new Date(anchorMs + 900_000).toISOString(), wm2: 600 },
+        { t: new Date(anchorMs + 1_800_000).toISOString(), wm2: 500 },
+        { t: new Date(anchorMs + 2_700_000).toISOString(), wm2: 480 },
+      ],
+    };
 
     wf._applySatelliteOverlay(satData);
 
     // each 15-min bucket returns its OWN value, not the hourly mean (495)
-    const buckets = satData.curve.map(c => new Date(c.t).getTime());
-    assert.strictEqual(wf.getSatGhiAt(buckets[0]), 400);
-    assert.strictEqual(wf.getSatGhiAt(buckets[1]), 600);
-    assert.strictEqual(wf.getSatGhiAt(buckets[2]), 500);
-    assert.strictEqual(wf.getSatGhiAt(buckets[3]), 480);
-    // a bucket inside the same hour but offset by a few minutes maps to its 15-min slot
-    assert.strictEqual(wf.getSatGhiAt(buckets[1] + 5 * 60_000), 600);
+    assert.strictEqual(wf.getSatGhiAt(anchorMs), 400);
+    assert.strictEqual(wf.getSatGhiAt(anchorMs + 900_000), 600);
+    assert.strictEqual(wf.getSatGhiAt(anchorMs + 1_800_000), 500);
+    assert.strictEqual(wf.getSatGhiAt(anchorMs + 2_700_000), 480);
+    // a time 5min into a bucket always maps to that bucket (anchor is boundary-aligned)
+    assert.strictEqual(wf.getSatGhiAt(anchorMs + 900_000 + 5 * 60_000), 600);
     // a time with no curve point returns null (no faked carry)
-    assert.strictEqual(wf.getSatGhiAt(buckets[3] + 3600_000), null);
+    assert.strictEqual(wf.getSatGhiAt(anchorMs + 3_600_000), null);
   });
 
   test('does NOT mutate radiationSpreadFrac (observation-only)', () => {
