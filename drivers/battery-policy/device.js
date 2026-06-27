@@ -1178,6 +1178,20 @@ if (debug) this.log(
         })
         .catch(e => this.error('Buienradar update failed:', e));
 
+      // Upwind cloud monitor: fire-and-forget, non-critical; windFromDeg=null skips upwind point but still fetches home station
+      this.weatherForecaster.fetchUpwindData(latitude, longitude, this.weatherData?.currentWindDeg ?? null)
+        .then(d => {
+          this._upwindData = d;
+          this._queueSettingsPersist('policy_wind_data', {
+            windMs:  this.weatherData?.currentWindMs  ?? null,
+            windDeg: this.weatherData?.currentWindDeg ?? null,
+            wmoCode: this.weatherData?.currentWmoCode ?? null,
+            upwind:  d,
+            ts:      new Date().toISOString()
+          });
+        })
+        .catch(() => {});
+
       // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
       const pvCapW = devSettings.pv_capacity_w || 0;
       const PR     = devSettings.pv_performance_ratio || 0.75;
@@ -2123,6 +2137,9 @@ if (debug) this.log(
       currentPrice: futureSlots[0]?.price ?? null,
       pvCapacityW:  this.getSetting('pv_capacity_w') || 0,
       updatedAt:    new Date().toISOString(),
+      windMs:       this.weatherData?.currentWindMs  ?? null,
+      windDeg:      this.weatherData?.currentWindDeg ?? null,
+      upwind:       this._upwindData ?? null,
       slots
     };
     // In-memory cache — widget api.js reads via driver.getDevices()[0]._widgetData.

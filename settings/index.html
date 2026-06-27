@@ -932,6 +932,14 @@
           })()}
           ${hourLabels}
         </svg>
+        ${day === 0 && actualWatts ? (() => {
+          const werkelijkKwh = (actualWatts.reduce((s, v) => s + (v ?? 0), 0) / 1000).toFixed(1);
+          const verwachtKwh  = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
+          return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#aaa;padding:2px 4px 0;">
+            <span>⚡ ${werkelijkKwh} kWh werkelijk</span>
+            <span>☀️ ${verwachtKwh} kWh verwacht</span>
+          </div>`;
+        })() : ''}
       </div>`;
     }
 
@@ -2417,7 +2425,38 @@
           const noPriceBadge = (day === 1 && !hasTomorrowPrices)
             ? `<div style="margin:4px 0 8px;padding:6px 10px;background:#3a2a00;border:1px solid #7a5500;border-radius:6px;font-size:12px;color:#FCD34D;display:inline-block;">⏳ ${Homey.__('settings.no_tomorrow_prices')}</div>`
             : '';
-          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${noPriceBadge}${weatherTs}${pvCurve}${pvSurplusPlaceholder}`;
+          let windRow = '';
+          if (day === 0) {
+            const wd = settings['policy_wind_data'];
+            const _u = wd && wd.upwind;
+            if (_u && _u.thisDd != null && _u.thisFf != null) {
+              const _dirs = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
+              const _compass = _dirs[Math.round((_u.thisDd + 180) / 22.5) % 16];
+              const _wmoEmoji = (c => {
+                if (c == null) return '';
+                if (c === 0) return '☀️ ';
+                if (c <= 1)  return '🌤️ ';
+                if (c <= 2)  return '⛅ ';
+                if (c <= 3)  return '☁️ ';
+                if (c === 45 || c === 48) return '🌫️ ';
+                if (c >= 51 && c <= 67)  return '🌧️ ';
+                if (c >= 71 && c <= 77)  return '❄️ ';
+                if (c >= 80 && c <= 82)  return '🌦️ ';
+                if (c >= 85 && c <= 86)  return '❄️ ';
+                if (c >= 95)             return '⛈️ ';
+                return '';
+              })(wd.wmoCode);
+              // KNMI dd = NAAR (TO direction) — arrow points in movement direction, no +180°
+              let _wHtml = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_u.thisDd}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
+              if (_u.thisStation) _wHtml = `${_u.thisStation}: ${_wHtml}`;
+              if (_u.station) {
+                const _dcotStr = (_u.dcot >= 0 ? '+' : '') + _u.dcot.toFixed(1);
+                _wHtml += ` · ${_u.station} ΔCOT${_dcotStr}`;
+              }
+              windRow = `<div style="font-size:11px;color:#aaa;padding:2px 4px 4px;text-align:right;">${_wHtml}</div>`;
+            }
+          }
+          dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${noPriceBadge}${weatherTs}${pvCurve}${windRow}${pvSurplusPlaceholder}`;
         }
 
         const isCurrent = hourGroup.intervals.some(i => i.isCurrent);
