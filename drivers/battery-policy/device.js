@@ -64,7 +64,11 @@ class BatteryPolicyDevice extends Homey.Device {
     await this.learningEngine.initialize();
 
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
-    const SAT_NOWCAST_URL = 'https://pv.tebbens.net/msgcpp/latest.json';
+    const _satLat = this.getSetting('weather_latitude');
+    const _satLon = this.getSetting('weather_longitude');
+    const SAT_NOWCAST_URL = (_satLat && _satLon)
+      ? `https://pv.tebbens.net/api/sat?lat=${_satLat}&lon=${_satLon}`
+      : 'https://pv.tebbens.net/msgcpp/latest.json';
     this.weatherForecaster.startSatelliteLoop(SAT_NOWCAST_URL, '', () => this._onSatelliteOverlay());
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
