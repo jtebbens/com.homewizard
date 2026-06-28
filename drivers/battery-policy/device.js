@@ -64,10 +64,8 @@ class BatteryPolicyDevice extends Homey.Device {
     await this.learningEngine.initialize();
 
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
-    const satUrl = this.getSetting('satellite_endpoint_url');
-    if (satUrl) {
-      this.weatherForecaster.startSatelliteLoop(satUrl, '', () => this._onSatelliteOverlay());
-    }
+    const SAT_NOWCAST_URL = 'https://pv.tebbens.net/msgcpp/latest.json';
+    this.weatherForecaster.startSatelliteLoop(SAT_NOWCAST_URL, '', () => this._onSatelliteOverlay());
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = null; // lazy-loaded on first policy check
@@ -2801,8 +2799,8 @@ if (debug) this.log(
     }
 
     // Satellite nowcast: override 0-2h pvForecast with sat-derived panel-W.
-    const satDpActive = this.getSetting('satellite_dp_active') !== false;
-    if (pvForecast && this.getSetting('satellite_endpoint_url')) {
+    const satDpActive = this.getSetting('satellite_dp_active') === true;
+    if (pvForecast && satDpActive) {
       const _nowMs = Date.now();
       const _SAT_MAX_LEAD_MS = 2 * 3600_000;
       let _satCount = 0;
@@ -4406,14 +4404,6 @@ if (debug) this.log(
     // Invalidate Solcast cache when API key or resource ID changes
     if (changedKeys.includes('solcast_api_key') || changedKeys.includes('solcast_resource_id')) {
       this._solcastProvider?.invalidateCache();
-    }
-
-    if (changedKeys.includes('satellite_endpoint_url')) {
-      this.weatherForecaster.stopSatelliteLoop();
-      const satUrl = newSettings.satellite_endpoint_url;
-      if (satUrl) {
-        this.weatherForecaster.startSatelliteLoop(satUrl, '', () => this._onSatelliteOverlay());
-      }
     }
 
     // Refresh cached settings used in hot poll loop

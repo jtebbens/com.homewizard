@@ -4772,19 +4772,6 @@
           },
           "children": [
             {
-              "id": "satellite_endpoint_url",
-              "type": "text",
-              "label": {
-                "en": "Satellite endpoint URL",
-                "nl": "Satelliet endpoint URL"
-              },
-              "hint": {
-                "en": "URL to satellite nowcast JSON endpoint. Leave empty to disable.",
-                "nl": "URL naar satelliet nowcast JSON-endpoint. Laat leeg om uit te schakelen."
-              },
-              "value": ""
-            },
-            {
               "id": "satellite_dp_active",
               "type": "checkbox",
               "label": {
@@ -4792,10 +4779,10 @@
                 "nl": "Gebruik satelliet in DP-optimizer"
               },
               "hint": {
-                "en": "Override 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast).",
-                "nl": "Overschrijf 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast)."
+                "en": "Override 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast). Uses pv.tebbens.net (experimental).",
+                "nl": "Overschrijf 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast). Gebruikt pv.tebbens.net (experimenteel)."
               },
-              "value": true
+              "value": false
             }
           ]
         },
