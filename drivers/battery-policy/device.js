@@ -3471,14 +3471,20 @@ if (debug) this.log(
     }
 
     // SAT yield-factor learning: independent of forecast-accuracy gates (no 100W floor).
-    // Own bucket dedup so one sample per 15-min bucket per PV update cadence.
-    const nowMs = Date.now();
-    const satBucketMs = Math.floor(nowMs / 900_000) * 900_000;
-    if (this._lastSatYfBucket !== satBucketMs && this.weatherForecaster && this.learningEngine) {
-      const satGhiWm2 = this.weatherForecaster.getSatGhiAt?.(satBucketMs) ?? null;
-      if (satGhiWm2 != null && satGhiWm2 > 0) {
-        this._lastSatYfBucket = satBucketMs;
-        this.learningEngine.recordSatYield(new Date(satBucketMs).getUTCHours(), satGhiWm2, powerW);
+    // SAT data lags ~30-60 min; scan back up to 8 buckets for most recent available reading.
+    // Dedup on the SAT bucket timestamp (not now) so each SAT bucket is sampled once.
+    if (this.weatherForecaster && this.learningEngine) {
+      const nowMs = Date.now();
+      const nowBucket = Math.floor(nowMs / 900_000) * 900_000;
+      let satGhiWm2 = null, satLookupMs = null;
+      for (let i = 1; i <= 8; i++) {
+        const t = nowBucket - i * 900_000;
+        const v = this.weatherForecaster.getSatGhiAt?.(t) ?? null;
+        if (v != null) { satGhiWm2 = v; satLookupMs = t; break; }
+      }
+      if (satGhiWm2 != null && satGhiWm2 > 0 && satLookupMs !== this._lastSatYfBucket) {
+        this._lastSatYfBucket = satLookupMs;
+        this.learningEngine.recordSatYield(new Date(satLookupMs).getUTCHours(), satGhiWm2, powerW);
       }
     }
 
