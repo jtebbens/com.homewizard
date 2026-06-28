@@ -247,12 +247,15 @@ function renderWind(data) {
     return '';
   })(data.wmoCode);
   // KNMI dd = NAAR (arrow direct); OM windDeg = FROM (already +180° above)
-  let html = `${wmoEmoji ? `<span>${wmoEmoji}</span>` : ''}<span class="wind-arrow" style="transform:rotate(${dd}deg);display:inline-block">↑</span><span>${compass} ${ff.toFixed(1)} m/s</span>`;
+  const line1 = `${wmoEmoji ? `<span>${wmoEmoji}</span>` : ''}<span class="wind-arrow" style="transform:rotate(${dd}deg);display:inline-block">↑</span><span>${compass} ${ff.toFixed(1)} m/s</span>`;
+  let html = `<div style="display:flex;align-items:center;gap:3px;justify-content:flex-end">${line1}</div>`;
   if (u && u.station) {
     const dcotStr = (u.dcot >= 0 ? '+' : '') + u.dcot.toFixed(1);
-    html += `<span style="opacity:0.4">·</span><span>${u.station} Δ${dcotStr}</span>`;
+    html += `<div style="opacity:0.5;font-size:10px;text-align:right">↖ ${u.station} Δ${dcotStr}</div>`;
   }
   row.style.display = 'flex';
+  row.style.flexDirection = 'column';
+  row.style.alignItems = 'flex-end';
   row.innerHTML = html;
 }
 
