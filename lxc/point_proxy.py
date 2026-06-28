@@ -84,6 +84,8 @@ def _register_location(lat, lon):
         except Exception:
             locs = []
         if not any(abs(l['lat'] - lat) < 0.001 and abs(l['lon'] - lon) < 0.001 for l in locs):
+            if len(locs) >= 200:
+                return  # hard cap — prevents unbounded growth
             locs.append({'lat': lat, 'lon': lon})
             with open(LOC_FILE, 'w') as f:
                 json.dump(locs, f)
@@ -268,6 +270,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
         elif parsed.path == "/sat":
+            if not (35 <= lat <= 63 and -11 <= lon <= 31):
+                self.send_error(400, "lat/lon outside KNMI SSI coverage (35-63N, 11W-31E)")
+                return
             self._handle_sat(lat, lon)
             return
 
@@ -305,8 +310,12 @@ class Handler(BaseHTTPRequestHandler):
 
         fpath = f"/var/www/msgcpp/{slat:.2f}_{slon:.2f}.json"
         if os.path.exists(fpath):
-            with open(fpath) as f:
-                data = json.load(f)
+            try:
+                with open(fpath) as f:
+                    data = json.load(f)
+            except Exception:
+                self.send_error(503, "sat data corrupted, retry next cycle")
+                return
             _cache_set(ck, data)
             body = json.dumps(data, separators=(",", ":")).encode()
             self.send_response(200)
