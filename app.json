@@ -4779,8 +4779,8 @@
                 "nl": "Gebruik satelliet in DP-optimizer"
               },
               "hint": {
-                "en": "⚠️ Experimental — single location only (pv.tebbens.net, NL). Overrides 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast). May be unavailable without notice.",
-                "nl": "⚠️ Experimenteel — één locatie (pv.tebbens.net, NL). Overschrijft 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast). Kan zonder aankondiging wegvallen."
+                "en": "⚠️ Experimental — single location only (NL). Overrides 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast). May be unavailable without notice.",
+                "nl": "⚠️ Experimenteel — één locatie (NL). Overschrijft 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast). Kan zonder aankondiging wegvallen."
               },
               "value": false
             }
