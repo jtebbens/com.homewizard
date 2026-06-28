@@ -1699,6 +1699,7 @@ if (debug) this.log(
       // holds charge instead of discharging (PV-forecast downside — refillConfidenceFromForecast).
       inputs.refillConfidence    = this._lastRefillConfidence ?? 1;
       inputs.refillReserveActive = (this._lastRefillConfidence ?? 1) < 1;
+      inputs.upwindData          = this._upwindData ?? null;
       let explanation = null;
       if (_heapBeforeExplain > 35) {
         this.log(`[MEM] Skipping explainability — heap ${_heapBeforeExplain.toFixed(1)} MB > 35 MB guard`);
