@@ -2159,6 +2159,13 @@ async _handleBatteries(data) {
 
         if (progressed) {
           // Battery is moving as commanded → healthy, advance baseline.
+          if (this._stallTriggered) {
+            this.log(`✅ Battery stall resolved — SoC moving again`);
+            this.homey.flow
+              .getDeviceTriggerCard('battery_error_resolved')
+              .trigger(this, {}, {})
+              .catch(this.error);
+          }
           this._stallBaselineSoc = avgSoC;
           this._stallBaselineTime = now;
           this._stallTriggered = false;
