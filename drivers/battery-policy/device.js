@@ -3080,6 +3080,20 @@ if (debug) this.log(
     // pvTimingRobust spread-band (internal device-setting, no UI knob): discount the
     // discharge-cap PV by per-slot ensemble disagreement. Off unless explicitly set true.
     const pvTimingRobust = this.getSetting('pv_timing_robust') === true;
+    {
+      const PV_SPREAD_Z = 1.0;
+      const highSpread = (pvForecast ?? [])
+        .filter(s => (s.spreadFrac ?? 0) > 0.20 && s.pvPowerW > 0)
+        .map(s => {
+          const t = new Date(s.timestamp);
+          const hh = t.getUTCHours().toString().padStart(2, '0') + ':' + t.getUTCMinutes().toString().padStart(2, '0');
+          const discounted = Math.round(s.pvPowerW * (1 - PV_SPREAD_Z * s.spreadFrac));
+          return `${hh}:${Math.round(s.pvPowerW)}→${discounted}W(σ=${s.spreadFrac.toFixed(2)})`;
+        });
+      if (highSpread.length > 0) {
+        this.log(`[SPREAD] shadow(off) slots: ${highSpread.join(' ')}`);
+      }
+    }
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust);
 
     // Compact planning summary — always visible in user diagnostics.
