@@ -960,6 +960,26 @@
         ]
       },
       {
+        "id": "battery_error_resolved",
+        "title": {
+          "en": "Battery error resolved",
+          "de": "Batteriefehler behoben",
+          "da": "Batterifejl løst",
+          "fr": "Erreur batterie résolue",
+          "sv": "Batterifel åtgärdat",
+          "no": "Batterifeil løst",
+          "fi": "Akkuvirhe ratkaistu",
+          "hu": "Akkumulátor hiba megoldva"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_v2"
+          }
+        ]
+      },
+      {
         "id": "battery_group_state_changed",
         "title": {
           "en": "Battery group state changed",
