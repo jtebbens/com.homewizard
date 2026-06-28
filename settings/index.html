@@ -2447,11 +2447,12 @@
                 return '';
               })(wd.wmoCode);
               // KNMI dd = NAAR (TO direction) — arrow points in movement direction, no +180°
-              let _wHtml = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_u.thisDd}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
-              if (_u.thisStation) _wHtml = `${_u.thisStation}: ${_wHtml}`;
+              let _wLine1 = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_u.thisDd}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
+              if (_u.thisStation) _wLine1 = `${_u.thisStation}: ${_wLine1}`;
+              let _wHtml = _wLine1;
               if (_u.station) {
                 const _dcotStr = (_u.dcot >= 0 ? '+' : '') + _u.dcot.toFixed(1);
-                _wHtml += ` · ${_u.station} ΔCOT${_dcotStr}`;
+                _wHtml += `<br><span style="opacity:0.7">↖ ${_u.station} ΔCOT${_dcotStr}</span>`;
               }
               windRow = `<div style="font-size:11px;color:#aaa;padding:2px 4px 4px;text-align:right;">${_wHtml}</div>`;
             }

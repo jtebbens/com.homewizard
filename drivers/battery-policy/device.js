@@ -1179,7 +1179,7 @@ if (debug) this.log(
         .catch(e => this.error('Buienradar update failed:', e));
 
       // Upwind cloud monitor: fire-and-forget, non-critical; windFromDeg=null skips upwind point but still fetches home station
-      this.weatherForecaster.fetchUpwindData(latitude, longitude, this.weatherData?.currentWindDeg ?? null)
+      this.weatherForecaster.fetchUpwindData(latitude, longitude)
         .then(d => {
           this._upwindData = d;
           this._queueSettingsPersist('policy_wind_data', {
