@@ -198,6 +198,20 @@
       "args": []
     },
     {
+      "id": "battery_error_resolved",
+      "title": {
+        "en": "Battery error resolved",
+        "de": "Batteriefehler behoben",
+        "da": "Batterifejl løst",
+        "fr": "Erreur batterie résolue",
+        "sv": "Batterifel åtgärdat",
+        "no": "Batterifeil løst",
+        "fi": "Akkuvirhe ratkaistu",
+        "hu": "Akkumulátor hiba megoldva"
+      },
+      "args": []
+    },
+    {
       "id": "battery_group_state_changed",
       "title": {
         "en": "Battery group state changed",

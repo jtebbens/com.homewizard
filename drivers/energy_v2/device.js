@@ -2177,6 +2177,13 @@ async _handleBatteries(data) {
         }
       }
     } else {
+      if (this._stallTriggered) {
+        this.log(`✅ Battery stall resolved — SoC moving again`);
+        this.homey.flow
+          .getDeviceTriggerCard('battery_error_resolved')
+          .trigger(this, {}, {})
+          .catch(this.error);
+      }
       this._stallDir = null;
       this._stallBaselineSoc = null;
       this._stallBaselineTime = null;
