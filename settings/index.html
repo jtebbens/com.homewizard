@@ -2429,9 +2429,12 @@
           if (day === 0) {
             const wd = settings['policy_wind_data'];
             const _u = wd && wd.upwind;
-            if (_u && _u.thisDd != null && _u.thisFf != null) {
+            if (_u && _u.thisFf != null) {
               const _dirs = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
-              const _compass = _dirs[Math.round((_u.thisDd + 180) / 22.5) % 16];
+              // OM windDeg = FROM (surface, reliable); fallback to KNMI measured dd+180 (tower, less reliable)
+              const _fromDeg = wd.windDeg != null ? wd.windDeg : (_u.thisDd != null ? (_u.thisDd + 180) % 360 : null);
+              const _compass = _fromDeg != null ? _dirs[Math.round(_fromDeg / 22.5) % 16] : '?';
+              const _arrowDeg = _fromDeg != null ? (_fromDeg + 180) % 360 : 0;
               const _wmoEmoji = (c => {
                 if (c == null) return '';
                 if (c === 0) return '☀️ ';
@@ -2446,8 +2449,7 @@
                 if (c >= 95)             return '⛈️ ';
                 return '';
               })(wd.wmoCode);
-              // KNMI dd = NAAR (TO direction) — arrow points in movement direction, no +180°
-              let _wLine1 = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_u.thisDd}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
+              let _wLine1 = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_arrowDeg}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
               if (_u.thisStation) _wLine1 = `${_u.thisStation}: ${_wLine1}`;
               let _wHtml = _wLine1;
               if (_u.station) {

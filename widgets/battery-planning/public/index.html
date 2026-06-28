@@ -225,13 +225,13 @@ function renderWind(data) {
   const row = document.getElementById('wind-row');
   if (!row) return;
   const u = data.upwind;
-  // prefer KNMI measured wind (thisDd/thisFf); fall back to OM forecast
-  const hasMeasured = u && u.thisDd != null && u.thisFf != null;
-  const dd  = hasMeasured ? u.thisDd  : (data.windDeg != null ? (data.windDeg + 180) % 360 : null);
-  const ff  = hasMeasured ? u.thisFf  : data.windMs;
+  // Speed: prefer KNMI measured; fallback OM
+  const ff = (u && u.thisFf != null) ? u.thisFf : data.windMs;
+  // Direction (FROM): prefer OM windDeg (surface, reliable); fallback KNMI dd+180 (tower, less reliable)
+  const fromDeg = data.windDeg != null ? data.windDeg : (u && u.thisDd != null ? (u.thisDd + 180) % 360 : null);
+  const dd = fromDeg != null ? (fromDeg + 180) % 360 : null;  // NAAR for arrow rotation
   if (dd == null || ff == null) { row.style.display = 'none'; return; }
-  // KNMI dd = NAAR → label shows FROM direction (+180°); OM windDeg already FROM
-  const compass = degToCompass(hasMeasured ? (dd + 180) % 360 : data.windDeg);
+  const compass = degToCompass(fromDeg);
   const wmoEmoji = (c => {
     if (c == null) return '';
     if (c === 0) return '☀️';
