@@ -2728,6 +2728,14 @@ if (debug) this.log(
       }
     }
 
+    // Re-clamp to installed capacity after all upward corrections (dailyBias, intradayRatio
+    // can multiply a pvCapacityW-capped slot back above the rated peak).
+    if (pvForecast && pvCapacityW > 0) {
+      pvForecast = pvForecast.map(s =>
+        s.pvPowerW > pvCapacityW ? { ...s, pvPowerW: pvCapacityW } : s
+      );
+    }
+
     // Buienradar rain correction: cap near-term PV slots based on precipitation radar.
     // Only applies within the 2-hour Buienradar window; only reduces, never increases.
     // Uses windowed average over ±7.5 min (half a 15-min slot) so adjacent rainy 5-min
