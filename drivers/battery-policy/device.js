@@ -1181,12 +1181,18 @@ if (debug) this.log(
       // Upwind cloud monitor: fire-and-forget, non-critical; windFromDeg=null skips upwind point but still fetches home station
       this.weatherForecaster.fetchUpwindData(latitude, longitude, this.weatherData?.currentWindDeg ?? null)
         .then(d => {
-          this._upwindData = d;
+          if (d !== null) {
+            // Preserve previous upwind station when this run had no windFromDeg (OM wind not yet loaded)
+            if (d.station === null && this._upwindData?.station != null) {
+              d = { ...d, station: this._upwindData.station, upwindCot: this._upwindData.upwindCot, dcot: this._upwindData.dcot };
+            }
+            this._upwindData = d;
+          }
           this._queueSettingsPersist('policy_wind_data', {
             windMs:  this.weatherData?.currentWindMs  ?? null,
             windDeg: this.weatherData?.currentWindDeg ?? null,
             wmoCode: this.weatherData?.currentWmoCode ?? null,
-            upwind:  d,
+            upwind:  d !== null ? d : (this._upwindData ?? null),
             ts:      new Date().toISOString()
           });
         })

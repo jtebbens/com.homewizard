@@ -251,7 +251,9 @@ function renderWind(data) {
   let html = `<div style="display:flex;align-items:center;gap:3px;justify-content:flex-end">${line1}</div>`;
   if (u && u.station) {
     const dcotStr = (u.dcot >= 0 ? '+' : '') + u.dcot.toFixed(1);
-    html += `<div style="opacity:0.5;font-size:10px;text-align:right">↖ ${u.station} Δ${dcotStr}</div>`;
+    const uc = u.upwindCot;
+    const cotEmoji = uc == null ? '' : uc === 0 ? '☀️' : uc < 3 ? '🌤️' : uc < 10 ? '⛅' : uc < 25 ? '🌥️' : '☁️';
+    html += `<div style="opacity:0.5;font-size:10px;text-align:right">${cotEmoji}↖ ${u.station} Δ${dcotStr}</div>`;
   }
   row.style.display = 'flex';
   row.style.flexDirection = 'column';

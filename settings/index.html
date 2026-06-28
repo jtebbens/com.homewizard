@@ -2454,7 +2454,9 @@
               let _wHtml = _wLine1;
               if (_u.station) {
                 const _dcotStr = (_u.dcot >= 0 ? '+' : '') + _u.dcot.toFixed(1);
-                _wHtml += `<br><span style="opacity:0.7">↖ ${_u.station} ΔCOT${_dcotStr}</span>`;
+                const _uc = _u.upwindCot;
+                const _cotEmoji = _uc == null ? '' : _uc === 0 ? '☀️' : _uc < 3 ? '🌤️' : _uc < 10 ? '⛅' : _uc < 25 ? '🌥️' : '☁️';
+                _wHtml += `<br><span style="opacity:0.7">${_cotEmoji}↖ ${_u.station} ΔCOT${_dcotStr}</span>`;
               }
               windRow = `<div style="font-size:11px;color:#aaa;padding:2px 4px 4px;text-align:right;">${_wHtml}</div>`;
             }
