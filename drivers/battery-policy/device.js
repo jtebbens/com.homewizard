@@ -2829,6 +2829,27 @@ if (debug) this.log(
       if (_satDip) this.log(`[SAT DIP] dip in ${_satDip.leadMin}min @ ${new Date(_satDip.dipStartMs).toISOString()} → ${new Date(_satDip.dipEndMs).toISOString()} min=${_satDip.minPanelW}W`);
     }
 
+    // Upwind cloud modulation: clouds at upwind KNMI station → lower pvForecast for lead-time slot.
+    // Runs independently of satDpActive (upwind data is always fetched when _satUrl is set).
+    {
+      const upwind = this._upwindData;
+      if ((upwind?.upwindKt ?? 1) < 0.98 && (upwind?.thisFf ?? 0) > 1) {
+        const leadMs = (40_000 / upwind.thisFf) * 1000;   // 40 km ÷ wind m/s → ms
+        const nowMs  = Date.now();
+        let _upCount = 0;
+        pvForecast = (pvForecast || []).map(slot => {
+          const slotMs = new Date(slot.timestamp).getTime();
+          if (Math.abs((slotMs - nowMs) - leadMs) > 1800_000) return slot; // ±30 min window
+          const upW = Math.round(slot.pvPowerW * upwind.upwindKt);
+          if (upW >= slot.pvPowerW) return slot;           // never raise forecast
+          _upCount++;
+          this.log(`[Upwind DP] h=${new Date(slotMs).getUTCHours()} kt=${upwind.upwindKt.toFixed(2)} lead=${Math.round(leadMs / 60_000)}min → ${upW}W (was ${slot.pvPowerW}W)`);
+          return { ...slot, pvPowerW: upW };
+        });
+        if (_upCount > 0) this.log(`[Upwind DP] ${_upCount} slot(s) modulated, wind=${upwind.thisFf}m/s`);
+      }
+    }
+
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
     // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
     // pvForecast doesn't contain because hourlyForecast only has slots > now.
