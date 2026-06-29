@@ -3232,47 +3232,11 @@ if (debug) this.log(
 
       // Sync PV chart from the SAME forecast the DP planned on (bias + intraday + rain/
       // precip corrections all applied) — single source of truth, no chart/DP divergence.
-      // (The earlier unbiased pvForecastChart snapshot diverged in shape because it was taken
-      // before the per-slot intraday/rain/precip corrections, misrepresenting DP assumptions.)
       {
-        const _fcNow      = new Date();
-        const _fcToday    = _fcNow.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const _fcTomorrow = new Date(_fcNow.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const _existing   = _preExistingPvForecast ?? [{}, {}];
-        const _pvDayCorr  = this._pvDayCorrectionFactor ?? 1.0;
-        // Display base: policy_pv_forecast_om (written once at startup, never re-scaled by
-        // DP) × dayCorr for ALL today hours. Intraday correction is DP-internal planning;
-        // applying it to display creates a step-change at nowHour (past=1.49×, future=0.73×).
-        const _rawOmFc    = (this._liveState?.policy_pv_forecast_om
-          ?? this.homey.settings.get('policy_pv_forecast_om')
-          ?? [{}, {}]);
-        const pvFcByDay   = [
-          Object.fromEntries(
-            Object.entries(_rawOmFc[0] ?? {}).map(([h, w]) => {
-              return [h, Math.round((w || 0) * _pvDayCorr)];
-            })
-          ),
-          { ..._existing[1] ?? {} },
-        ];
-        const pvSumByDayHour = [{}, {}];
-        const pvCntByDayHour = [{}, {}];
-        for (const fc of (pvForecast ?? [])) {
-          const st    = new Date(fc.timestamp);
-          const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-          const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
-          if (sIdx < 0 || sIdx === 0) continue;  // today: keep smooth OM×dayCorr display
-          const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-          pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + fc.pvPowerW;
-          pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
-        }
-        for (let d = 0; d < 2; d++) {
-          for (const h of Object.keys(pvSumByDayHour[d])) {
-            pvFcByDay[d][h] = Math.round(pvSumByDayHour[d][h] / pvCntByDayHour[d][h]);
-          }
-        }
+        const pvFcByDay      = BatteryPolicyDevice._buildPvChartByDay(_preExistingPvForecast, pvForecast, pvCapacityW, new Date());
         const _chartTodayKwh = Object.values(pvFcByDay[0]).reduce((s, w) => s + (w || 0), 0) / 1000;
         const _chartTomKwh  = Object.values(pvFcByDay[1]).reduce((s, w) => s + (w || 0), 0) / 1000;
-        this.log(`[PV chart] DP forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh (OM×dayCorr${_pvDayCorr.toFixed(2)}, smooth), morgen ${_chartTomKwh.toFixed(1)} kWh`);
+        this.log(`[PV chart] DP forecast stored: vandaag ${_chartTodayKwh.toFixed(1)} kWh, morgen ${_chartTomKwh.toFixed(1)} kWh`);
         this._setLive('policy_pv_forecast_hourly', pvFcByDay);
       }
 
@@ -3706,6 +3670,37 @@ if (debug) this.log(
    * @param {{omW:number, scP50:number, scP10:number, wOM:number, wSC:number, unbiased:boolean}} a
    * @returns {{blendedW:number, scAvg:number, useP10:boolean}}
    */
+  // Build policy_pv_forecast_hourly for today+tomorrow from DP pvForecast.
+  // Past hours come from existing[0] (previous run), future hours from pvForecast.
+  // All values are capped at pvCapacityW. Injectable `now` enables unit testing.
+  static _buildPvChartByDay(existing, pvForecast, pvCapacityW, now) {
+    const _fcToday    = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const _fcTomorrow = new Date(now.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const _ex         = existing ?? [{}, {}];
+    const cap         = (w) => pvCapacityW > 0 ? Math.min(w, pvCapacityW) : w;
+    const pvFcByDay   = [
+      Object.fromEntries(Object.entries(_ex[0] ?? {}).map(([h, w]) => [h, cap(w)])),
+      { ...(_ex[1] ?? {}) },
+    ];
+    const pvSumByDayHour = [{}, {}];
+    const pvCntByDayHour = [{}, {}];
+    for (const fc of (pvForecast ?? [])) {
+      const st    = new Date(fc.timestamp);
+      const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
+      if (sIdx < 0) continue;
+      const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+      pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + fc.pvPowerW;
+      pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
+    }
+    for (let d = 0; d < 2; d++) {
+      for (const h of Object.keys(pvSumByDayHour[d])) {
+        pvFcByDay[d][h] = cap(Math.round(pvSumByDayHour[d][h] / pvCntByDayHour[d][h]));
+      }
+    }
+    return pvFcByDay;
+  }
+
   static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased }) {
     const useP10 = !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
     const scAvg = useP10 ? scP10 : scP50;
