@@ -51,9 +51,63 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.15.98)
+## 📝 Latest Updates (v3.15.63–v3.17.0)
 
-### PV Forecast Comparison Curves Now Show Corrected Forecasts (unreleased)
+### Night Discharge Reorder — Priciest Slots First; wEnd-Budget Fix (v3.17.0)
+
+* **Overnight discharge slots are now evaluated priciest-first instead of chronologically** — The optimizer built its list of candidate night-window discharge slots and filled them earliest-to-latest. When total available SoC fell short of covering every candidate, the cheapest slot got filled while the most valuable one sat idle. The reorder block now sorts by slot price descending and fills from the top, so the highest-price export opportunity captures capacity first. `optimization-engine.js`
+
+* **Reorder budget now correctly uses the DP terminal-SoC target when `wEnd = N`** — When the optimizer targets a non-zero end SoC (e.g. a morning reserve), the reorder block was drawing from the full battery capacity instead of only the headroom above the target floor. On a night requiring 20% reserve at 06:00 it could schedule discharges totalling more SoC than was actually available, leaving later plan slots without energy to deliver. The budget is now `soc − wEnd_target`. Property tests in `test/optimizer-properties.test.js` cover both the sort invariant and the budget constraint.
+
+### Open-Meteo Preceding-Hour Convention: 1-Hour Forecast Shift Fixed (v3.17.0)
+
+* **The solar forecast was systematically shifted 1 hour late — now corrected** — Open-Meteo's hourly irradiance values use the *preceding-hour* convention: the value timestamped 14:00 represents the average from 13:00–14:00. The app was treating them as current-hour values, causing the OM-derived PV forecast to lead one hour. On a rising morning or a falling evening the optimizer was planning charge/discharge decisions 1 slot too early. The ingestion code now indexes each irradiance value to the hour it covers (13:00 for a 14:00 stamp). Existing learned solar yield factors were migrated −1 h UTC to stay consistent with the corrected timestamps. `lib/weather-forecaster.js`, `lib/learning-engine.js`
+
+### Upwind Cloud Signal via KNMI Wind (v3.17.0)
+
+* **The app now reads live KNMI wind speed and direction from the nearest home station** — A keep-alive KNMI wind poller (10-min cadence) pulls the closest measured wind. Wind speed, direction, and WMO weather icon are shown in settings; the widget carries a compass bearing. `lib/knmi-wind.js`, `drivers/battery-policy/device.js`
+
+* **Upwind COT modulates the DP PV forecast and is surfaced in explainability** — The cloud optical thickness at a point ~50 km upwind (derived from live KNMI wind direction and speed) is compared to the local COT. A higher upwind value signals incoming cloud cover with a 20–40 min lead; the DP reduces pvForecast for the next 1–2 slots proportionally. The explainability engine surfaces this as a named reason when it fires. `drivers/battery-policy/device.js`, `lib/explainability-engine.js`
+
+### Satellite Nowcast: EMA-Learned Yield Factors (F2) (v3.17.0)
+
+* **Satellite GHI→panel-W yield factors are now learned per UTC hour from live measurements** — Each 15-min PV production bucket is recorded against the simultaneous satellite GHI reading; an exponential moving average (α = 1.0 first sample, α = 0.10 thereafter) converges the per-hour conversion factor from live data. The hardcoded `SAT_YIELD_FACTORS` table in `weather-forecaster.js` remains as a cold-start fallback for hours that have no EMA data yet. The table was calibrated from a 6-day SDM230 measurement run (Jun 23–29, n = 79 hourly samples, clear-day MAE ≈ 78–118 W); h = 06/07 and h = 15/16/17 were corrected by 5–12%. `lib/learning-engine.js`, `lib/weather-forecaster.js`
+
+* **Satellite DP override defaults to off (`satellite_dp_active = false`)** — The nowcast feature is experimental and the yield-factor bootstrap is per-installation. The toggle must be explicitly enabled in settings; other users are unaffected.
+
+* **`getSat15minCurve` + `getNextSatDip` + `[SAT DIP]` policy log** — The 15-min satellite GHI curve is held in memory; the app can locate the next expected cloud dip and log it at policy time. `lib/weather-forecaster.js`
+
+### Battery Stall: `battery_error_resolved` Flow Trigger (v3.17.0)
+
+* **A new `battery_error_resolved` flow trigger fires when the battery SoC starts moving again after a detected stall** — The companion to the existing `battery_error_detected` card. Enables automations that notify on recovery or reset external state. Works per unit for multi-battery setups. `drivers/energy_v2/device.js`
+
+### Consumption EMA: Appliance Spike Resistance (v3.17.0)
+
+* **Hourly consumption learning is now winsorized to resist appliance spikes** — High P1 readings from short-duration loads (oven, washing machine) entered the EMA directly and inflated the learned baseline for that hour, persisting for weeks. Samples above a 95th-percentile fence are clipped before the EMA update so transient spikes no longer corrupt the consumption profile used for DP planning. `lib/learning-engine.js`
+
+### Daily Planned vs Actual Profit Tracking (v3.17.0)
+
+* **At midnight the app records yesterday's DP-planned profit against the actual metered outcome** — The delta is logged and exposed via the diagnostics API, providing a day-by-day economic accuracy signal. `drivers/battery-policy/device.js`
+
+### ENTSOE Price Cross-Validation (v3.17.0)
+
+* **ENTSOE prices are now cross-checked against the primary price source on the overlapping window** — A divergence above 5 ct/kWh on three or more slots logs a warning, catching provider feed issues early without automatic source switching. `lib/entsoe-prices.js`
+
+### Minor Fixes and Performance (v3.17.0)
+
+* **`trickle` policy maps to `standby` when no PV surplus exists** — Without surplus, the battery was held in a light-charge state on evening and night slots, consuming home-load budget unnecessarily. Standby is now commanded when PV surplus is absent. `drivers/battery-policy/device.js`
+
+* **PV surplus forecast no longer overcounts when the battery is nearly full** — A near-full battery cannot absorb the full projected surplus; the overcounted portion was inflating discharge decisions. A capacity cap is applied at planning time. `drivers/battery-policy/device.js`
+
+* **Panel geometry change auto-resets yield factors** — When tilt, azimuth, or panel count changes in settings the learned solar yield factors are cleared so the new geometry converges from scratch rather than inheriting calibration from the old orientation. `drivers/battery-policy/device.js`
+
+* **P1 poll loop: settings and date-format calls cached across the 15-second cycle** — Eliminates repeated property lookups and `toLocaleString` allocations on every tick. `drivers/battery-policy/device.js`
+
+* **Dynamic OM/Solcast blend weights via brute-force optimisation on the last 50 measured slots** — The blend weights are re-optimised each policy run against recent forecast-vs-actual pairs, replacing the fixed 50/50 default for installations with enough history. `lib/learning-engine.js`
+
+* **HTTP agents hardened and app lifecycle cleanup** — Keep-alive agents reused across weather and satellite fetches; teardown hooks cancel pollers on app uninit. `lib/weather-forecaster.js`
+
+### PV Forecast Comparison Curves Now Show Corrected Forecasts (v3.17.0)
 
 * **The raw weather-model comparison curves no longer sit structurally below the "Werkelijk" (actual) line** — Several diagnostic curves plotted raw NWP output, while the operational forecast that actually drives planning receives the daily-bias factor, the accuracy-conservatism factor and the live intraday actual-vs-forecast ratio. NWP models systematically over-forecast cloud over the Netherlands and so under-forecast irradiance; without those corrections the comparison curves were consistently low, making the charts misleading (most visible on a clear day, where *all* models showed the same gap). The same correction (daily-bias × accuracy-conservatism, plus the intraday ratio for today's slots, capped at the panel's rated capacity) is now applied to: the per-model accuracy chart (Météo-France / GFS / ICON / KNMI, `_recordPvAccuracySample`), and the PV Opwek camera's Open-Meteo, satellite and day-start overlay lines (`policy_pv_forecast_om` / `_sat`, `_correctedDayStartForChart`). Live-verified: a 1.43× intraday correction lifted MF/GFS/ICON/KNMI to ~2120–2268 W against an actual of 2206 W. Display-only — these are comparison curves, not the operational line that feeds the DP optimizer. The day-start reference array stays raw internally (it is the `predictedW` baseline the intraday ratio is computed against); only a scaled copy is plotted, avoiding a self-feeding correction. Solcast keeps its own provider calibration. `drivers/battery-policy/device.js`.
 

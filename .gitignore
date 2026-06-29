@@ -5,13 +5,11 @@
 /.homeybuild/
 
 # AI instruction files (keep private)
-CLAUDE.md
+
 CONTEXT.md
 DEVELOPMENT.md
 SKILL.md
 CRASH_DIAGNOSIS.md
-refactor.md
-refactor-log.md
 
 # Optional: any other internal prompt files
 *.prompt.md
