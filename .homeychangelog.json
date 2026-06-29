@@ -1576,5 +1576,8 @@
   },
   "3.16.1": {
     "en": "Energy_v2 Amp 5s interval update (was 30s), Open-meteo weather forecast tuning."
+  },
+  "3.17.0": {
+    "en": "Night discharge priciest-first, OM 1h forecast shift fix, upwind cloud signal, satellite EMA yield learning (F2), battery_error_resolved trigger, consumption spike resistance, daily profit tracking — 52 commits since"
   }
 }
