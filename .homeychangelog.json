@@ -1579,5 +1579,8 @@
   },
   "3.17.0": {
     "en": "Night discharge priciest-first, OM 1h forecast shift fix, upwind cloud signal, satellite EMA yield learning (F2), battery_error_resolved trigger, consumption spike resistance, daily profit tracking — 52 commits since"
+  },
+  "3.17.1": {
+    "en": "DP bugfix morning charge. Bugfix partial next day prices fallback. "
   }
 }
