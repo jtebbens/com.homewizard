@@ -1582,5 +1582,8 @@
   },
   "3.17.1": {
     "en": "DP bugfix morning charge. Bugfix partial next day prices fallback. "
+  },
+  "3.17.2": {
+    "en": "Bugfix + backfill day epex prices"
   }
 }
