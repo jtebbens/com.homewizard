@@ -51,7 +51,15 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.0)
+## 📝 Latest Updates (v3.15.63–v3.17.3)
+
+### PV-Surplus Charging: Duck-Curve Deferral & Evening-Coverage Safety Net (v3.17.3)
+
+* **The battery could stay near-empty through an entire morning of PV surplus, waiting for a price that never got meaningfully cheaper** — `cheaperPvAhead` deferred PV-surplus charging whenever any future PV-strong slot was even fractionally cheaper, with no minimum-savings floor. On a gradually falling "duck curve" price day (a coin-flip-cheaper slot always sits just ahead) this chained deferrals from morning through the price trough, by which point PV was already fading and the charging window had shrunk to almost nothing. The check now requires the future slot to be meaningfully cheaper (1.30× and ≥ €0.03, mirroring the existing `pvDelayMin` threshold) before deferring. Live miss 2026-07-01: SoC held at 2–3% for ~8 h despite 2–2.5 kW of exported PV surplus.
+
+* **Added a coverage safety net so deferral can't outrun the evening's actual energy need** — Even with the threshold above, a sufficiently steep duck-curve could in principle defer charging past the point of no return. The DP now compares the remaining free-PV headroom against the evening tail's predicted consumption (reusing the already-learned per-slot consumption data) and forces charging once that headroom would no longer cover the need — independent of whether a nominally cheaper price is still ahead.
+
+* **A negative-price slot anywhere in the 48 h horizon — even tomorrow — was blocking today's PV-surplus charging** — The suppression is now scoped to negative-price slots reachable before this evening's peak; one that lands afterward can't help cover tonight regardless, so it no longer holds the battery empty. Matters for dynamic contracts with genuine negative pricing (e.g. Zonneplan). `lib/optimization-engine.js`. Property invariants 25–27 in `test/optimizer-properties.test.js` pin all three cases.
 
 ### Night Discharge Reorder — Priciest Slots First; wEnd-Budget Fix (v3.17.0)
 
