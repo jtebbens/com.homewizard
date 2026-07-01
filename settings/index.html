@@ -2429,12 +2429,10 @@
           if (day === 0) {
             const wd = settings['policy_wind_data'];
             const _u = wd && wd.upwind;
-            if (_u && _u.thisFf != null) {
+            if (_u && (_u.thisFf != null || _u.station)) {
               const _dirs = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
               // OM windDeg = FROM (surface, reliable); fallback to KNMI measured dd+180 (tower, less reliable)
               const _fromDeg = wd.windDeg != null ? wd.windDeg : (_u.thisDd != null ? (_u.thisDd + 180) % 360 : null);
-              const _compass = _fromDeg != null ? _dirs[Math.round(_fromDeg / 22.5) % 16] : '?';
-              const _arrowDeg = _fromDeg != null ? (_fromDeg + 180) % 360 : 0;
               const _wmoEmoji = (c => {
                 if (c == null) return '';
                 if (c === 0) return '☀️ ';
@@ -2449,16 +2447,25 @@
                 if (c >= 95)             return '⛈️ ';
                 return '';
               })(wd.wmoCode);
-              let _wLine1 = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_arrowDeg}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
-              if (_u.thisStation) _wLine1 = `${_u.thisStation}: ${_wLine1}`;
-              let _wHtml = _wLine1;
+              let _wHtml = '';
+              if (_u.thisFf != null) {
+                const _compass = _fromDeg != null ? _dirs[Math.round(_fromDeg / 22.5) % 16] : '?';
+                const _arrowDeg = _fromDeg != null ? (_fromDeg + 180) % 360 : 0;
+                let _wLine1 = `${_wmoEmoji}<span style="display:inline-block;transform:rotate(${_arrowDeg}deg)">↑</span> ${_compass} ${_u.thisFf.toFixed(1)} m/s`;
+                if (_u.thisStation) _wLine1 = `${_u.thisStation}: ${_wLine1}`;
+                _wHtml = _wLine1;
+              } else if (_u.thisStation) {
+                const _thisCotEmoji = _u.thisCot == null ? '' : _u.thisCot === 0 ? '☀️' : _u.thisCot < 3 ? '🌤️' : _u.thisCot < 10 ? '⛅' : _u.thisCot < 25 ? '🌥️' : '☁️';
+                _wHtml = `${_wmoEmoji}${_thisCotEmoji} ${_u.thisStation} COT ${_u.thisCot?.toFixed(1) ?? '—'}`;
+              }
               if (_u.station) {
                 const _dcotStr = (_u.dcot >= 0 ? '+' : '') + _u.dcot.toFixed(1);
                 const _uc = _u.upwindCot;
                 const _cotEmoji = _uc == null ? '' : _uc === 0 ? '☀️' : _uc < 3 ? '🌤️' : _uc < 10 ? '⛅' : _uc < 25 ? '🌥️' : '☁️';
-                _wHtml += `<br><span style="opacity:0.7">${_cotEmoji}↖ ${_u.station} ΔCOT${_dcotStr}</span>`;
+                const _sep = _wHtml ? '<br>' : '';
+                _wHtml += `${_sep}<span style="opacity:0.7">${_cotEmoji}↖ ${_u.station} ΔCOT ${_dcotStr}</span>`;
               }
-              windRow = `<div style="font-size:11px;color:#aaa;padding:2px 4px 4px;text-align:right;">${_wHtml}</div>`;
+              if (_wHtml) windRow = `<div style="font-size:11px;color:#aaa;padding:2px 4px 4px;text-align:right;">${_wHtml}</div>`;
             }
           }
           dayMarker = `<div class="planning-day-marker">📅 ${label} — ${dayName}, ${dateStr}${cycleLabel}${dynChgLabel}${revenueLabel}${selfSuffLabel}</div>${noPriceBadge}${weatherTs}${pvCurve}${windRow}${pvSurplusPlaceholder}`;

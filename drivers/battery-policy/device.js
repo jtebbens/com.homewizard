@@ -3118,7 +3118,8 @@ if (debug) this.log(
         this.log(`[SPREAD] shadow(off) slots: ${highSpread.join(' ')}`);
       }
     }
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust);
+    const maxChargePrice = this.getSetting('max_charge_price') ?? 0;
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust, maxChargePrice);
 
     // Compact planning summary — always visible in user diagnostics.
     {
@@ -3651,7 +3652,7 @@ if (debug) this.log(
     const _corr = (this._pvDayCorrectionFactor ?? 1.0) * (this._lastIntradayPvRatio ?? 1.0);
     const chartW = _corr === 1 ? null : {
       om: this._correctOverlayW(omW, true),
-      sat: this._correctOverlayW(satW, true),
+      sat: this._correctOverlayW(satW, false),
       perModel: Object.fromEntries(Object.entries(perModelW).map(([m, w]) => [m, this._correctOverlayW(w, true)])),
     };
 
