@@ -1585,5 +1585,8 @@
   },
   "3.17.2": {
     "en": "Bugfix + backfill day epex prices"
+  },
+  "3.17.3": {
+    "en": "Finetuning planning and extra watchguards on EPEX/ENTSO prices when xadi-kwhprice fail"
   }
 }
