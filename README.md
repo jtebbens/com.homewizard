@@ -61,6 +61,8 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 * **Fixed a case where a favorable price later in the schedule could block charging today even when it wouldn't actually be reachable in time.**
 
+* **Stopped the battery from rapidly switching between charging and idle when solar output was present but below household demand** — the surplus-vs-grid decision now only runs when there is genuine surplus (solar actually exceeding the home's own use), avoiding needless mode changes.
+
 ### Night Discharge Reorder — Priciest Slots First; wEnd-Budget Fix (v3.17.0)
 
 * **Overnight discharge slots are now evaluated priciest-first instead of chronologically** — The optimizer built its list of candidate night-window discharge slots and filled them earliest-to-latest. When total available SoC fell short of covering every candidate, the cheapest slot got filled while the most valuable one sat idle. The reorder block now sorts by slot price descending and fills from the top, so the highest-price export opportunity captures capacity first. `optimization-engine.js`
