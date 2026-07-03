@@ -4818,7 +4818,7 @@ if (debug) this.log(
       const raw = satYf > 0 ? Math.round(store[key] * satYf) : 0;
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
-    this.homey.settings.set('policy_pv_sat_obs', store);
+    this._queueSettingsPersist('policy_pv_sat_obs', store);
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
   }
 
