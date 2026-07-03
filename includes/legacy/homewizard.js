@@ -504,7 +504,7 @@ module.exports = (function() {
       self.devices[id].polldata.windmeters = response.windmeters;
       self.devices[id].polldata.kakusensors = response.kakusensors;
 
-      if (Object.keys(response.energylinks).length !== 0) {
+      if (Object.keys(response.energylinks || {}).length !== 0) {
         try {
           const response2 = await new Promise((resolve, reject) => {
             homewizard.callnew(id, '/el/get/0/readings', (err2, response2) => {
