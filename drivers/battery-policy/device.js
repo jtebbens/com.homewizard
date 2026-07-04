@@ -1820,6 +1820,17 @@ if (debug) this.log(
         const _sched = this.optimizationEngine?._schedule;
         if (_sched?.terminalFactor != null) result.debug.pvTermFactor = +_sched.terminalFactor.toFixed(2);
         if (_sched?.terminalPvKwh != null)  result.debug.pvTermKwh = +_sched.terminalPvKwh.toFixed(1);
+        // PV forecast-accuracy EMAs (learning-engine.js recordPvAccuracy) — exposed here so they're
+        // readable from settings/diagnose without flipping learning-engine.js's debug flag + restart.
+        // Gates project_satellite_dp_integration_playbook's CHUNK 0 go/no-go on pv_accuracy_sat.
+        const _pvAcc = this.learningEngine?.data;
+        if (_pvAcc) {
+          result.debug.pvAccuracySat = _pvAcc.pv_accuracy_sat ?? null;
+          result.debug.pvAccuracyOm = _pvAcc.pv_accuracy_om ?? null;
+          result.debug.pvAccuracySc = _pvAcc.pv_accuracy_sc ?? null;
+          result.debug.pvAccuracyScore = _pvAcc.pv_accuracy_score ?? null;
+          result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
+        }
         this._setLive('policy_last_run_debug', result.debug);
       }
 
