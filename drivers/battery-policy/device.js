@@ -3994,6 +3994,8 @@ if (debug) this.log(
       pvAccuracy:     learningStats.pv_accuracy,
       rte:            rte != null ? +(rte * 100).toFixed(1) : null,
       rteByPower:     rteInsightsObj?.rteByPower ?? null,
+      rteBySeason:    rteInsightsObj?.rteBySeason ?? null,
+      rteByMode:      rteInsightsObj?.rteByMode ?? null,
       cycles:         this.efficiencyEstimator.getCycleCount(),
       accOM:          accOM != null ? +(accOM * 100).toFixed(1) : null,
       accSC:          accSC != null ? +(accSC * 100).toFixed(1) : null,
