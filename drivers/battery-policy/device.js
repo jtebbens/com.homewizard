@@ -3993,6 +3993,7 @@ if (debug) this.log(
       coverage:       learningStats.pattern_coverage,
       pvAccuracy:     learningStats.pv_accuracy,
       rte:            rte != null ? +(rte * 100).toFixed(1) : null,
+      rteByPower:     rteInsightsObj?.rteByPower ?? null,
       cycles:         this.efficiencyEstimator.getCycleCount(),
       accOM:          accOM != null ? +(accOM * 100).toFixed(1) : null,
       accSC:          accSC != null ? +(accSC * 100).toFixed(1) : null,
