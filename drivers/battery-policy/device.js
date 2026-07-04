@@ -321,7 +321,15 @@ class BatteryPolicyDevice extends Homey.Device {
       return;
     }
 
-    const [key, value] = this._settingsQueue.entries().next().value;
+    // Priority key: policy_last_run_debug drives the settings-page diagnose dump — with
+    // ~15+ keys queued per policy cycle, round-robin insertion-order left it stale for
+    // 10+ minutes after a restart (feedback_dp_instability_debug_workflow). Flushing it
+    // first whenever pending costs nothing extra (same 1-key-per-8s cadence, same 30MB
+    // GC-safety rationale) — it just jumps the queue instead of waiting its turn.
+    const _priorityKey = 'policy_last_run_debug';
+    const [key, value] = this._settingsQueue.has(_priorityKey)
+      ? [_priorityKey, this._settingsQueue.get(_priorityKey)]
+      : this._settingsQueue.entries().next().value;
     this._settingsQueue.delete(key);
     try {
       this.homey.settings.set(key, value);
@@ -1831,6 +1839,20 @@ if (debug) this.log(
           result.debug.pvAccuracyScore = _pvAcc.pv_accuracy_score ?? null;
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
         }
+        // Refill-reserve state + near-term discharge count — exposed so a "discharge tonight
+        // silently dropped" report (feedback_dp_instability_debug_workflow) is traceable from
+        // one diag-dump instead of a temp full-array log + restart + wait.
+        result.debug.refillConfidence = this._lastRefillConfidence ?? null;
+        result.debug.reserveFloorPct  = this._lastReserveFloorPct ?? null;
+        result.debug.minDischargePriceRange = this._lastMinDischargePriceRange ?? null;
+        result.debug.consumptionMarginRange = this._lastConsumptionMarginRange ?? null;
+        {
+          const _schedSlots    = this.optimizationEngine?._schedule?.slots ?? [];
+          const _next12hCutoff = Date.now() + 12 * 3_600_000;
+          result.debug.dischargeNext12h = _schedSlots.filter(
+            s => s.action === 'discharge' && new Date(s.timestamp).getTime() <= _next12hCutoff
+          ).length;
+        }
         this._setLive('policy_last_run_debug', result.debug);
       }
 
@@ -3052,6 +3074,18 @@ if (debug) this.log(
       }
     }
 
+    // Cheap scalar min/max summaries of the two per-slot arrays feeding compute() — surfaced
+    // in policy_last_run_debug so a future discharge-plan flip can be diagnosed from one diag
+    // dump instead of a temp full-array log (feedback_dp_instability_debug_workflow: these two
+    // arrays turned out to be exactly what a hand-typed repro got wrong last time).
+    {
+      const _range = v => Array.isArray(v)
+        ? { min: +Math.min(...v).toFixed(3), max: +Math.max(...v).toFixed(3) }
+        : { min: +v.toFixed(3), max: +v.toFixed(3) };
+      this._lastMinDischargePriceRange = _range(minDischargePrice);
+      this._lastConsumptionMarginRange = _range(consumptionMargin);
+    }
+
     // When battery was charged at zero or negative cost (avgCost ≤ 0) AND pvKwhTomorrow
     // is stale/missing (=0), assume PV will refill so terminal value doesn't block discharge.
     // Only applies when pvKwhTomorrow is actually 0 — a real forecast must be respected.
@@ -3129,7 +3163,11 @@ if (debug) this.log(
         this.log(`[SPREAD] shadow(off) slots: ${highSpread.join(' ')}`);
       }
     }
-    const maxChargePrice = this.getSetting('max_charge_price') ?? 0;
+    // Dynamic-or-static ceiling (Math.max of both, policy-engine.js:25-66) — matches what
+    // the mapper/explainability already use everywhere (chunk 2, project_stability_focus_chunkplan).
+    // Only ever raises the ceiling vs the static setting, so the DP's drain-avoidance/topup
+    // checks (optimization-engine.js:423-436, :787) become more permissive, never stricter.
+    const maxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice);
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust, maxChargePrice);
 
     // Compact planning summary — always visible in user diagnostics.
@@ -3137,12 +3175,18 @@ if (debug) this.log(
       const _slots = this.optimizationEngine._schedule?.slots ?? [];
       const _cnt   = { charge: 0, discharge: 0, preserve: 0, standby: 0, trickle: 0 };
       let _socMin = 100, _socMax = 0;
+      // Next-12h discharge count, separate from the full-horizon total: cheap, always-on
+      // signal to spot a "discharge tonight silently dropped to 0" flip between two runs
+      // without needing a temp per-incident diagnostic dump + restart (feedback_dp_instability_debug_workflow).
+      const _next12hCutoff = Date.now() + 12 * 3_600_000;
+      let _dischargeNext12h = 0;
       for (const s of _slots) {
         if (_cnt[s.action] !== undefined) _cnt[s.action]++;
         if (s.socProjected != null) { _socMin = Math.min(_socMin, s.socProjected); _socMax = Math.max(_socMax, s.socProjected); }
+        if (s.action === 'discharge' && new Date(s.timestamp).getTime() <= _next12hCutoff) _dischargeNext12h++;
       }
       const _profit = this.optimizationEngine._schedule?.todayProjectedProfit ?? this.optimizationEngine._schedule?.projectedProfit ?? 0;
-      this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)}`);
+      this.log(`📋 Plan: ${_slots.length} slots | charge=${_cnt.charge} discharge=${_cnt.discharge} (next12h=${_dischargeNext12h}) preserve=${_cnt.preserve} standby=${_cnt.standby} trickle=${_cnt.trickle} | SoC ${soc}%→min${_socMin}%→max${_socMax}% | profit €${_profit.toFixed(3)} | refillConf=${refillConfidence.toFixed(2)}`);
       this.setCapabilityValue('policy_profit_eur', parseFloat(_profit.toFixed(2))).catch(this.error);
       if (this._morningPlannedProfit == null) {
         const h = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -3182,9 +3226,10 @@ if (debug) this.log(
     // Persist planning schedule for the settings UI (single source of truth).
     // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
     // _recomputeOptimizer runs before policyEngine.evaluate(), so dynamicMaxChargePrice is not
-    // yet set on inputs — compute it here so the planning mapper uses the effective price.
+    // yet set on inputs — reuse the value already computed above for optimizer.compute(),
+    // same tariff/price inputs so recomputing would give an identical result anyway.
     if (!inputs.dynamicMaxChargePrice) {
-      inputs.dynamicMaxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice);
+      inputs.dynamicMaxChargePrice = maxChargePrice;
     }
     const slots = this.optimizationEngine._schedule?.slots;
     if (slots?.length > 0) {

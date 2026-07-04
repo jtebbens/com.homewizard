@@ -2687,6 +2687,14 @@
               const termStr   = d.pvTermKwh != null ? ` (post-horizon ${d.pvTermKwh} kWh)` : '';
               return `PV morgen:     ${pv != null ? pv + ' kWh' : '—'}${threshStr}${csStr}${pctStr}  terminal factor ${d.pvTermFactor != null ? d.pvTermFactor : '—'}${termStr}`;
             })(),
+            `Refill-reserve: conf ${d.refillConfidence != null ? d.refillConfidence.toFixed(2) : '—'}${d.reserveFloorPct != null ? `  vloer ${d.reserveFloorPct.toFixed(0)}%` : ''}  discharge komende 12h: ${d.dischargeNext12h != null ? d.dischargeNext12h + ' slots' : '—'}`,
+            (() => {
+              const md = d.minDischargePriceRange;
+              const cm = d.consumptionMarginRange;
+              const mdStr = md != null ? `€${md.min.toFixed(3)}-${md.max.toFixed(3)}` : '—';
+              const cmStr = cm != null ? `${cm.min.toFixed(2)}-${cm.max.toFixed(2)}` : '—';
+              return `Ontlaad-drempel-range: ${mdStr}  Verbruiksmarge-range: ${cmStr}`;
+            })(),
           );
         }
 
