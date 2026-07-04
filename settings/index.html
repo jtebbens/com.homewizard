@@ -647,6 +647,7 @@
       </div>
       <div id="econ-status" style="margin-bottom:6px;">–</div>
       <div id="econ-rte-power" style="font-size:11px;color:#666;margin-bottom:6px;">–</div>
+      <div id="econ-rte-discharge-power" style="font-size:11px;color:#666;margin-bottom:6px;">–</div>
       <div id="econ-insight" style="font-size:12px;color:#A0A0A0;font-style:italic;margin-top:8px;border-top:1px solid #2d2d2d;padding-top:8px;">–</div>
     </div>
 
@@ -1761,11 +1762,20 @@
           // of vol laden (bv. 800W) een beter of slechter rendement geeft dan gedeeltelijk laden.
           const elRtePower = document.getElementById('econ-rte-power');
           const rp = window.cachedRteByPower;
+          const part = (label, b) => b ? `${label} ${b.rte}% (${b.n}x)` : `${label} –`;
           if (rp && (rp.low || rp.mid || rp.high)) {
-            const part = (label, b) => b ? `${label} ${b.rte}% (${b.n}x)` : `${label} –`;
             elRtePower.innerHTML = `Rendement per laadvermogen: ${part('laag', rp.low)} · ${part('midden', rp.mid)} · ${part('hoog', rp.high)}`;
           } else {
             elRtePower.innerHTML = '';
+          }
+
+          // Zelfde split maar op ONTLAADvermogen — bv. piekscheren tijdens koken/oven op ~800W.
+          const elRteDischargePower = document.getElementById('econ-rte-discharge-power');
+          const rdp = window.cachedRteByDischargePower;
+          if (rdp && (rdp.low || rdp.mid || rdp.high)) {
+            elRteDischargePower.innerHTML = `Rendement per ontlaadvermogen: ${part('laag', rdp.low)} · ${part('midden', rdp.mid)} · ${part('hoog', rdp.high)}`;
+          } else {
+            elRteDischargePower.innerHTML = '';
           }
 
           // Forward-looking insight from optimizer schedule
@@ -2883,8 +2893,9 @@
 
       block.style.display = '';
 
-      const { days, coverage, pvAccuracy, rte, cycles, rteByPower } = st;
+      const { days, coverage, pvAccuracy, rte, cycles, rteByPower, rteByDischargePower } = st;
       window.cachedRteByPower = rteByPower ?? null;
+      window.cachedRteByDischargePower = rteByDischargePower ?? null;
 
       // Helper: pill with colour based on value vs thresholds
       const pill = (label, value, unit, lo, hi) => {
