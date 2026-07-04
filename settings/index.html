@@ -523,6 +523,7 @@
     <div id="learning-status-block" style="display:none;margin-top:24px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
       <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;" data-i18n="settings.learning_title">Leermotor status</div>
       <div id="learning-status-inner" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;"></div>
+      <div id="learning-status-rte-table" style="margin-top:10px;"></div>
     </div>
 
     <!-- Consumption profile chart -->
@@ -646,8 +647,6 @@
         </div>
       </div>
       <div id="econ-status" style="margin-bottom:6px;">–</div>
-      <div id="econ-rte-power" style="font-size:11px;color:#666;margin-bottom:6px;">–</div>
-      <div id="econ-rte-discharge-power" style="font-size:11px;color:#666;margin-bottom:6px;">–</div>
       <div id="econ-insight" style="font-size:12px;color:#A0A0A0;font-style:italic;margin-top:8px;border-top:1px solid #2d2d2d;padding-top:8px;">–</div>
     </div>
 
@@ -1758,25 +1757,9 @@
             elStatus.innerHTML = `<span style="color:#555">–</span>`;
           }
 
-          // Rendement per laadvermogen (low <300W, mid 300-600W, high >600W) — beantwoordt
-          // of vol laden (bv. 800W) een beter of slechter rendement geeft dan gedeeltelijk laden.
-          const elRtePower = document.getElementById('econ-rte-power');
-          const rp = window.cachedRteByPower;
-          const part = (label, b) => b ? `${label} ${b.rte}% (${b.n}x)` : `${label} –`;
-          if (rp && (rp.low || rp.mid || rp.high)) {
-            elRtePower.innerHTML = `Rendement per laadvermogen: ${part('laag', rp.low)} · ${part('midden', rp.mid)} · ${part('hoog', rp.high)}`;
-          } else {
-            elRtePower.innerHTML = '';
-          }
-
-          // Zelfde split maar op ONTLAADvermogen — bv. piekscheren tijdens koken/oven op ~800W.
-          const elRteDischargePower = document.getElementById('econ-rte-discharge-power');
-          const rdp = window.cachedRteByDischargePower;
-          if (rdp && (rdp.low || rdp.mid || rdp.high)) {
-            elRteDischargePower.innerHTML = `Rendement per ontlaadvermogen: ${part('laag', rdp.low)} · ${part('midden', rdp.mid)} · ${part('hoog', rdp.high)}`;
-          } else {
-            elRteDischargePower.innerHTML = '';
-          }
+          // Rendement per laad-/ontlaadvermogen staat nu in de Leermotor-status-tabel
+          // (renderLearningStatus) — betrouwbaarder daar (elke settings-poll, niet
+          // afhankelijk van het explainability_update-event).
 
           // Forward-looking insight from optimizer schedule
           const elInsight = document.getElementById('econ-insight');
@@ -2894,8 +2877,6 @@
       block.style.display = '';
 
       const { days, coverage, pvAccuracy, rte, cycles, rteByPower, rteByDischargePower } = st;
-      window.cachedRteByPower = rteByPower ?? null;
-      window.cachedRteByDischargePower = rteByDischargePower ?? null;
 
       // Helper: pill with colour based on value vs thresholds
       const pill = (label, value, unit, lo, hi) => {
@@ -2933,6 +2914,38 @@
                ⚠ Leermotor heeft nog onvoldoende data — planning minder nauwkeurig.
              </div>`
           : '');
+
+      // Rendement per vermogensbucket (laag <300W, midden 300-600W, hoog >600W), laden + ontladen
+      // naast elkaar. Direct uit dezelfde settings-poll als de pills hierboven — geen aparte
+      // window-cache/event-afhankelijkheid die stil kan blijven hangen als explainability_update
+      // eerder vuurt dan deze poll (was de vorige, kapotte aanpak).
+      const rteTable = document.getElementById('learning-status-rte-table');
+      if (rteTable) {
+        const cell = b => b ? `${b.rte}% <span style="color:var(--dim);">(${b.n}x)</span>` : '<span style="color:var(--dim);">–</span>';
+        if (rteByPower || rteByDischargePower) {
+          rteTable.innerHTML = `
+            <table style="font-size:11px;border-collapse:collapse;">
+              <thead><tr style="color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:9px;">
+                <th style="text-align:left;padding:2px 10px 2px 0;"></th>
+                <th style="text-align:left;padding:2px 10px;">Laag (&lt;300W)</th>
+                <th style="text-align:left;padding:2px 10px;">Midden (300-600W)</th>
+                <th style="text-align:left;padding:2px 10px;">Hoog (&gt;600W)</th>
+              </tr></thead>
+              <tbody>
+                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">Laden</td>
+                  <td style="padding:2px 10px;">${cell(rteByPower?.low)}</td>
+                  <td style="padding:2px 10px;">${cell(rteByPower?.mid)}</td>
+                  <td style="padding:2px 10px;">${cell(rteByPower?.high)}</td></tr>
+                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">Ontladen</td>
+                  <td style="padding:2px 10px;">${cell(rteByDischargePower?.low)}</td>
+                  <td style="padding:2px 10px;">${cell(rteByDischargePower?.mid)}</td>
+                  <td style="padding:2px 10px;">${cell(rteByDischargePower?.high)}</td></tr>
+              </tbody>
+            </table>`;
+        } else {
+          rteTable.innerHTML = '';
+        }
+      }
     }
 
     /* ══════════════════════════════════════════════════════════
