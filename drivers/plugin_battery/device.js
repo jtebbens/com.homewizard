@@ -280,26 +280,6 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
           this.wsManager?.restartWebSocket();
         }
 
-        // Surface WebSocketManager's already-tracked connection stats — previously computed
-        // (reconnects, drop/processed counts, handler errors) but never read by this driver.
-        const s = this.wsManager?._stats;
-        if (s) {
-          this._queueSettingsPersist(`ws_stats_${this.getData().id}`, {
-            reconnects: s.reconnects ?? null,
-            messagesReceived: s.messagesReceived ?? null,
-            measurementsProcessed: s.measurementsProcessed ?? null,
-            measurementsDropped: s.measurementsDropped ?? null,
-            systemProcessed: s.systemProcessed ?? null,
-            systemDropped: s.systemDropped ?? null,
-            batteriesProcessed: s.batteriesProcessed ?? null,
-            batteriesDeferred: s.batteriesDeferred ?? null,
-            handlerErrors: s.handlerErrors ?? null,
-            lastConnectedAt: s.lastConnectedAt ?? null,
-            lastDisconnectedAt: s.lastDisconnectedAt ?? null,
-            updatedAt: new Date().toISOString(),
-          });
-        }
-
         // Fault detection: if measurement data stale >5 min (restart attempts failed),
         // battery is likely in fault/unresponsive state. Trigger alarm + flow.
         const dataStaleSec = Date.now() - (this.lastMeasurementAt || 0);
