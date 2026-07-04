@@ -37,7 +37,7 @@ function _settingsFootprintKB(settings) {
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
     'weather_forecast_cache', 'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
-    'battery_policy_state', 'device_settings', 'policy_resource_history',
+    'battery_policy_state', 'device_settings',
   ];
   try {
     const entries = KNOWN_KEYS
@@ -58,7 +58,6 @@ class BatteryPolicyDevice extends Homey.Device {
     this.homey.app.bumpDeviceCount?.('battery-policy');
     this.log('BatteryPolicyDevice initialized');
     _memMB('onInit-start');
-    try { this._lastCpuUsage = process.cpuUsage(); } catch (_) {}
 
     // Components
     this.learningEngine = new LearningEngine(this.homey, this);
@@ -668,36 +667,6 @@ if (debug) this.log(
               `[RTE] session: dir=${dir} pending=${pendingWh}Wh charge=${chargedWh}Wh discharge=${dischargedWh}Wh ` +
               `cycles=${this.efficiencyEstimator.getCycleCount()} RTE=${(s.efficiency * 100).toFixed(1)}%`
             );
-
-            // Persistent heap+CPU tracking (every 5 min, same cadence as [RTE] above).
-            // process.memoryUsage() is FORBIDDEN here (hard-crashes on Homey Pro — see
-            // CLAUDE.md gotchas); process.cpuUsage() is a different API family but still
-            // unverified in this sandbox, hence its own guarded try/catch.
-            let heapUsedMB = null, heapTotalMB = null;
-            try {
-              const hs = require('v8').getHeapStatistics();
-              heapUsedMB  = +(hs.used_heap_size  / 1048576).toFixed(1);
-              heapTotalMB = +(hs.total_heap_size / 1048576).toFixed(1);
-            } catch (_) {}
-            let cpuUserMs = null, cpuSystemMs = null;
-            try {
-              const cpu = process.cpuUsage(this._lastCpuUsage);
-              cpuUserMs   = Math.round(cpu.user   / 1000);
-              cpuSystemMs = Math.round(cpu.system / 1000);
-              this._lastCpuUsage = process.cpuUsage();
-            } catch (_) {}
-            this.log(
-              `[RESOURCE] heap=${heapUsedMB ?? '?'}/${heapTotalMB ?? '?'}MB ` +
-              `cpu(5min)=user:${cpuUserMs ?? '?'}ms sys:${cpuSystemMs ?? '?'}ms`
-            );
-            try {
-              const resHistory = this.homey.settings.get('policy_resource_history') || [];
-              resHistory.push({ ts: new Date().toISOString(), heapUsedMB, heapTotalMB, cpuUserMs, cpuSystemMs });
-              if (resHistory.length > 288) resHistory.splice(0, resHistory.length - 288);
-              this._queueSettingsPersist('policy_resource_history', resHistory);
-            } catch (e) {
-              this.error('Failed to save resource history:', e.message);
-            }
           }
 
           // Update RTE from hardware meters every hour (240 × 15s)
