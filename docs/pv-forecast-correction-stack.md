@@ -36,7 +36,7 @@ in the order below.
 | 16 | Satellite nowcast override | 2839–2864 | **replace** | 0–2h, gated `satellite_dp_active`; sets spreadFrac=0 |
 | 17 | Upwind cloud modulation | 2866–2885 | reduce-only | lead-time slot ×`upwindKt`, always when upwind data present |
 | **F. DP-internal (not on pvForecast)** | | `optimization-engine.js` | | |
-| 18 | Spread-band (`_applyPvSpreadBand`) | 663–666 | reduce discharge-cap | only `pvTimingRobust=true`, discharge-rate cap only, chart stays p50 |
+| 18 | Spread-band (`_applyPvSpreadBand`) | 663–666 | **RETIRED 2026-07-04** | no live caller (device.js passes `pvTimingRobust=false` always); helper kept as dead-but-tested code |
 
 ## Three things that make this fragile
 
@@ -50,7 +50,7 @@ in the order below.
 2. **Two consumers diverge — by design, but watch it.** The chart, stored forecast, and
    accuracy line consume the fully-corrected **p50** `pvForecast[].pvPowerW`. The DP additionally
    applies `_pvCloudFactor` (layer 10, a *separate* `pvCloudFactor` arg to `compute()`, discounts
-   `pvCoverage` only) and the spread-band (layer 18, discharge-cap only). This is the deliberate
+   `pvCoverage` only) (the spread-band, layer 18, is retired — no longer a divergence). This is the deliberate
    "decision is more conservative than the display" split — but it means "why does the DP see less
    PV than the chart shows?" is expected, not a bug. Per CLAUDE.md's single-correction-impl rule:
    never add a chart-side mirror of a DP-side discount or vice-versa.

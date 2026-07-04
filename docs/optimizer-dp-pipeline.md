@@ -84,7 +84,8 @@ always traces back here first. It is now surfaced live in `policy_last_run_debug
 ## Invariants that guard the pipeline
 
 `test/optimizer-properties.test.js` (run via `npm run test-unit`):
-- **20/21** — spread-band is monotone / never suppresses peak-slot discharge.
+- **20/21** — spread-band is monotone / never suppresses peak-slot discharge (band retired
+  2026-07-04, no live caller; tests kept to guard the dead-but-present helper).
 - **22/25** — discharge-topup cycle never net-negative (25 = same guard holds at a raised ceiling).
 - **24** — upwind-cloud triggers early grid charge.
 - Per CLAUDE.md: any new DP constraint (floor/cap/gate/reserve) needs a random-arb property test

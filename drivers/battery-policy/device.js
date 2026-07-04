@@ -3146,29 +3146,15 @@ if (debug) this.log(
         this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
       }
     }
-    // pvTimingRobust spread-band (internal device-setting, no UI knob): discount the
-    // discharge-cap PV by per-slot ensemble disagreement. Off unless explicitly set true.
-    const pvTimingRobust = this.getSetting('pv_timing_robust') === true;
-    {
-      const PV_SPREAD_Z = 1.0;
-      const highSpread = (pvForecast ?? [])
-        .filter(s => (s.spreadFrac ?? 0) > 0.20 && s.pvPowerW > 0)
-        .map(s => {
-          const t = new Date(s.timestamp);
-          const hh = t.getUTCHours().toString().padStart(2, '0') + ':' + t.getUTCMinutes().toString().padStart(2, '0');
-          const discounted = Math.round(s.pvPowerW * (1 - PV_SPREAD_Z * s.spreadFrac));
-          return `${hh}:${Math.round(s.pvPowerW)}→${discounted}W(σ=${s.spreadFrac.toFixed(2)})`;
-        });
-      if (highSpread.length > 0) {
-        this.log(`[SPREAD] shadow(off) slots: ${highSpread.join(' ')}`);
-      }
-    }
     // Dynamic-or-static ceiling (Math.max of both, policy-engine.js:25-66) — matches what
     // the mapper/explainability already use everywhere (chunk 2, project_stability_focus_chunkplan).
     // Only ever raises the ceiling vs the static setting, so the DP's drain-avoidance/topup
     // checks (optimization-engine.js:423-436, :787) become more permissive, never stricter.
     const maxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice);
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, pvTimingRobust, maxChargePrice);
+    // Spread-band (pvTimingRobust) retired 2026-07-04: unmeasured (pv_predictions.csv is blind to
+    // a discharge-cap-only change) and inert live; dropped to reduce DP-stack complexity. Pass
+    // false — the optimization-engine helper stays as dead-but-tested code (inv20/21).
+    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
 
     // Compact planning summary — always visible in user diagnostics.
     {
