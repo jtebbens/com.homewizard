@@ -11,6 +11,16 @@ const ChartRenderer = require('../../lib/chart-renderer');
 
 const debug = false;
 
+// Suppress refillConfidence swings below this threshold between consecutive policy
+// runs. Open-Meteo refreshes its ensemble hourly even overnight (see _updateWeather,
+// "1h cycle"), so pvSpreadTomorrow — and thus refillConfidence — churns on pure
+// model disagreement with zero new PV observation to validate it while the sun is
+// down. That churn moved the reserve-floor enough to flip which slot the DP reorder
+// picked for discharge vs. preserve at an unchanged price (2026-07-05 incident: raw
+// refillConfidence 0.84→0.70 in 30min, floor +8%→+15%). ±0.04-0.06 was the observed
+// noise floor there; the real swing was 0.14. Starting value — may need tuning.
+const REFILL_CONFIDENCE_DEADBAND = 0.05;
+
 function _memMB(label) {
   try {
     const hs = require('v8').getHeapStatistics();
@@ -1001,6 +1011,16 @@ if (debug) this.log(
     this.log(`🛡️ SoC ${soc}% < reserve floor ${floorPct.toFixed(0)}% during ${hwModeNow} → reactive policy run`);
     this._runPolicyCheck().catch(e => this.error('[FLOOR] reactive trigger:', e));
     return true;
+  }
+
+  // Anchors against the last APPLIED (not last raw) value: pure noise oscillating
+  // around a stable mean stays suppressed indefinitely, while a real trend crossing
+  // the threshold vs. that anchor still updates. See REFILL_CONFIDENCE_DEADBAND.
+  _applyRefillConfidenceDeadband(rawConfidence) {
+    const prevApplied = this._lastRefillConfidence ?? rawConfidence;
+    return Math.abs(rawConfidence - prevApplied) < REFILL_CONFIDENCE_DEADBAND
+      ? prevApplied
+      : rawConfidence;
   }
 
   _schedulePolicyCheck() {
@@ -3131,15 +3151,17 @@ if (debug) this.log(
     // an abundant forecast lifts confidence and waives a reserve that guards a vanished risk.
     const _cvConf = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
     const _pvSpread = inputs.weather?.pvSpreadTomorrow;
-    const refillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh, _pvSpread);
+    const rawRefillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh, _pvSpread);
+    const refillConfidence = this._applyRefillConfidenceDeadband(rawRefillConfidence);
     this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
     const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
     const _cvStr = typeof _pvCv === 'number' ? _pvCv.toFixed(2) : 'n/a';
     const _spreadNote = typeof _pvSpread === 'number' ? ` spread=${_pvSpread.toFixed(2)}` : '';
+    const _confNote = rawRefillConfidence !== refillConfidence ? ` raw-conf=${rawRefillConfidence.toFixed(2)}→applied-conf=${refillConfidence.toFixed(2)}` : ` conf=${refillConfidence.toFixed(2)}`;
     if (refillConfidence < 1.0) {
       const floorAddPct = (1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0));
       this._lastReserveFloorPct = (_s.min_soc ?? 0) + floorAddPct;
-      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh conf=${refillConfidence.toFixed(2)} → overnight floor +${floorAddPct.toFixed(0)}% (until next strong-PV refill)`);
+      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}% (until next strong-PV refill)`);
     } else {
       this._lastReserveFloorPct = (_s.min_soc ?? 0);
       if (_cvConf < 1.0) {
