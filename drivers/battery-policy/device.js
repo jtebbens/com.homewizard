@@ -4386,6 +4386,21 @@ if (debug) this.log(
     }
   }
 
+  // set_override/clear_override flow-card handlers (driver.js:97-106). Writes the
+  // override_until store value that _runPolicyCheck already reads (line ~1598) to
+  // skip policy runs — that read-side existed but nothing ever wrote it.
+  async setManualOverride(durationMinutes) {
+    const until = new Date(Date.now() + durationMinutes * 60_000);
+    await this.setStoreValue('override_until', until.toISOString());
+    this.log(`Manual override set for ${durationMinutes}min (until ${until.toISOString()})`);
+    await this._triggerOverrideSet(durationMinutes);
+  }
+
+  async clearManualOverride() {
+    await this.setStoreValue('override_until', null);
+    this.log('Manual override cleared');
+  }
+
   /**
    * Check if the current moment is favorable for running appliances (cheap price or PV surplus).
    * Fires the favorable_consumption_window trigger on a false→true edge only.
