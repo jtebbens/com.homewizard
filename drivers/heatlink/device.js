@@ -128,7 +128,6 @@ class HomeWizardHeatlink extends Homey.Device {
       });
 
 
-
   }
 
   startPolling() {

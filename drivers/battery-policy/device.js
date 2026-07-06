@@ -11,6 +11,12 @@ const ChartRenderer = require('../../lib/chart-renderer');
 
 const debug = false;
 
+// Cached formatter for the planning-chart day-split below — constructing a fresh
+// Intl.DateTimeFormat per slot (via toLocaleDateString) was a confirmed CPU hotspot
+// (139 samples in one profiled second) since it's called once per slot in a filter().
+const _amsDayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
+const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false });
+
 // Suppress refillConfidence swings below this threshold between consecutive policy
 // runs. Open-Meteo refreshes its ensemble hourly even overnight (see _updateWeather,
 // "1h cycle"), so pvSpreadTomorrow — and thus refillConfidence — churns on pure
@@ -79,7 +85,14 @@ class BatteryPolicyDevice extends Homey.Device {
     const SAT_NOWCAST_URL = (_satLat && _satLon)
       ? `https://pv.tebbens.net/api/sat?lat=${_satLat}&lon=${_satLon}`
       : 'https://pv.tebbens.net/msgcpp/latest.json';
-    this.weatherForecaster.startSatelliteLoop(SAT_NOWCAST_URL, '', () => this._onSatelliteOverlay());
+    // Deferred 45s: starting this immediately at onInit fires its own out-of-band HTTPS
+    // fetch at the exact same instant as every other driver's onInit + WS auth + first
+    // poll — one more uncoordinated concurrent connection during the busiest part of boot.
+    // 45s (past the weather-fetch's own 30s defer + its 3s-staggered Buienradar/upwind
+    // tail) lands this independent 15-min-repeating loop in a different phase of the cycle.
+    this.homey.setTimeout(() => {
+      this.weatherForecaster.startSatelliteLoop(SAT_NOWCAST_URL, '', () => this._onSatelliteOverlay());
+    }, 45 * 1000);
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
     this.explainabilityEngine = null; // lazy-loaded on first policy check
@@ -307,6 +320,12 @@ class BatteryPolicyDevice extends Homey.Device {
   // before the next allocation — a single 60 MB peak alone trips the warning.
   _queueSettingsPersist(key, value) {
     if (!this._settingsQueue) this._settingsQueue = new Map();
+    if (!this._settingsLastWritten) this._settingsLastWritten = new Map();
+    // Skip the write entirely when the value is byte-identical to what's already persisted —
+    // each settings.set() costs a ~30MB transient V8 spike regardless of payload size, so an
+    // unchanged value queued every 15-min cycle is pure waste (device.js:306).
+    const serialized = JSON.stringify(value);
+    if (this._settingsLastWritten.get(key) === serialized) return;
     this._settingsQueue.set(key, value); // coalesces duplicates
     if (this._settingsFlushTimer) return;
     this._settingsFlushTimer = this.homey.setTimeout(() => {
@@ -343,6 +362,7 @@ class BatteryPolicyDevice extends Homey.Device {
     this._settingsQueue.delete(key);
     try {
       this.homey.settings.set(key, value);
+      this._settingsLastWritten.set(key, JSON.stringify(value));
     } catch (e) {
       this.error(`Failed to persist ${key}:`, e.message);
     }
@@ -1208,25 +1228,30 @@ if (debug) this.log(
         })
         .catch(e => this.error('Buienradar update failed:', e));
 
-      // Upwind cloud monitor: fire-and-forget, non-critical; windFromDeg=null skips upwind point but still fetches home station
-      this.weatherForecaster.fetchUpwindData(latitude, longitude, this.weatherData?.currentWindDeg ?? null)
-        .then(d => {
-          if (d !== null) {
-            // Preserve previous upwind station when this run had no windFromDeg (OM wind not yet loaded)
-            if (d.station === null && this._upwindData?.station != null) {
-              d = { ...d, station: this._upwindData.station, upwindCot: this._upwindData.upwindCot, dcot: this._upwindData.dcot };
+      // Upwind cloud monitor: fire-and-forget, non-critical; windFromDeg=null skips upwind point but still fetches home station.
+      // TEMP RSS-investigation stagger (2026-07-06): delayed 3s so its 2 new-host connections
+      // (SAT-relay qg+point) don't open at the same instant as the Buienradar fetch above —
+      // fewer simultaneous fresh TLS handshakes during the weather-update burst.
+      this.homey.setTimeout(() => {
+        this.weatherForecaster.fetchUpwindData(latitude, longitude, this.weatherData?.currentWindDeg ?? null)
+          .then(d => {
+            if (d !== null) {
+              // Preserve previous upwind station when this run had no windFromDeg (OM wind not yet loaded)
+              if (d.station === null && this._upwindData?.station != null) {
+                d = { ...d, station: this._upwindData.station, upwindCot: this._upwindData.upwindCot, dcot: this._upwindData.dcot };
+              }
+              this._upwindData = d;
             }
-            this._upwindData = d;
-          }
-          this._queueSettingsPersist('policy_wind_data', {
-            windMs:  this.weatherData?.currentWindMs  ?? null,
-            windDeg: this.weatherData?.currentWindDeg ?? null,
-            wmoCode: this.weatherData?.currentWmoCode ?? null,
-            upwind:  d !== null ? d : (this._upwindData ?? null),
-            ts:      new Date().toISOString()
-          });
-        })
-        .catch(() => {});
+            this._queueSettingsPersist('policy_wind_data', {
+              windMs:  this.weatherData?.currentWindMs  ?? null,
+              windDeg: this.weatherData?.currentWindDeg ?? null,
+              wmoCode: this.weatherData?.currentWmoCode ?? null,
+              upwind:  d !== null ? d : (this._upwindData ?? null),
+              ts:      new Date().toISOString()
+            });
+          })
+          .catch(() => {});
+      }, 3000);
 
       // Bereken verwachte PV-productie vandaag (kWh) op basis van straling + piekvermogen
       const pvCapW = devSettings.pv_capacity_w || 0;
@@ -1514,7 +1539,6 @@ if (debug) this.log(
 
       // Invalidate optimizer — new PV forecast may change the optimal charge schedule.
       this.optimizationEngine.updateSettings({});
-
     } catch (error) {
       this.error('Weather update failed:', error);
     }
@@ -2065,10 +2089,7 @@ if (debug) this.log(
     })();
 
     // Helper: Amsterdam hour from timestamp
-    const amhour = ts => parseInt(
-      new Date(ts).toLocaleString('en-US', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hour12: false }),
-      10
-    );
+    const amhour = ts => parseInt(_amsHourFormatter.format(new Date(ts)), 10);
 
     // Future slots from the optimizer schedule (include current slot via -15min buffer)
     // Use step as grace period so the current slot is never lost in the gap
@@ -3192,8 +3213,10 @@ if (debug) this.log(
     // which is blind to a discharge-cap-only change. This measures what the band actually
     // touches: projected € and where the SoC path diverges. Does not affect the live decision —
     // the real (pvTimingRobust=false) call below runs after and overwrites _schedule.
-    this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, true, maxChargePrice);
-    const _shadowOn = this.optimizationEngine._schedule;
+    const _shadowOn = (() => {
+      this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, true, maxChargePrice);
+      return this.optimizationEngine._schedule;
+    })();
 
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
 
@@ -4143,12 +4166,12 @@ if (debug) this.log(
     // Prefer dailyProfiles (full 24h including past hours) over hourlyForecast (future only).
     const weatherSource = weatherData?.dailyProfiles ?? weatherData?.hourlyForecast;
     if (weatherSource && Array.isArray(weatherSource)) {
-      const nowAmsDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const nowAmsDate = _amsDayKeyFormatter.format(new Date());
       const hourlyWeather = weatherSource.map(h => {
         const t = new Date(h.time);
-        const hAmsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const hAmsDate = _amsDayKeyFormatter.format(t);
         return {
-          hour: parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10),
+          hour: parseInt(_amsHourFormatter.format(t), 10),
           day: hAmsDate > nowAmsDate ? 1 : 0,
           sunshine: h.sunshine,
           cloudCover: h.cloudCover,
@@ -4824,7 +4847,7 @@ if (debug) this.log(
       const slots = compact?.slots || [];
 
       // Split slots by Amsterdam calendar day
-      const dayKey = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }); // YYYY-MM-DD
+      const dayKey = ts => _amsDayKeyFormatter.format(new Date(ts)); // YYYY-MM-DD
       const today    = dayKey(Date.now());
       const tomorrow = dayKey(Date.now() + 86400000);
 

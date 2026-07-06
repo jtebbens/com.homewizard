@@ -230,7 +230,6 @@ module.exports = class HomeWizardEnergyDevice230V2 extends Homey.Device {
 
     this._triggerFlowPrevious = {};
 
-
   }
 
   onDeleted() {
