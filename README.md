@@ -53,6 +53,12 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.17.3)
 
+### Diagnostics: DP Decision-Layer Tracing (v3.17.3)
+
+* **Added a log line that shows whether the optimizer's overnight PV-abundance logic actually reached the current battery level, and what the underlying algorithm would choose there before later adjustment steps run** — helps confirm whether an unexpected hold-vs-discharge decision came from the core planning logic or a later adjustment, without needing a separate reproduction script. `lib/optimization-engine.js`, `lib/policy-engine.js`
+
+* **Re-enabled a shadow measurement for the discharge-timing safety margin that was disabled earlier for lack of a working before/after comparison** — the safety margin (which makes overnight discharge more cautious when weather models disagree with each other) now logs its estimated profit and battery-level effect for comparison, without changing what the battery actually does. Counts persist across app restarts. `drivers/battery-policy/device.js`
+
 ### PV-Surplus Charging: Fixed a Battery-Stays-Empty Edge Case on Some Price Curves (v3.17.3)
 
 * **The battery could stay near-empty through a whole morning of PV surplus on certain price-curve shapes** — planning logic that decides when to wait for a better charging moment could keep deferring longer than intended, missing the practical charging window. Tightened so deferral only happens when genuinely worthwhile.
