@@ -2683,9 +2683,19 @@ if (debug) this.log(
     // Cloud uncertainty discount for DP pvCoverage projection: when cloud cover is high,
     // the DP should not rely on uncertain PV recharge to justify early discharge.
     // Kicks in above 70% cloud, reduces pvCoverage by up to 40% at full overcast.
+    // KNMI cross-check (shadow, gated on pv_cloud_knmi_gate): OM cloud% can be a false-overcast
+    // (see _knmiAwareCloudGate above, same kt≥0.65 bar) — when active, KNMI-clear releases the
+    // discount instead of applying it blindly.
     let _pvCloudFactor = 1.0;
     if (_pvBiasCloud != null && _pvBiasCloud > 70) {
-      _pvCloudFactor = Math.max(0.6, 1.0 - 0.5 * Math.min(1, (_pvBiasCloud - 70) / 30));
+      const _todayKtForCloudGate = this.weatherForecaster?.getTodayKt() ?? null;
+      const _cloudGateActive = this.getSetting('pv_cloud_knmi_gate') === true;
+      const _omOnlyCloudFactor = Math.max(0.6, 1.0 - 0.5 * Math.min(1, (_pvBiasCloud - 70) / 30));
+      const _gatedCloudFactor  = BatteryPolicyDevice._pvCloudUncertaintyFactor(_pvBiasCloud, _todayKtForCloudGate);
+      _pvCloudFactor = _cloudGateActive ? _gatedCloudFactor : _omOnlyCloudFactor;
+      if (_gatedCloudFactor !== _omOnlyCloudFactor) {
+        this.log(`[PV cloud KNMI gate${_cloudGateActive ? '' : ' shadow'}] cloud=${Math.round(_pvBiasCloud)}% kt=${_todayKtForCloudGate != null ? _todayKtForCloudGate.toFixed(2) : 'null'} → ${_cloudGateActive ? 'applied' : 'would apply'} factor ${_omOnlyCloudFactor.toFixed(2)}→${_gatedCloudFactor.toFixed(2)}`);
+      }
       this.log(`[PV cloud uncertainty] cloud=${Math.round(_pvBiasCloud)}% → pvCoverageFactor=${_pvCloudFactor.toFixed(2)}`);
     }
     this._setLive('policy_pv_bias', {
@@ -3840,6 +3850,23 @@ if (debug) this.log(
       return Math.max(0, 1 - (effectiveCloud - 70) / 30);
     }
     return 1.0;
+  }
+
+  /**
+   * Cloud-uncertainty discount for DP pvCoverage, cross-checked against KNMI ground truth.
+   * OM cloud% above 70% discounts pvCoverage by up to 40% (DP shouldn't rely on uncertain PV
+   * recharge) — but OM's cloud forecast can be a false-overcast. Same KNMI-clear bar as
+   * _knmiAwareCloudGate (kt ≥ 0.65): if KNMI's measured clearness disagrees with OM's high
+   * cloud%, don't discount. Returns a factor in [0.6,1]; only ever relaxes the OM-only discount.
+   * @param {number|null} effectiveCloud - OM effective cloud cover 0–100 (max of total, low×1.2)
+   * @param {number|null} knmiKt - KNMI clearness index for today, or null
+   * @returns {number} pvCoverage factor in [0.6,1]
+   */
+  static _pvCloudUncertaintyFactor(effectiveCloud, knmiKt) {
+    if (effectiveCloud == null || effectiveCloud <= 70) return 1.0;
+    const knmiClear = knmiKt != null && knmiKt >= 0.65;
+    if (knmiClear) return 1.0;
+    return Math.max(0.6, 1.0 - 0.5 * Math.min(1, (effectiveCloud - 70) / 30));
   }
 
   /**
