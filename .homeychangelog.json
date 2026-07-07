@@ -1588,5 +1588,8 @@
   },
   "3.17.3": {
     "en": "Finetuning planning and extra watchguards on EPEX/ENTSO prices when xadi-kwhprice fail"
+  },
+  "3.17.4": {
+    "en": "cpu and memory imorovements, knmi cloud cover correction on open meteo cloud forecast"
   }
 }
