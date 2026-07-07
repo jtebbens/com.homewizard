@@ -1882,6 +1882,9 @@ if (debug) this.log(
           result.debug.pvAccuracySc = _pvAcc.pv_accuracy_sc ?? null;
           result.debug.pvAccuracyScore = _pvAcc.pv_accuracy_score ?? null;
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
+          // Learned per-UTC-hour sat yield-factor table — exposed so it's checkable against
+          // the hardcoded SAT_YIELD_FACTORS fallback without a debug-flag flip + restart.
+          result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factors ?? null;
         }
         // Refill-reserve state + near-term discharge count — exposed so a "discharge tonight
         // silently dropped" report (feedback_dp_instability_debug_workflow) is traceable from
@@ -4991,7 +4994,8 @@ if (debug) this.log(
       if (amsDate < todayAms) { delete store[key]; continue; }
       const dayIdx = amsDate > todayAms ? 1 : 0;
       const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-      const satYf = WeatherForecaster.getSatYieldFactor(t.getUTCHours());
+      const satYf = this.weatherForecaster?.resolveSatYieldFactor?.(t.getUTCHours())
+        ?? WeatherForecaster.getSatYieldFactor(t.getUTCHours());
       const raw = satYf > 0 ? Math.round(store[key] * satYf) : 0;
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
