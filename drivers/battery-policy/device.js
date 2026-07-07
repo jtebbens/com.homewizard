@@ -3631,7 +3631,15 @@ if (debug) this.log(
       }
       if (satGhiWm2 != null && satGhiWm2 > 0 && satLookupMs !== this._lastSatYfBucket) {
         this._lastSatYfBucket = satLookupMs;
-        this.learningEngine.recordSatYield(new Date(satLookupMs).getUTCHours(), satGhiWm2, powerW);
+        // Train the yield-factor EMA against the panel-plane GHI (same gtiOverGhi
+        // transposition the scoring/chart legs use), not raw horizontal GHI — otherwise
+        // the learned factor has to blindly absorb the east-tilt geometry too.
+        const satHourMs = satLookupMs - (satLookupMs % 3_600_000);
+        const satHourSlot = this.weatherData?.hourlyForecast?.find(h => h.time.getTime() === satHourMs);
+        const satPanelGhi = typeof satHourSlot?.gtiOverGhi === 'number' && satHourSlot.gtiOverGhi > 0
+          ? satGhiWm2 * satHourSlot.gtiOverGhi
+          : satGhiWm2;
+        this.learningEngine.recordSatYield(new Date(satLookupMs).getUTCHours(), satPanelGhi, powerW);
       }
     }
 
@@ -3785,7 +3793,8 @@ if (debug) this.log(
     // overlay retains the raw 15-min curve; look up the value for THIS 15-min bucket
     // instead of the hourly slot, so the sat line has no gaps SC lacks. gtiOverGhi
     // from the containing hour slot keeps the GHI→panel conversion identical.
-    const satW = this.weatherForecaster?.getSatPanelWAt?.(bucketMs) ?? null;
+    const _satHourSlot = this.weatherData?.hourlyForecast?.find(h => h.time.getTime() === hourMs);
+    const satW = this.weatherForecaster?.getSatPanelWAt?.(bucketMs, _satHourSlot?.gtiOverGhi) ?? null;
 
     // Corrected display values for the accuracy chart only — routed through the shared
     // _correctOverlayW so the diag chart and the webcam overlay cannot diverge. This is the
@@ -4983,7 +4992,9 @@ if (debug) this.log(
       for (const s of slots) {
         if (typeof s.satGhiWm2 !== 'number') continue;
         const t = s.time instanceof Date ? s.time : new Date(s.time);
-        store[String(t.getTime())] = s.satGhiWm2;
+        // {ghi, ratio} — ratio carries the ensemble's gtiOverGhi so the chart's panel-W
+        // conversion shares the same transposition as the live overlay/accuracy sampler.
+        store[String(t.getTime())] = { ghi: s.satGhiWm2, ratio: typeof s.gtiOverGhi === 'number' ? s.gtiOverGhi : null };
       }
     }
     const todayAms = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
@@ -4994,9 +5005,11 @@ if (debug) this.log(
       if (amsDate < todayAms) { delete store[key]; continue; }
       const dayIdx = amsDate > todayAms ? 1 : 0;
       const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
-      const satYf = this.weatherForecaster?.resolveSatYieldFactor?.(t.getUTCHours())
-        ?? WeatherForecaster.getSatYieldFactor(t.getUTCHours());
-      const raw = satYf > 0 ? Math.round(store[key] * satYf) : 0;
+      // Backward-compat: entries persisted before this change are plain numbers (raw GHI, no ratio).
+      const entry = store[key];
+      const ghi   = typeof entry === 'number' ? entry : entry?.ghi;
+      const ratio = typeof entry === 'number' ? null : entry?.ratio;
+      const raw = this.weatherForecaster?.satGhiToPanelW?.(ghi, t.getUTCHours(), ratio) ?? 0;
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     this._queueSettingsPersist('policy_pv_sat_obs', store);
