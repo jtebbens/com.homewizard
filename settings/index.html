@@ -3063,8 +3063,11 @@
       const dayAcc   = entries.length
         ? Math.round(entries.reduce((s, p) => s + (1 - p.error), 0) / entries.length * 100)
         : null;
-      const omEnt    = entries.filter(p => p.om != null);
-      const scEnt    = entries.filter(p => p.sc != null);
+      // Gate om/sc/sat pills on satellite presence (p.sat > 50), same as the
+      // backend pv_accuracy_om/sc/sat EMAs (learning-engine.js) — otherwise
+      // these per-day numbers and the overall badges score different sample sets.
+      const omEnt    = entries.filter(p => p.om != null && p.sat != null && p.sat > 50);
+      const scEnt    = entries.filter(p => p.sc != null && p.sat != null && p.sat > 50);
       const dayOM    = omEnt.length
         ? Math.round(omEnt.reduce((s, p) => {
             const e = Math.abs(p.actual - p.om) / Math.max(p.actual, p.om, 1);
@@ -3077,7 +3080,7 @@
             return s + (1 - e);
           }, 0) / scEnt.length * 100)
         : null;
-      const satEnt   = entries.filter(p => p.sat != null);
+      const satEnt   = entries.filter(p => p.sat != null && p.sat > 50);
       const daySAT   = satEnt.length
         ? Math.round(satEnt.reduce((s, p) => {
             const e = Math.abs(p.actual - p.sat) / Math.max(p.actual, p.sat, 1);
