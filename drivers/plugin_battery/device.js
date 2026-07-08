@@ -240,64 +240,73 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       }, startupDelay);
 
     } else {
-      this.log('🔌 WebSocket enabled at init');
+      // ✅ CPU FIX: Stagger WS startup across devices (spread over 0-30s) — same
+      // thundering-herd fix as the polling branch above, applied here too: multiple
+      // plugin_battery devices in WS mode were opening TLS handshakes simultaneously.
+      const wsStartupDelay = Math.floor(Math.random() * 30000);
+      this.log(`🔌 WebSocket enabled at init, startup delay ${Math.round(wsStartupDelay / 1000)}s`);
 
-      this.wsManager = new WebSocketManager({
-        device: this,
-        url: this.url,
-        token: this.token,
-        log: this._boundLog,
-        error: this._boundError,
-        setAvailable: this._boundSetAvailable,
-        getSetting: this._boundGetSetting,
-        handleMeasurement: this._boundHandleMeasurement,
-        handleSystem: this._boundHandleSystem,
-        measurementThrottleMs: 5000, // ✅ CPU FIX: 5s for battery (was 2s) — 4 devices × 30/min instead of 4 × 120/min
-        onJournalEvent: (type, deviceId, data) => {
-          if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
-          else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
-        },
-      });
+      this._startupWsTimeout = setTimeout(() => {
+        if (this.__deleted) return;
+        this._startupWsTimeout = null;
 
-      this.wsManager.start();
+        this.wsManager = new WebSocketManager({
+          device: this,
+          url: this.url,
+          token: this.token,
+          log: this._boundLog,
+          error: this._boundError,
+          setAvailable: this._boundSetAvailable,
+          getSetting: this._boundGetSetting,
+          handleMeasurement: this._boundHandleMeasurement,
+          handleSystem: this._boundHandleSystem,
+          measurementThrottleMs: 5000, // ✅ CPU FIX: 5s for battery (was 2s) — 4 devices × 30/min instead of 4 × 120/min
+          onJournalEvent: (type, deviceId, data) => {
+            if (type === 'snapshot') wsDebug.snapshot(deviceId, data);
+            else wsDebug.log(type, deviceId, typeof data === 'string' ? data : JSON.stringify(data));
+          },
+        });
 
-      // Idle watchdog
-      this._wsIdleWatchdog = setInterval(() => {
-        const last = this.lastWsMeasurementAt || 0;
-        const diff = Date.now() - last;
+        this.wsManager.start();
 
-        if (diff > 10 * 60 * 1000) {
-          this.log(`🕒 WS idle for ${diff}ms → fallback poll`);
-          this._fallbackPoll();
-        }
-      }, 60000);
+        // Idle watchdog
+        this._wsIdleWatchdog = setInterval(() => {
+          const last = this.lastWsMeasurementAt || 0;
+          const diff = Date.now() - last;
 
-      // Stale WS watchdog
-      this._wsWatchdog = setInterval(() => {
-        const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
-        if (!this.getSettings().use_polling && staleMs > 190000) {
-          this.log(`🕒 WS stale >3min (${staleMs}ms), restarting`);
-          this.wsManager?.restartWebSocket();
-        }
+          if (diff > 10 * 60 * 1000) {
+            this.log(`🕒 WS idle for ${diff}ms → fallback poll`);
+            this._fallbackPoll();
+          }
+        }, 60000);
 
-        // Fault detection: if measurement data stale >5 min (restart attempts failed),
-        // battery is likely in fault/unresponsive state. Trigger alarm + flow.
-        const dataStaleSec = Date.now() - (this.lastMeasurementAt || 0);
-        if (dataStaleSec > 300_000 && !this._faultAlarmActive) {
-          this._faultAlarmActive = true;
-          this.log(`⚠️ Battery unresponsive — no data for ${Math.round(dataStaleSec / 1000)}s`);
-          this.setCapabilityValue('alarm_generic', true).catch(this.error);
-          this.homey.flow
-            .getDeviceTriggerCard('battery_unresponsive')
-            .trigger(this)
-            .catch(this.error);
-        }
-      }, 60000);
+        // Stale WS watchdog
+        this._wsWatchdog = setInterval(() => {
+          const staleMs = Date.now() - (this.wsManager?.lastMeasurementAt || 0);
+          if (!this.getSettings().use_polling && staleMs > 190000) {
+            this.log(`🕒 WS stale >3min (${staleMs}ms), restarting`);
+            this.wsManager?.restartWebSocket();
+          }
 
-      // Battery group updater (reduced from 10s to 60s to lower CPU usage)
-      this._batteryGroupInterval = setInterval(() => {
-        this._updateBatteryGroup();
-      }, 60000);
+          // Fault detection: if measurement data stale >5 min (restart attempts failed),
+          // battery is likely in fault/unresponsive state. Trigger alarm + flow.
+          const dataStaleSec = Date.now() - (this.lastMeasurementAt || 0);
+          if (dataStaleSec > 300_000 && !this._faultAlarmActive) {
+            this._faultAlarmActive = true;
+            this.log(`⚠️ Battery unresponsive — no data for ${Math.round(dataStaleSec / 1000)}s`);
+            this.setCapabilityValue('alarm_generic', true).catch(this.error);
+            this.homey.flow
+              .getDeviceTriggerCard('battery_unresponsive')
+              .trigger(this)
+              .catch(this.error);
+          }
+        }, 60000);
+
+        // Battery group updater (reduced from 10s to 60s to lower CPU usage)
+        this._batteryGroupInterval = setInterval(() => {
+          this._updateBatteryGroup();
+        }, 60000);
+      }, wsStartupDelay);
     }
 
     this.homey.app.logMem?.('[plugin_battery] onInit-done');
@@ -310,6 +319,10 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     if (this._startupPollTimeout) {
       clearTimeout(this._startupPollTimeout);
       this._startupPollTimeout = null;
+    }
+    if (this._startupWsTimeout) {
+      clearTimeout(this._startupWsTimeout);
+      this._startupWsTimeout = null;
     }
     if (this._wsWatchdog) {
       clearInterval(this._wsWatchdog);
