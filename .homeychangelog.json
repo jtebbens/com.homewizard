@@ -1591,5 +1591,8 @@
   },
   "3.17.4": {
     "en": "cpu and memory imorovements, knmi cloud cover correction on open meteo cloud forecast"
+  },
+  "3.17.5": {
+    "en": "fix: stagger plugin_battery WebSocket startup to prevent CPU-limit crashes on multi-battery setups"
   }
 }
