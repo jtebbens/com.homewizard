@@ -2910,6 +2910,8 @@ if (debug) this.log(
         return { ...slot, pvPowerW: satPvW, spreadFrac: 0 };
       });
       if (_satCount > 0) this.log(`[SAT DP] Override ${_satCount} slots (0-2h) with satellite PV`);
+      // 4h horizon (was 2h) — matches raw satellite data extent, so dips beyond
+      // the 0-2h DP override window (e.g. today's 165-195min front) now log.
       const _satDip = this.weatherForecaster?.getNextSatDip?.(Date.now(), 0.15, maxChargePowerW);
       if (_satDip) this.log(`[SAT DIP] dip in ${_satDip.leadMin}min @ ${new Date(_satDip.dipStartMs).toISOString()} → ${new Date(_satDip.dipEndMs).toISOString()} min=${_satDip.minPanelW}W`);
     }
