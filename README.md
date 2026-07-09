@@ -51,7 +51,40 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.3)
+## 📝 Latest Updates (v3.15.63–v3.17.5)
+
+### Battery Wear Cost Now Applied Consistently Across All Charging Paths (v3.17.5)
+
+* **Fixed an inconsistency where storing energy via one internal path was valued as slightly cheaper than an economically identical path, with no physical basis for the difference** — the battery's wear cost now applies uniformly no matter how the energy enters the battery, removing a small bias in charging-timing decisions.
+
+### Battery Startup Reliability for Multi-Battery Setups (v3.17.5)
+
+* **Fixed a startup crash that could occur on setups with several batteries** — connections to each battery now start with a brief stagger instead of all at once, avoiding a CPU-limit trip during initialization.
+
+### Satellite Solar Forecast Improvements (v3.17.5)
+
+* **Extended the near-term cloud-dip detection look-ahead** for earlier warning of an approaching solar dip.
+* **Fixed a regression in the satellite-based solar yield calculation** that had crept back in from an earlier change.
+* **Fixed a day-boundary issue where yesterday's cloud data could leak into today's calculation** right after midnight.
+
+### Camera Chart & PV Accuracy Display Fixes (v3.17.5)
+
+* **The camera solar chart now shows the same corrected forecast used for accuracy tracking**, instead of an older, less accurate calculation.
+* **PV accuracy indicators now only appear once satellite data is actually available**, instead of showing before there's anything to compare against.
+* **The camera chart now plots the same forecast curve used elsewhere in the app**, instead of a separate, unblended one.
+
+### Cloud-Cover Forecast Accuracy (v3.17.5)
+
+* **The solar-output discount applied during heavy cloud cover now cross-checks against ground-based measurements before applying** — reduces cases where a temporary cloud-model disagreement caused an unnecessarily large forecast cut.
+* **Cloud-cover data now blends multiple weather models instead of relying on a single one**, for a steadier forecast input.
+
+### Performance Improvements (v3.17.4)
+
+* **Reduced CPU overhead in price-fetching and policy evaluation**, and staggered related network calls to avoid short bursts.
+
+### Solar Ensemble Accuracy (v3.17.4)
+
+* **Aligned additional weather signals across forecast models** for a more consistent blended solar forecast.
 
 ### Diagnostics: DP Decision-Layer Tracing (v3.17.3)
 
