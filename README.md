@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.5)
+## 📝 Latest Updates (v3.15.63–v3.17.6)
+
+### Cheap Solar Now Stored at the Best Moment Instead of Exported (v3.17.6)
+
+* **Fixed a case where the battery could export cheap solar surplus now and top up later at a less favorable moment.** On systems that use time-varying discharge thresholds, an internal check that reserves enough energy for the evening was being skipped, so the planner sometimes preferred exporting over storing during strong, low-priced solar. Solar surplus is now stored at the cheapest available moment as intended.
 
 ### Battery Wear Cost Now Applied Consistently Across All Charging Paths (v3.17.5)
 
