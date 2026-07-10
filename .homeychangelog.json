@@ -1594,5 +1594,8 @@
   },
   "3.17.5": {
     "en": "fix: stagger plugin_battery WebSocket startup to prevent CPU-limit crashes on multi-battery setups"
+  },
+  "3.17.6": {
+    "en": "added EMCWF new model to ensemble. Fixed solar storage during cheap price slot was exported instead"
   }
 }
