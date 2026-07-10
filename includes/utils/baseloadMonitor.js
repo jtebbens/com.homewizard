@@ -10,6 +10,15 @@
 
 'use strict';
 
+// Cached formatter: constructing Intl.DateTimeFormat per call is a known CPU hotspot
+// elsewhere in this project. On Homey, Date.getHours()/setHours() resolve in UTC, not
+// Amsterdam local (see lib/learning-engine.js:390-392) — always go through this.
+const _amsterdamFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Amsterdam',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+
 class BaseloadMonitor {
   constructor(homey) {
     this.homey = homey;
@@ -109,15 +118,56 @@ class BaseloadMonitor {
     this._processNightSample(now, householdPower, power, batteryPower);
   }
 
+  _getAmsterdamHour(date) {
+    const parts = {};
+    for (const p of _amsterdamFormatter.formatToParts(date)) parts[p.type] = p.value;
+    return parseInt(parts.hour, 10);
+  }
+
+  _getAmsterdamOffsetMs(now) {
+    const parts = {};
+    for (const p of _amsterdamFormatter.formatToParts(now)) parts[p.type] = p.value;
+    const y = parseInt(parts.year, 10);
+    const m = parseInt(parts.month, 10) - 1;
+    const d = parseInt(parts.day, 10);
+    const h = parseInt(parts.hour, 10);
+    const min = parseInt(parts.minute, 10);
+    const s = parseInt(parts.second, 10);
+    const asIfUtc = Date.UTC(y, m, d, h, min, s);
+    return now.getTime() - asIfUtc;
+  }
+
+  // Next absolute UTC instant at which Amsterdam-local time reads targetHour:00.
+  // DST-transition edge case (2 nights/year): offset is computed from `now`, so a
+  // boundary rolled to "tomorrow" could fire up to 1h off — acceptable for this feature.
+  _getNextAmsterdamHourBoundary(targetHour, now) {
+    const parts = {};
+    for (const p of _amsterdamFormatter.formatToParts(now)) parts[p.type] = p.value;
+    const y = parseInt(parts.year, 10);
+    const m = parseInt(parts.month, 10) - 1;
+    const d = parseInt(parts.day, 10);
+    const offsetMs = this._getAmsterdamOffsetMs(now);
+    let candidateUtcMs = Date.UTC(y, m, d, targetHour, 0, 0) + offsetMs;
+    if (candidateUtcMs <= now.getTime()) {
+      candidateUtcMs = Date.UTC(y, m, d + 1, targetHour, 0, 0) + offsetMs;
+    }
+    return new Date(candidateUtcMs);
+  }
+
   _isInNightWindow(d) {
-    const h = d.getHours();
+    const h = this._getAmsterdamHour(d);
     return h >= this.nightStartHour && h < this.nightEndHour;
   }
 
   _isWithinCurrentNightWindow(now = new Date()) {
-    const s = new Date(now), e = new Date(now);
-    s.setHours(this.nightStartHour,0,0,0);
-    e.setHours(this.nightEndHour,0,0,0);
+    const parts = {};
+    for (const p of _amsterdamFormatter.formatToParts(now)) parts[p.type] = p.value;
+    const y = parseInt(parts.year, 10);
+    const m = parseInt(parts.month, 10) - 1;
+    const d = parseInt(parts.day, 10);
+    const offsetMs = this._getAmsterdamOffsetMs(now);
+    const s = new Date(Date.UTC(y, m, d, this.nightStartHour, 0, 0) + offsetMs);
+    const e = new Date(Date.UTC(y, m, d, this.nightEndHour, 0, 0) + offsetMs);
     return now >= s && now < e;
   }
 
@@ -125,18 +175,15 @@ class BaseloadMonitor {
     this._clearNightTimers();
     const now = new Date();
     if (this._isWithinCurrentNightWindow(now)) return this._onNightStartFromRecovery(now);
-    const next = new Date(now);
-    next.setHours(this.nightStartHour,0,0,0);
-    if (next <= now) next.setDate(next.getDate()+1);
+    const next = this._getNextAmsterdamHourBoundary(this.nightStartHour, now);
     this._nightTimer = this.homey.setTimeout(()=>this._onNightStart(), next-now);
   }
 
   _onNightStartFromRecovery(now) {
     if (!this.enabled) return this._scheduleNightWindow();
     this._resetNightState();
-    const end = new Date(now);
-    end.setHours(this.nightEndHour,0,0,0);
-    this._nightEndTimer = this.homey.setTimeout(()=>this._onNightEnd(), Math.max(0,end-now));
+    const end = this._getNextAmsterdamHourBoundary(this.nightEndHour, now);
+    this._nightEndTimer = this.homey.setTimeout(()=>this._onNightEnd(), Math.max(0, end - now));
   }
 
   _clearNightTimers() {
@@ -285,8 +332,10 @@ class BaseloadMonitor {
   _detectPVStartup() {
     const last = this.currentNightSamples.at(-1);
     if (!last) return;
-    const h = last.ts.getHours();
-    if (h>=this.pvStartupEarliest && h<=this.pvStartupLatest && last.power<0) {
+    const h = this._getAmsterdamHour(last.ts);
+    // last.power is already clamped to >=0 by updatePower() before it ever reaches here —
+    // rawGridPower is the unclamped field that actually carries the export (negative) signal.
+    if (h>=this.pvStartupEarliest && h<=this.pvStartupLatest && last.rawGridPower<0) {
       this.flags.sawPVStartup=true; this.nightInvalid=true;
     }
   }
