@@ -1203,8 +1203,15 @@ if (debug) this.log(
       const { latitude, longitude } = loc;
 
       const devSettings = this.getSettings();
-      const pvTilt = devSettings.pv_estimation_enabled && typeof devSettings.pv_tilt === 'number' ? devSettings.pv_tilt : null;
-      const pvAzimuth = devSettings.pv_estimation_enabled && typeof devSettings.pv_azimuth === 'number' ? devSettings.pv_azimuth : null;
+      // Gated on the tilt/azimuth values themselves, not pv_estimation_enabled — that flag is
+      // Priority-2 fallback ("estimate current PV when no flow-card data"), an unrelated feature
+      // that happens to share a settings-UI section with these fields. Coupling it here meant
+      // panel-plane GTI transposition (OM ensemble AND satellite both route through it) silently
+      // never ran whenever a user has real PV telemetry (so never needs the fallback estimator)
+      // but still wants the forecast panel-plane-corrected — confirmed 2026-07-10, this device
+      // has real tilt=35/azimuth=0 configured with the flag off, forecast ran fully flat/horizontal.
+      const pvTilt = typeof devSettings.pv_tilt === 'number' ? devSettings.pv_tilt : null;
+      const pvAzimuth = typeof devSettings.pv_azimuth === 'number' ? devSettings.pv_azimuth : null;
 
       this.weatherForecaster.knmiApiKey = devSettings.knmi_api_key || null;
       this.weatherForecaster.pvCapacityW = devSettings.pv_capacity_w || 0;
