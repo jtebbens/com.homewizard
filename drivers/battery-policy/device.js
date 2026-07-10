@@ -1882,6 +1882,9 @@ if (debug) this.log(
           result.debug.pvAccuracySc = _pvAcc.pv_accuracy_sc ?? null;
           result.debug.pvAccuracyScore = _pvAcc.pv_accuracy_score ?? null;
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
+          // Temp: raw per-slot om/sc/actual W for divergence-mining analysis
+          // (project_roadmap_perslot_blend_divergence). Remove after analysis done.
+          result.debug.pvPredictionsRecent = _pvAcc.pv_predictions?.slice(-300) ?? null;
           // Learned per-UTC-hour sat yield-factor table — exposed so it's checkable against
           // the hardcoded SAT_YIELD_FACTORS fallback without a debug-flag flip + restart.
           result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factors ?? null;
@@ -2401,7 +2404,7 @@ if (debug) this.log(
       // Uses perModelWm2 from hourlyForecast (aligned to standardData indices, no time-map lookup).
       this._pvForecastPerModel = null;
       if (yfs) {
-        const MODELS_OM = ['meteofrance_arpege_europe', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands'];
+        const MODELS_OM = ['meteofrance_arpege_europe', 'gfs_seamless', 'icon_seamless', 'knmi_harmonie_arome_netherlands', 'ecmwf_ifs'];
         this._pvForecastPerModel = {};
         for (const m of MODELS_OM) {
           const mSlots = inputs.weather.hourlyForecast
@@ -2423,7 +2426,7 @@ if (debug) this.log(
           if (mSlots.length > 0) this._pvForecastPerModel[m] = mSlots;
         }
         const slotCounts = Object.entries(this._pvForecastPerModel).map(([m, fc]) =>
-          `${m.replace('meteofrance_arpege_europe','mf').replace('_seamless','').replace('knmi_harmonie_arome_netherlands','knmi')}=${fc.length}`).join(' ');
+          `${m.replace('meteofrance_arpege_europe','mf').replace('_seamless','').replace('knmi_harmonie_arome_netherlands','knmi').replace('ecmwf_ifs','ecmwf')}=${fc.length}`).join(' ');
         this.log(`[PV perModel] slots: ${slotCounts || 'none'}`);
       }
 
@@ -4147,6 +4150,7 @@ if (debug) this.log(
       gfs:   _mAcc['gfs_seamless']                        != null ? +(_mAcc['gfs_seamless'] * 100).toFixed(1)                        : null,
       icon:  _mAcc['icon_seamless']                        != null ? +(_mAcc['icon_seamless'] * 100).toFixed(1)                        : null,
       knmi:  _mAcc['knmi_harmonie_arome_netherlands']      != null ? +(_mAcc['knmi_harmonie_arome_netherlands'] * 100).toFixed(1)      : null,
+      ecmwf: _mAcc['ecmwf_ifs']                            != null ? +(_mAcc['ecmwf_ifs'] * 100).toFixed(1)                            : null,
     };
     this._setLive('learning_status', {
       days:           learningStats.days_tracking,

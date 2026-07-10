@@ -6,7 +6,7 @@ Multi-source weather/PV forecasting feeds the optimizer's DP schedule, the PV-OV
 
 ### Open-Meteo ensemble (`WeatherForecaster.fetchForecast` → `_mergeApiResponses`)
 
-Four models fetched via `models=meteofrance_arpege_europe,gfs_seamless,icon_seamless,knmi_harmonie_arome_netherlands` on `api.open-meteo.com/v1/forecast`:
+Five models fetched via `models=meteofrance_arpege_europe,gfs_seamless,icon_seamless,knmi_harmonie_arome_netherlands,ecmwf_ifs` on `api.open-meteo.com/v1/forecast` (single call — `models=` is a comma-list, not per-model requests):
 
 | Model | Source | Region focus |
 |---|---|---|
@@ -14,6 +14,9 @@ Four models fetched via `models=meteofrance_arpege_europe,gfs_seamless,icon_seam
 | `gfs_seamless` | NOAA GFS | Global |
 | `icon_seamless` | DWD ICON | Europe / Global |
 | `knmi_harmonie_arome_netherlands` | KNMI HARMONIE-AROME | Netherlands (high-res, ~2.5km) |
+| `ecmwf_ifs` | ECMWF IFS HRES | Global (9km) |
+
+**Not `ecmwf_ifs04`**: that identifier is retired — Open-Meteo silently returns null `shortwave_radiation` for it (no HTTP error), so it looked valid but contributed nothing. Confirmed dead both in the 2026-05-17 fix (commit `ff747e5`) and re-verified live 2026-07-09. Current correct ECMWF id is `ecmwf_ifs` (IFS HRES, 9km — free since Oct 2025); `ecmwf_ifs025` (25km) also works but is lower-res.
 
 Each model exposes `shortwave_radiation_<model>` in the hourly response. Standard endpoint also returns `cloud_cover`, `sunshine_duration`, `global_tilted_irradiance` (when tilt/azimuth set in settings).
 
@@ -33,34 +36,28 @@ Settings flag: `knmi_api_key` field (set on device); without it, KNMI fetch is s
 
 ## Ensemble blending
 
-`_mergeApiResponses` produces a single `shortwave_radiation` array (used everywhere downstream) via weighted blend of the 4 model arrays:
+`_mergeApiResponses` produces a single `shortwave_radiation` array (used everywhere downstream) via weighted blend of the 5 model arrays:
 
 ```
 const w = learningEngine.getModelWeights() ?? { equal weights };
 wMean = Σ (w[m] × radiation[m]) / Σ w[m]
 ```
 
-**Spread discount:** when models disagree (stdev across 4 values for a given hour), the blended value is reduced to avoid overshoot:
+**Spread (model disagreement):** stdev across the 5 model values for a given hour is tracked for observability only — it does **not** discount the point forecast. Disagreement is two-sided uncertainty, not a downward bias, so `wMean` is used as-is regardless of spread (a `std>30` discount existed at one point but was removed; see `test/ensemble-spread.test.js`). Slots where `std>30 W/m²` are counted and logged as "spread-detected", not "spread-adjusted".
 
-- `std > 80 W/m²` → `wMean − 0.5 × std`
-- `std > 30 W/m²` → `wMean − 0.3 × std`
-- else → `wMean`
-
-Spread-adjusted slot count is logged: `Ensemble radiation blended from 4 models [mf=24% gfs=24% icon=26% knmi=27%] (sample avg: 155 W/m², spread-adjusted 29 slots)`.
+Logged as: `Ensemble radiation blended from 5 models [mf=13% gfs=27% icon=20% knmi=7% ecmwf_ifs=33%] (sample avg: 269 W/m², spread-detected 18 slots (p50 not discounted))`.
 
 Per-model arrays also kept as `perModelWm2` on each `hourlyForecast` slot, aligned to `standardData.hourly.time`. Used by device.js to build per-model `pvForecast` for accuracy tracking without re-aligning.
 
 ## Per-model accuracy
 
-`learningEngine.recordModelAccuracy(perModelForecast, actualAvgWm2, dateStr)` runs once per day in `_learnFromYesterday`:
+`learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW, chartW)` runs every policy cycle (`device.js` `_recordPvAccuracySample()`, called from the main policy loop — every `policy_interval` minutes, not once/day):
 
-- Forecast snapshot saved at day-end via `saveForecastSnapshot(date, forecastAvgWm2, perModel)`
-- Yesterday's snapshot compared against actual:
-  - `actualAvg = knmiDailyAvg ?? (openMeteoHistoricalAvg)` — KNMI preferred
-  - Per-model error `err = |actual − fc| / max(actual, fc)`; accuracy `1 − min(err, 1)`
-- EMA update: `acc_m[t+1] = 0.15 × acc + 0.85 × acc_m[t]` (α=0.15, ~7-day half-life)
-- Guard: each `dateStr` processed at most once (`pv_model_accuracy_date` flag)
-- Prior used for cold-start: `_modelPrior(m)` (currently 0.7 for all)
+- `perModelW` = current live PV interpolated from each model's own `_pvForecastPerModel[m]` curve (raw, uncorrected — ranking must judge closeness-to-truth, not closeness-to-ensemble-mean)
+- Per-model error `err = |actualW − mW| / max(actualW, mW, 1)`, only when `mW > 50`
+- EMA update: `acc_m[t+1] = 0.1 × (1 − err) + 0.9 × acc_m[t]` (α=0.1)
+- Cold-start seed: `_modelPrior(m)` — e.g. knmi=0.90, icon=0.87, mf=0.82, ecmwf_ifs=0.80, gfs=0.77, default 0.84 for any unlisted model
+- No per-date guard — updates continuously, every cycle a fresh sample lands
 
 Storage:
 
@@ -70,15 +67,15 @@ data.pv_model_accuracy = {
   gfs_seamless:              0.791,
   icon_seamless:             0.865,
   knmi_harmonie_arome_netherlands: 0.904,
+  ecmwf_ifs:                 0.80,
 }
-data.pv_model_accuracy_date = '2026-05-19'
 ```
 
-`getModelWeights()` returns proportional weights `acc[m] / Σacc[m]`, used by `_mergeApiResponses` for the next blend.
+`getModelWeights()` does **not** return proportional weights (`acc/Σacc`) — it rank-sorts models by current `pv_model_accuracy` (falling back to prior when absent) and assigns fixed `[5,4,3,2,1]/15` shares by rank position (softened tilt, chosen 2026-06-20 after proportional/harsh weighting chased daily noise). Recomputed fresh on every ensemble fetch (`weather_update_interval`, default 3h, or on-demand cache-miss) using whatever `pv_model_accuracy` currently holds — so accuracy drifts every policy cycle, but the blend weight only refreshes at the next fetch.
 
 ## Per-day per-model accuracy (UI)
 
-Settings page (`settings/index.html`) shows MF/GFS/ICON/KNMI pills **per day** alongside Blended/OM/SC pills. Computed entirely frontend from `pvPredictions[*].{mf, gfs, icon, knmi, actual}` (already in learning-engine pvPredictions storage), grouped by Amsterdam-day in `_renderPvAccuracyDay`. No new backend storage — derived from existing per-slot per-model W values.
+Settings page (`settings/index.html`) shows MF/GFS/ICON/KNMI/ECMWF pills **per day** alongside Blended/OM/SC pills. Computed entirely frontend from `pvPredictions[*].{mf, gfs, icon, knmi, ecmwf, actual}` (already in learning-engine pvPredictions storage), grouped by Amsterdam-day in `_renderPvAccuracyDay`. No new backend storage — derived from existing per-slot per-model W values.
 
 Updates when user navigates with day prev/next buttons.
 
@@ -97,7 +94,7 @@ Chart shows both lines separately (Open-Meteo dashed blue, Solcast dashed green)
 
 After the 2026-06 pipeline-collapse (removed Cabauw decorrelation scaffold + clear-sky ceiling), `pvForecast` is built once per `_recomputeOptimizer` and reused everywhere — no per-consumer re-derivation:
 
-1. **Radiation** — Open-Meteo 4-model ensemble blend (`_mergeApiResponses`, with spread discount) → `shortwave_radiation` per slot.
+1. **Radiation** — Open-Meteo 5-model ensemble blend (`_mergeApiResponses`, spread tracked not discounted — see Ensemble blending above) → `shortwave_radiation` per slot.
 2. **Base pvForecast** (device.js ~2174–2200) — `radiation × yieldFactorSmoothed` when `learnedSlots ≥ 10`, else `pvCapacity × PR × (radiation/1000) × tempFactor`. Capped at `pvCapacityW` (installed-system ceiling only; the separate clear-sky ceiling was removed — yield factors already encode real-world ceiling).
 3. **Daily bias** — `getDailyPvBiasFactor(cloud, kt)` (cloud/kt-aware EMA, capped toward 1.0 above 75% cloud). Returns `1.0` once `learnedSlots ≥ 10` (yield factors already absorb the correction — see [[learning-engine.md]]).
 4. **PV-accuracy conservatism** — discount when `pv_accuracy_score < 0.80`.
@@ -120,11 +117,12 @@ All three consumers see the same post-correction values by construction (Propert
 ```
 [KNMI] Cabauw (14km): qg=200 W/m² n=6 okta ss=0 min ta=13.9°C
 [KNMI] Using station qg=200 W/m² as actual for 2026-05-19
-Ensemble radiation blended from 4 models [mf=24% gfs=24% icon=26% knmi=27%] (sample avg: 155 W/m², spread-adjusted 29 slots)
-[Snapshot] 2026-05-20 rad=269 perModel=mf=332 gfs=415 icon=271 knmi=224 ensLen=96 hourlyLen=96
-[ModelAccuracy check] 2026-05-19: perModel=meteofrance_arpege_europe,gfs_seamless,icon_seamless,knmi_harmonie_arome_netherlands actualCount=14
-[ModelAccuracy] mf=0.80 gfs=0.79 icon=0.86 knmi=0.90 (actual=200W/m²)
+Ensemble radiation blended from 5 models [mf=13% gfs=27% icon=20% knmi=7% ecmwf_ifs=33%] (sample avg: 269 W/m², spread-detected 18 slots (p50 not discounted))
+[Snapshot] 2026-07-09 rad=269 hourlyLen=96
+[PV perModel] slots: mf=27 gfs=27 icon=27 knmi=27 ecmwf=27
 ```
+
+(Verified against live log 2026-07-09 — the older `[ModelAccuracy check]`/`[ModelAccuracy]` lines documented here previously no longer exist in the code; per-model accuracy has no dedicated log line now, only the stored `pv_model_accuracy` value and the `[PV perModel]` slot-count line above.)
 
 ## Settings keys
 

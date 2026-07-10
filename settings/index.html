@@ -581,6 +581,7 @@
           <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>GFS</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>ICON</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#fb7185;vertical-align:middle;margin-right:4px;"></span>KNMI</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#22d3ee;vertical-align:middle;margin-right:4px;"></span>ECMWF</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
         </div>
         <div id="pv-model-day-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
@@ -3106,10 +3107,11 @@
           return Math.round(ent.reduce((s,p) => s + (1 - Math.min(Math.abs(p.actual - p[key]) / Math.max(p.actual, p[key], 1), 1)), 0) / ent.length * 100);
         };
         dayModelPillsEl.innerHTML =
-          _pvPill('Météo-France', _dayAcc('mf'),   '%', 70, 85) +
-          _pvPill('GFS',          _dayAcc('gfs'),  '%', 70, 85) +
-          _pvPill('ICON',         _dayAcc('icon'), '%', 70, 85) +
-          _pvPill('KNMI',         _dayAcc('knmi'), '%', 70, 85);
+          _pvPill('Météo-France', _dayAcc('mf'),    '%', 70, 85) +
+          _pvPill('GFS',          _dayAcc('gfs'),   '%', 70, 85) +
+          _pvPill('ICON',         _dayAcc('icon'),  '%', 70, 85) +
+          _pvPill('KNMI',         _dayAcc('knmi'),  '%', 70, 85) +
+          _pvPill('ECMWF',        _dayAcc('ecmwf'), '%', 70, 85);
       }
 
       // Chart
@@ -3135,10 +3137,11 @@
       if (modelPillsEl && _pvModelAcc) {
         const hasModelData = Object.values(_pvModelAcc).some(v => v != null);
         modelPillsEl.innerHTML = hasModelData
-          ? _pvPill('Météo-France', _pvModelAcc.mf,   '%', 70, 85) +
-            _pvPill('GFS',         _pvModelAcc.gfs,  '%', 70, 85) +
-            _pvPill('ICON',        _pvModelAcc.icon, '%', 70, 85) +
-            _pvPill('KNMI',        _pvModelAcc.knmi, '%', 70, 85)
+          ? _pvPill('Météo-France', _pvModelAcc.mf,    '%', 70, 85) +
+            _pvPill('GFS',         _pvModelAcc.gfs,   '%', 70, 85) +
+            _pvPill('ICON',        _pvModelAcc.icon,  '%', 70, 85) +
+            _pvPill('KNMI',        _pvModelAcc.knmi,  '%', 70, 85) +
+            _pvPill('ECMWF',       _pvModelAcc.ecmwf, '%', 70, 85)
           : '<span style="font-size:11px;color:var(--muted);">Per-model nauwkeurigheid beschikbaar na eerste volledige dag</span>';
       }
 
@@ -3198,15 +3201,16 @@
       // Per-model chart (Météo-France / GFS / ICON / KNMI + Werkelijk)
       const modelCanvas = document.getElementById('pvModelChart');
       if (modelCanvas) {
-        const mfData = [], gfsData = [], iconData = [], knmiData = [];
+        const mfData = [], gfsData = [], iconData = [], knmiData = [], ecmwfData = [];
         for (const p of entries) {
           mfData.push(p.mf    ?? null);
           gfsData.push(p.gfs  ?? null);
           iconData.push(p.icon ?? null);
           knmiData.push(p.knmi ?? null);
+          ecmwfData.push(p.ecmwf ?? null);
         }
         const hasModelCurves = mfData.some(v => v != null) || gfsData.some(v => v != null)
-          || iconData.some(v => v != null) || knmiData.some(v => v != null);
+          || iconData.some(v => v != null) || knmiData.some(v => v != null) || ecmwfData.some(v => v != null);
         if (_pvModelChart) { _pvModelChart.destroy(); _pvModelChart = null; }
         if (hasModelCurves) {
           _pvModelChart = new Chart(modelCanvas, {
@@ -3218,6 +3222,7 @@
                 mkDataset('GFS',          gfsData,   '#f59e0b', [4, 2]),
                 mkDataset('ICON',         iconData,  '#a78bfa', [4, 2]),
                 mkDataset('KNMI',         knmiData,  '#fb7185', [4, 2]),
+                mkDataset('ECMWF',        ecmwfData, '#22d3ee', [4, 2]),
                 mkDataset('Werkelijk',    actualData,'#20F29B'),
               ],
             },
