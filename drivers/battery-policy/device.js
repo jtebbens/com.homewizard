@@ -7,6 +7,7 @@ const TariffManager = require('../../lib/tariff-manager');
 const LearningEngine = require('../../lib/learning-engine');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
 const OptimizationEngine = require('../../lib/optimization-engine');
+const { exportValue } = require('../../lib/price-formulas');
 const ChartRenderer = require('../../lib/chart-renderer');
 
 const debug = false;
@@ -423,7 +424,18 @@ class BatteryPolicyDevice extends Homey.Device {
 
       const current = this.getCapabilityValue(capability);
 
-      if (capability === 'policy_mode' && current === 'balanced') {
+      if (capability === 'policy_mode' && current === 'balanced-dynamic') {
+        // 'balanced-dynamic' removed (2026-07-11) — it only ever forced respect_minmax=false,
+        // duplicating the existing checkbox under a confusing "V2 — na salderen" name that
+        // falsely implied it drove asymmetric export pricing (that's tariff_model, unrelated).
+        this.log(`ℹ️ Migrating policy_mode 'balanced-dynamic' → 'balanced' + respect_minmax=false (same behavior, clearer setting)`);
+        await this.setSettings({ respect_minmax: false }).catch(err =>
+          this.error('Failed to migrate respect_minmax:', err)
+        );
+        await this.setCapabilityValue(capability, 'balanced').catch(err =>
+          this.error(`Failed to migrate ${capability}:`, err)
+        );
+      } else if (capability === 'policy_mode' && current === 'balanced') {
         // Migrate old 'balanced' to type-specific mode
         const newMode = tariffType === 'dynamic' ? 'balanced' : 'balanced-fixed';
         this.log(`ℹ️ Migrating policy_mode 'balanced' to '${newMode}' based on tariff type`);
@@ -3019,9 +3031,7 @@ if (debug) this.log(
 
     const slotLabel = slotMs === 900_000 ? '15-min' : '1h';
     this.log(`🔮 Optimizer: recomputing schedule (${prices.length} × ${slotLabel} slots, SoC ${soc}%, ${capacityKwh}kWh, PV ${pvCapacityW}W peak, RTE ${learnedRte != null ? (learnedRte * 100).toFixed(0) + '%' : 'default'})`);
-    const respectMinMax = (inputs.settings?.policy_mode === 'balanced-dynamic')
-      ? false
-      : inputs.settings?.respect_minmax !== false;
+    const respectMinMax = inputs.settings?.respect_minmax !== false;
     let minDischargePrice = respectMinMax
       ? (inputs.settings?.min_discharge_price ?? 0)
       : (inputs.settings?.cycle_cost_per_kwh ?? 0.075) / (inputs.settings?.battery_efficiency || 0.75);
@@ -5323,10 +5333,17 @@ if (debug) this.log(
       this._wasDischarging = false;
 
       if (pvState) {
-        const pvMode = this.getSetting('pv_cost_mode') || 'free';
-        const feedIn = this.getSetting('feed_in_tariff') ?? 0.08;
-
-        costNew = (pvMode === 'feedin') ? feedIn : 0;
+        // Opportunity cost of storing PV instead of exporting it — same exportValue()
+        // the DP uses, so this ledger's profit numbers stay in sync with what the
+        // optimizer actually decided. No dynamic price available (fixed tariff_type)
+        // → treat as free, matching the prior default.
+        const tariff = this.tariffManager.getCurrentTariff(gridPower);
+        if (tariff.currentPrice == null) {
+          costNew = 0;
+        } else {
+          const tariffModel = this.getSetting('tariff_model') || 'saldering';
+          costNew = exportValue({ price: tariff.currentPrice, exportPrice: tariff.currentExportPrice }, tariffModel);
+        }
       } else {
         // Grid charging
         const tariff = this.tariffManager.getCurrentTariff(gridPower);

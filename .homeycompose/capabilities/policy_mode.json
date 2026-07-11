@@ -56,20 +56,6 @@
       }
     },
     {
-      "id": "balanced-dynamic",
-      "title": {
-        "en": "Dynamic Pricing (V2 — post-saldering)",
-        "nl": "Dynamisch Tarief (V2 — na salderen)",
-        "de": "Dynamische Preisgestaltung (V2 — post-saldering)",
-        "da": "Dynamisk prissætning (V2 — post-saldering)",
-        "fr": "Tarification dynamique (V2 — post-saldering)",
-        "sv": "Dynamisk prissättning (V2 — post-saldering)",
-        "no": "Dynamisk prissetting (V2 — post-saldering)",
-        "fi": "Dynaaminen hinnoittelu (V2 — post-saldering)",
-        "hu": "Dinamikus árazás (V2 — post-saldering)"
-      }
-    },
-    {
       "id": "zero",
       "title": {
         "en": "Peak Shaving",

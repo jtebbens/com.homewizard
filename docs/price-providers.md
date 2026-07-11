@@ -22,3 +22,16 @@
 - `_loadCache()` is async and not awaited in the constructor
 - `fetchPrices()` must await `this._cacheLoadPromise` before checking `this.cache`, otherwise the settings cache is missed on every restart and both Xadi + KwhPrice are fetched unnecessarily
 - Pattern: `this._cacheLoadPromise = this._loadCache()` in constructor, `await this._cacheLoadPromise; this._cacheLoadPromise = null` at start of `fetchPrices()`
+
+## Import/Export price plumbing (post-2027 asymmetric tariffs)
+
+Every price slot from all three providers (Xadi, KwhPrice, ENTSOE fallback) now carries two prices, both derived from the same raw spot (`originalPrice`) via `lib/price-formulas.js` — the single shared implementation, not duplicated per provider:
+
+- **`price`** (import, unchanged): `(spot + markup) × 1.21`
+- **`exportPrice`** (new): `(spot + export_addon) × export_multiplier`
+
+`export_multiplier`/`export_addon` default to `1.0`/`0`, which reduces `exportPrice` to the bare spot price (current NL saldering assumption). They're read from settings `export_price_multiplier`/`export_price_addon` in `TariffManager._initializeDynamicProvider()` and passed through `MergedPriceProvider` to all three sub-providers — same pattern as the existing `dynamic_price_markup` passthrough. All three settings (plus `tariff_model`) have `driver.settings.compose.json` UI fields under "Tariff Configuration"; `export_price_multiplier`/`export_price_addon` are only visible when `tariff_model = asymmetric_2027`.
+
+**Order of operations matters**: the multiplier applies to `(spot + addon)`, not to spot alone — confirmed against Zonneplan's own Zonnebonus formula ("(marktprijs + €0,02) + 10%"). A feed-in fee (terugleverkosten) can be modeled as a negative `export_addon` with `export_multiplier: 1.0` (flat per-kWh penalty, no tiered/staffel pricing).
+
+`exportPrice` flows through unchanged to `TariffManager`'s `allPrices`, `allPrices15min`, `effectivePrices`, and `next24Hours` outputs, and into `OptimizationEngine._exportValue()` (both DP passes), `policy-engine.js` (runtime PV flags + planning chart mapper) and `explainability-engine.js` — the single `exportValue(priceSlot, tariffModel, ratio)` implementation in `lib/price-formulas.js` is the only place export value is computed, so every surface (DP, chart, explanation, and the battery-policy device's own cycle-profit/ROI ledger in `device.js#_updateBatteryCostModel`) reads the same number. `pv_cost_mode`/`feed_in_tariff` (the old flat scalar the ROI ledger used before this rework) have been removed in favor of `tariff_model`.

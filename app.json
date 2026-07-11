@@ -4331,6 +4331,102 @@
                 "when": "tariff_type",
                 "is": "dynamic"
               }
+            },
+            {
+              "id": "dynamic_price_markup",
+              "type": "number",
+              "label": {
+                "en": "Import Markup (€/kWh)",
+                "nl": "Inkoopopslag (€/kWh)"
+              },
+              "hint": {
+                "en": "Your provider's markup on the raw day-ahead spot price, before 21% VAT. Import price = (spot + markup) × 1.21. Check your energy contract for the exact value — Tibber, ANWB Energie and Zonneplan all differ.",
+                "nl": "Inkoopopslag van uw provider op de kale day-ahead spotprijs, vóór 21% btw. Inkoopprijs = (spot + opslag) × 1,21. Controleer uw energiecontract voor de exacte waarde — Tibber, ANWB Energie en Zonneplan verschillen hierin."
+              },
+              "value": 0.11,
+              "min": 0,
+              "max": 0.3,
+              "step": 0.005,
+              "units": "€/kWh",
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "tariff_model",
+              "type": "dropdown",
+              "label": {
+                "en": "Export Pricing Model",
+                "nl": "Terugleverprijsmodel"
+              },
+              "hint": {
+                "en": "'Net metering (saldering)': export offsets import 1:1 — the NL default until 2027. Storing PV in the battery instead of exporting it is priced at the same €/kWh as importing. 'Asymmetric (post-2027)': export is priced separately using the fields below, and the optimizer weighs storing vs. exporting PV accordingly. Switch this once net metering is phased out for your contract.",
+                "nl": "'Saldering': teruglevering compenseert inkoop 1-op-1 — de NL-standaard tot 2027. PV opslaan in de batterij in plaats van terugleveren wordt tegen dezelfde €/kWh geprijsd als inkopen. 'Asymmetrisch (post-2027)': teruglevering wordt apart geprijsd via de velden hieronder, en de optimizer weegt opslaan vs. terugleveren van PV daarop af. Zet dit om zodra saldering voor uw contract wegvalt."
+              },
+              "value": "saldering",
+              "values": [
+                {
+                  "id": "saldering",
+                  "label": {
+                    "en": "Net metering (saldering)",
+                    "nl": "Saldering"
+                  }
+                },
+                {
+                  "id": "asymmetric_2027",
+                  "label": {
+                    "en": "Asymmetric (post-2027)",
+                    "nl": "Asymmetrisch (post-2027)"
+                  }
+                }
+              ],
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "export_price_multiplier",
+              "type": "number",
+              "label": {
+                "en": "Export Multiplier",
+                "nl": "Terugleververmenigvuldiger"
+              },
+              "hint": {
+                "en": "Only used when Export Pricing Model above is set to 'Asymmetric (post-2027)' — ignored under net metering. Export price = (spot + addon) × multiplier. 1.0 = bare spot price. Example: Zonneplan's Zonnebonus is a 10% bonus on top → 1.10. Check your provider's export/feed-in terms.",
+                "nl": "Alleen gebruikt als Terugleverprijsmodel hierboven op 'Asymmetrisch (post-2027)' staat — genegeerd onder saldering. Terugleverprijs = (spot + toeslag) × vermenigvuldiger. 1,0 = kale spotprijs. Voorbeeld: Zonneplan's Zonnebonus is 10% bonus erbovenop → 1,10. Controleer de teruglevervoorwaarden van uw provider."
+              },
+              "value": 1,
+              "min": 0,
+              "max": 1.5,
+              "step": 0.01,
+              "units": "×",
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
+            },
+            {
+              "id": "export_price_addon",
+              "type": "number",
+              "label": {
+                "en": "Export Addon / Feed-in Cost (€/kWh)",
+                "nl": "Terugleveropslag / -kosten (€/kWh)"
+              },
+              "hint": {
+                "en": "Only used when Export Pricing Model above is set to 'Asymmetric (post-2027)' — ignored under net metering. Added to the spot price before the multiplier. Positive = bonus (e.g. €0.02 for Zonneplan's Zonnebonus). Negative = feed-in penalty (terugleverkosten) some fixed contracts charge per exported kWh.",
+                "nl": "Alleen gebruikt als Terugleverprijsmodel hierboven op 'Asymmetrisch (post-2027)' staat — genegeerd onder saldering. Wordt bij de spotprijs opgeteld vóór de vermenigvuldiger. Positief = bonus (bijv. €0,02 bij Zonneplan's Zonnebonus). Negatief = terugleverkosten die sommige vaste contracten per teruggeleverde kWh rekenen."
+              },
+              "value": 0,
+              "min": -0.15,
+              "max": 0.15,
+              "step": 0.01,
+              "units": "€/kWh",
+              "visible": {
+                "when": "tariff_type",
+                "is": "dynamic"
+              }
             }
           ]
         },
@@ -4499,60 +4595,6 @@
               "visible": {
                 "when": "tariff_type",
                 "is": "dynamic"
-              }
-            },
-            {
-              "id": "pv_cost_mode",
-              "type": "dropdown",
-              "label": {
-                "en": "PV Charging Cost",
-                "nl": "PV laadkosten"
-              },
-              "hint": {
-                "en": "What does it cost to store solar energy? 'Free' (€0): recommended for dynamic tariffs with net metering active (NL until 2027) — storing and exporting are equivalent. 'Export value': use when your fixed contract charges an export penalty, or post-2027 without net metering — enter the net value per kWh you receive for exporting (export compensation minus any export penalty).",
-                "nl": "Wat kost het om zonne-energie op te slaan? 'Gratis' (€0): aanbevolen bij dynamisch tarief met saldering actief (NL tot 2027) — opslaan en terugleveren zijn equivalent. 'Terugleverwaarde': gebruik bij vast contract met terugleverboete, of post-2027 zonder saldering — vul de netto terugleverwaarde in per kWh (terugleververgoeding minus eventuele boete)."
-              },
-              "values": [
-                {
-                  "id": "free",
-                  "label": {
-                    "en": "Free (€0) — dynamic tariff + net metering",
-                    "nl": "Gratis (€0) — dynamisch tarief + saldering"
-                  }
-                },
-                {
-                  "id": "feedin",
-                  "label": {
-                    "en": "Export value (€/kWh) — fixed contract or post-2027",
-                    "nl": "Terugleverwaarde (€/kWh) — vast contract of post-2027"
-                  }
-                }
-              ],
-              "value": "free",
-              "visible": {
-                "when": "tariff_type",
-                "is": "dynamic"
-              }
-            },
-            {
-              "id": "feed_in_tariff",
-              "type": "number",
-              "label": {
-                "en": "Net Export Value (€/kWh)",
-                "nl": "Netto terugleverwaarde (€/kWh)"
-              },
-              "hint": {
-                "en": "Net value per kWh you receive for exporting: export compensation minus export penalty. Example: €0.12 compensation − €0.14 penalty = −€0.02 → enter 0. Post-2027 without net metering: typically €0.06–0.10 (commodity price only, no energy tax).",
-                "nl": "Netto bedrag per kWh dat u ontvangt bij teruglevering: terugleververgoeding minus terugleverboete. Voorbeeld: €0,12 vergoeding − €0,14 boete = −€0,02 → vul 0 in. Post-2027 zonder saldering: doorgaans €0,06–0,10 (alleen commodity-prijs, geen energiebelasting)."
-              },
-              "value": 0.08,
-              "min": 0,
-              "max": 0.3,
-              "step": 0.01,
-              "units": "€/kWh",
-              "visible": {
-                "when": "pv_cost_mode",
-                "is": "feedin"
               }
             }
           ]
@@ -9654,20 +9696,6 @@
             "no": "Fast prissetting",
             "fi": "Kiinteä hinnoittelu",
             "hu": "Rögzített árazás"
-          }
-        },
-        {
-          "id": "balanced-dynamic",
-          "title": {
-            "en": "Dynamic Pricing (V2 — post-saldering)",
-            "nl": "Dynamisch Tarief (V2 — na salderen)",
-            "de": "Dynamische Preisgestaltung (V2 — post-saldering)",
-            "da": "Dynamisk prissætning (V2 — post-saldering)",
-            "fr": "Tarification dynamique (V2 — post-saldering)",
-            "sv": "Dynamisk prissättning (V2 — post-saldering)",
-            "no": "Dynamisk prissetting (V2 — post-saldering)",
-            "fi": "Dynaaminen hinnoittelu (V2 — post-saldering)",
-            "hu": "Dinamikus árazás (V2 — post-saldering)"
           }
         },
         {
