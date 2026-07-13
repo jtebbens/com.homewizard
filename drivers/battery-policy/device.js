@@ -1195,7 +1195,21 @@ if (debug) this.log(
     this.log(`Price refresh scheduled (adaptive: ${getRefreshInterval() / 60000}min, frequent 14:00–16:00)`);
   }
 
+  // Guards against concurrent weather-fetch cycles: policyCheckInterval and
+  // _scheduleHourBoundary both call _maybeRefreshWeatherOnly independently, and
+  // both read weatherData.fetchedAt before either write updates it (check-then-act
+  // race) — when they land close together this fired _updateWeather twice, each
+  // spawning its own 3s-delayed fetchUpwindData burst (2026-07-13: same 2 coords
+  // hit pv.tebbens.net 3x within ~2s, tripping its rate limiter).
   async _updateWeather() {
+    if (this._weatherUpdateInFlight) return this._weatherUpdateInFlight;
+    this._weatherUpdateInFlight = this._updateWeatherImpl().finally(() => {
+      this._weatherUpdateInFlight = null;
+    });
+    return this._weatherUpdateInFlight;
+  }
+
+  async _updateWeatherImpl() {
     try {
       const settings = this.getSettings();
 
