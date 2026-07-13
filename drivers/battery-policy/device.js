@@ -2911,7 +2911,7 @@ if (debug) this.log(
 
     // Satellite nowcast: override 0-2h pvForecast with sat-derived panel-W.
     const satDpActive = this.getSetting('satellite_dp_active') === true;
-    if (pvForecast && satDpActive) {
+    if (pvForecast) {
       const _nowMs = Date.now();
       const _SAT_MAX_LEAD_MS = 2 * 3600_000;
       let _satCount = 0;
