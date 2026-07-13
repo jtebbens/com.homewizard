@@ -1904,9 +1904,9 @@ if (debug) this.log(
           // Temp: raw per-slot om/sc/actual W for divergence-mining analysis
           // (project_roadmap_perslot_blend_divergence). Remove after analysis done.
           result.debug.pvPredictionsRecent = _pvAcc.pv_predictions?.slice(-300) ?? null;
-          // Learned per-UTC-hour sat yield-factor table — exposed so it's checkable against
-          // the hardcoded SAT_YIELD_FACTORS fallback without a debug-flag flip + restart.
-          result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factors ?? null;
+          // Learned scalar sat yield-factor (panel-plane basis) — exposed so it's checkable
+          // against the SAT_YF_PRIOR warm-start without a debug-flag flip + restart.
+          result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factor ?? null;
         }
         // Refill-reserve state + near-term discharge count — exposed so a "discharge tonight
         // silently dropped" report (feedback_dp_instability_debug_workflow) is traceable from
