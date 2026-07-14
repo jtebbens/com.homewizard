@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.6)
+## 📝 Latest Updates (v3.15.63–v3.17.7)
+
+### Battery Efficiency Now Broken Down by Charge/Discharge Workload (v3.17.7)
+
+* **New insight into how the battery's round-trip efficiency depends on how hard it is charged or discharged.** Each completed charge/discharge cycle now records how much of its energy moved at low, medium and high power, so the app can compare efficiency between gentle and high-power usage instead of relying on a single session average. This reveals whether short high-power bursts — for example covering a large household spike — cost efficiency, helping you tune when to charge and discharge for the least loss. The comparison fills in over the coming days as new cycles complete.
 
 ### Cheap Solar Now Stored at the Best Moment Instead of Exported (v3.17.6)
 

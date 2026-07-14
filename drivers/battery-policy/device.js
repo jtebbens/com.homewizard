@@ -4191,6 +4191,8 @@ if (debug) this.log(
       rte:            rte != null ? +(rte * 100).toFixed(1) : null,
       rteByPower:     rteInsightsObj?.rteByPower ?? null,
       rteByDischargePower: rteInsightsObj?.rteByDischargePower ?? null,
+      rteByDischargeComposition: rteInsightsObj?.rteByDischargeComposition ?? null,
+      rteByChargeComposition: rteInsightsObj?.rteByChargeComposition ?? null,
       rteBySeason:    rteInsightsObj?.rteBySeason ?? null,
       rteByMode:      rteInsightsObj?.rteByMode ?? null,
       cycles:         this.efficiencyEstimator.getCycleCount(),
@@ -5064,9 +5066,9 @@ if (debug) this.log(
     const dayCorr  = this._pvDayCorrectionFactor ?? 1.0;
     const intraday = this._lastIntradayPvRatio ?? 1.0;
     const capW     = this.getSetting('pv_capacity_w') || 0;
-    const today    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const today    = _amsDayKeyFormatter.format(new Date());
     return src.map(s => {
-      const isToday = new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === today;
+      const isToday = _amsDayKeyFormatter.format(new Date(s.timestamp)) === today;
       const f = isToday ? dayCorr * intraday : dayCorr;
       if (f === 1) return s;
       let w = Math.round(s.pvPowerW * f);
