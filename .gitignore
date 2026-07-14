@@ -14,3 +14,8 @@ CRASH_DIAGNOSIS.md
 # Optional: any other internal prompt files
 *.prompt.md
 *.ai.md
+
+.claude/hooks/hook-log.jsonl
+
+# Personal HomeyScript backups (user-specific, not app code)
+/local/
