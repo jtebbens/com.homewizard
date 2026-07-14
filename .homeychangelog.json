@@ -1597,5 +1597,8 @@
   },
   "3.17.6": {
     "en": "added EMCWF new model to ensemble. Fixed solar storage during cheap price slot was exported instead"
+  },
+  "3.17.7": {
+    "en": "Watermeter guard fix for timeout issues, same as energy-socket and other drivers"
   }
 }
