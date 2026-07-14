@@ -67,6 +67,9 @@ module.exports = class HomeWizardEnergyWatermeterDevice extends Homey.Device {
     }
 
     this._leakFlowStart = null;
+    this._pollRunning = false;
+    this._consecutiveFailures = 0;
+    this._lastSuccessfulPoll = Date.now();
 
     const interval = Math.max(settings.offset_polling, 2);
     const offset = Math.floor(Math.random() * interval * 1000);
@@ -211,12 +214,20 @@ _flushDebugLogs() {
   async onPoll() {
     if (this.__deleted) return;
 
+    // Guard against concurrent polls — setInterval fires regardless of whether
+    // the previous poll completed. Without this, a failing device piles up
+    // concurrent polls that exhaust the shared HTTP agent (same CPU-exhaustion
+    // class already fixed in energy_socket's onPoll).
+    if (this._pollRunning) return;
+    this._pollRunning = true;
+
     const settings = this.getSettings();
 
     if (!this.url) {
       if (settings.url) {
         this.url = settings.url;
       } else {
+        this._pollRunning = false;
         await this.setUnavailable('Missing URL');
         return;
       }
@@ -275,11 +286,22 @@ _flushDebugLogs() {
       }
 
       await this.setAvailable();
+      this._consecutiveFailures = 0;
+      this._lastSuccessfulPoll = Date.now();
 
     } catch (err) {
       this._debugLog(`❌ ${err.code || ''} ${err.message || err}`);
       this.error('Polling failed:', err);
-      this.setUnavailable(err.message || 'Polling error').catch(this.error);
+      this._consecutiveFailures++;
+
+      // Only mark unavailable after 5 consecutive failures AND 120s since last
+      // success — prevents flapping + setUnavailable IPC spam on transient
+      // network glitches (same threshold as energy_socket's _handlePollFailure).
+      if (this._consecutiveFailures >= 5 && Date.now() - this._lastSuccessfulPoll > 120000) {
+        this.setUnavailable(err.message || 'Polling error').catch(this.error);
+      }
+    } finally {
+      this._pollRunning = false;
     }
   }
 
