@@ -11,6 +11,7 @@ const http = require('http');
  * Safe capability updater
  */
 async function updateCapability(device, capability, value) {
+  if (device.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   try {
     const current = device.getCapabilityValue(capability);
 
@@ -119,7 +120,16 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     }
   }
 
+  onUninit() {
+    this.__deleted = true;
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
+  }
+
   onDeleted() {
+    this.__deleted = true;
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -232,6 +242,7 @@ _flushDebugLogs() {
    * GET /data
    */
   async onPoll() {
+    if (this.__deleted) return; // Skip poll during uninit/teardown
     // Guard against concurrent polls — setInterval fires regardless of whether
     // the previous poll finished. Prevents overlapping invocations piling up.
     if (this._pollRunning) return;

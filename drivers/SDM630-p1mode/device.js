@@ -8,6 +8,7 @@ const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
 // const Homey2023 = Homey.platform === 'local' && Homey.platformVersion === 2;
 
 async function updateCapability(device, capability, value) {
+  if (device.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   try {
     const current = device.getCapabilityValue(capability);
 
@@ -75,7 +76,16 @@ async onInit() {
 }
 
 
+  onUninit() {
+    this.__deleted = true;
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
+  }
+
   onDeleted() {
+    this.__deleted = true;
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -103,6 +113,7 @@ async onInit() {
   }
 
   async onPoll() {
+    if (this.__deleted) return; // Skip poll during uninit/teardown
     const settings = this.getSettings();
 
     if (!this.url) {

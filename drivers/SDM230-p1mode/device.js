@@ -9,6 +9,7 @@ const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
  * Stable capability updater — never removes capabilities.
  */
 async function updateCapability(device, capability, value) {
+  if (device.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   try {
     const current = device.getCapabilityValue(capability);
 
@@ -121,7 +122,16 @@ module.exports = class HomeWizardEnergyDevice230 extends Homey.Device {
     app.baseloadMonitor.setNotificationsEnabledForDevice(this, this._baseloadNotificationsEnabled);
   }
 
+  onUninit() {
+    this.__deleted = true;
+    if (this.onPollInterval) {
+      clearInterval(this.onPollInterval);
+      this.onPollInterval = null;
+    }
+  }
+
   onDeleted() {
+    this.__deleted = true;
     if (this.onPollInterval) {
       clearInterval(this.onPollInterval);
       this.onPollInterval = null;
@@ -230,6 +240,7 @@ _flushDebugLogs() {
  * GET /data
  */
 async onPoll() {
+  if (this.__deleted) return; // Skip poll during uninit/teardown
   const settings = this.getSettings();
 
   if (!this.url) {

@@ -1338,6 +1338,7 @@ _mergeBatterySources(realtime, group) {
 
 
 async _updateBatteryGroup() {
+  if (this.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   const dataObj = this.getData();
   if (!dataObj?.id) return;
 
@@ -1937,6 +1938,7 @@ async _measurementGasWater(gas, water, tasks, showGas, showWater) {
 
 _handleSystem(data) {
   // this.log('⚙️ System data received:', data);
+  if (this.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   if (!this.getData() || !this.getData().id) {
     this.log('⚠️ Ignoring system event: device no longer exists');
     return;
@@ -1990,6 +1992,7 @@ async _handleBatteries(data) {
     // --- Device existence guard ---
     // ✅ CPU FIX: Removed pointless getDriver/getDevice lookup — _handleBatteries
     // already runs on the device instance itself, no need to look it up again.
+    if (this.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
     const dataObj = this.getData();
     if (!dataObj?.id) return;
 

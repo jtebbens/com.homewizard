@@ -10,6 +10,7 @@ const http = require('http');
  * Safe capability updater
  */
 async function updateCapability(device, capability, value) {
+  if (device.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   const current = device.getCapabilityValue(capability);
 
   if (value === undefined || value === null) return;

@@ -20,6 +20,7 @@ const SHARED_SOCKET_AGENT = new http.Agent({
  * Safe capability updater
  */
 async function updateCapability(device, capability, value) {
+  if (device.__deleted) return; // Skip write during uninit/teardown → prevents IPCSocket EPIPE
   try {
     const current = device.getCapabilityValue(capability);
 
