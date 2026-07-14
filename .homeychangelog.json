@@ -1600,5 +1600,8 @@
   },
   "3.17.7": {
     "en": "Watermeter guard fix for timeout issues, same as energy-socket and other drivers"
+  },
+  "3.17.8": {
+    "en": "Guard for IPCsocket error"
   }
 }
