@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.7)
+## 📝 Latest Updates (v3.15.63–v3.17.8)
+
+### More Reliable Device Updates During App Restarts (v3.17.8)
+
+* **Fixed a rare connection error during app shutdown or restart.** Energy meters, smart plugs, batteries and the water meter could briefly try to update their values while the app was already shutting down, which showed up as a connection error in diagnostic reports. Those updates are now cleanly skipped while the app is stopping. The water meter additionally received the same protection against overlapping reads piling up that the smart plugs already had, keeping it responsive even when a meter is temporarily unreachable.
 
 ### Battery Efficiency Now Broken Down by Charge/Discharge Workload (v3.17.7)
 
