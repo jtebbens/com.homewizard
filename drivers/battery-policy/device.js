@@ -229,7 +229,7 @@ class BatteryPolicyDevice extends Homey.Device {
             const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: liveSoc, price: null };
             if (existing >= 0) modeHistory[existing] = entry;
             else modeHistory.push(entry);
-            if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
+            if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
             this._queueSettingsPersist('policy_mode_history', modeHistory);
           } catch (e) { this.error('Failed to save predictive mode history (flush):', e); }
           try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Widget save (predictive) failed:', e.message); }
@@ -1697,7 +1697,7 @@ if (debug) this.log(
             const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: currentSoC, price: null };
             if (existing >= 0) modeHistory[existing] = entry;
             else modeHistory.push(entry);
-            if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
+            if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
             this._queueSettingsPersist('policy_mode_history', modeHistory);
           } catch (e) { this.error('Failed to save predictive mode history:', e); }
           // Still recompute DP + update widget so planning stays fresh
@@ -2080,8 +2080,8 @@ if (debug) this.log(
           } else {
             modeHistory.push(entry);
           }
-          // Keep last 192 entries (48h headroom — extra triggers won't push out early-morning data)
-          if (modeHistory.length > 192) modeHistory.splice(0, modeHistory.length - 192);
+          // Keep last 2200 entries (~23d @ 96 buckets/day — retains F3 sat-accuracy over a multi-week vacation)
+          if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
           this._queueSettingsPersist('policy_mode_history', modeHistory);
         } catch (e) {
           this.error('Failed to save mode history:', e);
