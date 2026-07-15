@@ -2032,6 +2032,27 @@ if (debug) this.log(
           const _planSlot = this.optimizationEngine?._schedule?.slots
             ?.filter(s => new Date(s.timestamp).getTime() <= nowTs.getTime())
             .pop();
+          // plan-accuracy F3: store this slot's live sat + Solcast forecast alongside OM (pvFcW),
+          // so the 🎯 block can compare sat vs SC vs OM on valid live data (shadow-only; not fed
+          // to the DP). Read the already-computed live values — satPanelW (= satGHI × gtiOverGhi ×
+          // scalar) off the hourly slot, and Solcast p50 off _pvForecastSC — never re-derive a
+          // formula (that is the ktvssc-drift trap). satFcW is null outside the 0-2h sat window.
+          const _hourMs = nowTs.getTime()
+            - (nowTs.getUTCMinutes() * 60_000)
+            - (nowTs.getUTCSeconds() * 1_000)
+            - nowTs.getUTCMilliseconds();
+          const _satFcW = this.weatherData?.hourlyForecast
+            ?.find(h => h.time.getTime() === _hourMs)?.satPanelW ?? null;
+          // Age (min) of the sat data behind this satFcW — so the F4 analysis can label lead
+          // time / drop laggy-mirror samples. Only meaningful when satFcW is present.
+          const _satIssueMs = this.weatherForecaster?.getSatIssueMs?.() ?? null;
+          const _satAgeMin = (_satFcW != null && _satIssueMs != null)
+            ? Math.round((nowTs.getTime() - _satIssueMs) / 60_000)
+            : null;
+          const _scSlots = this._pvForecastSC?.get(_hourMs);
+          const _scFcW = _scSlots?.p50?.length > 0
+            ? Math.round(_scSlots.p50.reduce((a, b) => a + b, 0) / _scSlots.p50.length)
+            : null;
           const entry = {
             ts:     nowTs.toISOString(),
             hwMode: applyMode,
@@ -2043,6 +2064,9 @@ if (debug) this.log(
             consumW: result.debug?.houseConsumption ?? null,
             pvFcW:     _planSlot?.pvForecastW  ?? null,
             consumFcW: _planSlot?.consumptionW ?? null,
+            satFcW:  _satFcW,
+            scFcW:   _scFcW,
+            satAgeMin: _satAgeMin,
             gridW:   this.getCapabilityValue('grid_power_mirror') ?? null,
             battW:   inputs.p1?.battery_power        ?? this._lastBatteryTargetW ?? null,
             policyMode: result.policyMode ?? result.debug?.policyMode ?? null,
@@ -2363,6 +2387,30 @@ if (debug) this.log(
       sAct += e.pvW; sErr += e.pvW - e.pvFcW; n++;
     }
     return (sAct > 0 && n >= 4) ? sErr / sAct : null;
+  }
+
+  /**
+   * Plan-accuracy stats (MAE + signed bias, bias = actual − forecast) over a history slice,
+   * per forecast source. Single implementation for the 🎯 diagnostic AND its test.
+   * pv = OM forecast, sat = live satellite nowcast, sc = Solcast p50, co = consumption.
+   * Each source returns { n, mae, bias } or null when < 4 paired samples.
+   */
+  _planAccuracyStats(hist) {
+    const acc = (fc, act) => {
+      const errs = hist
+        .filter(e => e[fc] != null && e[act] != null)
+        .map(e => e[act] - e[fc]);
+      if (errs.length < 4) return null;
+      const mae  = errs.reduce((a, x) => a + Math.abs(x), 0) / errs.length;
+      const bias = errs.reduce((a, x) => a + x, 0) / errs.length;
+      return { n: errs.length, mae: Math.round(mae), bias: Math.round(bias) };
+    };
+    return {
+      pv:  acc('pvFcW', 'pvW'),
+      sat: acc('satFcW', 'pvW'),
+      sc:  acc('scFcW', 'pvW'),
+      co:  acc('consumFcW', 'consumW'),
+    };
   }
 
   /**
@@ -3326,24 +3374,19 @@ if (debug) this.log(
     // (positive = under-forecast). Observe-only; not yet fed back into confidence.
     {
       const _hist = (this.homey.settings.get('policy_mode_history') || []).slice(-96);
-      const _acc = (fc, act) => {
-        const errs = _hist
-          .filter(e => e[fc] != null && e[act] != null)
-          .map(e => e[act] - e[fc]);
-        if (errs.length < 4) return null;
-        const mae  = errs.reduce((a, x) => a + Math.abs(x), 0) / errs.length;
-        const bias = errs.reduce((a, x) => a + x, 0) / errs.length;
-        return { n: errs.length, mae: Math.round(mae), bias: Math.round(bias) };
-      };
       const _fmt = m => `MAE ${m.mae}W bias ${m.bias > 0 ? '+' : ''}${m.bias}W (n${m.n})`;
-      const _pv = _acc('pvFcW', 'pvW');
-      const _co = _acc('consumFcW', 'consumW');
+      // F3: pv=OM, sat=live satellite nowcast, sc=Solcast p50, co=consumption — all vs the same
+      // actual, so sat-vs-SC ranking is fair. Sat/SC are sparse (sat only fills 0-2h slots) and
+      // show only when ≥4 samples accumulate. Shadow-only; not fed to the DP.
+      const { pv: _pv, sat: _sat, sc: _sc, co: _co } = this._planAccuracyStats(_hist);
       // Daytime-masked relative PV bias (positive = under-forecast). Now also gates the
       // conservatism discount upstream (see _computePvRelBias / [PV accuracy] block).
       const _pvRelBias = this._computePvRelBias();
       if (_pv || _co) {
         const _rb = _pvRelBias != null ? ` relBias ${_pvRelBias > 0 ? '+' : ''}${_pvRelBias.toFixed(2)}` : '';
-        this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'}${_rb} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
+        const _satS = _sat ? ` | SAT ${_fmt(_sat)}` : '';
+        const _scS  = _sc  ? ` | SC ${_fmt(_sc)}`  : '';
+        this.log(`🎯 Plan-accuracy 24h: PV ${_pv ? _fmt(_pv) : 'n/a'}${_rb}${_satS}${_scS} | verbruik ${_co ? _fmt(_co) : 'n/a'}`);
       }
     }
 
