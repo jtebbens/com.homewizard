@@ -57,13 +57,17 @@ always traces back here first. It is now surfaced live in `policy_last_run_debug
 ## Known dangerous interactions
 
 1. **Reorder rollback guard ↔ trickle PV (the 2026-06-26 burn).** The reorder (stage 6) re-simulates
-   the window (449–463) and reverts the whole window if the re-simulated end SoC undershoots
-   `dpEndTargetG` (466–472). The re-sim adds *free PV charge* on any preserve slot inside the window
-   with `pvCoverage > 0` (461–462). If a preserve slot inside the reorder window carries trickle PV,
-   the simulated trajectory diverges from the original forward pass's trajectory, and the rollback
-   can fire even when the reorder itself was correct — silently reverting the fix. **After ANY change
-   to the reorder block, hand-trace the rollback guard with a trickle slot inside the window.** Two
-   sessions were lost to this; see CLAUDE.md "Reorder-block fixes" note.
+   the window and reverts the whole window if the re-simulated end SoC undershoots
+   `dpEndTargetG`. The re-sim must use the *same SoC physics as the forward pass*: free PV charge
+   only on `trickle` slots (and `pvStoreWins` preserve — strong coverage, so never inside the
+   window), plus the forced low-SoC top-up step on firing preserve slots. If the re-sim credits
+   *less* than the forward pass (the 06-26 burn: no trickle gain at all), the rollback false-fires
+   and silently reverts correct reorders; if it credits *more* (pre-2026-07-16: any
+   `pvCoverage > 0` slot gained, including standby/pvExportWins slots that really export), the
+   guard false-PASSES plans that end under `dpEndTargetG` and the trajectory shows a SoC rise the
+   runtime never delivers. **After ANY change to the reorder block, hand-trace the rollback guard
+   with a trickle slot inside the window.** Two sessions were lost to this; see CLAUDE.md
+   "Reorder-block fixes" note. Guarded by property invariant 33 (standby never gains SoC).
 
 2. **Reserve floor ↔ priciest-first hold.** The reorder deliberately holds the *cheapest* eligible
    slot when the window is floor-constrained. The island-elimination pass (stage 7) would re-discharge
