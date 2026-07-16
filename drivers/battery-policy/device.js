@@ -9,6 +9,7 @@ const EfficiencyEstimator = require('../../lib/efficiency-estimator');
 const OptimizationEngine = require('../../lib/optimization-engine');
 const { exportValue } = require('../../lib/price-formulas');
 const ChartRenderer = require('../../lib/chart-renderer');
+const { sanitizeSoc, createState } = require('../../lib/soc-glitch-guard');
 
 const debug = false;
 
@@ -182,7 +183,7 @@ class BatteryPolicyDevice extends Homey.Device {
         const mode = this.p1Device._currentDetailedMode
           || this.p1Device.getCapabilityValue('battery_group_charge_mode')
           || 'unknown';
-        const soc = this.p1Device.getCapabilityValue('battery_group_average_soc') ?? 50;
+        const soc = this._sanitizeSoc(this.p1Device.getCapabilityValue('battery_group_average_soc')) ?? 50;
         this._recordModeHistory(mode);
         this._recordSoCHistory(soc);
       }
@@ -656,7 +657,7 @@ if (debug) this.log(
 
 
         const soc =
-          this.p1Device.getCapabilityValue('battery_group_average_soc') ??
+          this._sanitizeSoc(this.p1Device.getCapabilityValue('battery_group_average_soc')) ??
           50;
 
         const gridPower =
@@ -1025,6 +1026,17 @@ if (debug) this.log(
     }, 15000);
 
     this.log('✅ P1 capability polling started (15s interval)');
+  }
+
+  // Central source guard: reject a WS-reinit SoC collapse-to-zero glitch before it fans out
+  // to any consumer (CostModel RESET, policy cost-reset, reserve-floor trigger, SoC-history).
+  // Shared state across all raw-SoC read sites. See lib/soc-glitch-guard.js.
+  _sanitizeSoc(rawSoc) {
+    if (!this._socGuard) this._socGuard = createState();
+    const minSoc = this.getSetting('min_soc') ?? 0;
+    const { soc, held } = sanitizeSoc(rawSoc, this._socGuard, { minSoc });
+    if (held) this.log(`⚠️ SoC glitch rejected: raw=${rawSoc}% → hold ${soc}%`);
+    return soc;
   }
 
   // ── Reactive reserve-floor breach trigger ───────────────────────────────
@@ -4403,7 +4415,7 @@ if (debug) this.log(
 
     try {
       const soc =
-        this.p1Device.getCapabilityValue('battery_group_average_soc') ??
+        this._sanitizeSoc(this.p1Device.getCapabilityValue('battery_group_average_soc')) ??
         50;
 
       const gridPower =
