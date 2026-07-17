@@ -158,14 +158,8 @@ class HomeWizardThermometer extends Homey.Device {
   }
 
   // Catch offset updates
-  onSettings(oldSettings, newSettings, changedKeys) {
+  onSettings({ oldSettings, newSettings, changedKeys = [] }) {
   this.log('Settings updated');
-
-  // Defensieve check: Homey geeft soms geen array terug
-  if (!Array.isArray(changedKeys)) {
-    this.error('changedKeys is not iterable:', changedKeys);
-    return;
-  }
 
   for (const key of changedKeys) {
     if (key.startsWith('offset_')) {

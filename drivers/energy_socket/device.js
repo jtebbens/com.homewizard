@@ -779,7 +779,7 @@ _flushFetchStats() {
   /**
    * Settings handler
    */
-  async onSettings(oldSettings, newSettings, changedKeys = []) {
+  async onSettings({ oldSettings, newSettings, changedKeys = [] }) {
     this.log('Settings updated', changedKeys);
 
     for (const key of changedKeys) {
