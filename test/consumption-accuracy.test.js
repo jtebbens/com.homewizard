@@ -40,18 +40,49 @@ console.log('Consumption accuracy tracking:');
 test('perfect prediction lifts the score toward 1.0', () => {
   const e = makeEngine(0.8);
   e.recordConsumptionAccuracy(500, 500, new Date('2026-07-17T10:30:00Z'));
-  // error 0 → accuracy 1.0 → 0.8 + 0.1*(1.0-0.8) = 0.82
-  assert.ok(Math.abs(e.data.consumption_accuracy_score - 0.82) < 1e-9,
-    `expected 0.82, got ${e.data.consumption_accuracy_score}`);
+  // error 0 → accuracy 1.0 → 0.8 + 0.01*(1.0-0.8) = 0.802
+  assert.ok(Math.abs(e.data.consumption_accuracy_score - 0.802) < 1e-9,
+    `expected 0.802, got ${e.data.consumption_accuracy_score}`);
 });
 
-test('bad prediction lowers the score by exactly alpha*delta (alpha=0.1)', () => {
+test('bad prediction lowers the score by exactly alpha*delta (alpha=0.01)', () => {
   const e = makeEngine(0.8);
   // predicted 400, actual 2000 → denom 2000, error 0.8 → accuracy 0.2
   e.recordConsumptionAccuracy(400, 2000, new Date('2026-07-17T10:30:00Z'));
-  const expected = 0.8 + 0.1 * (0.2 - 0.8); // 0.74
+  const expected = 0.8 + 0.01 * (0.2 - 0.8);
   assert.ok(Math.abs(e.data.consumption_accuracy_score - expected) < 1e-9,
     `expected ${expected}, got ${e.data.consumption_accuracy_score}`);
+});
+
+// These pin EFFECTIVE MEMORY, not taste. An EMA's memory is ~1/alpha samples, and this
+// codebase has already had an alpha=0.1/15-min score (~2.5h) cited as a long-run signal
+// and then retracted — see feedback_verify_ema_stability_before_claiming. If someone
+// retunes these, they must consciously restate what window the number covers.
+test('score alpha gives ~1 day of memory at the 15-min policy cadence', () => {
+  const e = makeEngine(1.0);
+  const ts = new Date('2026-07-17T10:30:00Z');
+  // Drive a constant 0-accuracy signal and count samples to reach half-way (1.0 → 0.5).
+  let n = 0;
+  while (e.data.consumption_accuracy_score > 0.5 && n < 10000) {
+    e.recordConsumptionAccuracy(1, 1000, ts); // error ~1.0 → accuracy ~0
+    n++;
+  }
+  const days = n / 96; // 96 policy runs per day
+  assert.ok(days > 0.5 && days < 1.5, `half-life should be ~0.7 days, got ${days.toFixed(2)}`);
+});
+
+test('hourly alpha gives ~25 days of memory at ~4 samples per hour-bucket per day', () => {
+  const e = makeEngine(1.0);
+  const ts = new Date('2026-07-17T10:30:00Z');
+  e.recordConsumptionAccuracy(500, 500, ts); // seed bucket at bias 0
+  let n = 0;
+  const b = () => e.data.consumption_accuracy_hourly[12];
+  while (b().emaBiasW < 250 && n < 10000) { // drive toward a steady +500W bias
+    e.recordConsumptionAccuracy(500, 1000, ts);
+    n++;
+  }
+  const days = n / 4; // four 15-min buckets per hour
+  assert.ok(days > 10 && days < 30, `half-life should be ~17 days, got ${days.toFixed(1)}`);
 });
 
 test('guard: actual <= 50W is not a sample (score unchanged)', () => {
