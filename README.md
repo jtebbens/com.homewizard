@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.8)
+## 📝 Latest Updates (v3.15.63–v3.17.10)
+
+### Energy Socket Polling Interval and Thermometer Offset Now Apply Immediately (v3.17.10)
+
+* **Fixed a bug where changing the polling interval on Energy Socket devices, or the temperature/humidity offset on Thermometer devices, silently had no effect until the app was restarted.** The settings screen saved the new value, but the running device kept using the old one — so, for example, lowering the polling interval from 10 to 5 seconds appeared to save successfully while the device kept polling every 10 seconds until the next app restart. Changes to these settings now take effect immediately.
 
 ### More Reliable Device Updates During App Restarts (v3.17.8)
 
