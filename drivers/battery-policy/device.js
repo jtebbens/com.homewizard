@@ -820,6 +820,30 @@ if (debug) this.log(
           await this.learningEngine.recordConsumption(houseConsumptionW).catch(err =>
             this.error('Learning consumption recording failed:', err)
           );
+          // Mean load over the current 15-min slot, accumulated from this 15s poll.
+          // The policy run only sees one instantaneous reading, which is blind to short
+          // appliance bursts: a 5-10 min dishwasher drying peak falls entirely between two
+          // policy samples, and because both the samples (:00/:15/:30/:45) and the appliance
+          // run on fixed schedules, the miss is systematic aliasing, not bad luck — it was
+          // missed on 3 of 3 nights while the 20-30 min heating peak was caught 3 of 3.
+          // Averaging the dense poll instead is what the forecast is comparable to anyway:
+          // the learned profile is itself the mean of these same samples.
+          const _slotMs = Math.floor(Date.now() / (15 * 60_000)) * (15 * 60_000);
+          if (this._loadSlotMs !== _slotMs) {
+            // Slot rolled over: freeze the one that just closed. The policy run fires at the
+            // START of a slot (:00:01), when the new slot holds no samples yet — so the only
+            // slot with a complete mean to score against is the previous one.
+            if (this._loadSlotCount > 0) {
+              this._loadPrevSlotMs = this._loadSlotMs;
+              this._loadPrevMeanW  = this._loadSlotSum / this._loadSlotCount;
+              this._loadPrevCount  = this._loadSlotCount;
+            }
+            this._loadSlotMs = _slotMs;
+            this._loadSlotSum = 0;
+            this._loadSlotCount = 0;
+          }
+          this._loadSlotSum += houseConsumptionW;
+          this._loadSlotCount++;
         }
 
         // ------------------------------------------------------
@@ -2093,6 +2117,13 @@ if (debug) this.log(
             minDischargePrice: this.getSetting('min_discharge_price'),
             pvW:     result.debug?.pvEstimate      ?? null,
             consumW: result.debug?.houseConsumption ?? null,
+            // Mean load over the 15 min ENDING at this timestamp, from the 15s poll. consumW
+            // above is a single instantaneous reading and is blind to short appliance bursts
+            // (a 5-10 min dishwasher drying peak lands between two policy samples, and since
+            // both run on fixed schedules it is missed every night, not occasionally). Pair
+            // this with the PREVIOUS entry's consumFcW for an honest forecast-vs-actual join.
+            consumAvgW: (this._loadPrevSlotMs != null && Date.now() - this._loadPrevSlotMs < 30 * 60_000)
+              ? Math.round(this._loadPrevMeanW) : null,
             pvFcW:     _planSlot?.pvForecastW  ?? null,
             consumFcW: _planSlot?.consumptionW ?? null,
             satFcW:  _satFcW,
@@ -2105,17 +2136,40 @@ if (debug) this.log(
             exception: !p1Available ? 'p1_unavailable' : (sensorLag || zeroOnMeterLag) ? 'battery_sensor_lag' : bmsCalibration ? 'bms_calibration' : (result.debug?.exception ?? null),
           };
           // Consumption forecast accuracy — the load side has no equivalent of
-          // recordPvAccuracy, so forecast quality was only knowable by scraping this
-          // history by hand. consumFcW is the raw slot forecast (consumptionMargin is
-          // applied later, inside the DP), so this scores the forecast, not the hedge.
-          // Observe-only; nothing reads it back.
-          // One sample per 15-min bucket, mirroring _recordPvAccuracySample's dedup: a
-          // policy run can fire several times in a bucket (twice within 14s on restart),
-          // and counting each would over-weight that bucket's error in the EMA.
+          // recordPvAccuracy, so forecast quality was only knowable by scraping this history
+          // by hand. Observe-only; nothing reads it back.
+          //
+          // Scores the slot that just CLOSED, not the one starting now: this runs at :00:01,
+          // when the new slot has no samples yet. Actual = mean over that closed slot from the
+          // 15s poll; forecast = the plan slot covering it. Using the run's instantaneous
+          // reading instead would alias — a 5-10 min appliance burst falls between two policy
+          // samples, and with both on fixed schedules it is missed every night, so even the
+          // signed bias would not average out.
+          //
+          // The forecast is comparable to a slot mean by construction: the learned profile is
+          // itself the mean of these same 15s samples. consumFcW is raw (consumptionMargin is
+          // applied later inside the DP), so this scores the forecast, not the hedge.
+          //
+          // One sample per 15-min bucket, mirroring _recordPvAccuracySample's dedup: a restart
+          // fires several policy runs into one bucket, and counting each would over-weight it.
           {
             const _cBucket = Math.floor(nowTs.getTime() / (15 * 60_000)) * (15 * 60_000);
-            if (this._lastConsumAccuracyBucket !== _cBucket
-                && this.learningEngine?.recordConsumptionAccuracy(entry.consumFcW, entry.consumW, nowTs)) {
+            const _closedMs = this._loadPrevSlotMs;
+            const _closedFresh = _closedMs != null && nowTs.getTime() - _closedMs < 30 * 60_000;
+            // Enough of the closed slot actually sampled? 15s poll → 60 expected. Require 75%:
+            // a thinly-covered slot can miss a short burst just like the instantaneous reading
+            // this replaces, which would quietly reintroduce the aliasing. Better to skip the
+            // slot than score against a mean that never saw the peak. 75% still tolerates the
+            // normal losses (batteryPowerLag guard, _p1PollInFlight skips) while rejecting a
+            // slot that spans a restart.
+            const _closedComplete = _closedFresh && this._loadPrevCount >= 45;
+            const _closedFc = _closedComplete
+              ? this.optimizationEngine?._schedule?.slots
+                ?.filter(s => new Date(s.timestamp).getTime() <= _closedMs).pop()?.consumptionW
+              : null;
+            if (this._lastConsumAccuracyBucket !== _cBucket && _closedComplete
+                && this.learningEngine?.recordConsumptionAccuracy(
+                  _closedFc, this._loadPrevMeanW, new Date(_closedMs))) {
               this._lastConsumAccuracyBucket = _cBucket;
             }
           }
