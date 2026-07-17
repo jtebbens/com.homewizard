@@ -780,8 +780,10 @@ _flushFetchStats() {
    * Settings handler
    */
   async onSettings(oldSettings, newSettings, changedKeys = []) {
+    this.log('Settings updated', changedKeys);
 
     for (const key of changedKeys) {
+      this.log(`Setting "${key}" changed: ${oldSettings[key]} → ${newSettings[key]}`);
 
       if (key === 'offset_socket') {
         const cap = 'measure_power';
@@ -794,6 +796,10 @@ _flushFetchStats() {
       }
 
       if (key === 'offset_polling') {
+        if (this._firstPollTimeout) {
+          clearTimeout(this._firstPollTimeout);
+          this._firstPollTimeout = null;
+        }
         if (this.onPollInterval) {
           clearInterval(this.onPollInterval);
           this.onPollInterval = null;

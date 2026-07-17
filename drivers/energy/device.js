@@ -192,9 +192,11 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     const offset = Math.floor(Math.random() * interval * 1000);
 
     if (this.onPollInterval) clearInterval(this.onPollInterval);
+    if (this._firstPollTimeout) clearTimeout(this._firstPollTimeout);
 
     // First poll offset
-    setTimeout(() => {
+    this._firstPollTimeout = setTimeout(() => {
+      this._firstPollTimeout = null;
       if (this._deleted) return;
       this.onPoll().catch(this.error);
 
@@ -1169,14 +1171,19 @@ _handlePollError(err) {
   }
 
   async onSettings(event) {
-    const { newSettings, changedKeys } = event;
+    const { oldSettings, newSettings, changedKeys } = event;
     this.log('Settings updated', changedKeys);
 
     for (const key of changedKeys) {
+      this.log(`Setting "${key}" changed: ${oldSettings[key]} → ${newSettings[key]}`);
 
       if (key === 'polling_interval') {
         const interval = newSettings.polling_interval;
         if (typeof interval === 'number' && interval > 0) {
+          if (this._firstPollTimeout) {
+            clearTimeout(this._firstPollTimeout);
+            this._firstPollTimeout = null;
+          }
           if (this.onPollInterval) clearInterval(this.onPollInterval);
           this.onPollInterval = setInterval(this.onPoll.bind(this), interval * 1000);
         } else {
