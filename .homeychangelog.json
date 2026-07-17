@@ -1603,5 +1603,8 @@
   },
   "3.17.8": {
     "en": "Guard for IPCsocket error"
+  },
+  "3.17.9": {
+    "en": "Energy and energy-socket interval settings adjustment not guard properly."
   }
 }
