@@ -1941,6 +1941,25 @@ if (debug) this.log(
         result.debug.reserveFloorPct  = this._lastReserveFloorPct ?? null;
         result.debug.minDischargePriceRange = this._lastMinDischargePriceRange ?? null;
         result.debug.consumptionMarginRange = this._lastConsumptionMarginRange ?? null;
+        // Consumption-accuracy meter. learning_data lives in the device store, which no
+        // external reader can reach — pv_predictions is only inspectable because it gets
+        // mirrored out too. Riding on this existing payload instead of claiming a new
+        // settings key keeps it off the heap-throttled persist queue (1 key / 8s).
+        // Snapshot, not the live object: consumption_accuracy_hourly keeps mutating after
+        // this payload is queued (the persist queue flushes ~8s later), which would alias
+        // learning data into _liveState and report score/hourly from different moments.
+        {
+          const _ch = _pvAcc?.consumption_accuracy_hourly;
+          result.debug.consumptionAccuracy = {
+            score: _pvAcc?.consumption_accuracy_score != null
+              ? +_pvAcc.consumption_accuracy_score.toFixed(4) : null,
+            hourly: _ch ? Object.fromEntries(Object.entries(_ch).map(([h, v]) => [h, {
+              emaAbsErrW: Math.round(v.emaAbsErrW),
+              emaBiasW:   Math.round(v.emaBiasW),
+              count:      v.count,
+            }])) : null,
+          };
+        }
         {
           const _schedSlots    = this.optimizationEngine?._schedule?.slots ?? [];
           const _next12hCutoff = Date.now() + 12 * 3_600_000;
@@ -2085,6 +2104,21 @@ if (debug) this.log(
             dpAction: typeof dpAction === 'string' ? dpAction : (dpAction?.action ?? null),
             exception: !p1Available ? 'p1_unavailable' : (sensorLag || zeroOnMeterLag) ? 'battery_sensor_lag' : bmsCalibration ? 'bms_calibration' : (result.debug?.exception ?? null),
           };
+          // Consumption forecast accuracy — the load side has no equivalent of
+          // recordPvAccuracy, so forecast quality was only knowable by scraping this
+          // history by hand. consumFcW is the raw slot forecast (consumptionMargin is
+          // applied later, inside the DP), so this scores the forecast, not the hedge.
+          // Observe-only; nothing reads it back.
+          // One sample per 15-min bucket, mirroring _recordPvAccuracySample's dedup: a
+          // policy run can fire several times in a bucket (twice within 14s on restart),
+          // and counting each would over-weight that bucket's error in the EMA.
+          {
+            const _cBucket = Math.floor(nowTs.getTime() / (15 * 60_000)) * (15 * 60_000);
+            if (this._lastConsumAccuracyBucket !== _cBucket
+                && this.learningEngine?.recordConsumptionAccuracy(entry.consumFcW, entry.consumW, nowTs)) {
+              this._lastConsumAccuracyBucket = _cBucket;
+            }
+          }
           if (existing >= 0) {
             // Update existing bucket — keep best SoC (non-null wins)
             if (entry.soc == null) entry.soc = modeHistory[existing].soc;
