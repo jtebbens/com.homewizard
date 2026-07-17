@@ -1606,5 +1606,8 @@
   },
   "3.17.9": {
     "en": "Energy and energy-socket interval settings adjustment not guard properly."
+  },
+  "3.17.10": {
+    "en": "onsettings fix"
   }
 }
