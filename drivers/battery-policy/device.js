@@ -3304,55 +3304,16 @@ if (debug) this.log(
     // a discharge-cap-only change) and inert live; dropped to reduce DP-stack complexity. Pass
     // false — the optimization-engine helper stays as dead-but-tested code (inv20/21).
     //
-    // TEMP SHADOW-DIAG (spread-band re-measurement, remove after ~1-2wk window — see
-    // project_dp_pv_timing_robustness memory). The 07-04 retirement measured forecast-MAE,
-    // which is blind to a discharge-cap-only change. This measures what the band actually
-    // touches: projected € and where the SoC path diverges. Does not affect the live decision —
-    // the real (pvTimingRobust=false) call below runs after and overwrites _schedule.
-    const _shadowOn = (() => {
-      this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, true, maxChargePrice);
-      return this.optimizationEngine._schedule;
-    })();
-
+    // The 2026-07-06 shadow-diag that re-measured this (dual compute(), Δ projectedProfit ON-vs-OFF,
+    // spreadband_shadow_stats counters) was removed 2026-07-16: its metric could not produce a
+    // negative result. The band only lowers pvWForDischarge, which feeds nothing but the
+    // effectiveDischargePowerW cap (optimization-engine.js:797) — lower PV there means a weakly
+    // higher cap, i.e. pure constraint relaxation on an otherwise identical objective, so
+    // projectedProfit_ON >= projectedProfit_OFF holds by construction. The observed 201:0
+    // positive:negative split over 1060 runs was therefore a tautology, not evidence. Do not
+    // re-measure this way; score both plans against realised PV instead. See
+    // project_dp_pv_timing_robustness + feedback_metric_must_allow_negative.
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
-
-    if (_shadowOn) {
-      const _off = this.optimizationEngine._schedule;
-      const _profitDelta = _shadowOn.projectedProfit - _off.projectedProfit;
-      let _maxSocDeltaPct = 0, _tMaxDelta = -1, _diffCount = 0;
-      for (let i = 0; i < Math.min(_shadowOn.slots.length, _off.slots.length); i++) {
-        if (_shadowOn.slots[i].action !== _off.slots[i].action) _diffCount++;
-        const _d = Math.abs(_shadowOn.slots[i].socProjected - _off.slots[i].socProjected); // already 0-100%
-        if (_d > _maxSocDeltaPct) { _maxSocDeltaPct = _d; _tMaxDelta = i; }
-      }
-      if (Math.abs(_profitDelta) > 0.001 || _maxSocDeltaPct > 0.05) {
-        this.log(`[SPREADBAND-SHADOW] profit OFF=€${_off.projectedProfit.toFixed(3)} ON=€${_shadowOn.projectedProfit.toFixed(3)} `
-          + `Δ=€${_profitDelta.toFixed(3)} | actions-diff=${_diffCount} SoC Δmax=${_maxSocDeltaPct.toFixed(1)}% @t=${_tMaxDelta}`);
-      }
-      // Persist counters (not the log line — /tmp/homey.log doesn't survive app restarts,
-      // and this measurement window is meant to run ~1-2wk across several of them). Read via
-      // getSetting (durable), not this._liveState (in-memory cache, empty again after restart —
-      // feedback_inmemory_state_restart). changedRuns/sumDeltaOnChanged only count runs where the
-      // band actually altered the plan — summing every run's Δ would recount the same future
-      // slot on each successive lookahead until it executes.
-      // _liveState first: _queueSettingsPersist is a 1-key-per-8s round-robin flush shared
-      // with 15+ other keys per cycle, so the disk value lags — reading it every run would
-      // race successive runs off the same stale base and drop increments. _liveState is
-      // updated synchronously by _setLive, so it's current within a session; only fall back
-      // to the durable read right after a restart when _liveState is still empty.
-      const _stats = this._liveState.spreadband_shadow_stats || this.homey.settings.get('spreadband_shadow_stats') || {
-        runs: 0, changedRuns: 0, positiveDeltaRuns: 0, negativeDeltaRuns: 0,
-        sumDeltaOnChanged: 0, since: new Date().toISOString(),
-      };
-      _stats.runs++;
-      if (_diffCount > 0) {
-        _stats.changedRuns++;
-        _stats.sumDeltaOnChanged = +(_stats.sumDeltaOnChanged + _profitDelta).toFixed(4);
-        if (_profitDelta > 0.0005) _stats.positiveDeltaRuns++;
-        else if (_profitDelta < -0.0005) _stats.negativeDeltaRuns++;
-      }
-      this._setLive('spreadband_shadow_stats', _stats);
-    }
 
     // Compact planning summary — always visible in user diagnostics.
     {
