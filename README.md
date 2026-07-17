@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.10)
+## 📝 Latest Updates (v3.15.63–v3.17.11)
+
+### Battery No Longer Makes Tiny Pointless Charges Around Sunset (v3.17.11)
+
+* **Fixed a case where the battery would briefly charge a little when solar production was roughly equal to house consumption (typically as the sun faded).** With no real surplus to store, that small charge had to be given back later at a round-trip efficiency loss — a guaranteed waste with no benefit. The battery now simply stays idle in that situation and lets any solar go to the grid, matching what the planning chart already showed. This mainly affects days with variable cloud and the hour around sunset.
 
 ### Energy Socket Polling Interval and Thermometer Offset Now Apply Immediately (v3.17.10)
 
