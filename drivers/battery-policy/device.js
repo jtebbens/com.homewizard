@@ -1815,22 +1815,16 @@ if (debug) this.log(
         inputs.tariff.next24Hours = null;
       }
 
-      // ------------------------------------------------------
-      // 📊 LEARNING: Apply confidence adjustment based on history
-      // ------------------------------------------------------
-      const confidenceAdjustment = this.learningEngine.getConfidenceAdjustment(
-        result.hwMode || result.policyMode,
-        {
-          soc: inputs.battery?.stateOfCharge ?? 0,
-          sun4h: inputs.weather?.sun4h ?? 0
-        }
-      );
-      
-      if (confidenceAdjustment !== 0) {
-        const originalConfidence = result.confidence;
-        result.confidence = Math.round(Math.max(0, Math.min(100, result.confidence + confidenceAdjustment)));
-        this.log(`📊 Learning adjusted confidence: ${originalConfidence} → ${result.confidence} (${confidenceAdjustment > 0 ? '+' : ''}${confidenceAdjustment})`);
-      }
+      // The history-based confidence adjustment was removed 2026-07-18. It averaged this app's
+      // OWN past confidence values with no outcome feedback — confidence feeding confidence —
+      // and predates the DP by a month (added 2026-02-14, DP 2026-03-15, confidence hardcoded
+      // to `exception ? 75 : 90` on 2026-04-13). Once the DP path stopped computing confidence
+      // its input no longer varied, so it emitted a constant +2.2 into a gate that has never
+      // fired in the entire log: on this path confidence is bounded to ~70-99 and the threshold
+      // is 55. Do not reintroduce without real outcome feedback (did the decision pay off?),
+      // and note that a firing gate freezes the previous hardware mode rather than choosing a
+      // safer one — the DP already hedges uncertainty internally via consumptionMargin,
+      // refillConfidence and the reserve floor.
 
       // Guard: skip explainability when heap is already high — the engine adds ~25 MB
       // which pushes total above the Homey memory ceiling (~65 MB heap).
@@ -2039,7 +2033,10 @@ if (debug) this.log(
         this.log(`📊 Scores: charge=${result.scores?.charge}, discharge=${result.scores?.discharge}, preserve=${result.scores?.preserve}`);
         this.log(`🎯 Attempting to apply: ${applyMode} (confidence: ${result.confidence}%)`);
         
-        const minConfidence = this.getSetting('min_confidence_threshold') ?? 60;
+        // Must match the resolution in _applyRecommendation — this copy only phrases the log
+        // line below, so a different default would explain a refusal with a threshold that did
+        // not cause it. Schema default is 55.
+        const minConfidence = this.getSetting('min_confidence_threshold') ?? 55;
         const applied = await this._applyRecommendation(applyMode, result.confidence);
 
         if (applied) {
@@ -4548,7 +4545,9 @@ if (debug) this.log(
   }
 
   async _applyRecommendation(mode, confidence, { force = false } = {}) {
-    const minConfidence = this.getSetting('min_confidence_threshold') || 55;
+    // ?? not ||: the schema allows 0 (min: 0), meaning "never gate on confidence". || would
+    // discard that explicit choice and keep refusing at 55.
+    const minConfidence = this.getSetting('min_confidence_threshold') ?? 55;
 
     if (!force && confidence < minConfidence) {
       this.log(`Confidence ${confidence}% below threshold ${minConfidence}%, not applying`);
