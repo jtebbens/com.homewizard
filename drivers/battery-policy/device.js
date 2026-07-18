@@ -828,20 +828,11 @@ if (debug) this.log(
           // missed on 3 of 3 nights while the 20-30 min heating peak was caught 3 of 3.
           // Averaging the dense poll instead is what the forecast is comparable to anyway:
           // the learned profile is itself the mean of these same samples.
-          const _slotMs = Math.floor(Date.now() / (15 * 60_000)) * (15 * 60_000);
-          if (this._loadSlotMs !== _slotMs) {
-            // Slot rolled over: freeze the one that just closed. The policy run fires at the
-            // START of a slot (:00:01), when the new slot holds no samples yet — so the only
-            // slot with a complete mean to score against is the previous one.
-            if (this._loadSlotCount > 0) {
-              this._loadPrevSlotMs = this._loadSlotMs;
-              this._loadPrevMeanW  = this._loadSlotSum / this._loadSlotCount;
-              this._loadPrevCount  = this._loadSlotCount;
-            }
-            this._loadSlotMs = _slotMs;
-            this._loadSlotSum = 0;
-            this._loadSlotCount = 0;
-          }
+          // Slot rolled over: freeze the one that just closed. The policy run fires at the
+          // START of a slot (:00:01), when the new slot holds no samples yet — so the only
+          // slot with a complete mean to score against is the previous one. The policy run
+          // calls this too, so it never has to wait for the next poll (see _rollLoadSlot).
+          this._rollLoadSlot();
           this._loadSlotSum += houseConsumptionW;
           this._loadSlotCount++;
         }
@@ -1671,6 +1662,35 @@ if (debug) this.log(
     }
   }
 
+  /**
+   * Freeze the 15-min load slot that just closed, if the boundary was crossed.
+   * Idempotent — a second call within the same slot is a no-op.
+   *
+   * Called from BOTH the 15s poll (which then accumulates into the new slot) and the
+   * policy run (which reads _loadPrevSlotMs). The policy run fires at :00:00.5, up to
+   * 15s BEFORE the first poll of the new slot. Without this call it would still see the
+   * slot that closed 30 min ago, and the 30-min freshness guard on consumAvgW /
+   * recordConsumptionAccuracy rejects it — silently starving the consumption accuracy
+   * meter from the day it was built (~5 samples in 5 days, all from off-schedule runs
+   * that happened to fire late enough to win the race).
+   *
+   * Do NOT "fix" this by widening that freshness guard instead: scoring against the
+   * slot-before-previous pairs a slot mean with the wrong slot's forecast — wrong data
+   * rather than missing data.
+   */
+  _rollLoadSlot(nowMs = Date.now()) {
+    const slotMs = Math.floor(nowMs / (15 * 60_000)) * (15 * 60_000);
+    if (this._loadSlotMs === slotMs) return;
+    if (this._loadSlotCount > 0) {
+      this._loadPrevSlotMs = this._loadSlotMs;
+      this._loadPrevMeanW  = this._loadSlotSum / this._loadSlotCount;
+      this._loadPrevCount  = this._loadSlotCount;
+    }
+    this._loadSlotMs = slotMs;
+    this._loadSlotSum = 0;
+    this._loadSlotCount = 0;
+  }
+
   async _runPolicyCheck({ skipEnabledCheck = false } = {}) {
     if (this._policyCheckRunning) {
       this.log('Policy check already in progress, skipping concurrent call');
@@ -2108,6 +2128,10 @@ if (debug) this.log(
           const _scFcW = _scSlots?.p50?.length > 0
             ? Math.round(_scSlots.p50.reduce((a, b) => a + b, 0) / _scSlots.p50.length)
             : null;
+          // Close the slot that just ended before reading it below. This runs at :00:00.5,
+          // ahead of the next 15s poll, so without it consumAvgW and the accuracy sample
+          // would both read a 30-min-old slot and fail their freshness guard.
+          this._rollLoadSlot(nowTs.getTime());
           const entry = {
             ts:     nowTs.toISOString(),
             hwMode: applyMode,
