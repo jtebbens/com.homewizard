@@ -3602,7 +3602,10 @@ if (debug) this.log(
               prices, soc, kwh, powerW, powerW,
               pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, pvKwhTomorrow
             );
-            const profit = +result.profit.toFixed(4);
+            // profitFromEmpty, not profit: the raw DP value credits the charge already in
+            // the battery at t=0, which scales with pack size and so inflates every larger
+            // scenario in this comparison.
+            const profit = +result.profitFromEmpty.toFixed(4);
             const selfSufficiencyPct = result.selfSufficiencyPct;
 
             // Power bottleneck: slots where house consumption exceeds battery discharge power,
