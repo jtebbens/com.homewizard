@@ -3437,7 +3437,6 @@
       grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">` +
         scenarios.map(s => {
           const isCurrent  = s.units === currentUnits;
-          const delta      = s.profit - currentProfit;
           const extraBatt  = s.units - currentUnits;
 
           // Prefer seasonally-corrected profit for payback; fall back to raw avg
@@ -3450,10 +3449,6 @@
             ? (extraBatt * investment / yearly).toFixed(1) + ' jaar'
             : null;
           const paybackBasis = useSeasonalBase ? 'seizoensgecorrigeerd' : 'jaargemiddelde';
-          // Projected payback for current battery based on optimizer estimate
-          const dpProjectedPaybackYears = isCurrent && s.profit > 0
-            ? (investment / (s.profit * 365)).toFixed(1)
-            : null;
 
           const border = isCurrent
             ? 'border:2px solid #7ecb7e;'
@@ -3467,15 +3462,21 @@
             <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">
               ${s.kwh} kWh · ${s.powerW}W
             </div>
-            <div style="font-size:18px;font-weight:bold;color:var(--text);margin-bottom:6px;">
-              ${fmt(s.profit)}<span style="font-size:11px;font-weight:normal;color:var(--dim);">/dag</span>
-            </div>
+            ${(() => {
+              // Headline = self-sufficiency. It is the one figure the scenario forward pass
+              // actually supports: share of house load covered by PV + battery instead of
+              // grid. The DP value itself is not a per-day amount and is no longer shown.
+              const pct = s.selfSufficiencyPct ?? null;
+              if (pct == null) return '';
+              const c = pct >= 80 ? '#7ecb7e' : pct >= 50 ? '#e5c07b' : '#e06c75';
+              return `<div style="font-size:22px;font-weight:bold;color:${c};line-height:1.1;">${pct}%</div>
+                <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">zelfvoorzienend</div>
+                <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px;">
+                  <div style="width:${Math.min(pct, 100)}%;height:100%;background:${c};border-radius:3px;"></div>
+                </div>`;
+            })()}
             ${isCurrent
               ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Huidige setup</div>
-                 <div style="font-size:11px;color:var(--dim);">
-                   Optimizerprognose: <span style="color:var(--text);">${fmt(s.profit)}/dag</span>
-                   ${dpProjectedPaybackYears ? `<span style="color:var(--dim);"> → ~${dpProjectedPaybackYears} jaar terugverdientijd</span>` : ''}
-                 </div>
                  ${hasCycleData
                    ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;">
                         Werkelijk gemeten: <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}/dag</span>
@@ -3484,27 +3485,11 @@
                    : `<div style="font-size:11px;color:var(--dim);margin-top:2px;">Werkelijk: nog geen cycli</div>`
                  }`
               : extraBatt > 0
-                ? `<div style="font-size:13px;color:#7ecb7e;margin-bottom:4px;">+${fmtD(delta)}/dag extra (optimizerprognose)</div>
-                   <div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar extra (${paybackBasis})</div>
+                ? `<div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar extra (${paybackBasis})</div>
                    ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd extra batterij: ${payback}</div>
-                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">Alleen de meerwinst t.o.v. huidige setup · ${paybackBasis} · o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''}</div>` : ''}`
-                : `<div style="font-size:11px;color:var(--dim);">${fmtD(delta)}/dag vs huidig</div>`
+                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">Ruwe indicatie uit het model — geen gemeten opbrengst. Alleen de meerwinst t.o.v. huidige setup · ${paybackBasis} · o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''}</div>` : ''}`
+                : `<div style="font-size:11px;color:var(--dim);">Kleinere setup dan nu</div>`
             }
-            ${(() => {
-              // Self-sufficiency bar
-              const pct = s.selfSufficiencyPct ?? null;
-              if (pct == null) return '';
-              const barColor = pct >= 80 ? '#7ecb7e' : pct >= 50 ? '#e5c07b' : '#e06c75';
-              return `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;">
-                <div style="font-size:11px;color:var(--dim);margin-bottom:4px;">Zelfvoorzienend</div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
-                    <div style="width:${Math.min(pct, 100)}%;height:100%;background:${barColor};border-radius:3px;"></div>
-                  </div>
-                  <span style="font-size:13px;font-weight:600;color:${barColor};min-width:36px;text-align:right;">${pct}%</span>
-                </div>
-              </div>`;
-            })()}
             ${(() => {
               // Power bottleneck: show residual grid import during discharge
               if (s.shortfallKwh == null) return '';
@@ -3536,12 +3521,17 @@
         return;
       }
 
-      const invest = parseFloat(invInput?.value) || 1200;
-      measuredPaybackYears = measuredYearlyProfit > 0.01 ? invest / measuredYearlyProfit : null;
-      const paybackPct  = measuredPaybackYears ? Math.min(100, 100 / measuredPaybackYears) : 0;
-      const barColor    = paybackPct >= 100 ? '#20F29B' : paybackPct >= 50 ? '#FCD34D' : '#60A5FA';
+      // The input holds the price of ONE battery, while the measured profit comes from
+      // battery_cycle_history — i.e. the whole pack. Scale to the pack before dividing.
+      const invest      = parseFloat(invInput?.value) || 1200;
+      const investTotal = invest * currentUnits;
+      measuredPaybackYears = measuredYearlyProfit > 0.01 ? investTotal / measuredYearlyProfit : null;
       const avgPerCycle = measuredTotalProfit / cycleHistory.length;
-      const roiPct      = (measuredTotalProfit / invest * 100).toFixed(1);
+      const roiPct      = measuredTotalProfit / investTotal * 100;
+      // Bar shows progress towards payback (same quantity as the 'Terugverdiend tot nu'
+      // tile), not 100/years — that was an annual return rate and never moved.
+      const paybackPct  = Math.min(100, roiPct);
+      const barColor    = paybackPct >= 100 ? '#20F29B' : paybackPct >= 50 ? '#FCD34D' : '#60A5FA';
 
       let paybackLabel = 'Onvoldoende data.';
       if (measuredPaybackYears) {
@@ -3577,7 +3567,7 @@
               ['Voltooide cycli', cycleHistory.length, 'var(--text)'],
               ['Gemiddeld per cyclus', `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
               ['Jaarprognose (gemeten)', `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
-              ['Terugverdiend tot nu', `${roiPct}%`, 'var(--purple-lt)'],
+              ['Terugverdiend tot nu', `${roiPct.toFixed(1)}%`, 'var(--purple-lt)'],
             ].map(([label, val, color]) =>
               `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
                 <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${label}</div>
@@ -3587,7 +3577,7 @@
           </div>
 
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd huidige batterij — werkelijk gemeten (investering €${invest})</div>
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd huidige setup — werkelijk gemeten (investering €${investTotal}${currentUnits > 1 ? ` — ${currentUnits} × €${invest}` : ''})</div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
               <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
                 <div style="width:${paybackPct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
