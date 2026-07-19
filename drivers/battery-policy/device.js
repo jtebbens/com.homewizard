@@ -4544,23 +4544,29 @@ if (debug) this.log(
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ||
         dischargeFallbackW;
 
+      // max_consumption_w (the pack's reported charge ceiling) is a PLANNING-ONLY input:
+      // the app never commands a charge wattage — it sets a mode and the HW enforces its own
+      // real limit at dispatch. So planning must use the pack's nominal charge capability,
+      // not the momentary reported ceiling. A BMS calibration drops max_consumption_w to a
+      // low value that then freezes (2026-07-19: stuck at 60 W for ~20 h after a calibration,
+      // even at zero charge current → sumPvNetWindow clamped pvKwhTomorrow to 0.5 kWh →
+      // refillConfidence collapsed → a 30 % SoC plan, real money lost). Both that freeze and
+      // any near-full tapering are the wrong input for a 24 h-forward absorption forecast (the
+      // window spans states where the pack recharges at full rate), so we always plan with
+      // nominal charge power. The earlier charge-contradiction check only caught the freeze
+      // while the pack was charging hard enough to contradict itself; nominal-always closes
+      // the zero-current gap too. Log when the reported value diverges so the event stays
+      // visible in diagnostics.
       const reportedMaxConsumption =
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ||
         chargeFallbackW;
-
-      // A BMS calibration drops max_consumption_w to a low momentary value. If the field
-      // then stops being refreshed it silently becomes a planning constant for the whole
-      // day (2026-07-19: stuck at 60 W while the pack was charging at 800 W, collapsing
-      // pvKwhTomorrow → refillConfidence → a 30% SoC plan). The pack contradicting its own
-      // ceiling is the reliable tell: no threshold to guess, and legitimate tapering near
-      // full SoC keeps charge power below the ceiling, so that case stays untouched.
-      const contradicted = groupPower > reportedMaxConsumption * 1.1;
-      const maxConsumption = contradicted ? chargeFallbackW : reportedMaxConsumption;
-      if (contradicted !== !!this._maxConsumptionContradicted) {
-        this._maxConsumptionContradicted = contradicted;
-        this.log(contradicted
-          ? `⚠️ max_consumption_w=${reportedMaxConsumption}W contradicted by actual charge ${groupPower}W → planning with ${chargeFallbackW}W`
-          : `✅ max_consumption_w=${reportedMaxConsumption}W consistent with charge ${groupPower}W again`);
+      const maxConsumption = chargeFallbackW;
+      const diverged = reportedMaxConsumption < chargeFallbackW;
+      if (diverged !== !!this._maxConsumptionContradicted) {
+        this._maxConsumptionContradicted = diverged;
+        this.log(diverged
+          ? `⚠️ max_consumption_w=${reportedMaxConsumption}W below nominal ${chargeFallbackW}W (calibration/taper) → planning with nominal ${chargeFallbackW}W`
+          : `✅ max_consumption_w=${reportedMaxConsumption}W back at nominal ${chargeFallbackW}W`);
       }
 
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
