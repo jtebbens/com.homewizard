@@ -3510,7 +3510,9 @@ if (debug) this.log(
         minDischargePrice,
         maxChargePowerW,
         inputs.dynamicMaxChargePrice ?? null,
-        inputs.battery?.totalCapacityKwh ?? null
+        inputs.battery?.totalCapacityKwh ?? null,
+        effectivePvKwhTomorrow,
+        refillConfidence
       );
       // Enrich with consumption sample count for confidence display in the UI
       if (this.learningEngine) {
