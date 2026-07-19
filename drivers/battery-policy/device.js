@@ -835,6 +835,13 @@ if (debug) this.log(
           this._rollLoadSlot();
           this._loadSlotSum += houseConsumptionW;
           this._loadSlotCount++;
+          // Same treatment for PV, for the same reason. The policy run's single pvW reading
+          // is blind to how steeply production moves inside a slot — the 2026-07-19 replay
+          // calibration found charge slots where the opening sample showed a 223 W surplus
+          // while the pack actually took on ~797 W. Accumulated under this same guard so the
+          // PV and load means always share one sample population.
+          this._pvSlotSum += pvW;
+          this._pvSlotCount++;
         }
 
         // ------------------------------------------------------
@@ -1686,9 +1693,18 @@ if (debug) this.log(
       this._loadPrevMeanW  = this._loadSlotSum / this._loadSlotCount;
       this._loadPrevCount  = this._loadSlotCount;
     }
+    // PV rides the same boundary and the same guard, so its mean covers an identical sample
+    // set to the load mean and the two can be paired honestly. Frozen separately (not derived
+    // from _loadSlotCount) so a future change to one accumulator cannot silently skew the other.
+    if (this._pvSlotCount > 0) {
+      this._pvPrevMeanW = this._pvSlotSum / this._pvSlotCount;
+      this._pvPrevCount = this._pvSlotCount;
+    }
     this._loadSlotMs = slotMs;
     this._loadSlotSum = 0;
     this._loadSlotCount = 0;
+    this._pvSlotSum = 0;
+    this._pvSlotCount = 0;
   }
 
   async _runPolicyCheck({ skipEnabledCheck = false } = {}) {
@@ -2145,6 +2161,12 @@ if (debug) this.log(
             // this with the PREVIOUS entry's consumFcW for an honest forecast-vs-actual join.
             consumAvgW: (this._loadPrevSlotMs != null && Date.now() - this._loadPrevSlotMs < 30 * 60_000)
               ? Math.round(this._loadPrevMeanW) : null,
+            // Mean PV over the same closed slot as consumAvgW. Pair BOTH with the previous
+            // entry's forecast fields, never with this entry's — they describe the interval
+            // that just ended, not the one starting now.
+            pvAvgW: (this._loadPrevSlotMs != null && Date.now() - this._loadPrevSlotMs < 30 * 60_000
+                     && this._pvPrevMeanW != null)
+              ? Math.round(this._pvPrevMeanW) : null,
             pvFcW:     _planSlot?.pvForecastW  ?? null,
             consumFcW: _planSlot?.consumptionW ?? null,
             satFcW:  _satFcW,
