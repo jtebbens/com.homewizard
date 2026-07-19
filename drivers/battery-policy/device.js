@@ -4542,9 +4542,24 @@ if (debug) this.log(
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_production_w') ||
         dischargeFallbackW;
 
-      const maxConsumption =
+      const reportedMaxConsumption =
         this.p1Device.getCapabilityValue('measure_power.battery_group_max_consumption_w') ||
         chargeFallbackW;
+
+      // A BMS calibration drops max_consumption_w to a low momentary value. If the field
+      // then stops being refreshed it silently becomes a planning constant for the whole
+      // day (2026-07-19: stuck at 60 W while the pack was charging at 800 W, collapsing
+      // pvKwhTomorrow → refillConfidence → a 30% SoC plan). The pack contradicting its own
+      // ceiling is the reliable tell: no threshold to guess, and legitimate tapering near
+      // full SoC keeps charge power below the ceiling, so that case stays untouched.
+      const contradicted = groupPower > reportedMaxConsumption * 1.1;
+      const maxConsumption = contradicted ? chargeFallbackW : reportedMaxConsumption;
+      if (contradicted !== !!this._maxConsumptionContradicted) {
+        this._maxConsumptionContradicted = contradicted;
+        this.log(contradicted
+          ? `⚠️ max_consumption_w=${reportedMaxConsumption}W contradicted by actual charge ${groupPower}W → planning with ${chargeFallbackW}W`
+          : `✅ max_consumption_w=${reportedMaxConsumption}W consistent with charge ${groupPower}W again`);
+      }
 
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
       await this.setCapabilityValue('grid_power_mirror', gridPower).catch(this.error);
