@@ -1882,6 +1882,7 @@ if (debug) this.log(
         dpAction,                 // DP-planned action for current slot ('charge'|'discharge'|'preserve')
         maxDischargePowerW: inputs.battery?.maxDischargePowerW || 800,
         maxChargePowerW: inputs.battery?.maxChargePowerW || 800,
+        reportedMaxChargePowerW: inputs.battery?.reportedMaxChargePowerW ?? null,
         totalCapacityKwh: inputs.battery?.totalCapacityKwh || null,
         batteryCount: Math.max(1, Math.round((inputs.battery?.totalCapacityKwh ?? 2.688) / 2.688)),
         pvLearnedSlots: this.learningEngine?.getSolarLearnedSlotCount() ?? 0,
@@ -4583,6 +4584,10 @@ if (debug) this.log(
         // ✅ NEW: Provide max discharge and charge power
         maxDischargePowerW: maxProduction,
         maxChargePowerW: maxConsumption,
+        // Raw reported ceiling (before the nominal-always override) so the diagnose
+        // page can flag a stuck calibration value at a glance instead of it hiding
+        // behind the corrected number.
+        reportedMaxChargePowerW: reportedMaxConsumption,
         battery_group_max_discharge_power_w: maxProduction
       };
 

@@ -2649,6 +2649,10 @@
           '',
           '--- Configuratie ---',
           `Batterij:      ${fmt(ps.batteryCount)}× · ${fmt(ps.totalCapacityKwh != null ? ps.totalCapacityKwh.toFixed(2) : null)} kWh · max laad ${fmtW(ps.maxChargePowerW)} / ontlaad ${fmtW(ps.maxDischargePowerW)}`,
+          ...(ps.reportedMaxChargePowerW != null && ps.maxChargePowerW != null
+              && ps.reportedMaxChargePowerW < ps.maxChargePowerW
+            ? [`⚠️ LAADVERMOGEN GEKNEPEN: P1 meldt ${fmtW(ps.reportedMaxChargePowerW)} < nominaal ${fmtW(ps.maxChargePowerW)} — BMS-calibratie/firmware. Planning gebruikt nominaal (waarde genegeerd).`]
+            : []),
           `SoC nu:        ${fmt(currentSOC)}%  (${fmt(ps.currentMode)})  · min ${fmt(minSoc)}%  max ${fmt(maxSoc)}%`,
           `Efficiëntie:   ${fmt(battEff)}  cycluskosten ${fmtE(deviceSettings['cycle_cost_per_kwh'] ?? 0.075)}/kWh`,
           `Beleid:        ${fmt(userPolicyMode)}  tarief ${fmt(tariffType)}  strict ${fmt(respectMinMax)}  res. ${use15Min ? '15 min' : '1 uur'}`,
