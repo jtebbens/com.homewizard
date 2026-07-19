@@ -412,7 +412,7 @@
 
   <h1 id="title"></h1>
   <a id="changelog" href="https://community.homey.app/t/app-pro-homewizard/19267/2" target="_blank"></a>
-  <a id="support" data-i18n="settings.support.label" target="_blank"></a>
+  <a id="support" target="_blank"></a>
   <br><br>
 
   <div class="tabs" id="tabs-bar">
@@ -431,8 +431,8 @@
     <h2 data-i18n="settings.baseload_title">Sluipverbruik grafiek</h2>
     <div id="baseload-cost" style="background:#1a1a1a;border:1px solid #2d2d2d;border-radius:8px;padding:15px;margin-bottom:20px;">
       <div style="font-size:14px;color:#A0A0A0;margin-bottom:8px;" data-i18n="settings.baseload_current">Huidig sluipverbruik</div>
-      <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#ffffff;margin-bottom:12px;">Laden...</div>
-      <div id="baseload-cost-details" style="font-size:13px;color:#A0A0A0;line-height:1.6;">Berekening wordt uitgevoerd...</div>
+      <div id="baseload-value" style="font-size:28px;font-weight:bold;color:#ffffff;margin-bottom:12px;" data-i18n="settings.baseload_loading">Laden...</div>
+      <div id="baseload-cost-details" style="font-size:13px;color:#A0A0A0;line-height:1.6;" data-i18n="settings.baseload_calculating">Berekening wordt uitgevoerd...</div>
     </div>
     <canvas id="baseloadChart" height="150"></canvas>
     <h3 data-i18n="settings.baseload_samples_title">Samples van geselecteerde nacht</h3>
@@ -551,14 +551,14 @@
       <details id="pv-accuracy-details" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
         <summary style="cursor:pointer;color:var(--text);font-size:13px;user-select:none;list-style:none;display:flex;align-items:center;gap:8px;">
           <span style="font-size:14px;">☀️</span>
-          <span style="font-weight:600;">PV Forecast nauwkeurigheid</span>
+          <span style="font-weight:600;" data-i18n="settings.pv_accuracy_title">PV Forecast nauwkeurigheid</span>
           <span id="pv-accuracy-summary" style="margin-left:auto;font-size:12px;color:var(--muted);"></span>
         </summary>
         <div id="pv-accuracy-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;"></div>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
-          <button id="pv-accuracy-prev" onclick="pvAccuracyNav(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;" title="Oudere dag">&#9664;</button>
+          <button id="pv-accuracy-prev" onclick="pvAccuracyNav(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;">&#9664;</button>
           <span id="pv-accuracy-day-label" style="font-size:12px;color:var(--text);font-weight:600;"></span>
-          <button id="pv-accuracy-next" onclick="pvAccuracyNav(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;" title="Nieuwere dag">&#9654;</button>
+          <button id="pv-accuracy-next" onclick="pvAccuracyNav(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;">&#9654;</button>
         </div>
         <div id="pv-accuracy-day-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;"></div>
         <div style="position:relative;height:140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:14px;">
@@ -567,9 +567,9 @@
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#808080;">
           <span><span style="display:inline-block;width:12px;height:2px;background:#60a5fa;vertical-align:middle;margin-right:4px;"></span>Open-Meteo</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>Solcast</span>
-          <span><span style="display:inline-block;width:12px;height:2px;background:#E879F9;vertical-align:middle;margin-right:4px;"></span>Satelliet</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#E879F9;vertical-align:middle;margin-right:4px;"></span><span data-i18n="settings.legend_satellite">Satelliet</span></span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#d1d5db;vertical-align:middle;margin-right:4px;"></span>Blended</span>
-          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span><span data-i18n="settings.legend_actual">Werkelijk</span></span>
         </div>
         <!-- Per-model OM chart -->
         <div id="pv-model-acc-pills" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:18px;"></div>
@@ -582,7 +582,7 @@
           <span><span style="display:inline-block;width:12px;height:2px;background:#a78bfa;vertical-align:middle;margin-right:4px;"></span>ICON</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#fb7185;vertical-align:middle;margin-right:4px;"></span>KNMI</span>
           <span><span style="display:inline-block;width:12px;height:2px;background:#22d3ee;vertical-align:middle;margin-right:4px;"></span>ECMWF</span>
-          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span>Werkelijk</span>
+          <span><span style="display:inline-block;width:12px;height:2px;background:#20F29B;vertical-align:middle;margin-right:4px;"></span><span data-i18n="settings.legend_actual">Werkelijk</span></span>
         </div>
         <div id="pv-model-day-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
       </details>
@@ -593,10 +593,10 @@
       <details id="planning-diagnose-details" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;">
         <summary style="cursor:pointer;color:var(--muted);font-size:12px;user-select:none;list-style:none;display:flex;align-items:center;gap:8px;">
           <span style="font-size:14px;">🔍</span>
-          <span>Diagnose — kopieer dit bij een supportvraag</span>
+          <span data-i18n="settings.diagnose_label">Diagnose — kopieer dit bij een supportvraag</span>
         </summary>
         <pre id="planning-diagnose-box" style="margin-top:12px;font-size:11px;user-select:all;white-space:pre-wrap;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;overflow-x:auto;color:var(--text);">—</pre>
-        <button id="planning-diagnose-copy-btn" style="margin-top:8px;padding:6px 14px;background:var(--purple);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">📋 Kopieer</button>
+        <button id="planning-diagnose-copy-btn" style="margin-top:8px;padding:6px 14px;background:var(--purple);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;" data-i18n="settings.diagnose_copy_btn">📋 Kopieer</button>
       </details>
     </div>
 
@@ -606,20 +606,20 @@
 
   <!-- TAB: EXPANSION ANALYSIS -->
   <div id="expansion" class="tab-content">
-    <h2>Capaciteitsuitbreiding</h2>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">
+    <h2 data-i18n="settings.expansion_h2">Capaciteitsuitbreiding</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;" data-i18n="settings.expansion_intro">
       Vergelijking van 1–4 batterijen op basis van de huidige prijsverwachting.
       Wordt bijgewerkt bij elke planningsrun (~15 min).
     </p>
 
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-      <label style="font-size:12px;color:var(--muted);white-space:nowrap;">Aanschafprijs per extra batterij (€)</label>
+      <label style="font-size:12px;color:var(--muted);white-space:nowrap;" data-i18n="settings.expansion_investment_label">Aanschafprijs per extra batterij (€)</label>
       <input id="expansion-investment" type="number" step="50" min="0" max="10000" value="1200"
              style="width:120px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;">
-      <button id="expansion-save-btn">Opslaan</button>
+      <button id="expansion-save-btn" data-i18n="settings.expansion_save_btn">Opslaan</button>
     </div>
 
-    <div id="expansion-no-data" style="color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;">
+    <div id="expansion-no-data" style="color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;" data-i18n="settings.expansion_no_data">
       Nog geen analyse beschikbaar. Wacht op de volgende planningsrun (~15 min).
     </div>
     <div id="expansion-grid" style="display:none;"></div>
@@ -636,14 +636,14 @@
     <div id="explain-summary" style="margin-bottom:15px;font-size:14px;"></div>
     <!-- ⭐ ECONOMICS PANEL -->
     <div id="economics-panel" style="margin:15px 0;padding:14px;border-radius:8px;background:#1a1a1a;border:1px solid #2d2d2d;font-size:13px;line-height:1.6;">
-      <h3 style="margin-top:0;margin-bottom:10px;">⚡ Batterij Economie</h3>
+      <h3 style="margin-top:0;margin-bottom:10px;" data-i18n="settings.econ_panel_title">⚡ Batterij Economie</h3>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">
         <div style="flex:1;min-width:100px;">
-          <div style="font-size:11px;color:#666;margin-bottom:2px;">Gisteren</div>
+          <div style="font-size:11px;color:#666;margin-bottom:2px;" data-i18n="settings.econ_yesterday">Gisteren</div>
           <div id="econ-yesterday" style="font-size:20px;font-weight:bold;">–</div>
         </div>
         <div style="flex:1;min-width:100px;">
-          <div style="font-size:11px;color:#666;margin-bottom:2px;">Afgelopen 7 dagen</div>
+          <div style="font-size:11px;color:#666;margin-bottom:2px;" data-i18n="settings.econ_week">Afgelopen 7 dagen</div>
           <div id="econ-week" style="font-size:20px;font-weight:bold;">–</div>
         </div>
       </div>
@@ -651,17 +651,17 @@
       <div id="econ-insight" style="font-size:12px;color:#A0A0A0;font-style:italic;margin-top:8px;border-top:1px solid #2d2d2d;padding-top:8px;">–</div>
     </div>
 
-    <h3>Redenen</h3>
+    <h3 data-i18n="settings.explain_reasons_title">Redenen</h3>
     <ul id="explain-reasons" style="padding-left:20px;"></ul>
-    <h3>Waarschuwingen</h3>
+    <h3 data-i18n="settings.explain_warnings_title">Waarschuwingen</h3>
     <ul id="explain-warnings" style="padding-left:20px;"></ul>
     <pre id="explain-scores" style="display:none;"></pre>
     <details style="margin-bottom:20px;">
-      <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;">Diagnose — kopieer dit bij een supportvraag</summary>
+      <summary style="cursor:pointer;color:#A0A0A0;font-size:12px;" data-i18n="settings.diagnose_label">Diagnose — kopieer dit bij een supportvraag</summary>
       <pre id="policy-debug-box" class="debug-box" style="margin-top:10px;font-size:11px;user-select:all;">—</pre>
-      <button id="policy-debug-copy-btn" style="margin-top:8px;padding:6px 14px;background:#5f6fff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">📋 Kopieer</button>
+      <button id="policy-debug-copy-btn" style="margin-top:8px;padding:6px 14px;background:#5f6fff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;" data-i18n="settings.diagnose_copy_btn">📋 Kopieer</button>
     </details>
-    <h3>Tijdstip</h3>
+    <h3 data-i18n="settings.explain_timestamp_title">Tijdstip</h3>
     <div id="explain-timestamp" style="font-size:12px;color:#A0A0A0;"></div>
   </div>
 
@@ -835,7 +835,7 @@
         if (actualPeak.w > 50) {
           actualPeakSvg = `<circle cx="${toX(actualPeak.h).toFixed(1)}" cy="${toY(actualPeak.w).toFixed(1)}" r="4" fill="#4ADE80"/>`;
           const actualKwh = (actualWatts.reduce((s, v) => s + (v ?? 0), 0) / 1000).toFixed(1);
-          actualKwhSvg = `<text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 12}" text-anchor="end" fill="#4ADE80" font-size="11">⚡ ${actualKwh} kWh werkelijk</text>`;
+          actualKwhSvg = `<text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 12}" text-anchor="end" fill="#4ADE80" font-size="11">⚡ ${actualKwh} ${Homey.__('settings.pv_curve_actual')}</text>`;
         }
       }
 
@@ -870,7 +870,7 @@
       const clipId = `pvClip${day}`;
 
       return `<div class="pv-curve-row">
-        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ${day === 0 ? `~${totalKwh} kWh resterend · ~${allKwh} kWh totaal` : `~${allKwh} kWh verwacht`}${pvForecastMap ? ' (geleerd)' : ' (schatting)'}</div>
+        <div style="text-align:right;font-size:11px;color:#aaa;padding:0 4px 2px;">☀️ ${day === 0 ? `~${totalKwh} ${Homey.__('settings.pv_curve_remaining')} · ~${allKwh} ${Homey.__('settings.pv_curve_total')}` : `~${allKwh} ${Homey.__('settings.pv_curve_expected')}`}${pvForecastMap ? ` ${Homey.__('settings.pv_curve_learned')}` : ` ${Homey.__('settings.pv_curve_estimate')}`}</div>
         <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px;display:block;">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
@@ -930,7 +930,7 @@
             }
             const totalKwhC = (filled.reduce((s, v, h) => s + (pvWatts[h] > 0 ? v : 0), 0) / 1000).toFixed(1);
             return `<path d="${cPath}" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5" stroke-dasharray="4 3" clip-path="url(#${clipId})"/>
-                    <text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 26}" text-anchor="end" fill="rgba(255,255,255,0.65)" font-size="11">🏠 ${totalKwhC} kWh verbruik overdag</text>`;
+                    <text x="${(W - pad.r).toFixed(1)}" y="${pad.t + 26}" text-anchor="end" fill="rgba(255,255,255,0.65)" font-size="11">🏠 ${totalKwhC} ${Homey.__('settings.pv_curve_consumption_daytime')}</text>`;
           })()}
           ${hourLabels}
         </svg>
@@ -938,8 +938,8 @@
           const werkelijkKwh = (actualWatts.reduce((s, v) => s + (v ?? 0), 0) / 1000).toFixed(1);
           const verwachtKwh  = (pvWatts.reduce((a, b) => a + b, 0) / 1000).toFixed(1);
           return `<div style="display:flex;justify-content:space-between;font-size:11px;color:#aaa;padding:2px 4px 0;">
-            <span>⚡ ${werkelijkKwh} kWh werkelijk</span>
-            <span>☀️ ${verwachtKwh} kWh verwacht</span>
+            <span>⚡ ${werkelijkKwh} ${Homey.__('settings.pv_curve_actual')}</span>
+            <span>☀️ ${verwachtKwh} ${Homey.__('settings.pv_curve_expected')}</span>
           </div>`;
         })() : ''}
       </div>`;
@@ -1070,8 +1070,8 @@
       modalHtml += `
           </div>
           <div class="modal-footer">
-            <button onclick="showHourDetail(${hourIndex - 1})" ${hourIndex === 0 ? 'disabled' : ''}>← Vorig uur</button>
-            <button onclick="showHourDetail(${hourIndex + 1})" ${hourIndex >= window.cachedHourlyGroups.length - 1 ? 'disabled' : ''}>Volgend uur →</button>
+            <button onclick="showHourDetail(${hourIndex - 1})" ${hourIndex === 0 ? 'disabled' : ''}>← ${Homey.__('settings.prev_hour')}</button>
+            <button onclick="showHourDetail(${hourIndex + 1})" ${hourIndex >= window.cachedHourlyGroups.length - 1 ? 'disabled' : ''}>${Homey.__('settings.next_hour')} →</button>
           </div>
         </div>
       `;
@@ -1101,6 +1101,8 @@
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const v = Homey.__(el.dataset.i18n); if (v) el.textContent = v;
       });
+      document.getElementById('pv-accuracy-prev').title = Homey.__('settings.older_day');
+      document.getElementById('pv-accuracy-next').title = Homey.__('settings.newer_day');
 
       Homey.get(async (err, settings) => {
         if (err) return;
@@ -1117,14 +1119,14 @@
           const yearlyCost = monthlyCost * 12;
           document.getElementById('baseload-value').innerText = `${Math.round(currentBaseload)}W`;
           document.getElementById('baseload-cost-details').innerHTML = `
-            <strong>${monthlyKwh.toFixed(1)} kWh/maand</strong> × €${avgPrice.toFixed(2)}/kWh (schatting) =
-            <strong>~€${monthlyCost.toFixed(2)}/maand</strong> (€${yearlyCost.toFixed(0)}/jaar)<br>
-            <span style="font-size:12px;color:#808080;">Typisch sluipverbruik: 200-300W</span><br>
-            <span style="font-size:11px;color:#666;">De groene punten tonen per nacht de laagste waarden (pieken eruit). De gele stippellijn is het gemiddelde van de 3 rustigste nachten — dat is dit getal.</span>
+            <strong>${monthlyKwh.toFixed(1)} ${Homey.__('settings.baseload_per_month')}</strong> × €${avgPrice.toFixed(2)}/kWh (${Homey.__('settings.baseload_estimate')}) =
+            <strong>~€${monthlyCost.toFixed(2)}${Homey.__('settings.baseload_per_month_short')}</strong> (€${yearlyCost.toFixed(0)}${Homey.__('settings.baseload_per_year_short')})<br>
+            <span style="font-size:12px;color:#808080;">${Homey.__('settings.baseload_typical_range')}</span><br>
+            <span style="font-size:11px;color:#666;">${Homey.__('settings.baseload_explain_minima')}</span>
           `;
         } else {
-          document.getElementById('baseload-value').innerText = 'Geen data';
-          document.getElementById('baseload-cost-details').innerText = 'Sluipverbruik wordt nog berekend. Check morgen terug.';
+          document.getElementById('baseload-value').innerText = Homey.__('settings.baseload_no_data');
+          document.getElementById('baseload-cost-details').innerText = Homey.__('settings.baseload_pending');
         }
 
         const labels = history.map(n => n.date);
@@ -1149,7 +1151,7 @@
             labels,
             datasets: [
               {
-                label: 'Stille ondergrens per nacht (pieken eruit)',
+                label: Homey.__('settings.baseload_chart_minima_label'),
                 data: filteredMinima,
                 borderColor: 'rgba(32,242,155,1)', backgroundColor: 'rgba(32,242,155,0.12)',
                 spanGaps: false,
@@ -1159,7 +1161,7 @@
                 order: 1
               },
               {
-                label: 'Nachtgemiddelde (incl. koelkastpieken)',
+                label: Homey.__('settings.baseload_chart_avg_label'),
                 data: values,
                 borderColor: 'rgba(120,120,120,0.5)',
                 backgroundColor: 'transparent',
@@ -1171,7 +1173,7 @@
                 order: 2
               },
               ...(currentBaseload ? [{
-                label: `Sluipverbruik: ${Math.round(currentBaseload)}W (gemiddelde van 3 laagste nachten)`,
+                label: `${Homey.__('settings.baseload_chart_current_prefix')}: ${Math.round(currentBaseload)}W ${Homey.__('settings.baseload_chart_current_suffix')}`,
                 data: labels.map(() => Math.round(currentBaseload)),
                 borderColor: 'rgba(255,200,80,0.9)',
                 borderDash: [6, 4],
@@ -1188,7 +1190,7 @@
         history.forEach((n, i) => {
           const opt = document.createElement('option');
           opt.value = i;
-          opt.textContent = `${n.date} ${n.invalid ? '(ongeldig)' : ''}`;
+          opt.textContent = `${n.date} ${n.invalid ? Homey.__('settings.baseload_invalid_tag') : ''}`;
           selector.appendChild(opt);
         });
         selector.addEventListener('change', () => renderSamples(history[selector.value]));
@@ -1681,31 +1683,32 @@
 
         /* ── EXPLAINABILITY ── */
         function renderExplainability(data) {
-          if (!data) { document.getElementById('explain-summary').innerHTML = '<em>Nog geen analyse beschikbaar.</em>'; return; }
+          const lang = window.cachedLanguage || 'nl';
+          if (!data) { document.getElementById('explain-summary').innerHTML = `<em>${Homey.__('settings.explain_no_analysis')}</em>`; return; }
 
           const conf = Math.round(data.confidence ?? 0);
           const confColor = conf >= 80 ? '#4caf50' : conf >= 60 ? '#fb8c00' : '#e53935';
 
           // policyMode (charge/discharge/preserve) drives the scores — show that as primary decision
           const POLICY_LABELS = {
-            charge:    { icon: '🔌', nl: 'Laden',       badge: 'hw-badge-to_full' },
-            discharge: { icon: '⚡', nl: 'Ontladen',    badge: 'hw-badge-zero_discharge_only' },
-            preserve:  { icon: '🛡️', nl: 'Beschermen', badge: 'hw-badge-standby' }
+            charge:    { icon: '🔌', label: Homey.__('settings.col_charge'),      badge: 'hw-badge-to_full' },
+            discharge: { icon: '⚡', label: Homey.__('settings.col_discharge'),   badge: 'hw-badge-zero_discharge_only' },
+            preserve:  { icon: '🛡️', label: Homey.__('settings.policy_label_preserve'), badge: 'hw-badge-standby' }
           };
-          const policyInfo = POLICY_LABELS[data.policyMode] || { icon: '❓', nl: data.policyMode || '?', badge: '' };
+          const policyInfo = POLICY_LABELS[data.policyMode] || { icon: '❓', label: data.policyMode || '?', badge: '' };
 
           // hwMode is the actual implementation of that decision
           const hwInfo = HW_MODES[data.hwMode] || null;
           const hwBadge = hwInfo
-            ? `<span class="hw-badge ${hwInfo.badge}" style="font-size:12px;padding:3px 8px">${hwInfo.icon} ${hwInfo.nl}</span>`
+            ? `<span class="hw-badge ${hwInfo.badge}" style="font-size:12px;padding:3px 8px">${hwInfo.icon} ${lang === 'nl' ? hwInfo.nl : hwInfo.en}</span>`
             : '';
 
           document.getElementById('explain-summary').innerHTML =
             `<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">` +
-              `<span class="hw-badge ${policyInfo.badge}" style="font-size:14px;padding:4px 10px">${policyInfo.icon} ${policyInfo.nl}</span>` +
-              `<span style="font-size:13px;color:${confColor};font-weight:bold">${conf}% zekerheid</span>` +
+              `<span class="hw-badge ${policyInfo.badge}" style="font-size:14px;padding:4px 10px">${policyInfo.icon} ${policyInfo.label}</span>` +
+              `<span style="font-size:13px;color:${confColor};font-weight:bold">${conf}% ${Homey.__('settings.confidence_suffix')}</span>` +
             `</div>` +
-            (hwInfo ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:#A0A0A0;">Geïmplementeerd als ${hwBadge}${data.hwMode === 'zero_charge_only' && data.policyMode === 'preserve' ? ' — om eventuele zonne-energie op te vangen' : ''}</div>` : '') +
+            (hwInfo ? `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:12px;color:#A0A0A0;">${Homey.__('settings.implemented_as_prefix')} ${hwBadge}${data.hwMode === 'zero_charge_only' && data.policyMode === 'preserve' ? Homey.__('settings.implemented_pv_note') : ''}</div>` : '') +
             `<div style="font-size:13px;color:#ffffff">${data.shortSummary || ''}</div>` +
             `<div style="font-size:12px;color:#A0A0A0;margin-top:6px">${data.summary || ''}</div>`;
           const avg   = data?.batteryCost?.avgCost ?? null;
@@ -1744,16 +1747,16 @@
             let signal, color;
             if (diff > 0.01) {
               color  = '#20F29B';
-              signal = isDischarging ? `✅ Ontladen loont (+€${diff.toFixed(3)}/kWh)` : `✅ Prijs gunstig voor ontladen (+€${diff.toFixed(3)}/kWh)`;
+              signal = isDischarging ? `✅ ${Homey.__('settings.econ_discharge_pays')} (+€${diff.toFixed(3)}/kWh)` : `✅ ${Homey.__('settings.econ_price_good_discharge')} (+€${diff.toFixed(3)}/kWh)`;
             } else if (diff < -0.01) {
               color  = '#5f6fff';
-              signal = isCharging ? `🔋 Laden gunstig (–€${Math.abs(diff).toFixed(3)}/kWh)` : `🔋 Prijs gunstig voor laden (–€${Math.abs(diff).toFixed(3)}/kWh)`;
+              signal = isCharging ? `🔋 ${Homey.__('settings.econ_charge_favorable')} (–€${Math.abs(diff).toFixed(3)}/kWh)` : `🔋 ${Homey.__('settings.econ_price_good_charge')} (–€${Math.abs(diff).toFixed(3)}/kWh)`;
             } else {
               color  = '#fdd835';
-              signal = `⚖️ Rond break-even`;
+              signal = `⚖️ ${Homey.__('settings.econ_near_breakeven')}`;
             }
             elStatus.innerHTML = `<span style="color:${color}">${signal}</span>`
-              + (avg ? ` <span style="font-size:11px;color:#555;">· kostprijs €${avg.toFixed(3)} · break-even €${be.toFixed(3)}</span>` : '');
+              + (avg ? ` <span style="font-size:11px;color:#555;">· ${Homey.__('settings.econ_cost_price_label')} €${avg.toFixed(3)} · break-even €${be.toFixed(3)}</span>` : '');
           } else {
             elStatus.innerHTML = `<span style="color:#555">–</span>`;
           }
@@ -1779,9 +1782,10 @@
           const hasTrickle        = tomorrowSlots.some(s => s.hwMode === 'pv_trickle');
 
           const currentSOC = window.cachedPolicyState?.batterySOC ?? null;
+          const _timeLocale = lang === 'nl' ? 'nl-NL' : 'en-US';
           const fmt = (slots, key) => {
             const s = slots.find(sl => sl[key]);
-            return s ? new Date(s.timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : null;
+            return s ? new Date(s.timestamp).toLocaleTimeString(_timeLocale, { hour: '2-digit', minute: '2-digit' }) : null;
           };
 
           // ── Vandaag ──
@@ -1792,21 +1796,21 @@
 
           let todayLine = '';
           if (todayChargeSlots.length) {
-            const t = new Date(todayChargeSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-            todayLine += `🔌 Laden vanaf ${t}`;
+            const t = new Date(todayChargeSlots[0].timestamp).toLocaleTimeString(_timeLocale, { hour: '2-digit', minute: '2-digit' });
+            todayLine += `🔌 ${Homey.__('settings.insight_charge_from')} ${t}`;
           } else if (hasPvExportWins) {
-            todayLine += `📤 Geen laden: PV exporteren loont meer dan opslaan`;
+            todayLine += `📤 ${Homey.__('settings.insight_no_charge_pv_export')}`;
           } else if (currentSOC !== null && currentSOC >= 95) {
-            todayLine += `🔋 Batterij vol (${Math.round(currentSOC)}%)`;
+            todayLine += `🔋 ${Homey.__('settings.insight_battery_full')} (${Math.round(currentSOC)}%)`;
           } else {
-            todayLine += `⏸ Geen laden gepland: prijs te hoog`;
+            todayLine += `⏸ ${Homey.__('settings.insight_no_charge_planned_price')}`;
           }
           if (todayDischSlots.length) {
-            const t = new Date(todayDischSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            const t = new Date(todayDischSlots[0].timestamp).toLocaleTimeString(_timeLocale, { hour: '2-digit', minute: '2-digit' });
             const maxDischSoc = todayDischSlots[todayDischSlots.length - 1]?.socProjected ?? null;
-            todayLine += ` · ⚡ Ontladen vanaf ${t}${maxDischSoc != null ? ` → ${Math.round(maxDischSoc)}% SoC` : ''}`;
+            todayLine += ` · ⚡ ${Homey.__('settings.insight_discharge_from')} ${t}${maxDischSoc != null ? ` → ${Math.round(maxDischSoc)}% SoC` : ''}`;
           } else {
-            todayLine += ` · Geen ontladen gepland`;
+            todayLine += ` · ${Homey.__('settings.insight_no_discharge_planned')}`;
           }
 
           // ── Morgen ──
@@ -1818,48 +1822,48 @@
           const tmrMaxSoc      = tomorrowSlots.reduce((m, s) => Math.max(m, s.socProjected ?? 0), 0);
 
           if (tmrChargeSlots.length) {
-            const t = new Date(tmrChargeSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-            tomorrowLine += `🔌 Laden vanaf ${t}`;
+            const t = new Date(tmrChargeSlots[0].timestamp).toLocaleTimeString(_timeLocale, { hour: '2-digit', minute: '2-digit' });
+            tomorrowLine += `🔌 ${Homey.__('settings.insight_charge_from')} ${t}`;
           } else if (tmrPvExport) {
-            tomorrowLine += `📤 Geen laden: PV exporteren loont meer dan opslaan`;
+            tomorrowLine += `📤 ${Homey.__('settings.insight_no_charge_pv_export')}`;
           } else if (tmrTrickle) {
-            tomorrowLine += `🌤 Alleen sprokkelen (PV-overschot)`;
+            tomorrowLine += `🌤 ${Homey.__('settings.insight_trickle_only')}`;
           } else {
-            tomorrowLine += `⏸ Geen laden gepland`;
+            tomorrowLine += `⏸ ${Homey.__('settings.insight_no_charge_planned')}`;
           }
           if (tmrDischSlots.length) {
-            const t = new Date(tmrDischSlots[0].timestamp).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+            const t = new Date(tmrDischSlots[0].timestamp).toLocaleTimeString(_timeLocale, { hour: '2-digit', minute: '2-digit' });
             const endSoc = tmrDischSlots[tmrDischSlots.length - 1]?.socProjected ?? null;
-            tomorrowLine += ` · ⚡ Ontladen vanaf ${t}${endSoc != null ? ` → ${Math.round(endSoc)}% SoC` : ''}`;
+            tomorrowLine += ` · ⚡ ${Homey.__('settings.insight_discharge_from')} ${t}${endSoc != null ? ` → ${Math.round(endSoc)}% SoC` : ''}`;
           } else {
-            tomorrowLine += ` · Geen ontladen gepland`;
+            tomorrowLine += ` · ${Homey.__('settings.insight_no_discharge_planned')}`;
           }
 
           elInsight.innerHTML =
-            `<div style="margin-bottom:4px;"><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Vandaag</span> <span style="font-style:normal;">${todayLine}</span></div>` +
-            (tomorrowSlots.length ? `<div><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Morgen</span> <span style="font-style:normal;">${tomorrowLine}</span></div>` : '');
+            `<div style="margin-bottom:4px;"><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">${Homey.__('settings.today')}</span> <span style="font-style:normal;">${todayLine}</span></div>` +
+            (tomorrowSlots.length ? `<div><span style="color:#A0A0A0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">${Homey.__('settings.tomorrow')}</span> <span style="font-style:normal;">${tomorrowLine}</span></div>` : '');
 
           const reasonsList = document.getElementById('explain-reasons');
           reasonsList.innerHTML = '';
           const weightMap = {
-            critical: { dots: '●●●●', color: '#e53935', label: 'Doorslaggevend' },
-            high:     { dots: '●●●○', color: '#fb8c00', label: 'Belangrijk' },
-            medium:   { dots: '●●○○', color: '#fdd835', label: 'Meespeelt' },
+            critical: { dots: '●●●●', color: '#e53935', label: Homey.__('settings.weight_critical') },
+            high:     { dots: '●●●○', color: '#fb8c00', label: Homey.__('settings.weight_high') },
+            medium:   { dots: '●●○○', color: '#fdd835', label: Homey.__('settings.weight_medium') },
             low:      { dots: '●○○○', color: '#9e9e9e', label: 'Info' }
           };
           const categoryMap = {
-            battery:      'Batterij',
-            tariff:       'Tarief',
+            battery:      Homey.__('settings.category_battery'),
+            tariff:       Homey.__('settings.category_tariff'),
             arbitrage:    'Arbitrage',
-            pv:           'Zonne-energie',
-            weather:      'Weer',
-            sun_forecast: 'Zonprognose',
-            strategy:     'Strategie',
-            load:         'Belasting',
-            RTE:          'Batterijrendement',
-            peak:         'Piekuren',
-            time:         'Tijdstip',
-            confidence:   'Zekerheid'
+            pv:           Homey.__('settings.category_pv'),
+            weather:      Homey.__('settings.category_weather'),
+            sun_forecast: Homey.__('settings.category_sun_forecast'),
+            strategy:     Homey.__('settings.category_strategy'),
+            load:         Homey.__('settings.category_load'),
+            RTE:          Homey.__('settings.learning_rte_label'),
+            peak:         Homey.__('settings.category_peak'),
+            time:         Homey.__('settings.explain_timestamp_title'),
+            confidence:   Homey.__('settings.category_confidence')
           };
           const modeTextColor = { charge: '#5f6fff', discharge: '#20F29B', preserve: '#FB923C' };
           data.reasons.forEach(r => {
@@ -1882,7 +1886,7 @@
           });
 
           document.getElementById('explain-scores').textContent = JSON.stringify(data.scores, null, 2);
-          document.getElementById('explain-timestamp').innerText = `Laatste update: ${new Date(data.timestamp).toLocaleString()}`;
+          document.getElementById('explain-timestamp').innerText = `${Homey.__('settings.last_update_prefix')} ${new Date(data.timestamp).toLocaleString(lang === 'nl' ? 'nl-NL' : 'en-US')}`;
 
           // Diagnostic snapshot is rendered inside renderBatteryPlanning (has access to policyState + deviceSettings)
         }
@@ -2129,8 +2133,8 @@
           btn.addEventListener('click', () => {
             const text = document.getElementById('policy-debug-box')?.textContent || '';
             navigator.clipboard.writeText(text).then(() => {
-              btn.textContent = '✅ Gekopieerd';
-              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+              btn.textContent = Homey.__('settings.diagnose_copied_btn');
+              setTimeout(() => { btn.textContent = Homey.__('settings.diagnose_copy_btn'); }, 2000);
             }).catch(() => {
               // Fallback for environments without clipboard API
               const ta = document.createElement('textarea');
@@ -2141,8 +2145,8 @@
               ta.select();
               document.execCommand('copy');
               document.body.removeChild(ta);
-              btn.textContent = '✅ Gekopieerd';
-              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+              btn.textContent = Homey.__('settings.diagnose_copied_btn');
+              setTimeout(() => { btn.textContent = Homey.__('settings.diagnose_copy_btn'); }, 2000);
             });
           });
         }
@@ -2304,7 +2308,7 @@
         </div>
         <div class="planning-status-item">
           <div class="planning-status-label">${Homey.__('settings.label_resolution')}</div>
-          <div class="planning-status-value" style="font-size:14px;">${use15Min ? '15 min' : '1 uur'}</div>
+          <div class="planning-status-value" style="font-size:14px;">${use15Min ? '15 min' : (lang === 'nl' ? '1 uur' : '1 hour')}</div>
         </div>
       `;
 
@@ -2493,9 +2497,9 @@
           );
 
           if (hasOpportunisticCharge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#5f6fff;color:#fff;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#5f6fff;color:#fff;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">${Homey.__('settings.opportunistic_badge')}</span>`;
           } else if (hasOpportunisticDischarge) {
-            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#20F29B;color:#000;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">🎯 OPPORTUNISTISCH</span>`;
+            opportunisticBadge = `<span style="position:absolute;top:2px;left:2px;background:#20F29B;color:#000;padding:1px 3px;border-radius:3px;font-size:7px;font-weight:bold;">${Homey.__('settings.opportunistic_badge')}</span>`;
           }
         }
 
@@ -2533,7 +2537,7 @@
                   : (isPast && avgPlannedConsumptionW != null ? ` · 🏠 ${(avgPlannedConsumptionW/1000).toFixed(1)}kW<span style="font-size:9px;color:var(--dim);"> plan</span>` : '')
               }
               ${minSampleCount != null && minSampleCount < 4
-                ? `<br><span style="font-size:10px;color:${minSampleCount === 0 ? '#f87171' : '#f0c040'};">${minSampleCount === 0 ? '🔴 geen verbruiksdata' : `🟡 ${minSampleCount} samples`}</span>`
+                ? `<br><span style="font-size:10px;color:${minSampleCount === 0 ? '#f87171' : '#f0c040'};">${minSampleCount === 0 ? Homey.__('settings.no_consumption_data') : `🟡 ${minSampleCount} samples`}</span>`
                 : ''}
             </div>
             ${hourGroup.dominantReason ? `<div class="planning-hour-reason">${formatReason(hourGroup.dominantReason, lang)}</div>` : ''}
@@ -2603,13 +2607,13 @@
           }).join('');
           el.innerHTML = `
             <div style="margin-top:24px;padding:12px 0;">
-              <div style="font-size:13px;font-weight:bold;color:var(--text);margin-bottom:8px;">📊 Dagwinst (werkelijk geschat)</div>
+              <div style="font-size:13px;font-weight:bold;color:var(--text);margin-bottom:8px;">${Homey.__('settings.daily_profit_title')}</div>
               <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:monospace;">
                 <thead><tr style="color:var(--dim);border-bottom:1px solid #333;">
-                  <th style="text-align:left;padding:4px 0;">Datum</th>
-                  <th style="text-align:right;">Ontladen</th>
-                  <th style="text-align:right;">Laden</th>
-                  <th style="text-align:right;">Netto</th>
+                  <th style="text-align:left;padding:4px 0;">${Homey.__('settings.col_date')}</th>
+                  <th style="text-align:right;">${Homey.__('settings.col_discharge')}</th>
+                  <th style="text-align:right;">${Homey.__('settings.col_charge')}</th>
+                  <th style="text-align:right;">${Homey.__('settings.col_net')}</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
               </table>
@@ -2821,8 +2825,8 @@
           btn.addEventListener('click', () => {
             const text = document.getElementById('planning-diagnose-box')?.textContent || '';
             navigator.clipboard.writeText(text).then(() => {
-              btn.textContent = '✅ Gekopieerd';
-              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+              btn.textContent = Homey.__('settings.diagnose_copied_btn');
+              setTimeout(() => { btn.textContent = Homey.__('settings.diagnose_copy_btn'); }, 2000);
             }).catch(() => {
               const ta = document.createElement('textarea');
               ta.value = text;
@@ -2831,8 +2835,8 @@
               ta.select();
               document.execCommand('copy');
               document.body.removeChild(ta);
-              btn.textContent = '✅ Gekopieerd';
-              setTimeout(() => { btn.textContent = '📋 Kopieer'; }, 2000);
+              btn.textContent = Homey.__('settings.diagnose_copied_btn');
+              setTimeout(() => { btn.textContent = Homey.__('settings.diagnose_copy_btn'); }, 2000);
             });
           });
         }
@@ -2855,14 +2859,14 @@
       const dayMsg = (d, label) => {
         if (!d || d.socMax == null) return null;
         const kwh  = (d.netPvKwh ?? 0).toFixed(1);
-        const grid = d.chargeSlots > 0 ? `${d.chargeSlots} netlaadslot${d.chargeSlots > 1 ? 's' : ''}` : null;
-        const src  = grid ? `${kwh} kWh zon + ${grid}` : `${kwh} kWh zon-surplus`;
-        if (d.socMax >= 99)         return `${label}: batterij wordt vol (${src}).`;
-        if (d.socMax > (soc ?? 0))  return `${label}: batterij tot ~${d.socMax}% (${src}).`;
-        return `${label}: nauwelijks aanvulling via zon (blijft ~${d.socMax}%).`;
+        const grid = d.chargeSlots > 0 ? `${d.chargeSlots} ${d.chargeSlots > 1 ? Homey.__('settings.pv_surplus_grid_slots_word') : Homey.__('settings.pv_surplus_grid_slot_word')}` : null;
+        const src  = grid ? `${kwh} ${Homey.__('settings.pv_surplus_kwh_solar_label')} + ${grid}` : `${kwh} ${Homey.__('settings.pv_surplus_kwh_solar_surplus_label')}`;
+        if (d.socMax >= 99)         return `${label}: ${Homey.__('settings.pv_surplus_will_be_full')} (${src}).`;
+        if (d.socMax > (soc ?? 0))  return `${label}: ${Homey.__('settings.pv_surplus_up_to')}${d.socMax}% (${src}).`;
+        return `${label}: ${Homey.__('settings.pv_surplus_barely')}${d.socMax}%).`;
       };
 
-      const lines = [dayMsg(today, 'Vandaag'), dayMsg(tomorrow, 'Morgen')].filter(Boolean);
+      const lines = [dayMsg(today, Homey.__('settings.today')), dayMsg(tomorrow, Homey.__('settings.tomorrow'))].filter(Boolean);
       if (!lines.length) return;
 
       const todayFull = today.socMax != null && today.socMax >= 99;
@@ -2871,7 +2875,7 @@
       const color = todayFull ? '#20F29B' : (todayLift ? '#FCD34D' : 'var(--muted)');
 
       block.style.display = 'block';
-      block.innerHTML = `<span style="color:${color};">${icon} <strong>Zonne-energie:</strong></span> ` + lines.join(' ');
+      block.innerHTML = `<span style="color:${color};">${icon} <strong>${Homey.__('settings.pv_surplus_title')}</strong></span> ` + lines.join(' ');
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -2902,25 +2906,25 @@
 
       // Days maturity: separator at 7d (basic) and 14d (mature)
       const daysColor = days >= 14 ? '#20F29B' : days >= 7 ? '#FCD34D' : '#F87171';
-      const daysLabel = days >= 14 ? 'rijp' : days >= 7 ? 'groeiend' : 'opstartend';
+      const daysLabel = days >= 14 ? Homey.__('settings.learning_maturity_mature') : days >= 7 ? Homey.__('settings.learning_maturity_growing') : Homey.__('settings.learning_maturity_starting');
 
       inner.innerHTML =
         `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
-          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Leerdagen</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${Homey.__('settings.learning_days_label')}</span>
           <span style="font-size:16px;font-weight:bold;color:${daysColor};">${days ?? '—'}</span>
           <span style="font-size:10px;color:${daysColor};">${daysLabel}</span>
         </div>` +
-        pill('Patroon', coverage, '%', 50, 80) +
-        pill('PV-nauwkeurigheid', pvAccuracy, '%', 70, 85) +
-        pill('Batterijrendement', rte, '%', 70, 80) +
+        pill(Homey.__('settings.learning_pattern_label'), coverage, '%', 50, 80) +
+        pill(Homey.__('settings.learning_pv_accuracy_label'), pvAccuracy, '%', 70, 85) +
+        pill(Homey.__('settings.learning_rte_label'), rte, '%', 70, 80) +
         `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
-          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Rendementscycli</span>
+          <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${Homey.__('settings.learning_cycles_label')}</span>
           <span style="font-size:16px;font-weight:bold;color:${cycles >= 5 ? '#20F29B' : '#FCD34D'};">${cycles ?? '—'}</span>
-          <span style="font-size:10px;color:var(--dim);">${cycles >= 5 ? 'betrouwbaar' : '< 5 nodig'}</span>
+          <span style="font-size:10px;color:var(--dim);">${cycles >= 5 ? Homey.__('settings.learning_cycles_reliable') : Homey.__('settings.learning_cycles_need_more')}</span>
         </div>` +
         (coverage < 50 || days < 7
           ? `<div style="font-size:11px;color:#FCD34D;align-self:center;max-width:220px;">
-               ⚠ Leermotor heeft nog onvoldoende data — planning minder nauwkeurig.
+               ${Homey.__('settings.learning_insufficient_data')}
              </div>`
           : '');
 
@@ -2936,16 +2940,16 @@
             <table style="font-size:11px;border-collapse:collapse;">
               <thead><tr style="color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:9px;">
                 <th style="text-align:left;padding:2px 10px 2px 0;"></th>
-                <th style="text-align:left;padding:2px 10px;">Laag (&lt;300W)</th>
-                <th style="text-align:left;padding:2px 10px;">Midden (300-600W)</th>
-                <th style="text-align:left;padding:2px 10px;">Hoog (&gt;600W)</th>
+                <th style="text-align:left;padding:2px 10px;">${Homey.__('settings.rte_bucket_low')}</th>
+                <th style="text-align:left;padding:2px 10px;">${Homey.__('settings.rte_bucket_mid')}</th>
+                <th style="text-align:left;padding:2px 10px;">${Homey.__('settings.rte_bucket_high')}</th>
               </tr></thead>
               <tbody>
-                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">Laden</td>
+                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">${Homey.__('settings.col_charge')}</td>
                   <td style="padding:2px 10px;">${cell(rteByPower?.low)}</td>
                   <td style="padding:2px 10px;">${cell(rteByPower?.mid)}</td>
                   <td style="padding:2px 10px;">${cell(rteByPower?.high)}</td></tr>
-                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">Ontladen</td>
+                <tr><td style="padding:2px 10px 2px 0;color:var(--muted);">${Homey.__('settings.col_discharge')}</td>
                   <td style="padding:2px 10px;">${cell(rteByDischargePower?.low)}</td>
                   <td style="padding:2px 10px;">${cell(rteByDischargePower?.mid)}</td>
                   <td style="padding:2px 10px;">${cell(rteByDischargePower?.high)}</td></tr>
@@ -2985,7 +2989,7 @@
     function _pvPillCalibrating(label) {
       return `<div style="display:flex;flex-direction:column;gap:3px;min-width:80px;">
         <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">${label}</span>
-        <span style="font-size:12px;font-weight:bold;color:var(--dim);">kalibreert</span>
+        <span style="font-size:12px;font-weight:bold;color:var(--dim);">${Homey.__('settings.pv_calibrating')}</span>
       </div>`;
     }
 
@@ -3008,15 +3012,15 @@
       section.style.display = '';
 
       const summaryEl = document.getElementById('pv-accuracy-summary');
-      if (summaryEl) summaryEl.textContent = pvAccuracy != null ? `${pvAccuracy}% algeheel` : '';
+      if (summaryEl) summaryEl.textContent = pvAccuracy != null ? `${pvAccuracy}% ${Homey.__('settings.pv_accuracy_overall_suffix')}` : '';
 
       const pillsEl = document.getElementById('pv-accuracy-pills');
       if (pillsEl) {
         pillsEl.innerHTML =
-          _pvPill('Algeheel', pvAccuracy, '%', 70, 85) +
+          _pvPill(Homey.__('settings.pv_accuracy_overall_label'), pvAccuracy, '%', 70, 85) +
           _pvPill('Open-Meteo', accOM, '%', 70, 85) +
           _pvPill('Solcast', accSC, '%', 70, 85) +
-          _pvPill('Satelliet', accSAT, '%', 70, 85) +
+          _pvPill(Homey.__('settings.legend_satellite'), accSAT, '%', 70, 85) +
           (wOM != null && wSC != null
             ? `<div style="display:flex;flex-direction:column;gap:3px;min-width:100px;">
                 <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Blend (OM / SC)</span>
@@ -3034,7 +3038,7 @@
       }
       _pvAccuracyDays = Object.keys(byDay).sort().reverse().map(dk => {
         const entries = byDay[dk].sort((a, b) => a.timestamp - b.timestamp);
-        const label = new Date(entries[0].timestamp).toLocaleDateString('nl-NL', {
+        const label = new Date(entries[0].timestamp).toLocaleDateString(window.cachedLanguage === 'nl' ? 'nl-NL' : 'en-US', {
           timeZone: 'Europe/Amsterdam', weekday: 'short', month: 'short', day: 'numeric'
         });
         return { label, entries };
@@ -3095,7 +3099,7 @@
           _pvPill('Blended', dayAcc, '%', 70, 85) +
           _pvPill('Open-Meteo', dayOM, '%', 70, 85) +
           _pvPill('Solcast', daySC, '%', 70, 85) +
-          _pvPill('Satelliet', daySAT, '%', 70, 85);
+          _pvPill(Homey.__('settings.legend_satellite'), daySAT, '%', 70, 85);
       }
 
       // Per-model daily accuracy (MF/GFS/ICON/KNMI) from day's entries
@@ -3118,7 +3122,7 @@
       const canvas = document.getElementById('pvAccuracyChart');
       if (!canvas) return;
 
-      const fmtTime = ts => new Date(ts).toLocaleTimeString('nl-NL', {
+      const fmtTime = ts => new Date(ts).toLocaleTimeString(window.cachedLanguage === 'nl' ? 'nl-NL' : 'en-US', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Amsterdam'
       });
       const labels = [], omData = [], scData = [], satData = [], blendData = [], actualData = [];
@@ -3142,7 +3146,7 @@
             _pvPill('ICON',        _pvModelAcc.icon,  '%', 70, 85) +
             _pvPill('KNMI',        _pvModelAcc.knmi,  '%', 70, 85) +
             _pvPill('ECMWF',       _pvModelAcc.ecmwf, '%', 70, 85)
-          : '<span style="font-size:11px;color:var(--muted);">Per-model nauwkeurigheid beschikbaar na eerste volledige dag</span>';
+          : `<span style="font-size:11px;color:var(--muted);">${Homey.__('settings.pv_model_acc_pending')}</span>`;
       }
 
       if (_pvAccuracyChart) { _pvAccuracyChart.destroy(); _pvAccuracyChart = null; }
@@ -3166,8 +3170,8 @@
             mkDataset('Open-Meteo', omData,    '#60a5fa', [4, 2]),
             mkDataset('Solcast',    scData,    '#f59e0b', [4, 2]),
             mkDataset('Blended',   blendData, '#d1d5db'),
-            mkDataset('Werkelijk', actualData,'#20F29B'),
-            ...(satData.some(v => v != null) ? [mkDataset('Satelliet', satData, '#E879F9', [4, 2])] : []),
+            mkDataset(Homey.__('settings.legend_actual'), actualData,'#20F29B'),
+            ...(satData.some(v => v != null) ? [mkDataset(Homey.__('settings.legend_satellite'), satData, '#E879F9', [4, 2])] : []),
           ],
         },
         options: {
@@ -3223,7 +3227,7 @@
                 mkDataset('ICON',         iconData,  '#a78bfa', [4, 2]),
                 mkDataset('KNMI',         knmiData,  '#fb7185', [4, 2]),
                 mkDataset('ECMWF',        ecmwfData, '#22d3ee', [4, 2]),
-                mkDataset('Werkelijk',    actualData,'#20F29B'),
+                mkDataset(Homey.__('settings.legend_actual'), actualData,'#20F29B'),
               ],
             },
             options: {
@@ -3290,7 +3294,7 @@
         return `${String(h).padStart(2,'0')}:${String(q*15).padStart(2,'0')} (${Math.round(v)}W)`;
       });
       const peakEl = document.getElementById('consumption-peak-info');
-      if (peakEl) peakEl.textContent = `Pieken: ${peakSlots.join('  ·  ')}`;
+      if (peakEl) peakEl.textContent = `${Homey.__('settings.consumption_peaks_label')}: ${peakSlots.join('  ·  ')}`;
 
       // Current quarter marker
       const nowAms = new Date();
@@ -3418,14 +3422,14 @@
           ? +(todayConsumptionKwh - todayGridImportKwh).toFixed(2)
           : null;
         grid.insertAdjacentHTML('beforebegin', `<div id="today-selfsuff" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Vandaag — werkelijk zelfvoorzienend</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${Homey.__('settings.today_selfsuff_title')}</div>
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
               <div style="width:${Math.min(pct,100)}%;height:100%;background:${barColor};border-radius:4px;"></div>
             </div>
             <span style="font-size:20px;font-weight:bold;color:${barColor};min-width:44px;text-align:right;">${pct}%</span>
           </div>
-          ${pvKwh != null ? `<div style="font-size:11px;color:var(--dim);margin-top:6px;">${pvKwh != null ? pvKwh.toFixed(2) : '?'} kWh eigen · ${todayGridImportKwh.toFixed(2)} kWh net · ${todayConsumptionKwh.toFixed(2)} kWh totaal</div>` : ''}
+          ${pvKwh != null ? `<div style="font-size:11px;color:var(--dim);margin-top:6px;">${pvKwh != null ? pvKwh.toFixed(2) : '?'} ${Homey.__('settings.kwh_own_label')} · ${todayGridImportKwh.toFixed(2)} ${Homey.__('settings.kwh_grid_label')} · ${todayConsumptionKwh.toFixed(2)} ${Homey.__('settings.kwh_total_label')}</div>` : ''}
         </div>`);
       }
 
@@ -3446,9 +3450,9 @@
             : (s.avgProfit ?? s.profit) - currentAvgProfit;
           const yearly     = seasonalDelta * 365;
           const payback    = extraBatt > 0 && yearly > 0.001
-            ? (extraBatt * investment / yearly).toFixed(1) + ' jaar'
+            ? (extraBatt * investment / yearly).toFixed(1) + ' ' + Homey.__('settings.payback_years_suffix')
             : null;
-          const paybackBasis = useSeasonalBase ? 'seizoensgecorrigeerd' : 'jaargemiddelde';
+          const paybackBasis = useSeasonalBase ? Homey.__('settings.seasonal_corrected') : Homey.__('settings.yearly_average');
 
           const border = isCurrent
             ? 'border:2px solid #7ecb7e;'
@@ -3457,7 +3461,7 @@
 
           return `<div style="background:var(--surface2);border-radius:8px;padding:14px;${border}">
             <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
-              ${s.units} ${s.units === 1 ? 'batterij' : 'batterijen'}${isCurrent ? ' ★' : ''}
+              ${s.units} ${s.units === 1 ? Homey.__('settings.battery_singular') : Homey.__('settings.battery_plural')}${isCurrent ? ' ★' : ''}
             </div>
             <div style="font-size:11px;color:var(--dim);margin-bottom:10px;">
               ${s.kwh} kWh · ${s.powerW}W
@@ -3470,44 +3474,44 @@
               if (pct == null) return '';
               const c = pct >= 80 ? '#7ecb7e' : pct >= 50 ? '#e5c07b' : '#e06c75';
               return `<div style="font-size:22px;font-weight:bold;color:${c};line-height:1.1;">${pct}%</div>
-                <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">zelfvoorzienend</div>
+                <div style="font-size:11px;color:var(--dim);margin-bottom:8px;">${Homey.__('settings.self_sufficient')}</div>
                 <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:10px;">
                   <div style="width:${Math.min(pct, 100)}%;height:100%;background:${c};border-radius:3px;"></div>
                 </div>`;
             })()}
             ${isCurrent
-              ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Huidige setup</div>
+              ? `<div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${Homey.__('settings.current_setup_label')}</div>
                  ${hasCycleData
                    ? `<div style="font-size:11px;color:var(--dim);margin-top:2px;">
-                        Werkelijk gemeten: <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}/dag</span>
-                        <span style="color:var(--dim);"> (${cycleHistory.length} cycli)</span>
+                        ${Homey.__('settings.actual_measured_label')} <span style="color:#20F29B;font-weight:bold;">€${measuredDailyProfit.toFixed(3)}${Homey.__('settings.per_day_suffix')}</span>
+                        <span style="color:var(--dim);"> (${cycleHistory.length} ${Homey.__('settings.cycles_word')})</span>
                       </div>`
-                   : `<div style="font-size:11px;color:var(--dim);margin-top:2px;">Werkelijk: nog geen cycli</div>`
+                   : `<div style="font-size:11px;color:var(--dim);margin-top:2px;">${Homey.__('settings.actual_no_cycles_yet')}</div>`
                  }`
               : extraBatt > 0
-                ? `<div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}/jaar extra (${paybackBasis})</div>
-                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">Terugverdientijd extra batterij: ${payback}</div>
-                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">Ruwe indicatie uit het model — geen gemeten opbrengst. Alleen de meerwinst t.o.v. huidige setup · ${paybackBasis} · o.b.v. ${historyDays ?? 1} dag${(historyDays ?? 1) !== 1 ? 'en' : ''}</div>` : ''}`
-                : `<div style="font-size:11px;color:var(--dim);">Kleinere setup dan nu</div>`
+                ? `<div style="font-size:11px;color:var(--dim);">${fmtD(yearly)}${Homey.__('settings.per_year_extra_suffix')} (${paybackBasis})</div>
+                   ${payback ? `<div style="font-size:11px;color:#e5c07b;margin-top:6px;">${Homey.__('settings.payback_extra_battery_label')} ${payback}</div>
+                   <div style="font-size:10px;color:var(--dim);margin-top:2px;">${Homey.__('settings.rough_indication_note')} · ${paybackBasis} · ${Homey.__('settings.based_on_prefix')} ${historyDays ?? 1} ${(historyDays ?? 1) === 1 ? Homey.__('settings.day_singular') : Homey.__('settings.day_plural')}</div>` : ''}`
+                : `<div style="font-size:11px;color:var(--dim);">${Homey.__('settings.smaller_setup_label')}</div>`
             }
             ${(() => {
               // Power bottleneck: show residual grid import during discharge
               if (s.shortfallKwh == null) return '';
               if (s.shortfallSlots === 0) {
                 return `<div style="font-size:11px;color:#7ecb7e;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
-                  Vermogen dekt alle discharge slots
+                  ${Homey.__('settings.power_covers_all_slots')}
                 </div>`;
               }
               return `<div style="font-size:11px;color:#e5c07b;margin-top:8px;border-top:1px solid var(--border);padding-top:8px;">
-                ${s.shortfallSlots} slot${s.shortfallSlots > 1 ? 's' : ''}: nog
-                ${(s.shortfallKwh * 1000).toFixed(0)} Wh van net tijdens ontladen
+                ${s.shortfallSlots} slot${s.shortfallSlots > 1 ? 's' : ''}: ${Homey.__('settings.shortfall_still')}
+                ${(s.shortfallKwh * 1000).toFixed(0)} ${Homey.__('settings.shortfall_from_grid_during_discharge')}
               </div>`;
             })()}
           </div>`;
         }).join('') +
         `</div>`;
 
-      if (ts) ts.textContent = `Bijgewerkt: ${timestamp ? new Date(timestamp).toLocaleString('nl-NL') : '—'}`;
+      if (ts) ts.textContent = `${Homey.__('settings.updated_prefix')} ${timestamp ? new Date(timestamp).toLocaleString(window.cachedLanguage === 'nl' ? 'nl-NL' : 'en-US') : '—'}`;
 
       // ── Werkelijk gemeten rendement ──────────────────────────────
       const roiEl = document.getElementById('expansion-actual-roi');
@@ -3515,8 +3519,7 @@
 
       if (!hasCycleData) {
         roiEl.innerHTML = `<div style="margin-top:24px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--dim);font-size:13px;">
-          <strong style="color:var(--muted);">Werkelijk rendement</strong> — nog geen cycli gemeten.
-          Wordt gevuld zodra de batterij voor het eerst volledig ontlaadt (laadniveau ≤ 3%).
+          <strong style="color:var(--muted);">${Homey.__('settings.actual_return_label')}</strong> — ${Homey.__('settings.no_cycles_measured_note')}
         </div>`;
         return;
       }
@@ -3533,11 +3536,11 @@
       const paybackPct  = Math.min(100, roiPct);
       const barColor    = paybackPct >= 100 ? '#20F29B' : paybackPct >= 50 ? '#FCD34D' : '#60A5FA';
 
-      let paybackLabel = 'Onvoldoende data.';
+      let paybackLabel = Homey.__('settings.insufficient_data_label');
       if (measuredPaybackYears) {
         const yr = Math.floor(measuredPaybackYears);
         const mo = Math.round((measuredPaybackYears - yr) * 12);
-        paybackLabel = `~${yr > 0 ? yr + ' jaar' : ''}${mo > 0 ? ' ' + mo + ' mnd' : ''} (o.b.v. ${measuredDaysDiff} dagen data)`;
+        paybackLabel = `~${yr > 0 ? yr + ' ' + Homey.__('settings.years_short') : ''}${mo > 0 ? ' ' + mo + ' ' + Homey.__('settings.months_short') : ''} (${Homey.__('settings.based_on_days_data').replace('{n}', measuredDaysDiff)})`;
       }
 
       // Cycle table rows (newest first, max 20)
@@ -3555,19 +3558,19 @@
 
       roiEl.innerHTML = `
         <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:20px;">
-          <h3 style="margin:0 0 4px;">Werkelijk gemeten rendement</h3>
+          <h3 style="margin:0 0 4px;">${Homey.__('settings.measured_return_title')}</h3>
           <p style="font-size:12px;color:var(--dim);margin:0 0 16px;">
-            Gebaseerd op ${cycleHistory.length} voltooide cycli. Wordt bijgewerkt bij elke volledige ontlaadcyclus.
-            De optimizerprognose in de kaarten hierboven is een berekende schatting; onderstaande cijfers zijn werkelijk gemeten resultaten.
+            ${Homey.__('settings.based_on_completed_cycles_note').replace('{n}', cycleHistory.length)}
+            ${Homey.__('settings.optimizer_vs_measured_note')}
           </p>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
             ${[
-              ['Totaal verdiend', `€${measuredTotalProfit.toFixed(2)}`, '#20F29B'],
-              ['Voltooide cycli', cycleHistory.length, 'var(--text)'],
-              ['Gemiddeld per cyclus', `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
-              ['Jaarprognose (gemeten)', `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
-              ['Terugverdiend tot nu', `${roiPct.toFixed(1)}%`, 'var(--purple-lt)'],
+              [Homey.__('settings.total_earned_label'), `€${measuredTotalProfit.toFixed(2)}`, '#20F29B'],
+              [Homey.__('settings.completed_cycles_label'), cycleHistory.length, 'var(--text)'],
+              [Homey.__('settings.avg_per_cycle_label'), `€${avgPerCycle.toFixed(3)}`, '#60A5FA'],
+              [Homey.__('settings.yearly_forecast_measured_label'), `€${measuredYearlyProfit.toFixed(0)}/jr`, '#FCD34D'],
+              [Homey.__('settings.payback_so_far_label'), `${roiPct.toFixed(1)}%`, 'var(--purple-lt)'],
             ].map(([label, val, color]) =>
               `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
                 <div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">${label}</div>
@@ -3577,7 +3580,7 @@
           </div>
 
           <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Terugverdientijd huidige setup — werkelijk gemeten (investering €${investTotal}${currentUnits > 1 ? ` — ${currentUnits} × €${invest}` : ''})</div>
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">${Homey.__('settings.payback_current_setup_title')} (${Homey.__('settings.investment_word')} €${investTotal}${currentUnits > 1 ? ` — ${currentUnits} × €${invest}` : ''})</div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
               <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
                 <div style="width:${paybackPct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
@@ -3588,16 +3591,16 @@
           </div>
 
           <details>
-            <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">Cyclushistorie (laatste 20)</summary>
+            <summary style="cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:10px;">${Homey.__('settings.cycle_history_label')}</summary>
             <div style="overflow-x:auto;">
               <table style="width:100%;border-collapse:collapse;font-size:12px;">
                 <thead>
                   <tr style="color:var(--muted);border-bottom:1px solid var(--border);">
-                    <th style="text-align:left;padding:5px 8px;">Datum</th>
+                    <th style="text-align:left;padding:5px 8px;">${Homey.__('settings.col_date')}</th>
                     <th style="text-align:right;padding:5px 8px;">kWh</th>
-                    <th style="text-align:right;padding:5px 8px;">Laadprijs</th>
-                    <th style="text-align:right;padding:5px 8px;">Ontlaadprijs</th>
-                    <th style="text-align:right;padding:5px 8px;">Winst</th>
+                    <th style="text-align:right;padding:5px 8px;">${Homey.__('settings.charge_price_label')}</th>
+                    <th style="text-align:right;padding:5px 8px;">${Homey.__('settings.discharge_price_label')}</th>
+                    <th style="text-align:right;padding:5px 8px;">${Homey.__('settings.profit_label')}</th>
                   </tr>
                 </thead>
                 <tbody>${rows}</tbody>
