@@ -32,6 +32,39 @@
           "example": 45
         }
       ]
+    },
+    {
+      "id": "standby_too_long",
+      "title": {
+        "en": "Standby too long",
+        "nl": "Te lang stand-by",
+        "de": "Zu lange Standby",
+        "da": "For lang standby",
+        "fr": "Veille trop longue",
+        "sv": "Standby för länge",
+        "no": "For lenge i standby",
+        "fi": "Valmiustila liian pitkä",
+        "hu": "Túl sokáig készenlétben"
+      },
+      "args": [],
+      "tokens": [
+        {
+          "name": "standby_hours",
+          "type": "number",
+          "title": {
+            "en": "Standby duration (h)",
+            "nl": "Stand-by duur (u)",
+            "de": "Standby-Dauer (h)",
+            "da": "Standby varighed (t)",
+            "fr": "Durée veille (h)",
+            "sv": "Standbyvaraktighet (h)",
+            "no": "Standbyvarighet (t)",
+            "fi": "Valmiustilan kesto (h)",
+            "hu": "Készenléti idő (ó)"
+          },
+          "example": 4.5
+        }
+      ]
     }
   ]
 }

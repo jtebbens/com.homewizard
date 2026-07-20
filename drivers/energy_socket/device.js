@@ -204,6 +204,10 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     this._applianceActiveStart = 0;
     this._applianceFinishedAt = 0;
     this._flowTriggerApplianceFinished = this.homey.flow.getDeviceTriggerCard('appliance_finished');
+
+    this._standbyStart = 0;
+    this._standbyAlertFired = false;
+    this._flowTriggerStandbyTooLong = this.homey.flow.getDeviceTriggerCard('standby_too_long');
   }
 
   _tcpPing(ip, port, timeoutMs) {
@@ -646,6 +650,7 @@ _flushFetchStats() {
     const watt = data.active_power_w + offset;
 
     this._updateApplianceState(watt);
+    this._updateStandbyAlert(watt);
 
     const tasks = [];
     const cap = (name, value) => {
@@ -774,6 +779,38 @@ _flushFetchStats() {
     this._flowTriggerApplianceFinished
       .trigger(this, { active_minutes: activeMinutes })
       .catch(this.error);
+  }
+
+  _updateStandbyAlert(watt) {
+    const settings = this.getSettings();
+    if (!settings.standby_alert_enabled) return;
+    const standbyThreshold = Number(settings.standby_threshold_w) || 5;
+    const alertHours = Number(settings.standby_alert_hours) || 4;
+
+    const isStandby = watt > 0 && watt < standbyThreshold;
+
+    if (!isStandby) {
+      this._standbyStart = 0;
+      this._standbyAlertFired = false;
+      return;
+    }
+
+    if (!this._standbyStart) {
+      this._standbyStart = Date.now();
+      return;
+    }
+
+    const standbyHours = (Date.now() - this._standbyStart) / 3600000;
+    if (standbyHours >= alertHours && !this._standbyAlertFired) {
+      this._standbyAlertFired = true;
+      this._debugLog(`Standby too long (${standbyHours.toFixed(1)}h >= ${alertHours}h)`);
+      this._flowTriggerStandbyTooLong
+        ?.trigger(this, { standby_hours: Math.round(standbyHours * 10) / 10 })
+        .catch(this.error);
+      this.homey.notifications.createNotification({
+        excerpt: `${this.getName()} staat al ${standbyHours.toFixed(1)}u in stand-by (< ${standbyThreshold}W). Vergeten uit te schakelen?`,
+      }).catch(() => {});
+    }
   }
 
   /**

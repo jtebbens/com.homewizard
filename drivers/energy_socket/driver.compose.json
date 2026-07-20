@@ -296,6 +296,55 @@
           "value": true
         }
       ]
+    },
+    {
+      "type": "group",
+      "label": {
+        "en": "Standby alert",
+        "nl": "Stand-by melding",
+        "de": "Standby-Warnung",
+        "da": "Standby-advarsel",
+        "fr": "Alerte veille",
+        "sv": "Standbyvarning",
+        "no": "Standbyvarsel",
+        "fi": "Valmiustilan hälytys",
+        "hu": "Készenléti riasztás"
+      },
+      "children": [
+        {
+          "id": "standby_alert_enabled",
+          "type": "checkbox",
+          "label": {
+            "en": "Enable standby alert",
+            "nl": "Stand-by melding inschakelen",
+            "de": "Standby-Warnung aktivieren",
+            "da": "Aktiver standby-advarsel",
+            "fr": "Activer l'alerte veille",
+            "sv": "Aktivera standbyvarning",
+            "no": "Aktiver standbyvarsel",
+            "fi": "Ota valmiustilan hälytys käyttöön",
+            "hu": "Készenléti riasztás engedélyezése"
+          },
+          "value": false
+        },
+        {
+          "id": "standby_alert_hours",
+          "type": "number",
+          "label": {
+            "en": "Alert after (h)",
+            "nl": "Melden na (u)",
+            "de": "Warnen nach (h)",
+            "da": "Advar efter (t)",
+            "fr": "Alerter après (h)",
+            "sv": "Varna efter (h)",
+            "no": "Varsle etter (t)",
+            "fi": "Hälytä (h) jälkeen",
+            "hu": "Riasztás (ó) után"
+          },
+          "value": 4,
+          "min": 1
+        }
+      ]
     }
   ],
   "pair": [
