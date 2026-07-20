@@ -4,7 +4,7 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.17.10",
+  "version": "3.17.11",
   "platforms": [
     "local"
   ],
@@ -905,6 +905,45 @@
               "hu": "Aktív időtartam (perc)"
             },
             "example": 45
+          }
+        ]
+      },
+      {
+        "id": "standby_too_long",
+        "title": {
+          "en": "Standby too long",
+          "nl": "Te lang stand-by",
+          "de": "Zu lange Standby",
+          "da": "For lang standby",
+          "fr": "Veille trop longue",
+          "sv": "Standby för länge",
+          "no": "For lenge i standby",
+          "fi": "Valmiustila liian pitkä",
+          "hu": "Túl sokáig készenlétben"
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=energy_socket"
+          }
+        ],
+        "tokens": [
+          {
+            "name": "standby_hours",
+            "type": "number",
+            "title": {
+              "en": "Standby duration (h)",
+              "nl": "Stand-by duur (u)",
+              "de": "Standby-Dauer (h)",
+              "da": "Standby varighed (t)",
+              "fr": "Durée veille (h)",
+              "sv": "Standbyvaraktighet (h)",
+              "no": "Standbyvarighet (t)",
+              "fi": "Valmiustilan kesto (h)",
+              "hu": "Készenléti idő (ó)"
+            },
+            "example": 4.5
           }
         ]
       },
@@ -6157,6 +6196,55 @@
                 "hu": "Legyen kiváltás kikapcsoláskor is (0W)"
               },
               "value": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Standby alert",
+            "nl": "Stand-by melding",
+            "de": "Standby-Warnung",
+            "da": "Standby-advarsel",
+            "fr": "Alerte veille",
+            "sv": "Standbyvarning",
+            "no": "Standbyvarsel",
+            "fi": "Valmiustilan hälytys",
+            "hu": "Készenléti riasztás"
+          },
+          "children": [
+            {
+              "id": "standby_alert_enabled",
+              "type": "checkbox",
+              "label": {
+                "en": "Enable standby alert",
+                "nl": "Stand-by melding inschakelen",
+                "de": "Standby-Warnung aktivieren",
+                "da": "Aktiver standby-advarsel",
+                "fr": "Activer l'alerte veille",
+                "sv": "Aktivera standbyvarning",
+                "no": "Aktiver standbyvarsel",
+                "fi": "Ota valmiustilan hälytys käyttöön",
+                "hu": "Készenléti riasztás engedélyezése"
+              },
+              "value": false
+            },
+            {
+              "id": "standby_alert_hours",
+              "type": "number",
+              "label": {
+                "en": "Alert after (h)",
+                "nl": "Melden na (u)",
+                "de": "Warnen nach (h)",
+                "da": "Advar efter (t)",
+                "fr": "Alerter après (h)",
+                "sv": "Varna efter (h)",
+                "no": "Varsle etter (t)",
+                "fi": "Hälytä (h) jälkeen",
+                "hu": "Riasztás (ó) után"
+              },
+              "value": 4,
+              "min": 1
             }
           ]
         }
