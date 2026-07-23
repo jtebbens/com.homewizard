@@ -1089,6 +1089,114 @@ if (debug) this.log(
       : rawConfidence;
   }
 
+  /**
+   * Morning-waive shadow metric (log-only, project_morning_reserve_floor_holds_through_peak).
+   * Given the live plan's slots (reserve floor ON) and a counterfactual with refillConfidence=1.0
+   * (floor OFF), quantify whether the active floor holds morning kWh that midday PV refills anyway.
+   *
+   * The metric is deliberately STRUCTURAL and TWO-SIDED, not Δ projectedProfit: removing a DP
+   * constraint can only raise forecast profit (profit_OFF >= profit_ON by construction), so a
+   * profit diff is a tautology and can never go negative (device.js spreadband note ~:3438,
+   * feedback_metric_must_allow_negative). Instead we measure the held energy and whether the OFF
+   * run still serves the evening peak — waive-gain exists ONLY if OFF serves the peak equally;
+   * if OFF strands the evening the floor was needed → negative eurAtStake.
+   *
+   * Returns null when the slot arrays are unusable. socProjected is in percent (socG/GRID, 0-100).
+   */
+  _morningWaiveShadowMetrics(onSlots, offSlots, capacityKwh) {
+    if (!onSlots?.length || !offSlots?.length || onSlots.length !== offSlots.length) return null;
+    const N = onSlots.length;
+    const maxSoc = this.getSettings().max_soc ?? 100;
+
+    // Anchor the morning-trough / midday-refill / evening-peak window on the PV cycle, NOT on
+    // wall-clock hour. The forward horizon starts at NOW: a run in the evening has slot[0] already
+    // past any hard-coded hour (the old `localHour>=16 break` broke on slot[0] → tMin=-1 → null on
+    // every evening/night run) and TOMORROW's morning sits mid-horizon. Slots carry pvForecastW, so
+    // use the FIRST PV block as midday, the drain into it as the morning trough, and the discharge
+    // after it as the evening peak — run-time-independent, no local-hour aliasing across two days.
+    let maxPv = 0;
+    for (let i = 0; i < N; i++) maxPv = Math.max(maxPv, offSlots[i].pvForecastW ?? 0);
+    if (maxPv <= 0) return null; // no PV refill in horizon → the waive question is moot
+    const PV_THRESH = Math.max(50, maxPv * 0.1);
+    const isPv = (i) => (offSlots[i].pvForecastW ?? 0) >= PV_THRESH;
+
+    // First contiguous PV block = midday refill; the block after a gap (if the horizon spans a 2nd
+    // day) bounds the evening window so it stays within one cycle.
+    let tPvStart = -1;
+    for (let i = 0; i < N; i++) { if (isPv(i)) { tPvStart = i; break; } }
+    if (tPvStart < 0) return null;
+    let tPvEnd = tPvStart;
+    for (let i = tPvStart; i < N && isPv(i); i++) tPvEnd = i;
+    let tNextPv = N;
+    for (let i = tPvEnd + 1; i < N; i++) { if (isPv(i)) { tNextPv = i; break; } }
+
+    // Morning window: the 8h of drain immediately preceding PV onset. On an evening run a prior-
+    // evening low sits >8h earlier in the horizon, so this excludes it; tMin = the LAST (closest to
+    // PV) slot achieving the OFF-run minimum here — the deepest pre-refill drain the DP dares WITHOUT
+    // the floor. The floor's morning contribution = SoC gap at this slot.
+    const ts = (i) => new Date(offSlots[i].timestamp).getTime();
+    const morningStartMs = ts(tPvStart) - 8 * 3600_000;
+    let tMin = -1, tMinSoc = Infinity;
+    for (let i = 0; i <= tPvEnd; i++) {
+      if (ts(i) < morningStartMs) continue;
+      const soc = offSlots[i].socProjected;
+      if (soc == null) continue;
+      if (soc <= tMinSoc) { tMinSoc = soc; tMin = i; } // <= → last (closest-to-PV) occurrence wins
+    }
+    if (tMin < 0 || onSlots[tMin].socProjected == null) return null;
+
+    const heldKwh = Math.max(0, (onSlots[tMin].socProjected - offSlots[tMin].socProjected) / 100 * capacityKwh);
+
+    // bothReachMax: each schedule hits ~maxSoc during the refill (tMin, tPvEnd] → midday PV refilled
+    // both → the morning hold was redundant on this day.
+    const EPS = 1.0; // percent
+    const reachesMax = (slots) => {
+      for (let i = tMin + 1; i <= tPvEnd; i++) {
+        if (slots[i].socProjected != null && slots[i].socProjected >= maxSoc - EPS) return true;
+      }
+      return false;
+    };
+    const bothReachMax = reachesMax(onSlots) && reachesMax(offSlots);
+
+    // Evening discharge revenue over the post-refill window (tPvEnd, tNextPv): Σ SoC-drop × cap × price.
+    const eveningRevenue = (slots) => {
+      let rev = 0;
+      for (let i = tPvEnd + 1; i < tNextPv; i++) {
+        if (slots[i].socProjected == null || slots[i - 1].socProjected == null) continue;
+        const drop = (slots[i - 1].socProjected - slots[i].socProjected) / 100 * capacityKwh;
+        if (drop > 0) rev += drop * (slots[i].price ?? 0);
+      }
+      return rev;
+    };
+    const onEve = eveningRevenue(onSlots), offEve = eveningRevenue(offSlots);
+    const offServesEvening = offEve >= onEve - 1e-6;
+
+    let eurAtStake;
+    if (offServesEvening) {
+      // Waive frees heldKwh from the morning peak to be refilled midday. Value = held × (drain − refill).
+      const avgPrice = (pred) => {
+        let sum = 0, n = 0;
+        for (let i = 1; i < N; i++) { if (pred(i)) { sum += onSlots[i].price ?? 0; n++; } }
+        return n ? sum / n : 0;
+      };
+      // pDrain: morning slots up to tMin where OFF discharges but ON holds (the kWh the floor pinned).
+      const pDrain = avgPrice(i => i <= tMin && ts(i) >= morningStartMs
+        && offSlots[i].socProjected != null && offSlots[i - 1].socProjected != null
+        && onSlots[i].socProjected != null && onSlots[i - 1].socProjected != null
+        && offSlots[i].socProjected < offSlots[i - 1].socProjected
+        && onSlots[i].socProjected >= onSlots[i - 1].socProjected - EPS);
+      // pRefill: refill slots (tMin, tPvEnd] where ON re-buys the held kWh from midday PV.
+      const pRefill = avgPrice(i => i > tMin && i <= tPvEnd
+        && onSlots[i].socProjected != null && onSlots[i - 1].socProjected != null
+        && onSlots[i].socProjected > onSlots[i - 1].socProjected);
+      eurAtStake = heldKwh * (pDrain - pRefill);
+    } else {
+      // OFF strands the evening peak → the floor was needed. Negative: lost evening revenue.
+      eurAtStake = -(onEve - offEve);
+    }
+    return { heldKwh, bothReachMax, offServesEvening, eurAtStake };
+  }
+
   _schedulePolicyCheck() {
     const intervalMinutes = this.getSetting('policy_interval') || 15;
     const intervalMs = intervalMinutes * 60 * 1000;
@@ -3446,6 +3554,25 @@ if (debug) this.log(
     // re-measure this way; score both plans against realised PV instead. See
     // project_dp_pv_timing_robustness + feedback_metric_must_allow_negative.
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
+
+    // Morning-waive shadow (log-only, project_morning_reserve_floor_holds_through_peak). When the
+    // refill-reserve floor is active (refillConfidence < 1.0), re-run the DP with the floor OFF
+    // (refillConfidence=1.0) on a SEPARATE engine so the live _schedule/_reorderDebug/_flattenDebug
+    // stay untouched, and log a two-sided metric of whether the floor held morning kWh the midday PV
+    // refills anyway. Gated: conf=1.0 → ON≡OFF → skip (no CPU). Does NOT affect the live plan.
+    if (refillConfidence < 1.0) {
+      try {
+        if (!this._morningWaiveEngine) this._morningWaiveEngine = new OptimizationEngine(this.getSettings());
+        this._morningWaiveEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, 1.0, false, maxChargePrice);
+        const m = this._morningWaiveShadowMetrics(
+          this.optimizationEngine._schedule?.slots, this._morningWaiveEngine._schedule?.slots, capacityKwh);
+        if (m) {
+          this.log(`🔬 morning-waive: conf=${refillConfidence.toFixed(2)} floor=${Math.round(this._lastReserveFloorPct ?? 0)}% held=${m.heldKwh.toFixed(2)}kWh bothMax=${m.bothReachMax ? 'Y' : 'N'} offEvening=${m.offServesEvening ? 'Y' : 'N'} eurStake=${m.eurAtStake >= 0 ? '+' : ''}${m.eurAtStake.toFixed(3)}`);
+        }
+      } catch (err) {
+        this.error('morning-waive shadow failed', err);
+      }
+    }
 
     // Compact planning summary — always visible in user diagnostics.
     {
