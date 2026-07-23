@@ -38,6 +38,7 @@
  */
 
 const fs = require('fs');
+const { createSim } = require('./replay-sim');
 
 // ── Battery configuration (device eca0f7a8, read from live settings 2026-07-19) ──────────
 const CAPACITY_KWH  = 2.69;   // policy_last_run_debug.battCapKwh
@@ -55,11 +56,6 @@ if (!historyPath) {
 }
 const rteArg = args.indexOf('--rte');
 const RTE = rteArg >= 0 ? Number(args[rteArg + 1]) : 0.72;
-// Round-trip loss splits ~evenly across charge and discharge (√RTE per side) rather than
-// falling entirely on the discharge draw. The old asymmetric model (η_charge=1, all 28% on
-// discharge) produced a systematic +bias in both active modes that √-split predicts and
-// removes quantitatively (calibration 2026-07-23: MAE 24.6%→21.1%, discharge bias +20.5→+1.3).
-const ETA = Math.sqrt(RTE);
 const consArg = args.indexOf('--consumption');
 const CONS_MODE = consArg >= 0 ? args[consArg + 1] : 'avg';
 const pvArg = args.indexOf('--pv');
@@ -74,90 +70,19 @@ const PV_MODE = pvArg >= 0 ? args[pvArg + 1] : 'avg';
 const insArg = args.indexOf('--insights-soc');
 const INSIGHTS_SOC = insArg >= 0 ? args[insArg + 1] : null;
 
-/**
- * Per-slot battery power the hardware mode implies, given realized PV and load.
- * Sign convention matches the measured `battW` field and _computeDailyProfit:
- * positive = charging, negative = discharging.
- *
- * socPct limits the result: a full battery cannot charge, an empty one cannot discharge.
- * RTE is applied to the SoC cost of discharging (physical drain exceeds delivered energy),
- * never to the € scoring — the measured battW is already AC-side, so the losses are inside it.
- */
-function simulateSlot(hwMode, pvW, consW, socPct) {
-  const surplusW = Math.max(0, pvW - consW);
-  const deficitW = Math.max(0, consW - pvW);
-  const capWh = CAPACITY_KWH * 1000;
-
-  // physW is measured at the CELLS; deliveredW is what reaches the house.
-  // The power limit binds on the cell side: to deliver D the pack must draw D/RTE, so a
-  // demand above MAX_DISCHARGE_W * RTE cannot be fully covered and the grid supplies the
-  // rest. Calibration 2026-07-19 confirms this — across 36 discharge slots the largest
-  // delivered power ever observed is 542 W ≈ 800 W * 0.72, never the nominal 800 W.
-  let physW = 0;
-  switch (hwMode) {
-    case 'zero_charge_only':                        // PV surplus only, never from grid
-      physW = ETA * Math.min(MAX_CHARGE_W, surplusW);
-      break;
-    case 'to_full':                                 // grid charging allowed
-      physW = ETA * MAX_CHARGE_W;
-      break;
-    case 'zero_discharge_only':                     // cover net load, never export
-      physW = -Math.min(MAX_DISCHARGE_W, deficitW / ETA);
-      break;
-    case 'standby':
-    default:
-      physW = 0;
-  }
-
-  // Clamp against remaining headroom / stored energy (both cell-side).
-  if (physW > 0) {
-    physW = Math.min(physW, ((MAX_SOC - socPct) / 100 * capWh) / SLOT_H);
-  } else if (physW < 0) {
-    physW = -Math.min(-physW, ((socPct - MIN_SOC) / 100 * capWh) / SLOT_H);
-  }
-
-  const deliveredW = physW >= 0 ? physW : physW * RTE;
-  const nextSoc = Math.max(MIN_SOC, Math.min(MAX_SOC, socPct + ((physW * SLOT_H) / capWh) * 100));
-
-  return { battW: Math.round(deliveredW), nextSoc };
-}
-
-/**
- * € accounting from a SoC delta rather than from measured battW.
- *
- * device.js:5328-5338 (_computeDailyProfit) scores `battW * 0.25h`, but battW is a single
- * instantaneous reading taken at the START of the policy run, before that run's mode takes
- * effect — it lags the mode by one slot and is blind to the firmware's continuous zero-on-meter
- * regulation in between. Measured per-slot check (2026-07-19, n=297): using battW to predict
- * the SoC step gives MAE 0.53% of capacity, and the outliers are exactly one-slot-shifted.
- *
- * SoC does not have that problem: soc[t] and soc[t+1] bracket the interval in which hwMode[t]
- * is in force, so the delta lands in the right time window by construction.
- *
- * Charge: energy into the pack is billed at the slot price.
- * Discharge: the pack loses |ΔSoC| physically, of which RTE reaches the house (RTE lives on
- * the discharge side — optimization-engine.js:782-784, :1090-1097).
- */
-function scoreSocDelta(deltaSocPct, price) {
-  const wh = (deltaSocPct / 100) * CAPACITY_KWH * 1000;
-  if (wh > 1)  return { revenue: 0, cost: (wh / 1000) * price };
-  if (wh < -1) return { revenue: (Math.abs(wh) * RTE / 1000) * price, cost: 0 };
-  return { revenue: 0, cost: 0 };
-}
-
-/**
- * Physical energy moved in a slot, in Wh at the cells. This is the calibration target rather
- * than €, because it is RTE-FREE: a SoC delta is a measurement, whereas converting it to money
- * requires the very efficiency constant the model is being tested on.
- *
- * The first version of this harness scored € on both sides, so running the negative control
- * (--rte 1.0) moved the measured reference along with the simulation — the yardstick flexed
- * with the thing being measured, and the control could not fail. Same failure class as the
- * 2026-07-16 tautology, reproduced here by accident and caught by the control itself.
- */
-function physicalWh(deltaSocPct) {
-  return (deltaSocPct / 100) * CAPACITY_KWH * 1000;
-}
+// Replay physics shared with tools/dp-regret.js (tools/replay-sim.js). simulateSlot applies
+// the √RTE-per-side loss split; scoreSocDelta bills € from the SoC delta (battW lags mode by
+// one slot); physicalWh is the RTE-free calibration target. The √-split (2026-07-23) removed
+// the systematic +bias in both active modes — see replay-sim.js and the calibration note.
+const { simulateSlot, scoreSocDelta, physicalWh } = createSim({
+  rte: RTE,
+  capacityKwh: CAPACITY_KWH,
+  maxChargeW: MAX_CHARGE_W,
+  maxDischargeW: MAX_DISCHARGE_W,
+  minSoc: MIN_SOC,
+  maxSoc: MAX_SOC,
+  slotH: SLOT_H,
+});
 
 // ── Load + normalize ──────────────────────────────────────────────────────────────────────
 const raw = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
