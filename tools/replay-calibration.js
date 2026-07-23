@@ -30,7 +30,7 @@
  *   € scoring             device.js:5328-5338 (_computeDailyProfit)
  *
  * Usage:
- *   node tools/replay-calibration.js <history.json> [--rte 0.72] [--consumption avg|instant]
+ *   node tools/replay-calibration.js <history.json> [--rte 0.72] [--consumption avg|instant] [--pv avg|instant]
  *
  * The --rte flag exists for the negative control: run with --rte 1.0 and the verdict MUST
  * degrade. If a deliberately wrong constant still passes, the harness measures nothing —
@@ -50,13 +50,20 @@ const SLOT_H  = 0.25;         // 15-min buckets
 const args = process.argv.slice(2);
 const historyPath = args[0];
 if (!historyPath) {
-  console.error('usage: node tools/replay-calibration.js <history.json> [--rte N] [--consumption avg|instant]');
+  console.error('usage: node tools/replay-calibration.js <history.json> [--rte N] [--consumption avg|instant] [--pv avg|instant]');
   process.exit(1);
 }
 const rteArg = args.indexOf('--rte');
 const RTE = rteArg >= 0 ? Number(args[rteArg + 1]) : 0.72;
+// Round-trip loss splits ~evenly across charge and discharge (√RTE per side) rather than
+// falling entirely on the discharge draw. The old asymmetric model (η_charge=1, all 28% on
+// discharge) produced a systematic +bias in both active modes that √-split predicts and
+// removes quantitatively (calibration 2026-07-23: MAE 24.6%→21.1%, discharge bias +20.5→+1.3).
+const ETA = Math.sqrt(RTE);
 const consArg = args.indexOf('--consumption');
 const CONS_MODE = consArg >= 0 ? args[consArg + 1] : 'avg';
+const pvArg = args.indexOf('--pv');
+const PV_MODE = pvArg >= 0 ? args[pvArg + 1] : 'avg';
 // Optional higher-fidelity SoC source. policy_mode_history stores SoC as whole percent
 // sampled once per policy run, and that reading does not refresh every slot — consecutive
 // discharge slots alternate large/small steps whose MEAN matches the simulator while the
@@ -89,13 +96,13 @@ function simulateSlot(hwMode, pvW, consW, socPct) {
   let physW = 0;
   switch (hwMode) {
     case 'zero_charge_only':                        // PV surplus only, never from grid
-      physW = Math.min(MAX_CHARGE_W, surplusW);
+      physW = ETA * Math.min(MAX_CHARGE_W, surplusW);
       break;
     case 'to_full':                                 // grid charging allowed
-      physW = MAX_CHARGE_W;
+      physW = ETA * MAX_CHARGE_W;
       break;
     case 'zero_discharge_only':                     // cover net load, never export
-      physW = -Math.min(MAX_DISCHARGE_W, deficitW / RTE);
+      physW = -Math.min(MAX_DISCHARGE_W, deficitW / ETA);
       break;
     case 'standby':
     default:
@@ -175,6 +182,7 @@ for (const e of entries) {
     hwMode: e.hwMode,
     price: e.price,
     pvW: e.pvW,
+    pvAvgW: e.pvAvgW ?? null,
     consW: e.consumW,
     consumAvgW: e.consumAvgW ?? null,
     socMeasured: e.soc,
@@ -230,6 +238,7 @@ for (let i = 0; i < slots.length - 1; i++) {
     socStart,
     socEnd,
     dSocMeasured: socEnd - socStart,
+    pvW: PV_MODE === 'avg' ? (nxt.pvAvgW ?? cur.pvW) : cur.pvW,
     consW: CONS_MODE === 'avg' ? (nxt.consumAvgW ?? cur.consW) : cur.consW,
   });
 }
