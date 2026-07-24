@@ -3574,6 +3574,51 @@ if (debug) this.log(
       }
     }
 
+    // Near-floor chatter catcher (log-only, project_soc_near_floor_chatter_0723). When SoC sits just
+    // above the refill-reserve floor and the DP's slot[0] action FLIPS between two ADJACENT runs at
+    // (near-)flat price, persist the FULL compute() input arrays of BOTH runs so the mech1 (near-floor
+    // budget-tilt) vs mech2 (per-slot PV-array shift) question can be settled from faithful data. The
+    // 07-23 window was unrecoverable because policy_mode_history stores only scalars. Gated hard
+    // (near-floor band + slot0 flip) so it fires almost never; no behaviour change on the live plan.
+    try {
+      const _floorPct = this._lastReserveFloorPct ?? null;
+      if (_floorPct != null && soc <= _floorPct + 3) {
+        const _r4 = a => Array.isArray(a) ? a.map(x => +(+x).toFixed(4)) : +(+a).toFixed(4);
+        const _r0 = a => Array.isArray(a) ? a.map(x => Math.round(x)) : Math.round(a);
+        const _slot0 = this.optimizationEngine._schedule?.slots?.[0]?.action ?? null;
+        const _now = Date.now();
+        const _snap = {
+          ts: new Date(_now).toISOString(),
+          soc, floorPct: _floorPct,
+          refillConfidence: +refillConfidence.toFixed(3),
+          maxChargePrice: +maxChargePrice.toFixed(4),
+          effectivePvKwhTomorrow: +effectivePvKwhTomorrow.toFixed(2),
+          adjustedTerminalPvKwh: +adjustedTerminalPvKwh.toFixed(2),
+          pvCloudFactor: +(_pvCloudFactor ?? 1).toFixed(3),
+          dpAction0: _slot0,
+          prices: _r4(prices),
+          pvForecast: _r0(pvForecast),
+          consumptionWPerSlot: _r0(consumptionWPerSlot),
+          minDischargePrice: _r4(minDischargePrice),
+          consumptionMargin: _r4(consumptionMargin),
+        };
+        const _prev = this._nearFloorPrevSnap;
+        // Pair only with a genuinely adjacent run (<30min old) whose slot0 differs = the flip.
+        if (_prev && _prev.dpAction0 !== _slot0 && (_now - Date.parse(_prev.ts)) <= 30 * 60_000) {
+          const _ring = Array.isArray(this._liveState?.nearfloor_chatter_catch)
+            ? this._liveState.nearfloor_chatter_catch : [];
+          _ring.unshift({ prev: _prev, cur: _snap });
+          this._setLive('nearfloor_chatter_catch', _ring.slice(0, 4));
+          this.log(`🎯 nearfloor-chatter caught: ${_prev.dpAction0}→${_slot0} @SoC ${soc}% floor ${_floorPct}% price €${_snap.prices[0]} (pair persisted)`);
+        }
+        this._nearFloorPrevSnap = _snap;
+      } else {
+        this._nearFloorPrevSnap = null; // reset once out of the near-floor band
+      }
+    } catch (err) {
+      this.error('nearfloor-chatter catcher failed', err);
+    }
+
     // Compact planning summary — always visible in user diagnostics.
     {
       const _slots = this.optimizationEngine._schedule?.slots ?? [];
@@ -4695,6 +4740,40 @@ if (debug) this.log(
         this.log(diverged
           ? `⚠️ max_consumption_w=${reportedMaxConsumption}W below nominal ${chargeFallbackW}W (calibration/taper) → planning with nominal ${chargeFallbackW}W`
           : `✅ max_consumption_w=${reportedMaxConsumption}W back at nominal ${chargeFallbackW}W`);
+      }
+
+      // Squeeze-at-zero-SoC: LOG ONLY, not yet a trigger source. checkSoCDrift() in
+      // plugin_battery/device.js (power-signature: sustained 75W or 800W charge while
+      // SoC stuck at 0%) stays the sole source that fires battery_soc_drift_detected —
+      // it is proven over multiple real calibrations. This max_consumption_w-based check
+      // is new (first-ever-seen 60W reading 2026-07-21) and the "squeezed value" signal
+      // is not yet trustworthy on its own: the pack also derates max_consumption_w a few
+      // percent (e.g. 794W vs 800W) when it runs warm — an unrelated, harmless cause with
+      // the same shape (diverged=true) that this check cannot yet tell apart from a real
+      // calibration. Logging the exact wattage here (not just a boolean) lets a future
+      // session compare thermal-derate magnitudes (~expect small, single-digit-%) against
+      // real calibration magnitudes (60W ≈ 92% below nominal) before this is trusted
+      // enough to drive the trigger card itself. Checked PER UNIT (plugin_battery
+      // devices' own measure_battery), not the P1's battery_group_average_soc: on a
+      // multi-battery group the group average is a capacity-weighted blend across all
+      // units (energy_v2/device.js ~1420), so one unit calibrating at 0% while others sit
+      // at 50% would never bring the average to exactly 0 — the group signal would
+      // silently miss multi-battery calibrations, hence per-unit even for this log.
+      let calibratingUnits = [];
+      try {
+        const battDriver = this.homey.drivers.getDriver('plugin_battery');
+        if (battDriver) {
+          calibratingUnits = battDriver.getDevices()
+            .filter(dev => dev.getCapabilityValue('measure_battery') === 0);
+        }
+      } catch (e) { /* driver not available */ }
+
+      const calibrationSqueeze = diverged && calibratingUnits.length > 0;
+      if (calibrationSqueeze !== !!this._calibrationSqueezeActive) {
+        this._calibrationSqueezeActive = calibrationSqueeze;
+        this.log(calibrationSqueeze
+          ? `🔎 [observe-only] max_consumption_w=${reportedMaxConsumption}W squeezed (nominal ${chargeFallbackW}W), ${calibratingUnits.length} unit(s) at SoC 0% — not yet wired to battery_soc_drift_detected`
+          : '🔎 [observe-only] max_consumption_w back at nominal or no unit at SoC 0%');
       }
 
       await this.setCapabilityValue('battery_soc_mirror', soc).catch(this.error);
