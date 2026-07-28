@@ -4864,6 +4864,19 @@
                 "nl": "⚠️ Experimenteel — één locatie (NL). Overschrijft 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast). Kan zonder aankondiging wegvallen."
               },
               "value": false
+            },
+            {
+              "id": "sat_replaces_sc",
+              "type": "checkbox",
+              "label": {
+                "en": "Satellite replaces Solcast (0-3h)",
+                "nl": "Satelliet vervangt Solcast (0-3u)"
+              },
+              "hint": {
+                "en": "⚠️ Experimental — single location only (NL). For slots up to 3h ahead the satellite nowcast takes the Solcast half of the PV blend; the Open-Meteo half is untouched. Do not combine with \"Use satellite in DP optimizer\" — this setting wins and disables that override.",
+                "nl": "⚠️ Experimenteel — één locatie (NL). Voor slots tot 3u vooruit neemt de satelliet-nowcast de Solcast-helft van de PV-blend over; de Open-Meteo-helft blijft ongemoeid. Niet combineren met \"Gebruik satelliet in DP-optimizer\" — deze instelling wint en schakelt die override uit."
+              },
+              "value": false
             }
           ]
         },

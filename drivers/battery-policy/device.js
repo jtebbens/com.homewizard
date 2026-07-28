@@ -2729,7 +2729,11 @@ if (debug) this.log(
           // Cap at installed system capacity — learned yield factors can overshoot on
           // exceptional days, but the inverter/system can never exceed its rated peak.
           const pvW = pvCapacityW > 0 ? Math.min(rawPvW, pvCapacityW) : rawPvW;
-          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0 };
+          // Carry the satellite nowcast alongside OM so the blend below can swap it into the
+          // Solcast leg without re-finding the hour slot per forecast slot. _applySatelliteOverlay
+          // (weather-forecaster.js) writes satPanelW onto these very hourlyForecast slots, and
+          // leaves it null outside its 0-3h lead window or below 15° solar elevation.
+          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0, satPanelW: h.satPanelW ?? null, satIssueMs: h.satIssueMs ?? null };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
@@ -2849,6 +2853,22 @@ if (debug) this.log(
         const weightsToday    = getDayWeights(todayNLDate, true);
         const weightsTomorrow = getDayWeights(tomorrowNLDate, false);
 
+        // Satellite-for-Solcast swap on near-term slots (chunk 2). Two gates live here; the
+        // third (lead window ≤3h, elevation ≥15°) is already baked into satPanelW being null.
+        // Freshness is checked per slot against the issue that produced that slot's value —
+        // a slot outside the current lead window keeps its previous satPanelW, so the latest
+        // issue being fresh says nothing about the value actually sitting on the slot.
+        const SAT_MAX_AGE_MS = 3600_000;
+        const SAT_LEAD_MS    = 3 * 3600_000;
+        const satReplSc  = this.getSetting('sat_replaces_sc') === true;
+        const satIssueMs = this.weatherForecaster?.getSatIssueMs?.() ?? null;
+        const satLog     = [];
+        let satDeltaWh   = 0;
+        // Coverage denominator: blend-eligible slots overlapping the current sat lead window
+        // that carry any PV signal. Without it, n= has no scale.
+        let satWindowSlots = 0;
+        let satStaleSlots  = 0;
+
         const scEffectiveSlots = []; // collect effective SC per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
@@ -2860,8 +2880,28 @@ if (debug) this.log(
           if (scSlots?.p50?.length > 0) {
             const scP50 = Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length);
             const scP10 = Math.round(scSlots.p10.reduce((a, b) => a + b, 0) / scSlots.p10.length);
-            const r = BatteryPolicyDevice._blendOmScSlot({
-              omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
+            // Hourly slot overlaps the lead window when it ends after the issue and starts
+            // before issue+3h — the current, partly-elapsed hour counts.
+            if (satIssueMs != null && slotMs + 3600_000 > satIssueMs && slotMs < satIssueMs + SAT_LEAD_MS
+                && (slot.pvPowerW > 0 || slot.satPanelW != null)) satWindowSlots++;
+            const satAgeOk = typeof slot.satIssueMs === 'number' && (Date.now() - slot.satIssueMs) <= SAT_MAX_AGE_MS;
+            if (!satAgeOk && slot.satPanelW != null) satStaleSlots++;
+            const satW  = (satAgeOk && typeof slot.satPanelW === 'number')
+              ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
+              : null;
+            const base  = { omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend };
+            let r;
+            if (satW == null) {
+              r = BatteryPolicyDevice._blendOmScSlot(base);
+            } else {
+              // Shadow: score both legs every run so the swap is measurable before the
+              // toggle flips, and stays measurable after it.
+              const rSc  = BatteryPolicyDevice._blendOmScSlot(base);
+              const rSat = BatteryPolicyDevice._blendOmScSlot({ ...base, satW, satActive: true });
+              r = satReplSc ? rSat : rSc;
+              satDeltaWh += rSat.blendedW - rSc.blendedW;
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sc=${scP50} sat=${satW} blend ${rSc.blendedW}→${rSat.blendedW}W`);
+            }
             blendedW = r.blendedW;
             if (byDay[dayKey]) { byDay[dayKey].sc += r.scAvg; if (r.useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
             scEffectiveSlots.push({ ts: slot.timestamp, w: r.scAvg, dayKey });
@@ -2872,6 +2912,15 @@ if (debug) this.log(
           if (byDay[dayKey]) { byDay[dayKey].om += slot.pvPowerW; byDay[dayKey].bl += blendedW; }
           return { ...slot, pvPowerW: blendedW };
         });
+
+        // Satellite swap trace. Slots here are hourly, so W sums straight to Wh. The Δ is
+        // always sat-leg minus SC-leg regardless of the toggle, and is bounded to the 0-3h
+        // lead window — it is NOT a whole-horizon plan delta.
+        if (satIssueMs != null) {
+          const ageMin = Math.round((Date.now() - satIssueMs) / 60_000);
+          this.log(`[SAT-SC] n=${satLog.length}/${satWindowSlots} ΔkWh=${(satDeltaWh / 1000).toFixed(2)} mode=${satReplSc ? 'active' : 'shadow'} satAge=${ageMin}min stale=${satStaleSlots}`);
+          if (satLog.length > 0) this.log(`[SAT-SC] ${satLog.join(' | ')}`);
+        }
 
         // Aggregate effective SC to hourly for chart (shows p10 where actually used)
         const scEffByDay = [{}, {}];
@@ -2893,7 +2942,10 @@ if (debug) this.log(
         const fmt = wh => (wh / 1000).toFixed(1);
         const pct = (v, base) => (base > 0 ? `${v >= base ? '+' : ''}${((v - base) / base * 100).toFixed(0)}%` : '—');
         const td = byDay[todayNLDate], tm = byDay[tomorrowNLDate];
-        const scToday    = td.sc > 0 ? ` SC=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})${td.p10slots ? ` p10=${td.p10slots}slots` : ''}` : '';
+        // Label the SC total honestly: with sat_replaces_sc on, the near-term slots inside it
+        // are satellite, not Solcast (byDay.sc sums the leg that was actually blended).
+        const scLabel    = satReplSc && satLog.length > 0 ? `SC*sat${satLog.length}` : 'SC';
+        const scToday    = td.sc > 0 ? ` ${scLabel}=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})${td.p10slots ? ` p10=${td.p10slots}slots` : ''}` : '';
         const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})${tm.p10slots ? ` p10=${tm.p10slots}slots` : ''}` : '';
         const accOM = this.learningEngine?.data?.pv_accuracy_om;
         const accSC = this.learningEngine?.data?.pv_accuracy_sc;
@@ -3224,7 +3276,11 @@ if (debug) this.log(
     }
 
     // Satellite nowcast: override 0-2h pvForecast with sat-derived panel-W.
-    const satDpActive = this.getSetting('satellite_dp_active') === true;
+    // sat_replaces_sc already swapped the satellite into the Solcast leg of the blend above.
+    // Letting this override run too would substitute the satellite twice — the second time
+    // over the OM half as well, which the F4 head-to-head does not support (OM ≥ sat).
+    const satDpActive = this.getSetting('satellite_dp_active') === true
+      && this.getSetting('sat_replaces_sc') !== true;
     if (pvForecast) {
       const _nowMs = Date.now();
       const _SAT_MAX_LEAD_MS = 2 * 3600_000;
@@ -4216,12 +4272,19 @@ if (debug) this.log(
     return pvFcByDay;
   }
 
-  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased }) {
-    const useP10 = !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
-    const scAvg = useP10 ? scP10 : scP50;
+  // satW/satActive: the satellite nowcast takes over the SOLCAST leg for near-term slots
+  // (sat_replaces_sc). F4 verdict 2026-07-28 — sat beats Solcast at every sstd threshold
+  // (n=302-642, no crossover) but OM stays marginally ahead of sat, so the satellite may
+  // only ever occupy the SC half; the OM half is untouched. The caller owns the freshness,
+  // lead-time and elevation gates (see the blend loop).
+  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false }) {
+    const satUsed = satActive && typeof satW === 'number' && Number.isFinite(satW) && satW >= 0;
+    // The p10 pessimism is a Solcast property (percentile spread); the satellite has none.
+    const useP10 = !satUsed && !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
+    const scAvg = satUsed ? satW : (useP10 ? scP10 : scP50);
     const w_om = unbiased ? 0.5 : wOM;
     const w_sc = unbiased ? 0.5 : wSC;
-    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10 };
+    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10, satUsed };
   }
 
   /**
