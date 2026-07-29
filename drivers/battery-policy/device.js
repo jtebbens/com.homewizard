@@ -3638,9 +3638,14 @@ if (debug) this.log(
     // (near-floor band + slot0 flip) so it fires almost never; no behaviour change on the live plan.
     try {
       const _floorPct = this._lastReserveFloorPct ?? null;
-      if (_floorPct != null && soc <= _floorPct + 3) {
+      // Require an ACTIVE floor: with floorPct=0 the band degenerates to "SoC <= 3%", which caught
+      // ordinary near-empty runs that have nothing to do with the reserve floor (2026-07-29) and
+      // evicted real catches from the 4-deep ring. Every catch of interest so far had a live floor
+      // (2026-07-26: 20%/16%, 2026-07-25 night: 38%), so this loses nothing.
+      if (_floorPct > 0 && soc <= _floorPct + 3) {
         const _r4 = a => Array.isArray(a) ? a.map(x => +(+x).toFixed(4)) : +(+a).toFixed(4);
         const _r0 = a => Array.isArray(a) ? a.map(x => Math.round(x)) : Math.round(a);
+        const _ts = t => (t == null ? null : new Date(t).toISOString());
         const _slot0 = this.optimizationEngine._schedule?.slots?.[0]?.action ?? null;
         const _now = Date.now();
         const _snap = {
@@ -3652,8 +3657,14 @@ if (debug) this.log(
           adjustedTerminalPvKwh: +adjustedTerminalPvKwh.toFixed(2),
           pvCloudFactor: +(_pvCloudFactor ?? 1).toFixed(3),
           dpAction0: _slot0,
-          prices: _r4(prices),
-          pvForecast: _r0(pvForecast),
+          // prices[] and pvForecast[] are arrays of OBJECTS ({price,timestamp,exportPrice} /
+          // {timestamp,pvPowerW}), not numbers — rounding them directly yielded NaN → JSON null,
+          // which made every catch before 2026-07-29 useless. Project to the scalar the DP uses and
+          // keep one anchor timestamp per array so runs with a different horizon start can be aligned.
+          pricesTs0: _ts(prices?.[0]?.timestamp),
+          pvForecastTs0: _ts(pvForecast?.[0]?.timestamp),
+          prices: _r4((prices ?? []).map(p => p.price)),
+          pvForecast: _r0((pvForecast ?? []).map(p => p.pvPowerW)),
           consumptionWPerSlot: _r0(consumptionWPerSlot),
           minDischargePrice: _r4(minDischargePrice),
           consumptionMargin: _r4(consumptionMargin),
@@ -3661,8 +3672,13 @@ if (debug) this.log(
         const _prev = this._nearFloorPrevSnap;
         // Pair only with a genuinely adjacent run (<30min old) whose slot0 differs = the flip.
         if (_prev && _prev.dpAction0 !== _slot0 && (_now - Date.parse(_prev.ts)) <= 30 * 60_000) {
+          // Seed from the PERSISTED setting, not only from _liveState: _liveState is in-memory and
+          // resets on restart, so a restart used to silently drop every catch collected so far
+          // (8 catches from the 2026-07-26 near-floor window were lost that way).
+          const _persisted = this.homey.settings.get('nearfloor_chatter_catch');
           const _ring = Array.isArray(this._liveState?.nearfloor_chatter_catch)
-            ? this._liveState.nearfloor_chatter_catch : [];
+            ? this._liveState.nearfloor_chatter_catch
+            : (Array.isArray(_persisted) ? _persisted : []);
           _ring.unshift({ prev: _prev, cur: _snap });
           this._setLive('nearfloor_chatter_catch', _ring.slice(0, 4));
           this.log(`🎯 nearfloor-chatter caught: ${_prev.dpAction0}→${_slot0} @SoC ${soc}% floor ${_floorPct}% price €${_snap.prices[0]} (pair persisted)`);
