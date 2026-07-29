@@ -381,8 +381,38 @@ class BatteryPolicyDevice extends Homey.Device {
   // sees the same data. The batcher spaces writes 8s apart so each ~30 MB spike
   // is fully GC'd before the next allocation.
   _setLive(key, value) {
+    this._deadArrayGuard(key, value);
     this._liveState[key] = value;
     this._queueSettingsPersist(key, value);
+  }
+
+  // An instrument that writes an all-null/NaN array is dead but looks alive: it fires on cadence,
+  // logs no error, and only reveals itself when someone finally reads the stored values back --
+  // the near-floor catcher rounded arrays of OBJECTS as if they were numbers and shipped 5 days of
+  // JSON nulls that way (fixed c4acba6). Cost is O(1) on healthy data: the scan bails at the first
+  // non-null element, so only a genuinely dead array pays for its own length. Logged once per key
+  // per app run, so a legitimately-empty-at-startup array cannot spam.
+  _deadArrayGuard(key, value) {
+    const dead = a => Array.isArray(a) && a.length >= 4
+      && !a.some(x => x != null && !(typeof x === 'number' && Number.isNaN(x)));
+    // Descend at most 4 levels, and into only the FIRST element of an array of objects (for a ring
+    // that is the newest entry) -- keeps the walk O(depth), never O(payload), on 50kB settings.
+    const find = (v, path, depth) => {
+      if (depth > 4 || v == null || typeof v !== 'object') return null;
+      if (dead(v)) return path;
+      if (Array.isArray(v)) return v.length ? find(v[0], `${path}[0]`, depth + 1) : null;
+      for (const k of Object.keys(v)) {
+        const hit = find(v[k], `${path}.${k}`, depth + 1);
+        if (hit) return hit;
+      }
+      return null;
+    };
+    const field = find(value, key, 0);
+    if (!field) return;
+    this._deadArrayWarned ??= new Set();
+    if (this._deadArrayWarned.has(field)) return;
+    this._deadArrayWarned.add(field);
+    this.error(`dead-array guard: ${field} is entirely null/NaN — instrument writing garbage, check the projection`);
   }
 
   async _initializeCapabilities() {
