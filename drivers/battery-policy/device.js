@@ -33,6 +33,14 @@ const MODE_HISTORY_DAYS      = 23;
 const MODE_HISTORY_BUCKET_MS = 15 * 60 * 1000;
 const MODE_HISTORY_FILE_RE   = /^mode-history-(\d{4}-\d{2}-\d{2})\.json$/;
 
+// [DP-INPUT-DUMP] lands one compute()-input snapshot per file next to the mode history. It used to
+// go to this.log(), but /tmp/homey.log is tmpfs: a ~150 kB dump line rolls out of reach as the log
+// grows and is gone after a restart, so the capture kept expiring before anyone read it. On
+// /userdata it survives both and is one plain-HTTP GET from the dev box. 12 ≈ an hour of runs.
+const DP_DUMP_DIR     = '/userdata';
+const DP_DUMP_KEEP    = 12;
+const DP_DUMP_FILE_RE = /^dp-input-\d{8}T\d{6}\.\d{3}Z\.json$/;
+
 // Night bias correction (see _nightBiasCorrW). The window is the block the 08-01 reading
 // verified as a LEVEL error (bias ≈ median, negative in 7/7 nights); daytime hours are excluded
 // because their error is tail-driven and h8/h10 additionally feed pvCoverage.
@@ -447,6 +455,30 @@ class BatteryPolicyDevice extends Homey.Device {
     const hours = (Date.now() - this._wireStatsSince) / 3600_000;
     const rate = hours > 0 ? (this._wireTotalBytes / 1048576 / hours).toFixed(1) : '—';
     console.log(`[MEM][settings.set] ${key} value=${bytes}B n=${st.n} | wire=${(wire / 1024).toFixed(0)}kB writes=${this._wireWrites} cum=${(this._wireTotalBytes / 1048576).toFixed(1)}MB rate=${rate}MB/h`);
+  }
+
+  // Writes one dump file and prunes to the newest DP_DUMP_KEEP. Returns the path, or null when the
+  // dump failed -- a diagnostic must never break the policy run that produced it.
+  _writeDpInputDump(payload) {
+    const fs  = require('fs');
+    const dir = this._dpDumpDir || DP_DUMP_DIR;
+    let file;
+    try {
+      // Serialise BEFORE opening the file, so a bad payload cannot leave a truncated dump behind.
+      const json = JSON.stringify(payload);
+      file = `${dir}/dp-input-${new Date(payload.at).toISOString().replace(/[-:]/g, '')}.json`;
+      fs.writeFileSync(file, json);
+    } catch (e) {
+      this.log(`[DP-INPUT-DUMP] write failed: ${e.message}`);
+      return null;
+    }
+    // Best-effort: the dump already landed, so a failed prune costs disk, not the capture. The
+    // filter is what keeps rotation off mode-history-*.json and the baseload state in the same dir.
+    try {
+      const names = fs.readdirSync(dir).filter(n => DP_DUMP_FILE_RE.test(n)).sort();
+      for (const n of names.slice(0, Math.max(0, names.length - DP_DUMP_KEEP))) fs.unlinkSync(`${dir}/${n}`);
+    } catch (e) { /* prune failed: dumps stay, retention slips a run */ }
+    return file;
   }
 
   // ---- mode history: per-Amsterdam-day files on /userdata (see MODE_HISTORY_* above) ----
@@ -4000,14 +4032,14 @@ if (debug) this.log(
     // runs you want captured (e.g. 3 to straddle an hour boundary).
     const _dumpsLeft = Number(this.homey.settings.get('dp_input_dump') || 0);
     if (_dumpsLeft > 0) {
-      try {
-        this.log(`[DP-INPUT-DUMP] ${JSON.stringify({
-          at: new Date().toISOString(), soc, capacityKwh, maxChargePowerW, maxDischargePowerW,
-          learnedRte, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow,
-          adjustedTerminalPvKwh, pvCloudFactor: _pvCloudFactor, refillConfidence, maxChargePrice,
-          prices, pvForecast, consumptionWPerSlot,
-        })}`);
-      } catch (e) { this.log(`[DP-INPUT-DUMP] failed: ${e.message}`); }
+      const _file = this._writeDpInputDump({
+        at: new Date().toISOString(), soc, capacityKwh, maxChargePowerW, maxDischargePowerW,
+        learnedRte, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow,
+        adjustedTerminalPvKwh, pvCloudFactor: _pvCloudFactor, refillConfidence, maxChargePrice,
+        prices, pvForecast, consumptionWPerSlot,
+      });
+      // Log the pointer, not the payload: the file is the artefact, the line only says where.
+      if (_file) this.log(`[DP-INPUT-DUMP] wrote ${_file} (${_dumpsLeft - 1} left)`);
       this.homey.settings.set('dp_input_dump', _dumpsLeft - 1);
     }
 
@@ -6385,5 +6417,7 @@ if (debug) this.log(
 
 
 }
+
+BatteryPolicyDevice.DP_DUMP_KEEP = DP_DUMP_KEEP;
 
 module.exports = BatteryPolicyDevice;
