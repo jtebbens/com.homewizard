@@ -27,21 +27,19 @@ trap 'rm -f "$TMP"' EXIT
 # mirror scripts had to after the 2026-07-13 cron-env outage (missing HOME/nvm PATH silently
 # killed them for 17 days).
 export HOME="${HOME:-/root}"
-if ! command -v homey >/dev/null 2>&1; then
+if ! command -v node >/dev/null 2>&1; then
   for n in "$HOME"/.nvm/versions/node/*/bin; do
     [ -d "$n" ] && PATH="$n:$PATH"
   done
   export PATH
 fi
-command -v homey >/dev/null 2>&1 || { echo "homey CLI not found in PATH" >&2; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "node not found in PATH" >&2; exit 1; }
 
 mkdir -p "$(dirname "$OUT")"
 [ -f "$OUT" ] || echo "ts,soc" > "$OUT"
 
-homey api insights get-log-entries \
-  --uri "$DEVICE" \
-  --id "$DEVICE:battery_group_average_soc" \
-  --resolution last24Hours --json \
+node "$(dirname "$0")/homey-local.js" \
+  insights "$DEVICE:battery_group_average_soc" last24Hours \
 | python3 -c '
 import json, sys
 d = json.load(sys.stdin)

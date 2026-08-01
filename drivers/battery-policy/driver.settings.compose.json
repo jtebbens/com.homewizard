@@ -517,6 +517,16 @@
           "nl": "⚠️ Experimenteel — één locatie (NL). Voor slots tot 3u vooruit neemt de satelliet-nowcast de Solcast-helft van de PV-blend over; de Open-Meteo-helft blijft ongemoeid. Niet combineren met \"Gebruik satelliet in DP-optimizer\" — deze instelling wint en schakelt die override uit."
         },
         "value": false
+      },
+      {
+        "id": "night_consumption_bias_corr",
+        "type": "checkbox",
+        "label": { "en": "Correct night consumption bias", "nl": "Corrigeer nacht-verbruiksbias" },
+        "hint": {
+          "en": "Measured on 652 samples: between 23:00 and 07:00 the learned consumption profile predicts ~19% too high (−76W on 403W actual), and the DP's safety margin inflates it further. This subtracts the measured per-hour bias (capped at 150W, downward only) from the optimizer's night consumption input. Uses the live accuracy meter, so it follows the seasons. Daytime is untouched — the error there comes from appliance peaks, not a level shift.",
+          "nl": "Gemeten op 652 samples: tussen 23:00 en 07:00 voorspelt het geleerde verbruiksprofiel ~19% te hoog (−76W op 403W werkelijk), en de veiligheidsmarge van de DP blaast dat verder op. Dit trekt de gemeten bias per uur (max 150W, alleen naar beneden) van de nacht-verbruiksinvoer van de optimizer af. Gebruikt de live accuracy-meter, dus volgt de seizoenen. Overdag verandert er niets — de fout daar komt van apparaatpieken, niet van een niveauverschuiving."
+        },
+        "value": false
       }
     ]
   },
@@ -552,6 +562,16 @@
         "id": "enable_policy_notifications",
         "type": "checkbox",
         "label": { "en": "Post policy decisions to timeline", "nl": "Policy‑beslissingen naar tijdlijn sturen" },
+        "value": false
+      },
+      {
+        "id": "dp_flatten_pv_shift",
+        "type": "checkbox",
+        "label": { "en": "Smooth PV refill threshold (experimental)", "nl": "PV-bijvuldrempel vloeiend maken (experimenteel)" },
+        "hint": {
+          "en": "⚠️ Experimental — changes optimizer planning. The optimizer treats a battery level that solar can refill to full as equal to a full battery. Without this, a level just below that point drops in value all at once, which can make buying grid power look worthwhile when it is not. With this on, the value follows solar smoothly.",
+          "nl": "⚠️ Experimenteel — verandert de planning van de optimizer. De optimizer beschouwt een accuniveau dat de zon nog vol kan laden als gelijkwaardig aan een volle accu. Zonder deze optie valt een niveau net onder dat punt in één klap terug in waarde, waardoor stroom inkopen winstgevend kan lijken terwijl dat niet zo is. Met deze optie aan volgt de waarde de zon vloeiend."
+        },
         "value": false
       }
     ]

@@ -85,6 +85,17 @@ always traces back here first. It is now surfaced live in `policy_last_run_debug
    0.6×cap`, non-PV slot, next slot not PV-strong). Do NOT revert to the old `dp.fill(dpMax)` +
    `_betterSlotAhead` gate — caused overnight standby. Documented in `battery-policy.md`.
 
+5. **`_runBackwardDP` runs TWICE per `compute()` — any instance state it writes needs a call-site
+   guard.** Call site 1 (`253`) is the live pass and passes the full argument list including
+   `currentSoc`; call site 2 (`718`) is the expansion-scenario profit probe and stops at
+   `pvKwhTomorrow`, so `currentSoc` and the eight params after it arrive `undefined`. The probe runs
+   *after* the live pass, so anything the method assigns to `this.*` unconditionally gets clobbered
+   by the SoC-less run before a consumer reads it. This already bit once (2026-07-25, `dd431b8`): an
+   unconditional `this._flattenDebug = null` reset wiped the live snapshot and policy-engine logged a
+   line full of `undefined`. Both the reset and the aggregate write now sit behind
+   `initialSocG != null` (`1005–1010`). **Adding any new `this.*` diagnostic or state to
+   `_runBackwardDP`: gate it on the live pass, and check both call sites.**
+
 ## Invariants that guard the pipeline
 
 `test/optimizer-properties.test.js` (run via `npm run test-unit`):

@@ -82,7 +82,7 @@ function _settingsFootprintKB(settings) {
     'policy_optimizer_schedule', 'policy_all_prices', 'policy_all_prices_15min',
     'policy_pv_forecast_hourly', 'policy_pv_forecast_om', 'policy_pv_forecast_sc',
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
-    'weather_forecast_cache', 'battery_expansion_analysis', 'policy_daily_profit',
+    'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
     'policy_pv_predictions_recent', 'battery_policy_state', 'device_settings',
   ];

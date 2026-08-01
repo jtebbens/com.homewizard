@@ -40,9 +40,12 @@ function logMem(label) {
       const ab  = (mu.arrayBuffers / 1024 / 1024).toFixed(1);
       rssPart = ` rss=${rss}MB ab=${ab}MB`;
     } catch (_) { /* sandbox blocks rss */ }
-    console.log(`[MEM] ${label}: heap=${heap}/${total}MB ext=${ext}MB${rssPart}`);
+    // console.log bypasses Homey's logger, so these lines land in the log without the
+    // ISO prefix every other line has — time attribution then depends on whichever
+    // timestamped line happens to precede them. Stamp them here instead.
+    console.log(`${new Date().toISOString()} [MEM] ${label}: heap=${heap}/${total}MB ext=${ext}MB${rssPart}`);
   } catch (e) {
-    console.log(`[MEM] ${label}: unavailable (${e.message})`);
+    console.log(`${new Date().toISOString()} [MEM] ${label}: unavailable (${e.message})`);
   }
 }
 
@@ -76,7 +79,6 @@ class HomeWizardApp extends Homey.App {
 
     // 🔍 CRASH DIAGNOSTICS: Global error handlers
     this._setupGlobalErrorHandlers();
-
 
       if (process.env.DEBUG === '1' && Testing) {
         try {
@@ -162,6 +164,26 @@ class HomeWizardApp extends Homey.App {
         }
       }
       if (removed > 0) this.log(`[MIGRATE] Removed ${removed} orphaned batt_mode_hist key(s)`);
+
+      // Provider caches that no longer belong in settings. Every settings.set() ships the whole
+      // settings object, so these 137.9 kB rode along on every unrelated write (28% of a 490 kB
+      // blob). Two groups, both dead weight by the time this runs:
+      //   - moved to /userdata (see lib/userdata-store.js): the live caches, now stale duplicates
+      //   - never written since ~2026-03: xadi/kwhprice _saveCache() are no-ops (MergedPriceProvider
+      //     saves centrally) and energyzero has no owning provider left at all, so their
+      //     expiry > Date.now() check has failed for months
+      const staleCacheKeys = [
+        'merged_price_cache', 'weather_forecast_cache', 'solcast_forecast_cache',
+        'xadi_cache', 'kwhprice_cache', 'energyzero_cache',
+      ];
+      let cacheKB = 0;
+      for (const key of staleCacheKeys) {
+        const stored = all[key];
+        if (stored == null) continue;
+        cacheKB += JSON.stringify(stored).length / 1024;
+        try { this.homey.settings.unset(key); } catch (_) {}
+      }
+      if (cacheKB > 0) this.log(`[MIGRATE] Dropped ${cacheKB.toFixed(1)} kB of provider caches from settings`);
     } catch (e) {
       this.error('[MIGRATE] Settings migration failed:', e.message);
     }

@@ -47,5 +47,18 @@
     "node/no-commonjs": "off",
     "quotes": "off",
     "prefer-template": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "drivers/battery-policy/*.js"
+      ],
+      "rules": {
+        "no-restricted-syntax": ["error", {
+          "selector": "CallExpression[callee.property.name='toLocaleDateString'][arguments.length>1]",
+          "message": "Constructs a fresh Intl.DateTimeFormat per call; this file calls it per slot inside the policy loop. Use the module-level _amsDayKeyFormatter.format(d). Only add an eslint-disable line for genuinely one-shot paths, with the reason."
+        }]
+      }
+    }
+  ]
 }
