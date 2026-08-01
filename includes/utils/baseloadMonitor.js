@@ -27,6 +27,11 @@ class BaseloadMonitor {
     this.nightEndHour = 5;
     this.maxNights = 30;
 
+    // Per-night samples live on disk, not in the settings blob: they are 99% of this
+    // state's 260 kB, and every settings.set() re-serializes all 111 keys (~1338 kB).
+    // Overridden in tests.
+    this.stateDir = '/userdata';
+
     // Original thresholds - these work well for most households
     // The key insight: fridge cycles (50-300W, 30-120min) are normal and not tracked as invalid
     this.highPlateauThreshold = 800;
@@ -624,22 +629,61 @@ class BaseloadMonitor {
     if (this._saveTimer) clearTimeout(this._saveTimer);
     this._saveTimer = setTimeout(() => {
       this._saveTimer = null;
-      this.homey.settings.set('baseload_state',{
-        nightHistory:this.nightHistory,
-        currentBaseload:this.currentBaseload,
-        deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
-        invalidNightCounter:this.invalidNightCounter
-      });
+      this._writeState();
     }, 5 * 60 * 1000);
+  }
+
+  get _samplesFile() {
+    return `${this.stateDir}/baseload-samples.json`;
+  }
+
+  // Samples to disk, everything else to settings. A failed file write must not cost us the
+  // slim state, so the settings.set() runs either way — the samples are a display detail,
+  // the nightly averages are what the baseload calculation restarts from.
+  _writeState() {
+    const fs = require('fs');
+    const samples = {};
+    for (const n of this.nightHistory) {
+      if (n.date && Array.isArray(n.samples)) samples[n.date] = n.samples;
+    }
+    try {
+      fs.writeFileSync(this._samplesFile, JSON.stringify(samples));
+    } catch (e) {
+      this.homey.error?.(`[Baseload] sample file write failed: ${e.message}`);
+    }
+
+    this.homey.settings.set('baseload_state',{
+      nightHistory:this.nightHistory.map(({ samples: _s, ...rest }) => rest),
+      currentBaseload:this.currentBaseload,
+      deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
+      invalidNightCounter:this.invalidNightCounter
+    });
   }
 
   _loadState() {
     const s=this.homey.settings.get('baseload_state');
     if (!s) return;
-    if (Array.isArray(s.nightHistory)) this.nightHistory=s.nightHistory;
+    if (Array.isArray(s.nightHistory)) this.nightHistory=this._restoreSamples(s.nightHistory);
     if (typeof s.currentBaseload==='number') this.currentBaseload=s.currentBaseload;
     if (Array.isArray(s.deviceNotificationPrefs)) this.deviceNotificationPrefs=new Map(s.deviceNotificationPrefs);
     if (typeof s.invalidNightCounter==='number') this.invalidNightCounter=s.invalidNightCounter;
+  }
+
+  // Nights keep whatever samples the old settings blob still holds (first start after the
+  // split); otherwise they come from the file. A missing or corrupt file costs the samples,
+  // not the nights.
+  _restoreSamples(nightHistory) {
+    const fs = require('fs');
+    let stored = {};
+    try {
+      stored = JSON.parse(fs.readFileSync(this._samplesFile, 'utf8')) || {};
+    } catch (e) { /* no file yet, or unreadable — fall through to inline/empty */ }
+
+    return nightHistory.map(n => ({
+      ...n,
+      samples: Array.isArray(n.samples) ? n.samples
+        : (Array.isArray(stored[n.date]) ? stored[n.date] : []),
+    }));
   }
 
   setNotificationsEnabledForDevice(device,enabled) {

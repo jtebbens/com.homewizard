@@ -676,6 +676,26 @@
     /* ── TAB SWITCHING ── */
     let homeyInstance = null;
 
+    /* The mode history lives on /userdata as one JSON per Amsterdam day, not in the settings blob:
+       it was 43.8% of that blob and rode along on every unrelated settings.set. Day keys are
+       derivable from the clock, so no index file is needed — a day that does not exist 404s and
+       reads as empty. The formatter is hoisted; constructing one per call is the expensive part. */
+    const _amsDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const _amsDay = ms => _amsDayFmt.format(new Date(ms));
+
+    async function fetchModeHistory(dayKeys) {
+      const days = [...new Set(dayKeys)].sort();
+      const chunks = await Promise.all(days.map(async d => {
+        try {
+          const res = await fetch(`/app/com.homewizard/userdata/mode-history-${d}.json`);
+          if (!res.ok) return [];
+          const arr = await res.json();
+          return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+      }));
+      return [].concat(...chunks);
+    }
+
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1110,6 +1130,19 @@
         /* ── BASELOAD ── */
         const state = settings['baseload_state'];
         const history = state?.nightHistory || [];
+
+        /* Per-night samples live on /userdata, not in the settings blob (they were 99% of
+           its 260 kB and inflated every unrelated settings.set). A failed fetch costs the
+           per-night minima and the sample viewer, not the nightly averages above them. */
+        try {
+          const res = await fetch('/app/com.homewizard/userdata/baseload-samples.json');
+          if (res.ok) {
+            const byDate = await res.json();
+            history.forEach(n => {
+              if (!Array.isArray(n.samples)) n.samples = byDate[n.date] || [];
+            });
+          }
+        } catch (e) { /* file not written yet, or unreachable */ }
         const currentBaseload = state?.currentBaseload;
 
         if (currentBaseload && typeof currentBaseload === 'number') {
@@ -1953,6 +1986,17 @@
       const currentSOC = policyState?.batterySOC ?? 50;
       const socPlan = settings['policy_soc_plan'] || {};
 
+      /* Day files to pull once for all three history consumers below: the past-slot fill and the
+         event list need the last 24h, and the daily-profit table needs any completed day it has
+         not scored yet — that loop is incremental, so normally this is yesterday alone. */
+      const _wantDays = [_amsDay(now.getTime()), _amsDay(now.getTime() - 86400000)];
+      const _scored = settings['policy_daily_profit'] || [];
+      for (let i = 1; i <= 23; i++) {
+        const d = _amsDay(now.getTime() - i * 86400000);
+        if (!_scored.some(x => x.date === d)) _wantDays.push(d);
+      }
+      const modeHistoryAll = await fetchModeHistory(_wantDays);
+
       /* ── Engine settings ── */
       const deviceSettings = settings['device_settings'] || {};
       const battEff = settings['battery_efficiency_effective'] || deviceSettings['battery_efficiency'] || 0.75;
@@ -2194,7 +2238,7 @@
         intervals[curIdx].soc = currentSOC;
 
         // ✅ NEW: Fill in PAST intervals with historical data
-        const modeHistory = settings['policy_mode_history'] || [];
+        const modeHistory = modeHistoryAll;
         for (let i = 0; i < curIdx; i++) {
           const interval = intervals[i];
           const intervalStart = interval.timestamp;
@@ -2549,7 +2593,7 @@
 
       /* ── Dagwinst: reconstruct actual profit from mode history ── */
       try {
-        const history     = settings['policy_mode_history'] || [];
+        const history     = modeHistoryAll;
         const capKwhLocal = capKwh || 2.688;
         const dailyProfit = settings['policy_daily_profit'] || [];
 
@@ -2788,7 +2832,7 @@
         }
 
         // Event history — last 24h of policy_mode_history entries with extended fields
-        const evHistory = (settings['policy_mode_history'] || [])
+        const evHistory = modeHistoryAll
           .filter(h => h.pvW != null || h.consumW != null || h.gridW != null)
           .filter(h => Date.now() - new Date(h.ts).getTime() <= 24 * 3600 * 1000)
           .slice(-96);

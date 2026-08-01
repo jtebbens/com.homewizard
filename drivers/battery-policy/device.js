@@ -19,6 +19,27 @@ const debug = false;
 const _amsDayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
 const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false });
 
+// The mode history is stored as one JSON file per Amsterdam day on /userdata. It lived in settings
+// before -- first as a single 2200-entry key (~596 kB), then as per-day keys -- but chunking only
+// shrank the per-key payload, not the cost: every settings.set() ships the WHOLE settings object
+// (SDK manager/settings.js _save -> emitApp('setSettings', …)), so 587 kB of history rode along on
+// every unrelated write, 43.8% of a 1340 kB blob. Off settings, an append writes ~25 kB to disk and
+// costs other keys nothing. Retention is unchanged in wall-clock terms: MODE_HISTORY_DAYS ≈ the old
+// 2200-entry cap at 96 buckets/day, which learning-engine.js:715-718 (EMA alpha 0.01 ≈ 25d) is
+// tuned against.
+const MODE_HISTORY_PREFIX    = 'policy_mode_history_';
+const MODE_HISTORY_DIR       = '/userdata';
+const MODE_HISTORY_DAYS      = 23;
+const MODE_HISTORY_BUCKET_MS = 15 * 60 * 1000;
+const MODE_HISTORY_FILE_RE   = /^mode-history-(\d{4}-\d{2}-\d{2})\.json$/;
+
+// Night bias correction (see _nightBiasCorrW). The window is the block the 08-01 reading
+// verified as a LEVEL error (bias ≈ median, negative in 7/7 nights); daytime hours are excluded
+// because their error is tail-driven and h8/h10 additionally feed pvCoverage.
+const NIGHT_BIAS_HOURS     = new Set([23, 0, 1, 2, 3, 4, 5, 6]); // Amsterdam local
+const NIGHT_BIAS_CAP_W     = 150;
+const NIGHT_BIAS_MIN_COUNT = 20;
+
 // Suppress refillConfidence swings below this threshold between consecutive policy
 // runs. Open-Meteo refreshes its ensemble hourly even overnight (see _updateWeather,
 // "1h cycle"), so pvSpreadTomorrow — and thus refillConfidence — churns on pure
@@ -55,18 +76,34 @@ function _settingsFootprintKB(settings) {
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
     'weather_forecast_cache', 'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
-    'battery_policy_state', 'device_settings',
+    'policy_pv_predictions_recent', 'battery_policy_state', 'device_settings',
   ];
   try {
+    // The mode history lives in ~23 day chunks; report them as one line so they can't crowd the
+    // top-8 out with 23 near-identical entries.
+    const allKeys = typeof settings.getKeys === 'function' ? settings.getKeys()
+      : (typeof settings.getAll === 'function' ? Object.keys(settings.getAll()) : []);
+    const chunkKeys = allKeys.filter(k => k.startsWith(MODE_HISTORY_PREFIX));
+    const chunkBytes = chunkKeys.reduce((s, k) => s + JSON.stringify(settings.get(k) ?? null).length, 0);
     const entries = KNOWN_KEYS
       .map(k => ({ k, bytes: JSON.stringify(settings.get(k) ?? null).length }))
+      .concat(chunkKeys.length ? [{ k: `${MODE_HISTORY_PREFIX}*(${chunkKeys.length}d)`, bytes: chunkBytes }] : [])
       .filter(e => e.bytes > 5)
       .sort((a, b) => b.bytes - a.bytes);
-    const totalKB = (entries.reduce((s, e) => s + e.bytes, 0) / 1024).toFixed(1);
+    // Total must span ALL keys, not just KNOWN_KEYS: every settings.set() ships the complete
+    // object (SDK manager/settings.js _save -> emitApp('setSettings', this._settings)), so the
+    // wire cost per write is this total regardless of which key was written. KNOWN_KEYS stays
+    // the breakdown only -- it misses baseload_state/debug_logs and read 780kB where the
+    // object is ~1299kB (feedback_measure_wire_payload_not_value).
+    const totalBytes = allKeys.reduce((s, k) => s + k.length + JSON.stringify(settings.get(k) ?? null).length, 0);
+    const namedKB = (entries.reduce((s, e) => s + e.bytes, 0) / 1024).toFixed(1);
     const top = entries.slice(0, 8).map(e => `${e.k}=${(e.bytes / 1024).toFixed(1)}kB`).join(' | ');
-    return `${totalKB}kB total | ${top}`;
+    return {
+      totalBytes,
+      line: `${(totalBytes / 1024).toFixed(1)}kB wire (${allKeys.length} keys), ${namedKB}kB named | ${top}`,
+    };
   } catch (e) {
-    return `unavailable: ${e.message}`;
+    return { totalBytes: 0, line: `unavailable: ${e.message}` };
   }
 }
 
@@ -76,6 +113,10 @@ class BatteryPolicyDevice extends Homey.Device {
     this.homey.app.bumpDeviceCount?.('battery-policy');
     this.log('BatteryPolicyDevice initialized');
     _memMB('onInit-start');
+
+    // Load the day files, then drain whatever settings still holds -- both before anything reads it.
+    try { this._loadModeHistory(); } catch (e) { this.error('[ModeHistory] load:', e.message); }
+    try { this._migrateModeHistoryChunks(); } catch (e) { this.error('[MIGRATE] mode history:', e.message); }
 
     // Components
     this.learningEngine = new LearningEngine(this.homey, this);
@@ -221,17 +262,9 @@ class BatteryPolicyDevice extends Homey.Device {
           }
           // Record predictive mode in planning chart history
           try {
-            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
-            const nowTs  = new Date();
-            const bucket = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
-            const existing = modeHistory.findIndex(
-              h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
-            );
-            const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: liveSoc, price: null };
-            if (existing >= 0) modeHistory[existing] = entry;
-            else modeHistory.push(entry);
-            if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
-            this._queueSettingsPersist('policy_mode_history', modeHistory);
+            this._upsertModeHistory({
+              ts: new Date().toISOString(), hwMode: 'predictive', soc: liveSoc, price: null,
+            });
           } catch (e) { this.error('Failed to save predictive mode history (flush):', e); }
           try { this._saveWidgetData({ skipChart: true }); } catch (e) { this.error('Widget save (predictive) failed:', e.message); }
         }).catch(e => this.error('Predictive mode flush failed:', e.message));
@@ -309,7 +342,12 @@ class BatteryPolicyDevice extends Homey.Device {
   }
 
   _logSettingsFootprint() {
-    this.log(`[MEM] settings footprint: ${_settingsFootprintKB(this.homey.settings)}`);
+    const fp = _settingsFootprintKB(this.homey.settings);
+    // Cached for _accountSettingsWrite: re-scanning all keys per write would cost more than the
+    // write it measures. Refreshed on this line's cadence, so a write in between reports the
+    // previous total -- fine for a kB/hour rate, not for a single-write figure.
+    this._settingsWireBytes = fp.totalBytes;
+    this.log(`[MEM] settings footprint: ${fp.line}`);
   }
 
   // Queue a settings.set call for deferred, serialized execution.
@@ -328,7 +366,11 @@ class BatteryPolicyDevice extends Homey.Device {
     // unchanged value queued every 15-min cycle is pure waste (device.js:306).
     const serialized = JSON.stringify(value);
     if (this._settingsLastWritten.get(key) === serialized) return;
-    this._settingsQueue.set(key, value); // coalesces duplicates
+    // Carry the string through to the flush instead of letting it rebuild one: the flush
+    // has to refresh _settingsLastWritten after the set(), and on a 576kB key that second
+    // walk is a full duplicate of the one just done here (project_app_rss_step_0722 —
+    // the settings.set path is 79.9% of app allocation).
+    this._settingsQueue.set(key, { value, serialized }); // coalesces duplicates
     if (this._settingsFlushTimer) return;
     this._settingsFlushTimer = this.homey.setTimeout(() => {
       this._settingsFlushTimer = null;
@@ -358,13 +400,14 @@ class BatteryPolicyDevice extends Homey.Device {
     // first whenever pending costs nothing extra (same 1-key-per-8s cadence, same 30MB
     // GC-safety rationale) — it just jumps the queue instead of waiting its turn.
     const _priorityKey = 'policy_last_run_debug';
-    const [key, value] = this._settingsQueue.has(_priorityKey)
+    const [key, entry] = this._settingsQueue.has(_priorityKey)
       ? [_priorityKey, this._settingsQueue.get(_priorityKey)]
       : this._settingsQueue.entries().next().value;
     this._settingsQueue.delete(key);
     try {
-      this.homey.settings.set(key, value);
-      this._settingsLastWritten.set(key, JSON.stringify(value));
+      this.homey.settings.set(key, entry.value);
+      this._settingsLastWritten.set(key, entry.serialized);
+      this._accountSettingsWrite(key, entry.serialized.length);
     } catch (e) {
       this.error(`Failed to persist ${key}:`, e.message);
     }
@@ -374,6 +417,190 @@ class BatteryPolicyDevice extends Homey.Device {
         this._flushSettingsQueue();
       }, 8000);
     }
+  }
+
+  // Per-key accounting for the settings.set path. That path is 79.9% of all app allocation
+  // and cost scales with payload size (the homey serializer walks the whole blob per set),
+  // so bytes-written per key is the proxy for who actually drives it. Which key dominates
+  // was so far only INFERRED from the stored footprint (576 of 773.9 kB) -- this measured it
+  // (policy_mode_history: 596 kB/write, 86% of 1.33 MB over 42 writes), which is what gated the
+  // day-chunk rewrite above.
+  _accountSettingsWrite(key, bytes) {
+    if (!this._settingsWriteStats) this._settingsWriteStats = new Map();
+    const st = this._settingsWriteStats.get(key) || { n: 0, bytes: 0 };
+    st.n += 1;
+    st.bytes += bytes;
+    this._settingsWriteStats.set(key, st);
+
+    // The wire cost is the whole settings object per set(), not this key's value -- so the
+    // rate that matters is writes x object size, and shrinking one key only pays off via that
+    // product. Undercounts: writes that bypass _queueSettingsPersist (baseloadMonitor,
+    // debug_logs from the other drivers, app.js migration) ship the same object unmeasured.
+    const wire = this._settingsWireBytes || 0;
+    if (!this._wireStatsSince) {
+      this._wireStatsSince = Date.now();
+      this._wireTotalBytes = 0;
+      this._wireWrites = 0;
+    }
+    this._wireTotalBytes += wire;
+    this._wireWrites += 1;
+    const hours = (Date.now() - this._wireStatsSince) / 3600_000;
+    const rate = hours > 0 ? (this._wireTotalBytes / 1048576 / hours).toFixed(1) : '—';
+    console.log(`[MEM][settings.set] ${key} value=${bytes}B n=${st.n} | wire=${(wire / 1024).toFixed(0)}kB writes=${this._wireWrites} cum=${(this._wireTotalBytes / 1048576).toFixed(1)}MB rate=${rate}MB/h`);
+  }
+
+  // ---- mode history: per-Amsterdam-day files on /userdata (see MODE_HISTORY_* above) ----
+
+  _modeHistoryBucket(ts) {
+    return Math.round(new Date(ts).getTime() / MODE_HISTORY_BUCKET_MS) * MODE_HISTORY_BUCKET_MS;
+  }
+
+  _modeHistoryFile(dayKey) {
+    return `${this._modeStateDir || MODE_HISTORY_DIR}/mode-history-${dayKey}.json`;
+  }
+
+  // The Map is the source of truth, the files are only persistence: _readModeHistory() runs on every
+  // policy run and would otherwise re-parse the whole 23-day store from disk -- the allocation this
+  // move set out to kill. Settings held the same data in memory before, so this costs nothing extra.
+  _modeHistMap() {
+    if (!this._modeHist) this._modeHist = new Map();
+    return this._modeHist;
+  }
+
+  _modeHistoryKeys() {
+    return [...this._modeHistMap().keys()].sort();
+  }
+
+  // A failed write costs that day on the next restart, not the running state -- the entry stays in
+  // the Map either way. Same trade-off as baseloadMonitor._writeState.
+  _writeModeDay(dayKey) {
+    try {
+      require('fs').writeFileSync(this._modeHistoryFile(dayKey), JSON.stringify(this._modeHistMap().get(dayKey) || []));
+    } catch (e) {
+      this.error(`[ModeHistory] write ${dayKey} failed: ${e.message}`);
+    }
+  }
+
+  // Fills the Map from disk at init. A corrupt or unreadable file costs that one day, not the store.
+  _loadModeHistory() {
+    const fs  = require('fs');
+    const dir = this._modeStateDir || MODE_HISTORY_DIR;
+    const map = this._modeHistMap();
+    let names = [];
+    try { names = fs.readdirSync(dir); } catch (e) { return; }
+    for (const name of names) {
+      const m = MODE_HISTORY_FILE_RE.exec(name);
+      if (!m) continue;
+      try {
+        const arr = JSON.parse(fs.readFileSync(`${dir}/${name}`, 'utf8'));
+        if (Array.isArray(arr)) map.set(m[1], arr);
+      } catch (e) { /* corrupt or unreadable: that day is lost, the rest stands */ }
+    }
+  }
+
+  // Upsert one 15-min bucket. The chunk is picked from the BUCKET, not the raw ts: a 23:53 sample
+  // rounds up to the next day's 00:00 bucket, and filing it under the ts day would put two chunks
+  // in play for one bucket.
+  _upsertModeHistory(entry) {
+    const bucket = this._modeHistoryBucket(entry.ts);
+    const dayKey = _amsDayKeyFormatter.format(new Date(bucket));
+    const map    = this._modeHistMap();
+    const chunk  = map.get(dayKey) || [];
+    const i = chunk.findIndex(h => this._modeHistoryBucket(h.ts) === bucket);
+    if (i >= 0) {
+      // A run that reports no SoC must not erase one an earlier run in the same bucket did report.
+      if (entry.soc == null) entry.soc = chunk[i].soc;
+      chunk[i] = entry;
+    } else {
+      chunk.push(entry);
+    }
+    map.set(dayKey, chunk);
+    this._writeModeDay(dayKey);
+    this._pruneModeHistoryChunks();
+  }
+
+  // Retention anchors on the newest chunk, not on the clock, so a stopped or rewound clock cannot
+  // wipe the store. Chunks dated beyond tomorrow are excluded from the anchor: one clock-glitch
+  // entry in the future would otherwise prune every real day.
+  _pruneModeHistoryChunks() {
+    const days = this._modeHistoryKeys();
+    if (!days.length) return;
+    const map      = this._modeHistMap();
+    const tomorrow = _amsDayKeyFormatter.format(new Date(Date.now() + 86400000));
+    const sane     = days.filter(d => d <= tomorrow);
+    const newest   = (sane.length ? sane : days)[(sane.length ? sane : days).length - 1];
+    const cutoff   = new Date(new Date(`${newest}T00:00:00Z`).getTime() - (MODE_HISTORY_DAYS - 1) * 86400000)
+      .toISOString().slice(0, 10);
+    for (const d of days) {
+      if (d < cutoff) {
+        map.delete(d);
+        try { require('fs').unlinkSync(this._modeHistoryFile(d)); } catch (_) {}
+      }
+    }
+  }
+
+  // Concatenated history, oldest first. With lastN only the newest chunks needed to cover N are
+  // walked, so the 96-slot consumers no longer touch the full 23-day store.
+  _readModeHistory(lastN) {
+    const days = this._modeHistoryKeys();
+    const map  = this._modeHistMap();
+    const chunks = [];
+    let n = 0;
+    for (let i = days.length - 1; i >= 0; i--) {
+      const chunk = map.get(days[i]) || [];
+      chunks.unshift(chunk);
+      n += chunk.length;
+      if (lastN != null && n >= lastN) break;
+    }
+    const all = [].concat(...chunks);
+    return lastN != null ? all.slice(-lastN) : all;
+  }
+
+  _readModeHistoryDay(dayKey) {
+    return this._modeHistMap().get(dayKey) || [];
+  }
+
+  // One-time move out of settings, covering both shapes that ever shipped: the legacy single-key
+  // array and the per-day keys that replaced it. Idempotent -- every source key is unset afterwards,
+  // so a second call returns at the guard. Runs after _loadModeHistory(), so a bucket the files
+  // already hold wins over the settings copy.
+  _migrateModeHistoryChunks() {
+    const s = this.homey.settings;
+    const allKeys = typeof s.getKeys === 'function' ? s.getKeys()
+      : (typeof s.getAll === 'function' ? Object.keys(s.getAll()) : []);
+    const chunkKeys = allKeys.filter(k => k.startsWith(MODE_HISTORY_PREFIX));
+    const legacy    = s.get('policy_mode_history');
+    if (!chunkKeys.length && !Array.isArray(legacy)) return;
+
+    const map     = this._modeHistMap();
+    const touched = new Set();
+    let entries   = 0;
+    const add = (h) => {
+      if (!h || !h.ts) return;
+      const bucket = this._modeHistoryBucket(h.ts);
+      const dayKey = _amsDayKeyFormatter.format(new Date(bucket));
+      const chunk  = map.get(dayKey) || [];
+      if (chunk.some(x => this._modeHistoryBucket(x.ts) === bucket)) return;
+      chunk.push(h);
+      map.set(dayKey, chunk);
+      touched.add(dayKey);
+      entries++;
+    };
+    for (const k of chunkKeys) for (const h of (s.get(k) || [])) add(h);
+    if (Array.isArray(legacy)) for (const h of legacy) add(h);
+
+    // Merging two sources into a day that may already hold file entries can leave it out of order;
+    // every reader assumes chronological.
+    for (const dayKey of touched) map.get(dayKey).sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+    for (const k of [...chunkKeys, 'policy_mode_history']) {
+      try { s.unset(k); } catch (_) {}
+    }
+    this._pruneModeHistoryChunks();
+    for (const dayKey of touched) {
+      if (map.has(dayKey)) this._writeModeDay(dayKey);
+    }
+    this.log(`[MIGRATE] policy_mode_history → ${touched.size} day file(s), ${entries} entries`);
   }
 
   // Store rebuildable UI state in-memory for fast internal reads (cameras, widget),
@@ -1052,10 +1279,9 @@ if (debug) this.log(
         // Midnight day rollover: swap _chartTomorrow → _chartToday when Amsterdam date changes.
         // Prevents camera from showing yesterday's chart during SlimLaden/predictive pause overnight.
         {
-          const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const todayKey = _amsDayKeyFormatter.format(new Date());
           if (this._lastChartRolloverDay !== todayKey && this._chartToday?.slots?.length > 0) {
-            const firstSlotDay = new Date(this._chartToday.slots[0].ts)
-              .toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            const firstSlotDay = _amsDayKeyFormatter.format(new Date(this._chartToday.slots[0].ts));
             if (firstSlotDay !== todayKey) {
               this._lastChartRolloverDay = todayKey;
               this.log('[Chart] Day rollover — swapping tomorrow chart to today camera');
@@ -1227,6 +1453,86 @@ if (debug) this.log(
     return { heldKwh, bothReachMax, offServesEvening, eurAtStake };
   }
 
+  /**
+   * Shadow metric: the € value of a grid top-up the DP declined, on days where the PV surplus
+   * dries up before the battery is full. Log-only — nothing here changes a decision.
+   *
+   * The DP skips midday grid charging via preserve:pv_strong / trickle:pv_weak, betting free PV
+   * will fill the battery anyway. On an overcast day that bet fails: 2026-07-30 peaked at 44%
+   * while midday slots cost €0.144-0.152 and the evening peak was €0.396. Whether buying would
+   * actually have paid is still OPEN (project_dp_daytime_pv_timing_no_hedge, "measure first,
+   * then decide" — 2026-07-05); this collects the numbers to settle it.
+   *
+   * marginPerKwh charges the FULL cycleCostPerKwh, not half: the DP books cycleCostPerKwh*0.5 on
+   * charge (optimization-engine.js:904) AND on discharge (:946), so a round trip pays both.
+   *
+   * Deliberately NOT clamped at zero (feedback_metric_must_allow_negative): a low evening peak or
+   * an expensive midday has to be able to come out negative, otherwise the measurement can only
+   * ever confirm the hypothesis that prompted it.
+   *
+   * Returns null when there is nothing to measure (no PV surplus in the horizon, nothing left to
+   * sell into, headroom under 0.2 kWh) or when any value would be non-finite.
+   * socProjected is in percent (socG/GRID, 0-100), like _morningWaiveShadowMetrics.
+   */
+  _topupMissMetrics(slots, capacityKwh, rte, cycleCostKwh, maxSoc) {
+    if (!slots?.length || !Number.isFinite(capacityKwh) || capacityKwh <= 0) return null;
+    if (!Number.isFinite(rte) || !Number.isFinite(cycleCostKwh) || !Number.isFinite(maxSoc)) return null;
+    const N = slots.length;
+
+    // End of PV surplus = last slot the plan still expects to store PV. pvCoverage is net surplus
+    // / maxChargeW (optimization-engine.js:227), so > 0 means "there is something to store".
+    let pvEnd = -1;
+    for (let i = 0; i < N; i++) { if ((slots[i].pvCoverage ?? 0) > 0) pvEnd = i; }
+    if (pvEnd < 0 || pvEnd >= N - 1) return null; // no surplus at all, or nothing left to sell into
+
+    const socAtEnd = slots[pvEnd].socProjected;
+    if (!Number.isFinite(socAtEnd)) return null;
+    const headroomKwh = capacityKwh * Math.max(0, maxSoc - socAtEnd) / 100;
+    if (headroomKwh < 0.2) return null; // essentially full on PV alone → nothing worth buying
+
+    // Sell side: the highest price after the PV surplus ends.
+    let eveMax = -Infinity, eveIdx = -1;
+    for (let i = pvEnd + 1; i < N; i++) {
+      const p = slots[i].price;
+      if (Number.isFinite(p) && p > eveMax) { eveMax = p; eveIdx = i; }
+    }
+    if (eveIdx < 0) return null;
+
+    // Buy side: cheapest slot from now up to that peak — the window a top-up could have used.
+    let buy = Infinity, buyIdx = -1;
+    for (let i = 0; i < eveIdx; i++) {
+      const p = slots[i].price;
+      if (Number.isFinite(p) && p < buy) { buy = p; buyIdx = i; }
+    }
+    if (buyIdx < 0) return null;
+
+    const marginPerKwh = eveMax * rte - buy - cycleCostKwh;
+    const valueEur = headroomKwh * marginPerKwh;
+
+    // Input coverage is measured, not assumed: a flat default or synthetic tail has to be visible
+    // in the sample, or a later verdict rests on made-up inputs (the flatten-gate replay ran
+    // 126/134 slots on a 400W consumption default and flipped sign once fed real data).
+    let covPv = 0, covCons = 0;
+    for (const s of slots) {
+      if (Number.isFinite(s.pvForecastW)) covPv++;
+      if (Number.isFinite(s.consumptionW)) covCons++;
+    }
+
+    // Never hand a NaN to the ring: c4acba6 stored NaN prices and made every collected sample
+    // unusable, c6d9fe8 added the same guard for all-null arrays.
+    for (const v of [socAtEnd, headroomKwh, buy, eveMax, marginPerKwh, valueEur]) {
+      if (!Number.isFinite(v)) return null;
+    }
+
+    return {
+      pvEndTs: slots[pvEnd].timestamp, socAtEnd, headroomKwh,
+      buy, buyTs: slots[buyIdx].timestamp,
+      eveMax, eveTs: slots[eveIdx].timestamp,
+      rte, cycleCostKwh, marginPerKwh, valueEur,
+      covPv, covCons, nSlots: N,
+    };
+  }
+
   _schedulePolicyCheck() {
     const intervalMinutes = this.getSetting('policy_interval') || 15;
     const intervalMs = intervalMinutes * 60 * 1000;
@@ -1332,7 +1638,9 @@ if (debug) this.log(
 
             try {
               // Force-refresh the merged provider (fetches Xadi + KwhPrice concurrently)
+              this.homey.app.logMem?.('[BatteryPolicy] before-price-refresh');
               await this.tariffManager.mergedProvider.fetchPrices(true);
+              this.homey.app.logMem?.('[BatteryPolicy] after-price-refresh');
               const priceCount = this.tariffManager.mergedProvider.cache?.length || 0;
               const sources    = this.tariffManager.mergedProvider.lastFetchSources.join('+');
               const days       = priceCount > 24 ? 'today + tomorrow' : 'today only';
@@ -1523,13 +1831,13 @@ if (debug) this.log(
         // and chart values are NOT distorted by the accuracy-discount applied for optimizer planning.
         if (learnedSlots >= 10 || pvCapW > 0) {
           const nowFc          = new Date();
-          const nowAmsDate     = nowFc.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-          const tomorrowAmsDate = new Date(nowFc.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const nowAmsDate     = _amsDayKeyFormatter.format(nowFc);
+          const tomorrowAmsDate = _amsDayKeyFormatter.format(new Date(nowFc.getTime() + 86_400_000));
           const pvFcByDay      = [{}, {}];
 
           for (const h of this.weatherData.dailyProfiles) {
             const d     = h.time instanceof Date ? h.time : new Date(h.time);
-            const hDate = d.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            const hDate = _amsDayKeyFormatter.format(d);
             const dayIdx = hDate === nowAmsDate ? 0 : hDate === tomorrowAmsDate ? 1 : -1;
             if (dayIdx < 0) continue;
             const hHour = parseInt(d.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -1587,7 +1895,7 @@ if (debug) this.log(
                   const scByDayHour = [{}, {}];
                   for (const s of solcastForecast) {
                     const st    = new Date(s.timestamp);
-                    const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+                    const sDate = _amsDayKeyFormatter.format(st);
                     const sIdx  = sDate === nowAmsDate ? 0 : sDate === tomorrowAmsDate ? 1 : -1;
                     if (sIdx < 0) continue;
                     const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -1852,6 +2160,18 @@ if (debug) this.log(
     }
     this._policyCheckRunning = true;
     try {
+      // [MEM] runtime sample. The onInit-only sampling could not explain the
+      // 2026-07-22 11:00→12:00Z +10MB RSS step: there was no restart that hour,
+      // so every heap/ext sample sat at an identical point in boot and could not
+      // move. Sampling on the policy cadence catches the next level-shift while
+      // it happens. Uses app.logMem (heap + total + external) rather than the
+      // local _memMB, which reports heap only.
+      this.homey.app.logMem?.('[BatteryPolicy] policy-run');
+      if (Date.now() - (this._lastMemFootprintMs || 0) > 3600_000) {
+        this._lastMemFootprintMs = Date.now();
+        this._logSettingsFootprint();
+      }
+
       if (!skipEnabledCheck && !this.getCapabilityValue('policy_enabled')) {
         this.log('Policy disabled, skipping check');
         return;
@@ -1898,17 +2218,9 @@ if (debug) this.log(
           await this.setCapabilityValue('explanation_summary', `Slim laden: actief - SoC ${currentSoC}%`).catch(this.error);
           // Record predictive mode in planning chart history
           try {
-            const modeHistory = this.homey.settings.get('policy_mode_history') || [];
-            const nowTs  = new Date();
-            const bucket = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
-            const existing = modeHistory.findIndex(
-              h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
-            );
-            const entry = { ts: nowTs.toISOString(), hwMode: 'predictive', soc: currentSoC, price: null };
-            if (existing >= 0) modeHistory[existing] = entry;
-            else modeHistory.push(entry);
-            if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
-            this._queueSettingsPersist('policy_mode_history', modeHistory);
+            this._upsertModeHistory({
+              ts: new Date().toISOString(), hwMode: 'predictive', soc: currentSoC, price: null,
+            });
           } catch (e) { this.error('Failed to save predictive mode history:', e); }
           // Still recompute DP + update widget so planning stays fresh
           try {
@@ -1930,6 +2242,7 @@ if (debug) this.log(
       }
 
       const inputs = await this._gatherInputs();
+      this.homey.app.logMem?.('[BatteryPolicy] after-inputs');
       if (!inputs.battery || inputs.battery.stateOfCharge === undefined) {
         this.log('Skipping policy check — battery state not ready');
         return;
@@ -1940,6 +2253,7 @@ if (debug) this.log(
       const currentSoc = inputs.battery?.stateOfCharge ?? null;
       if ((this.optimizationEngine.isStale() || this._shouldForceReoptimize(currentSoc)) && inputs.tariff) {
         await this._recomputeOptimizer(inputs);
+        this.homey.app.logMem?.('[BatteryPolicy] after-optimizer');
       }
       inputs.optimizer = this.optimizationEngine;
       inputs.optimizerSlots = this.optimizationEngine._schedule?.slots ?? null;
@@ -1957,6 +2271,7 @@ if (debug) this.log(
       }
 
       const result = this.policyEngine.calculatePolicy(inputs);
+      this.homey.app.logMem?.('[BatteryPolicy] after-policy');
 
       // Free large price arrays before loading the explainability engine.
       // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
@@ -2005,7 +2320,8 @@ if (debug) this.log(
         this._setLive('policy_explainability', explanation);
         this.log('Saving explainability length:', JSON.stringify(explanation).length);
       }
-      
+      this.homey.app.logMem?.('[BatteryPolicy] after-explain');
+
       const recommended = result.hwMode || result.policyMode || 'standby';
       
       // Push planning data to app settings for the settings page
@@ -2122,7 +2438,12 @@ if (debug) this.log(
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
           // Temp: raw per-slot om/sc/actual W for divergence-mining analysis
           // (project_roadmap_perslot_blend_divergence). Remove after analysis done.
-          result.debug.pvPredictionsRecent = _pvAcc.pv_predictions?.slice(-300) ?? null;
+          // Its OWN key, not a field of result.debug: _queueSettingsPersist dedupes per key, and
+          // the debug blob changes every policy run through the scalars below — riding along meant
+          // this ~45 kB array was re-serialized ~6.5x/hour while it only mutates once per PV slot.
+          // settings.set is 79.9% of app allocation and cost scales with payload size
+          // (project_app_rss_step_0722), so the skipped writes are the point, not the split itself.
+          this._setLive('policy_pv_predictions_recent', _pvAcc.pv_predictions?.slice(-300) ?? null);
           // Learned scalar sat yield-factor (panel-plane basis) — exposed so it's checkable
           // against the SAT_YF_PRIOR warm-start without a debug-flag flip + restart.
           result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factor ?? null;
@@ -2134,6 +2455,9 @@ if (debug) this.log(
         result.debug.reserveFloorPct  = this._lastReserveFloorPct ?? null;
         result.debug.minDischargePriceRange = this._lastMinDischargePriceRange ?? null;
         result.debug.consumptionMarginRange = this._lastConsumptionMarginRange ?? null;
+        // Night bias correction actually applied, in W (≤ 0). null = flag off. Expect a non-zero
+        // min on a run whose horizon spans 23-06 and 0/0 on a pure daytime horizon.
+        result.debug.nightBiasCorrRange = this._lastNightBiasCorrRange ?? null;
         // Consumption-accuracy meter. learning_data lives in the device store, which no
         // external reader can reach — pv_predictions is only inspectable because it gets
         // mirrored out too. Riding on this existing payload instead of claiming a new
@@ -2224,7 +2548,6 @@ if (debug) this.log(
         // the mode was successfully applied. This ensures the SOC line starts from
         // the beginning of the day even when the battery isn't responding yet.
         try {
-          const modeHistory = this.homey.settings.get('policy_mode_history') || [];
           const currentPrice = result.debug?.price ?? inputs.tariff?.currentPrice ?? null;
           const currentSoc   = this.getCapabilityValue('battery_soc_mirror') ?? null;
           const _rtBatt      = this.p1Device?._getRealtimePluginBatteryData?.() ?? [];
@@ -2249,10 +2572,6 @@ if (debug) this.log(
           const p1Available  = this.p1Device?.getAvailable() !== false;
           this._lastHistorySoc = currentSoc;
           const nowTs   = new Date();
-          const bucket  = Math.round(nowTs.getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
-          const existing = modeHistory.findIndex(
-            h => Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000) === bucket
-          );
           // plan-accuracy: store this slot's forecast alongside the actuals.
           // Slots may be hourly (1h optimizer) or 15-min — pick the slot covering now
           // (latest start <= now) so bucket granularity never blocks the match.
@@ -2345,9 +2664,12 @@ if (debug) this.log(
             // normal losses (batteryPowerLag guard, _p1PollInFlight skips) while rejecting a
             // slot that spans a restart.
             const _closedComplete = _closedFresh && this._loadPrevCount >= 45;
+            // Reads the stashed RAW learned profile, not _schedule.slots[].consumptionW: with
+            // night_consumption_bias_corr on, that array carries the correction, and scoring it
+            // would make emaBiasW measure its own output (bias → 0 → correction → 0 → bias back).
+            // The meter's job is to score the learned profile, which is what feeds the correction.
             const _closedFc = _closedComplete
-              ? this.optimizationEngine?._schedule?.slots
-                ?.filter(s => new Date(s.timestamp).getTime() <= _closedMs).pop()?.consumptionW
+              ? (this._rawConsumptionSlots?.filter(s => s.ms <= _closedMs).pop()?.w ?? null)
               : null;
             if (this._lastConsumAccuracyBucket !== _cBucket && _closedComplete
                 && this.learningEngine?.recordConsumptionAccuracy(
@@ -2355,16 +2677,9 @@ if (debug) this.log(
               this._lastConsumAccuracyBucket = _cBucket;
             }
           }
-          if (existing >= 0) {
-            // Update existing bucket — keep best SoC (non-null wins)
-            if (entry.soc == null) entry.soc = modeHistory[existing].soc;
-            modeHistory[existing] = entry;
-          } else {
-            modeHistory.push(entry);
-          }
-          // Keep last 2200 entries (~23d @ 96 buckets/day — retains F3 sat-accuracy over a multi-week vacation)
-          if (modeHistory.length > 2200) modeHistory.splice(0, modeHistory.length - 2200);
-          this._queueSettingsPersist('policy_mode_history', modeHistory);
+          // Upserts this 15-min bucket in the day chunk (non-null SoC wins) and prunes chunks
+          // outside the MODE_HISTORY_DAYS window — retains F3 sat-accuracy over a multi-week vacation.
+          this._upsertModeHistory(entry);
         } catch (e) {
           this.error('Failed to save mode history:', e);
         }
@@ -2456,14 +2771,16 @@ if (debug) this.log(
       });
 
     // Chart plots the DP's own socProjected trajectory (already mapped to
-    // slot.soc above from each schedule slot). No re-simulation: the DP is the
-    // single source of truth for the SoC line, so the chart, the settings
-    // planning view, and the explainability engine all show the same numbers.
+    // slot.soc above from each schedule slot), so the chart, the settings planning
+    // view, and the explainability engine all show the same numbers. Exception:
+    // slots where the planning mapper overrode the DP action carry a re-simulated
+    // value instead (buildPlanningSchedule, socOverride flag) — the DP projected no
+    // delta for what the mapper decided there. The [PLANTILE] log line counts them.
     // Drift between live SoC and the schedule start is handled upstream — reopt
     // force-recomputes the schedule whenever the deviation exceeds threshold.
 
     // Past slots from mode history (has real soc + mode) — keyed by rounded 15-min ts
-    const modeHistory = this.homey.settings.get('policy_mode_history') || [];
+    const modeHistory = this._readModeHistory();
     const historyMap  = new Map();
     for (const h of modeHistory) {
       const ts15 = Math.round(new Date(h.ts).getTime() / (15 * 60 * 1000)) * (15 * 60 * 1000);
@@ -2661,7 +2978,7 @@ if (debug) this.log(
    * Positive = under-forecast (PV beats forecast). null if < 4 daytime samples.
    */
   _computePvRelBias() {
-    const hist = (this.homey.settings.get('policy_mode_history') || []).slice(-96);
+    const hist = this._readModeHistory(96);
     let sAct = 0, sErr = 0, n = 0;
     for (const e of hist) {
       if (e.pvFcW == null || e.pvW == null) continue;
@@ -2847,8 +3164,8 @@ if (debug) this.log(
         // bypass both so the blend is exactly the measured unbiased average. Toggle off to revert.
         const unbiasedBlend = this.getSetting('pv_unbiased_blend') !== false;
 
-        const todayNLDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const tomorrowNLDate = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const todayNLDate = _amsDayKeyFormatter.format(new Date());
+        const tomorrowNLDate = _amsDayKeyFormatter.format(new Date(Date.now() + 86_400_000));
         const byDay = { [todayNLDate]: { om: 0, sc: 0, bl: 0 }, [tomorrowNLDate]: { om: 0, sc: 0, bl: 0 } };
 
         // Pre-scan per-day OM vs SC totals for divergence detection.
@@ -2857,7 +3174,7 @@ if (debug) this.log(
         // tomorrow's blend isn't skewed by today's weather divergence.
         const dayTotals = { [todayNLDate]: { om: 0, sc: 0 }, [tomorrowNLDate]: { om: 0, sc: 0 } };
         for (const slot of pvForecast) {
-          const dk = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const dk = _amsDayKeyFormatter.format(new Date(slot.timestamp));
           if (!dayTotals[dk]) continue;
           const scSlots = solcastByHourMs.get(new Date(slot.timestamp).getTime());
           if (scSlots?.p50?.length > 0) {
@@ -2902,7 +3219,7 @@ if (debug) this.log(
         const scEffectiveSlots = []; // collect effective SC per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
-          const dayKey = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+          const dayKey = _amsDayKeyFormatter.format(new Date(slot.timestamp));
           const { wOM, wSC } = dayKey === todayNLDate ? weightsToday : weightsTomorrow;
 
           const scSlots = solcastByHourMs.get(slotMs);
@@ -2990,6 +3307,8 @@ if (debug) this.log(
       }
     }
 
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-blend');
+
     // Compute net PV surplus for next 24h using the blended forecast (post-Solcast).
     // Placed after the blend so Solcast data is included in the terminal value calculation.
     // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
@@ -3039,7 +3358,7 @@ if (debug) this.log(
       // Snapshot today's blended forecast once at first forecast build of the day (NL timezone).
       // Accuracy tracking compares against this fixed day-start snapshot, not the rolling forecast,
       // to avoid degrading the score when providers revise the forecast mid-day.
-      const _pvSnapDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const _pvSnapDate = _amsDayKeyFormatter.format(now);
       if (this._pvDayStartForecastDate !== _pvSnapDate) {
         this._pvDayStartForecast     = pvForecast.map(slot => ({ ...slot }));
         this._pvDayStartForecastDate = _pvSnapDate;
@@ -3090,10 +3409,10 @@ if (debug) this.log(
         }
       } else {
         // Simplified path: dailyBias only on tomorrow's slots (today handled by intradayRatio).
-        const todayNL = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const todayNL = _amsDayKeyFormatter.format(now);
         if (cappedDailyBias !== 1.0) {
           pvForecast = pvForecast.map(s => {
-            const slotDate = new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            const slotDate = _amsDayKeyFormatter.format(new Date(s.timestamp));
             if (slotDate === todayNL) return s;
             return { ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) };
           });
@@ -3156,7 +3475,7 @@ if (debug) this.log(
     if (pvForecast && this.learningEngine && Array.isArray(this.learningEngine.data?.pv_predictions)) {
       const nowMs       = Date.now();
       const cutoffMs    = nowMs - 3 * 3600_000;
-      const todayNLDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const todayNLDate = _amsDayKeyFormatter.format(now);
       const todayPreds  = this.learningEngine.data.pv_predictions.filter(p =>
         p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
         p.predicted > 50 && p.actual > 50
@@ -3204,12 +3523,12 @@ if (debug) this.log(
           // plan) so the corrector's kWh contribution can be checked against actual yield.
           const todayFuture = pvForecast.filter(s =>
             new Date(s.timestamp) > now &&
-            new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === todayNLDate);
+            _amsDayKeyFormatter.format(new Date(s.timestamp)) === todayNLDate);
           const futureSlotsCount = todayFuture.length;
           const kwhBefore = todayFuture.reduce((s, sl) => s + sl.pvPowerW, 0) * 0.25 / 1000;
           pvForecast = pvForecast.map(slot => {
             if (new Date(slot.timestamp) <= now) return slot;
-            const slotDate = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+            const slotDate = _amsDayKeyFormatter.format(new Date(slot.timestamp));
             if (slotDate !== todayNLDate) return slot;
             return { ...slot, pvPowerW: Math.round(slot.pvPowerW * ratio) };
           });
@@ -3225,9 +3544,9 @@ if (debug) this.log(
     // Shadow-run: when simplified is OFF, log what the simplified path would produce
     // vs legacy so the delta can be monitored before switching.
     if (pvForecast && !simplified && (_pvDailyBiasFactor !== 1.0 || _pvAccFactor !== 1.0)) {
-      const todayNL = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const todayNL = _amsDayKeyFormatter.format(now);
       const todayTotalLegacy = pvForecast.filter(s =>
-        new Date(s.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) === todayNL &&
+        _amsDayKeyFormatter.format(new Date(s.timestamp)) === todayNL &&
         new Date(s.timestamp) > now
       ).reduce((s, sl) => s + sl.pvPowerW, 0);
       const netLegacy = _pvDailyBiasFactor * _pvAccFactor;
@@ -3359,6 +3678,8 @@ if (debug) this.log(
       }
     }
 
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-pvcorr');
+
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
     // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
     // pvForecast doesn't contain because hourlyForecast only has slots > now.
@@ -3369,11 +3690,11 @@ if (debug) this.log(
     // merge, which now uses the SAME fully-corrected DP forecast. Both are consistent.
     // Sync chart orange line with the fully-corrected DP forecast (bias+conservatism+coverage applied)
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
-      const _todayNL    = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-      const _tomorrowNL = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const _todayNL    = _amsDayKeyFormatter.format(new Date());
+      const _tomorrowNL = _amsDayKeyFormatter.format(new Date(Date.now() + 86_400_000));
       const _dpBuckets  = [{ key: _todayNL, h: {} }, { key: _tomorrowNL, h: {} }];
       for (const slot of pvForecast) {
-        const dk = new Date(slot.timestamp).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        const dk = _amsDayKeyFormatter.format(new Date(slot.timestamp));
         const bucket = _dpBuckets.find(b => b.key === dk);
         if (!bucket) continue;
         const hr = parseInt(new Date(slot.timestamp).toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -3389,6 +3710,8 @@ if (debug) this.log(
       });
       this._setLive('policy_pv_forecast_hourly', _dpHourly);
     }
+
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-chartsync');
 
     // Learned round-trip efficiency from efficiencyEstimator
     let learnedRte = this.efficiencyEstimator?.getEfficiency() ?? null;
@@ -3406,6 +3729,7 @@ if (debug) this.log(
     const hasSlotFields = typeof prices[0]?.hour === 'number' && typeof prices[0]?.minute === 'number';
     if (this.learningEngine) {
       const rawLearned = [];
+      const hoursAms = [];
       let nonZeroCount = 0;
       for (let h = 0; h < prices.length; h++) {
         const futureTime = new Date(prices[h].timestamp);
@@ -3414,6 +3738,9 @@ if (debug) this.log(
           : (this.learningEngine.getPredictedConsumption(futureTime) ?? 0);
         if (learned > 0) nonZeroCount++;
         rawLearned.push(learned);
+        // Same Amsterdam hour the accuracy meter buckets on, so the correction lines up with
+        // the bucket it came from. _amsHourFormatter is the cached module-level formatter.
+        hoursAms.push(hasSlotFields ? prices[h].hour : Number(_amsHourFormatter.format(futureTime)));
       }
       // Only pass consumption data when the learning engine has meaningful data.
       // When nothing is learned yet (all slots return 0), the baseload floor (~300W
@@ -3424,7 +3751,33 @@ if (debug) this.log(
         // Floor by baseload: a learned value below the measured baseload is an
         // artefact of averaging quiet evenings — the house always consumes at least
         // baseload, so the optimizer should never plan slower discharge than that.
-        consumptionWPerSlot = rawLearned.map(v => Math.max(v, baseloadW));
+        const hourly = this.learningEngine.data?.consumption_accuracy_hourly;
+        const nightCorrOn = this.getSetting('night_consumption_bias_corr') === true;
+        consumptionWPerSlot = BatteryPolicyDevice._buildDpConsumption(
+          rawLearned, hoursAms, hourly, baseloadW, nightCorrOn);
+
+        // The accuracy meter must keep scoring the RAW learned profile. It used to read
+        // optimizationEngine._schedule.slots[].consumptionW, which is this same array
+        // (optimization-engine.js:407) — with the correction applied that would make emaBiasW
+        // measure its own output: bias → 0 → correction → 0 → bias back. Stash the uncorrected
+        // profile for it instead, keyed the same way the meter looks slots up.
+        this._rawConsumptionSlots = prices.map((p, i) => ({
+          ms: new Date(p.timestamp).getTime(),
+          w: Math.max(rawLearned[i], baseloadW),
+        }));
+
+        if (nightCorrOn) {
+          const deltas = consumptionWPerSlot.map((v, i) => v - this._rawConsumptionSlots[i].w);
+          this._lastNightBiasCorrRange = {
+            min: +Math.min(...deltas).toFixed(1),
+            max: +Math.max(...deltas).toFixed(1),
+          };
+        } else {
+          this._lastNightBiasCorrRange = null;
+        }
+      } else {
+        this._rawConsumptionSlots = null;
+        this._lastNightBiasCorrRange = null;
       }
       this.log(`🔮 Consumption: ${nonZeroCount}/${prices.length} learned slots (hasSlotFields=${hasSlotFields}), sample=[${rawLearned.slice(0,3).map(v=>Math.round(v)).join(',')},...], nonZero=${nonZeroCount}`);
     }
@@ -3456,7 +3809,7 @@ if (debug) this.log(
       this.log(`☀️ pvKwhTomorrow smoothed: raw=${pvKwhTomorrowRaw}kWh → min3=${pvKwhTomorrow}kWh (history=[${this._pvKwhTomorrowHistory.map(v=>v.toFixed(2)).join(',')}])`);
     }
     if (this.learningEngine && pvKwhTomorrow > 0) {
-      const tomorrowStr = new Date(Date.now() + 24 * 3600_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const tomorrowStr = _amsDayKeyFormatter.format(new Date(Date.now() + 24 * 3600_000));
       this.learningEngine.savePvNetSurplusPrediction(tomorrowStr, pvKwhTomorrow);
     }
     if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0 && pvForecast) {
@@ -3639,7 +3992,28 @@ if (debug) this.log(
     // positive:negative split over 1060 runs was therefore a tautology, not evidence. Do not
     // re-measure this way; score both plans against realised PV instead. See
     // project_dp_pv_timing_robustness + feedback_metric_must_allow_negative.
+    // [DP-INPUT-DUMP] Exact compute() arguments, log-only, for offline replay. The 2026-07-10
+    // minDischargePrice scalar-vs-array bug was invisible in every derived log line and only fell
+    // out of replaying the REAL arguments — param SHAPE, not just value, can flip the decision.
+    // Gated on app setting `dp_input_dump` (default off) and self-limiting: it clears the setting
+    // after `dumpsLeft` runs so it can never sit on in a shipped build. Set it to the number of
+    // runs you want captured (e.g. 3 to straddle an hour boundary).
+    const _dumpsLeft = Number(this.homey.settings.get('dp_input_dump') || 0);
+    if (_dumpsLeft > 0) {
+      try {
+        this.log(`[DP-INPUT-DUMP] ${JSON.stringify({
+          at: new Date().toISOString(), soc, capacityKwh, maxChargePowerW, maxDischargePowerW,
+          learnedRte, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow,
+          adjustedTerminalPvKwh, pvCloudFactor: _pvCloudFactor, refillConfidence, maxChargePrice,
+          prices, pvForecast, consumptionWPerSlot,
+        })}`);
+      } catch (e) { this.log(`[DP-INPUT-DUMP] failed: ${e.message}`); }
+      this.homey.settings.set('dp_input_dump', _dumpsLeft - 1);
+    }
+
+    this.homey.app.logMem?.('[BatteryPolicy] opt:before-dp');
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-dp');
 
     // Morning-waive shadow (log-only, project_morning_reserve_floor_holds_through_peak). When the
     // refill-reserve floor is active (refillConfidence < 1.0), re-run the DP with the floor OFF
@@ -3659,6 +4033,8 @@ if (debug) this.log(
         this.error('morning-waive shadow failed', err);
       }
     }
+
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-shadow');
 
     // Near-floor chatter catcher (log-only, project_soc_near_floor_chatter_0723). When SoC sits just
     // above the refill-reserve floor and the DP's slot[0] action FLIPS between two ADJACENT runs at
@@ -3721,6 +4097,8 @@ if (debug) this.log(
       this.error('nearfloor-chatter catcher failed', err);
     }
 
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-catcher');
+
     // Compact planning summary — always visible in user diagnostics.
     {
       const _slots = this.optimizationEngine._schedule?.slots ?? [];
@@ -3752,7 +4130,7 @@ if (debug) this.log(
     // Plan-accuracy: forecast vs actual over last 24h (96 slots). bias = actual − forecast
     // (positive = under-forecast). Observe-only; not yet fed back into confidence.
     {
-      const _hist = (this.homey.settings.get('policy_mode_history') || []).slice(-96);
+      const _hist = this._readModeHistory(96);
       const _fmt = m => `MAE ${m.mae}W bias ${m.bias > 0 ? '+' : ''}${m.bias}W (n${m.n})`;
       // F3: pv=OM, sat=live satellite nowcast, sc=Solcast p50, co=consumption — all vs the same
       // actual, so sat-vs-SC ranking is fair. Sat/SC are sparse (sat only fills 0-2h slots) and
@@ -3769,8 +4147,12 @@ if (debug) this.log(
       }
     }
 
+    this.homey.app.logMem?.('[BatteryPolicy] opt:after-summary');
+
     // Persist planning schedule for the settings UI (single source of truth).
-    // Frontend reads 'policy_optimizer_schedule' and renders it directly — no re-simulation.
+    // Frontend reads 'policy_optimizer_schedule' and renders it directly. The SoC line
+    // in it is the DP's own socProjected, except on slots flagged socOverride, where
+    // the planning mapper overrode the DP action and buildPlanningSchedule re-simulated.
     // _recomputeOptimizer runs before policyEngine.evaluate(), so dynamicMaxChargePrice is not
     // yet set on inputs — reuse the value already computed above for optimizer.compute(),
     // same tariff/price inputs so recomputing would give an identical result anyway.
@@ -3797,15 +4179,65 @@ if (debug) this.log(
       }
       this._setLive('policy_optimizer_schedule', planningSchedule);
 
+      // ── Shadow: € value of the grid top-up the DP declined ─────────────────
+      // Log-only, no behaviour change. This is the measurement the 2026-07-05 decision asked for
+      // ("first just LOG, then decide whether it is worth the DP complexity") and that was never
+      // built — the question then came back on 07-10 and 07-24 and got answered off the code each
+      // time, with no data. One entry per Amsterdam day, overwritten with the latest estimate.
+      // Exit condition lives in project_running_experiments_tracker.md, not here.
+      try {
+        const _tmMaxSoc = this.getSettings().max_soc ?? 100;
+        const _tm = this._topupMissMetrics(
+          slots, capacityKwh, learnedRte ?? 0.75,
+          this.optimizationEngine.cycleCostPerKwh ?? 0.075, _tmMaxSoc,
+        );
+        if (_tm) {
+          const _day = _amsDayKeyFormatter.format(new Date());
+          // Seed from the PERSISTED setting, not only from _liveState: _liveState is in-memory and
+          // resets on restart, which is exactly how the nearfloor ring silently lost its catches
+          // before c4acba6.
+          const _persisted = this.homey.settings.get('topup_miss_samples');
+          const _ring = Array.isArray(this._liveState?.topup_miss_samples)
+            ? this._liveState.topup_miss_samples
+            : (Array.isArray(_persisted) ? _persisted : []);
+          const _today = _ring.find(e => e.day === _day);
+          let _runs = 1;
+          if (_today) {
+            // Keep the first estimate of the day alongside the latest, so intraday drift stays
+            // visible without writing 96 entries per day.
+            _runs = (_today.nRuns ?? 1) + 1;
+            const _first = _today.firstValueEur ?? _tm.valueEur;
+            Object.assign(_today, _tm, { day: _day, nRuns: _runs, firstValueEur: _first });
+          } else {
+            _ring.unshift({ day: _day, nRuns: 1, firstValueEur: _tm.valueEur, ..._tm });
+          }
+          this._setLive('topup_miss_samples', _ring.slice(0, 14));
+          const _hhmm = t => new Date(t).toLocaleTimeString('en-GB', {
+            timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit', hour12: false,
+          });
+          const _sgn = n => (n >= 0 ? '+' : '') + n.toFixed(3);
+          this.log(`[TOPUP-MISS] ${_day} pvEnd=${_hhmm(_tm.pvEndTs)} soc=${_tm.socAtEnd.toFixed(0)}% `
+            + `headroom=${_tm.headroomKwh.toFixed(2)}kWh | buy=${_tm.buy.toFixed(3)}@${_hhmm(_tm.buyTs)} `
+            + `eveMax=${_tm.eveMax.toFixed(3)}@${_hhmm(_tm.eveTs)} rte=${_tm.rte.toFixed(3)} `
+            + `cyc=${_tm.cycleCostKwh.toFixed(3)} | margin=${_sgn(_tm.marginPerKwh)}/kWh `
+            + `value=${_sgn(_tm.valueEur)} | cov pv=${_tm.covPv}/${_tm.nSlots} `
+            + `cons=${_tm.covCons}/${_tm.nSlots} runs=${_runs}`);
+        }
+      } catch (err) {
+        this.error('topup-miss shadow failed', err);
+      }
+
       // ── PV surplus forecast ────────────────────────────────────────────────
       // Use mapped hwModes (not raw DP actions) so mapper overrides like standby→to_full
       // are counted correctly. Filter: hwModes that actually charge the battery from PV.
       if (pvForecast && consumptionWPerSlot) {
         // Split surplus + DP-projected peak SoC by Amsterdam calendar day (today vs tomorrow).
-        // socMax comes straight from the DP schedule (no re-sim) so the UI never diverges from
-        // what the optimizer actually plans.
-        const _nlDate  = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-        const todayNL  = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+        // socMax follows the DP schedule, so the UI matches what the optimizer plans on every
+        // slot the planning mapper agreed with. On socOverride slots the mapper contradicted
+        // the DP action and ps.socProjected is a re-simulated value — those are the only slots
+        // where this peak can still diverge, and [PLANTILE] reports how many there were.
+        const _nlDate  = ts => _amsDayKeyFormatter.format(new Date(ts));
+        const todayNL  = _amsDayKeyFormatter.format(new Date());
         let netPvTodayKwh = 0, netPvTomorrowKwh = 0;
         let socMaxToday = soc, socMaxTomorrow = null;
         for (let i = 0; i < planningSchedule.length; i++) {
@@ -4112,7 +4544,7 @@ if (debug) this.log(
 
     // Accumulate actual PV per Amsterdam hour for planning chart display.
     const nowAms = new Date();
-    const todayStr = nowAms.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const todayStr = _amsDayKeyFormatter.format(nowAms);
     const amsHour = parseInt(nowAms.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
 
     if (!this._pvActualHourly || this._pvActualHourly.date !== todayStr) {
@@ -4287,12 +4719,56 @@ if (debug) this.log(
    * @param {{omW:number, scP50:number, scP10:number, wOM:number, wSC:number, unbiased:boolean}} a
    * @returns {{blendedW:number, scAvg:number, useP10:boolean}}
    */
+  /**
+   * Night bias correction for one slot, in watts (always ≤ 0).
+   *
+   * Measured 2026-08-01 on 652 raw pairs (07-17..07-24): the learned profile runs 19% HIGH at
+   * night — bias −76W on 403W actual, median ≈ mean, negative in 7/7 nights and in both
+   * sub-windows. That is a level error, unlike the daytime error which is tail-driven
+   * (median ≈ 0, p90 up to 1374W) and must NOT be bias-corrected.
+   *
+   * Downward only: correcting upward is consumptionMargin's job (optimization-engine.js:856),
+   * and running both on the same slot double-counts.
+   *
+   * This lands BEFORE consumptionMargin, and the margin is not a buffer beside the plan — it is
+   * the number the DP plans the discharge cap with. So the margin multiplies the correction
+   * through: at night (margin ≈ 1.128, CV is low) a −76W correction arrives as −85W of planned
+   * load, 479×1.128=540W → 403×1.128=455W. Deliberate: the margin then hedges variance on a
+   * bias-free base. Moving the correction after the margin would land exactly −76W instead.
+   *
+   * Fed by the live EMA rather than a constant so it tracks into winter. That EMA runs α=0.01
+   * (~25 days to settle) and only started 07-18, so it is roughly half converged: hence the
+   * count gate and the clamp.
+   */
+  static _nightBiasCorrW(hourly, hourAms) {
+    if (!NIGHT_BIAS_HOURS.has(hourAms)) return 0;
+    const b = hourly?.[hourAms];
+    if (!b || !(b.count >= NIGHT_BIAS_MIN_COUNT)) return 0;
+    const bias = b.emaBiasW;
+    // emaBiasW = actual − predicted, so only a negative value means "predicted too high".
+    if (!Number.isFinite(bias) || bias >= 0) return 0;
+    return Math.max(-NIGHT_BIAS_CAP_W, bias);
+  }
+
+  /**
+   * Consumption array as the DP should see it: learned profile + night bias correction, then
+   * floored by baseload. The correction lands BEFORE the floor on purpose — after it the floor
+   * would swallow the correction and stop being a floor.
+   * With `enabled` false this is byte-identical to the uncorrected build.
+   */
+  static _buildDpConsumption(rawLearned, hoursAms, hourly, baseloadW, enabled) {
+    return rawLearned.map((v, i) => {
+      const corr = enabled ? BatteryPolicyDevice._nightBiasCorrW(hourly, hoursAms[i]) : 0;
+      return Math.max(v + corr, baseloadW);
+    });
+  }
+
   // Build policy_pv_forecast_hourly for today+tomorrow from DP pvForecast.
   // Past hours come from existing[0] (previous run), future hours from pvForecast.
   // All values are capped at pvCapacityW. Injectable `now` enables unit testing.
   static _buildPvChartByDay(existing, pvForecast, pvCapacityW, now) {
-    const _fcToday    = now.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
-    const _fcTomorrow = new Date(now.getTime() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const _fcToday    = _amsDayKeyFormatter.format(now);
+    const _fcTomorrow = _amsDayKeyFormatter.format(new Date(now.getTime() + 86_400_000));
     const _ex         = existing ?? [{}, {}];
     const cap         = (w) => pvCapacityW > 0 ? Math.min(w, pvCapacityW) : w;
     const pvFcByDay   = [
@@ -4303,7 +4779,7 @@ if (debug) this.log(
     const pvCntByDayHour = [{}, {}];
     for (const fc of (pvForecast ?? [])) {
       const st    = new Date(fc.timestamp);
-      const sDate = st.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const sDate = _amsDayKeyFormatter.format(st);
       const sIdx  = sDate === _fcToday ? 0 : sDate === _fcTomorrow ? 1 : -1;
       if (sIdx < 0) continue;
       const sHour = parseInt(st.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -5315,8 +5791,8 @@ if (debug) this.log(
     // Final flush — write pending queued settings synchronously on shutdown
     // so the last policy run's state is not lost on restart.
     if (this._settingsQueue && this._settingsQueue.size > 0) {
-      for (const [key, value] of this._settingsQueue) {
-        try { this.homey.settings.set(key, value); } catch (_) {}
+      for (const [key, entry] of this._settingsQueue) {
+        try { this.homey.settings.set(key, entry.value); } catch (_) {}
       }
       this._settingsQueue.clear();
     }
@@ -5354,11 +5830,20 @@ if (debug) this.log(
       'policy_pv_forecast_hourly',
       'policy_pv_actual_today',
       'policy_pv_bias',
+      'policy_pv_predictions_recent',
       `batt_mode_hist_${this.getData().id}`,
+      // Day keys from before the /userdata move; harmless when the migration already unset them.
+      ...Object.keys(this.homey.settings.getAll?.() || {}).filter(k => k.startsWith(MODE_HISTORY_PREFIX)),
     ];
     for (const key of settingsToClean) {
       try { this.homey.settings.unset(key); } catch (_) {}
     }
+
+    // The history itself lives on /userdata now, so it needs unlinking, not unsetting.
+    for (const dayKey of this._modeHistoryKeys()) {
+      try { require('fs').unlinkSync(this._modeHistoryFile(dayKey)); } catch (_) {}
+    }
+    this._modeHist = null;
 
     // Clear p1Device reference
     this.p1Device = null;
@@ -5472,7 +5957,7 @@ if (debug) this.log(
         await this._initPvCamera();
       }
 
-      const pvHash = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }) + JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
+      const pvHash = _amsDayKeyFormatter.format(new Date()) + JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
       if (pvHash !== this._pvChartHash) {
         await this.planningImagePv.update();
         this._pvChartHash = pvHash;
@@ -5531,11 +6016,11 @@ if (debug) this.log(
         store[String(t.getTime())] = { ghi: s.satGhiWm2, ratio: typeof s.gtiOverGhi === 'number' ? s.gtiOverGhi : null };
       }
     }
-    const todayAms = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+    const todayAms = _amsDayKeyFormatter.format(new Date());
     const result = [{}, {}];
     for (const key of Object.keys(store)) {
       const t = new Date(Number(key));
-      const amsDate = t.toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const amsDate = _amsDayKeyFormatter.format(t);
       if (amsDate < todayAms) { delete store[key]; continue; }
       const dayIdx = amsDate > todayAms ? 1 : 0;
       const amsH = parseInt(t.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
@@ -5690,10 +6175,13 @@ if (debug) this.log(
   }
 
   _computeDailyProfit(dateStr) {
-    const hist = this.homey.settings.get('policy_mode_history') || [];
+    // Two chunks, not one: an entry timestamped 23:53 on dateStr rounds into the 00:00 bucket and
+    // is therefore filed under the NEXT day's chunk. The ts filter below still decides the day.
+    const next = new Date(new Date(`${dateStr}T00:00:00Z`).getTime() + 86400000).toISOString().slice(0, 10);
+    const hist = [...this._readModeHistoryDay(dateStr), ...this._readModeHistoryDay(next)];
     let revenue = 0, cost = 0, slots = 0;
     for (const h of hist) {
-      const d = new Date(h.ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' });
+      const d = _amsDayKeyFormatter.format(new Date(h.ts));
       if (d !== dateStr || h.price == null || h.battW == null) continue;
       slots++;
       const kwh = Math.abs(h.battW) * (15 / 60) / 1000;
