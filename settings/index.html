@@ -675,6 +675,9 @@
   <script>
     /* ── TAB SWITCHING ── */
     let homeyInstance = null;
+    // Set from inside onHomeyReady, where the renderer is defined — the tab handler below lives in
+    // this outer scope and cannot see it otherwise.
+    let refreshFetchLogs = null;
 
     /* The mode history lives on /userdata as one JSON per Amsterdam day, not in the settings blob:
        it was 43.8% of that blob and rode along on every unrelated settings.set. Day keys are
@@ -714,6 +717,11 @@
           homeyInstance.get((e, s) => {
             if (!e) renderExpansionAnalysis(s);
           });
+        }
+        // Re-read the fetch log from /userdata on tab open: it no longer lives in settings, so
+        // the settings.set listener cannot announce it (and only energy_socket writes the stats key).
+        if (tab.dataset.tab === 'fetch' && refreshFetchLogs) {
+          refreshFetchLogs();
         }
         // Refresh legacy fetch debug when switching to legacy tab
         if (tab.dataset.tab === 'legacy' && homeyInstance) {
@@ -1355,16 +1363,29 @@
 
         function renderFetchDebug(s) {
           renderFetchStats(s);
-          const logs = s.debug_logs || [];
-          fetchBox.textContent = (!Array.isArray(logs) || logs.length === 0)
-            ? 'Geen fetch-logs beschikbaar.'
-            : logs.join('\n');
+          renderFetchLogs();
+        }
+
+        /* The fetch-debug log lives on /userdata as one JSON, not in the settings blob: at 500
+           entries it was 46.5 kB of a 364.5 kB blob, and every settings.set() ships that whole blob
+           over IPC. Same move the mode history above already made. */
+        async function renderFetchLogs() {
+          let logs = [];
+          try {
+            const res = await fetch('/app/com.homewizard/userdata/debug_logs.json');
+            if (res.ok) {
+              const arr = await res.json();
+              if (Array.isArray(arr)) logs = arr;
+            }
+          } catch (e) { /* no file yet, or unreadable — show the empty state */ }
+          fetchBox.textContent = logs.length === 0 ? 'Geen fetch-logs beschikbaar.' : logs.join('\n');
           fetchBox.scrollTop = fetchBox.scrollHeight;
         }
         renderFetchDebug(settings);
+        refreshFetchLogs = renderFetchLogs;
 
         Homey.on('settings.set', changedKey => {
-          if (changedKey === 'debug_logs' || changedKey === 'fetch_device_stats') {
+          if (changedKey === 'fetch_device_stats') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
           if (changedKey === 'policy_consumption_profile' && document.getElementById('planning').classList.contains('active')) {
@@ -1387,7 +1408,10 @@
         });
 
         document.getElementById('clear-fetch-btn').addEventListener('click', () => {
-          Homey.set('debug_logs', []);
+          /* The log file is on /userdata and the browser cannot write there, so ask the app:
+             app.js watches this key and deletes the file. Re-read once it has had a moment. */
+          Homey.set('debug_logs_clear', Date.now());
+          setTimeout(renderFetchLogs, 500);
         });
 
         document.getElementById('reset-fetch-stats-btn').addEventListener('click', () => {

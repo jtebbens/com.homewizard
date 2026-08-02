@@ -20,8 +20,9 @@
 
 const Homey = require('homey');
 const v8 = require('v8');
+const { clearDebugLogs } = require('./lib/debug-logs');
 
-const Testing = false;
+const Testing = true; // TEMP: opens the CDP inspector in onInit. Set back to false after profiling.
 
 // Helper: log V8 heap + (if available) process RSS. Memory Warning Limit on Homey
 // could be RSS-based rather than heap — try both so we can correlate which bucket
@@ -80,12 +81,15 @@ class HomeWizardApp extends Homey.App {
     // 🔍 CRASH DIAGNOSTICS: Global error handlers
     this._setupGlobalErrorHandlers();
 
-      if (process.env.DEBUG === '1' && Testing) {
-        try {
-          require('inspector').waitForDebugger();
-        }
-        catch (error) {
-          require('inspector').open(9225, '0.0.0.0', true);
+    // CDP for live CPU/heap profiling on the physical Homey (DEBUG=1 homey app run --remote).
+    // Non-blocking: the third arg must stay false, or onInit stalls until a client attaches.
+    if (Testing) {
+      try {
+        require('inspector').open(9222, '0.0.0.0', false);
+        this.log('[INSPECT] CDP listening on 0.0.0.0:9222');
+      }
+      catch (error) {
+        this.error('[INSPECT] inspector.open failed:', error.message);
       }
     }
 
@@ -103,6 +107,23 @@ class HomeWizardApp extends Homey.App {
       }
       setTimeout(() => this._runSettingsMigration(currentVersion), 30_000);
     }
+
+    // The fetch-debug log moved to /userdata (lib/debug-logs.js). Drop the old settings copy
+    // unconditionally rather than from _runSettingsMigration: that one only fires on a version
+    // change, and until it does the stale 46.5 kB would keep riding along on every settings.set().
+    // unset() on an absent key is a no-op, so this costs nothing on later boots.
+    if (this.homey.settings.get('debug_logs') != null) {
+      try {
+        this.homey.settings.unset('debug_logs');
+        this.log('[MIGRATE] Dropped debug_logs from settings — it now lives on /userdata');
+      } catch (_) {}
+    }
+
+    // The settings page cannot write to /userdata, so its "clear fetch logs" button sets this key.
+    this.homey.settings.on('set', (key) => {
+      if (key !== 'debug_logs_clear') return;
+      clearDebugLogs();
+    });
 
     // Support diagnostics: periodic app-health snapshot (version, uptime, heap,
     // device inventory) surfaced in the settings "Copy Diagnostics" report.

@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const fetchWithTimeout = require('../../includes/utils/fetchWithTimeout');
+const { appendDebugLogs } = require('../../lib/debug-logs');
 const http = require('http');
 
 
@@ -181,10 +182,7 @@ _debugLog(msg) {
 _flushDebugLogs() {
   if (!this._debugBuffer || this._debugBuffer.length === 0) return;
   try {
-    const logs = this.homey.settings.get('debug_logs') || [];
-    logs.push(...this._debugBuffer);
-    if (logs.length > 500) logs.splice(0, logs.length - 500);
-    this.homey.settings.set('debug_logs', logs);
+    appendDebugLogs(this._debugBuffer);
     this._debugBuffer = [];
   } catch (err) {
     this.error('Failed to flush debug logs:', err.message || err);
