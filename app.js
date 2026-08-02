@@ -108,14 +108,19 @@ class HomeWizardApp extends Homey.App {
       setTimeout(() => this._runSettingsMigration(currentVersion), 30_000);
     }
 
-    // The fetch-debug log moved to /userdata (lib/debug-logs.js). Drop the old settings copy
-    // unconditionally rather than from _runSettingsMigration: that one only fires on a version
-    // change, and until it does the stale 46.5 kB would keep riding along on every settings.set().
-    // unset() on an absent key is a no-op, so this costs nothing on later boots.
-    if (this.homey.settings.get('debug_logs') != null) {
+    // Keys that moved to /userdata. Dropped unconditionally rather than from _runSettingsMigration:
+    // that one only fires on a version change, and until it does the stale copy would keep riding
+    // along on every settings.set() — the SDK ships the whole settings object each time, so a key
+    // nobody reads is still charged to every unrelated write. unset() on an absent key is a no-op,
+    // so this costs nothing on later boots.
+    for (const [key, what] of [
+      ['debug_logs', 'the fetch-debug log'],
+      ['policy_pv_predictions_recent', 'the PV sample buffer'],
+    ]) {
+      if (this.homey.settings.get(key) == null) continue;
       try {
-        this.homey.settings.unset('debug_logs');
-        this.log('[MIGRATE] Dropped debug_logs from settings — it now lives on /userdata');
+        this.homey.settings.unset(key);
+        this.log(`[MIGRATE] Dropped ${key} from settings — ${what} now lives on /userdata`);
       } catch (_) {}
     }
 

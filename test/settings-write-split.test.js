@@ -8,17 +8,28 @@
 // app allocation and cost scales with blob size (project_app_rss_step_0722), so the array now gets
 // its own key and the existing dedupe can actually skip it.
 //
+// 2026-08-02: the own-key step is superseded. A key of its own still rode along in the settings
+// object, and the SDK ships that object WHOLE on every set() — so the dedupe saved a re-serialize
+// of 50 kB but nothing else's write got cheaper. The buffer now lives on /userdata and nothing in
+// the UI reads it; the same stamp guard survives as a flash-write guard, not a blob guard.
+//
 // Contract covered here:
 //   - policy_last_run_debug no longer carries pvPredictionsRecent
-//   - policy_pv_predictions_recent carries the samples unchanged in shape
-//   - an unchanged sample buffer is written ONCE across two runs that both change the debug blob
-//     (this is the whole point — a smaller blob written just as often buys nothing)
-//   - a new sample does produce a fresh write
+//   - the sample buffer never reaches the settings blob at all
+//   - it round-trips through /userdata unchanged in shape
+//   - an unchanged buffer is NOT rewritten; a new sample is
+//   - the debug blob itself still goes through settings, and still dedupes
 
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const Module = require('module');
+
+// userdata-store reads process.env per call, so the tests can point it at a tmpdir.
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hw-predsplit-'));
+process.env.HOMEY_USERDATA_DIR = tmpDir;
+const userdataStore = require('../lib/userdata-store');
 
 const origRequire = Module.prototype.require;
 Module.prototype.require = function (id) {
@@ -28,7 +39,8 @@ Module.prototype.require = function (id) {
 const BatteryPolicyDevice = require('../drivers/battery-policy/device');
 Module.prototype.require = origRequire;
 
-const PRED_KEY = 'policy_pv_predictions_recent';
+const PRED_KEY = 'policy_pv_predictions_recent'; // the settings key it must no longer use
+const PRED_FILE = 'pv-predictions-recent';       // the /userdata sink it uses instead
 const DEBUG_KEY = 'policy_last_run_debug';
 
 let passed = 0;
@@ -77,14 +89,15 @@ const sample = i => ({
 const predictions = n => Array.from({ length: n }, (_, i) => sample(i));
 
 // Mirrors the production call order at device.js:2325-2371: the debug blob is built, the sample
-// buffer is written as its own key, then the debug blob goes out.
+// buffer goes to /userdata, then the debug blob goes out over settings. Both calls are the real
+// production methods — the guard is not re-implemented here.
 function runPolicyCycle(ctx, { pvPredictions, refillConfidence }) {
   const debug = {
     pvAccuracySamples: pvPredictions.length,
     refillConfidence,
     reserveFloorPct: 15,
   };
-  ctx._setLive(PRED_KEY, pvPredictions.slice(-300));
+  ctx._persistPvPredictions(pvPredictions.slice(-300));
   ctx._setLive(DEBUG_KEY, debug);
   ctx._flushSettingsQueue();
   ctx._flushSettingsQueue();
@@ -92,7 +105,7 @@ function runPolicyCycle(ctx, { pvPredictions, refillConfidence }) {
 
 const writesFor = (ctx, key) => ctx.writes.filter(w => w.key === key);
 
-console.log('\npolicy_last_run_debug — pvPredictionsRecent split to its own key\n');
+console.log('\nPV sample buffer — out of the settings blob, onto /userdata\n');
 
 test('policy_last_run_debug no longer carries pvPredictionsRecent', () => {
   const ctx = makeCtx();
@@ -101,37 +114,57 @@ test('policy_last_run_debug no longer carries pvPredictionsRecent', () => {
   assert.ok(!('pvPredictionsRecent' in dbg), 'debug blob still holds the sample array');
 });
 
-test('policy_pv_predictions_recent holds the samples unchanged in shape', () => {
+test('the sample buffer never reaches the settings blob', () => {
+  const ctx = makeCtx();
+  runPolicyCycle(ctx, { pvPredictions: predictions(300), refillConfidence: 0.8 });
+  assert.strictEqual(writesFor(ctx, PRED_KEY).length, 0, `${PRED_KEY} was written to settings`);
+  assert.ok(!(PRED_KEY in ctx._liveState), `${PRED_KEY} still cached in _liveState`);
+});
+
+test('the buffer round-trips through /userdata unchanged in shape', () => {
   const ctx = makeCtx();
   const preds = predictions(300);
   runPolicyCycle(ctx, { pvPredictions: preds, refillConfidence: 0.8 });
-  const stored = ctx._liveState[PRED_KEY];
+  const stored = userdataStore.readJson(PRED_FILE);
   assert.strictEqual(stored.length, 300);
   assert.deepStrictEqual(stored[0], preds[0]);
   assert.deepStrictEqual(stored[299], preds[299]);
 });
 
-test('unchanged sample buffer is written once across two runs that both change the debug blob', () => {
+test('an unchanged buffer is not rewritten across two runs that both change the debug blob', () => {
   const ctx = makeCtx();
   const preds = predictions(300);
   runPolicyCycle(ctx, { pvPredictions: preds, refillConfidence: 0.80 });
+  const firstMtime = fs.statSync(path.join(tmpDir, `${PRED_FILE}.json`)).mtimeNs;
+  const rewrote = ctx._persistPvPredictions(preds.slice(-300));
   runPolicyCycle(ctx, { pvPredictions: preds, refillConfidence: 0.62 });
+  assert.strictEqual(rewrote, false, 'guard let an identical buffer through');
+  assert.strictEqual(fs.statSync(path.join(tmpDir, `${PRED_FILE}.json`)).mtimeNs, firstMtime,
+    'file was rewritten for an unchanged buffer');
   assert.strictEqual(writesFor(ctx, DEBUG_KEY).length, 2, 'debug blob should be written both runs');
-  assert.strictEqual(writesFor(ctx, PRED_KEY).length, 1, 'sample buffer should be deduped on run 2');
 });
 
 test('a new sample does produce a fresh write', () => {
   const ctx = makeCtx();
   const preds = predictions(300);
   runPolicyCycle(ctx, { pvPredictions: preds, refillConfidence: 0.80 });
-  runPolicyCycle(ctx, { pvPredictions: [...preds, sample(300)], refillConfidence: 0.80 });
-  assert.strictEqual(writesFor(ctx, PRED_KEY).length, 2);
+  assert.strictEqual(ctx._persistPvPredictions([...preds, sample(300)].slice(-300)), true);
+  assert.strictEqual(userdataStore.readJson(PRED_FILE)[299].timestamp, sample(300).timestamp);
 });
 
-// The four tests above drive _setLive directly, so they pass against the pre-split code too —
-// they pin the dedupe contract, not the call site. These two bind to the production source, which
-// is the only part that actually moved (the debug blob is assembled inline in a ~300-line method;
-// extracting it just to make it callable would be a bigger change than the fix itself).
+test('a failed write does not arm the guard, so the next run retries', () => {
+  const ctx = makeCtx();
+  const preds = predictions(4);
+  process.env.HOMEY_USERDATA_DIR = path.join(tmpDir, 'does-not-exist');
+  assert.strictEqual(ctx._persistPvPredictions(preds), false);
+  process.env.HOMEY_USERDATA_DIR = tmpDir;
+  assert.strictEqual(ctx._persistPvPredictions(preds), true, 'guard armed on a failed write');
+});
+
+// The tests above drive the production methods directly, so they pin the contract, not the call
+// site. These two bind to the production source, which is the part that actually moved (the debug
+// blob is assembled inline in a ~300-line method; extracting it just to make it callable would be
+// a bigger change than the fix itself).
 const deviceSrc = fs.readFileSync(path.join(__dirname, '../drivers/battery-policy/device.js'), 'utf8');
 
 test('device.js no longer assigns pvPredictionsRecent into the debug blob', () => {
@@ -139,9 +172,19 @@ test('device.js no longer assigns pvPredictionsRecent into the debug blob', () =
     'result.debug.pvPredictionsRecent assignment still present');
 });
 
-test('device.js writes the samples as their own settings key', () => {
-  assert.ok(new RegExp(`_setLive\\(\\s*'${PRED_KEY}'`).test(deviceSrc),
-    `no _setLive('${PRED_KEY}', ...) call site found`);
+test('device.js persists the samples via /userdata, not via a settings key', () => {
+  assert.ok(!new RegExp(`_setLive\\(\\s*'${PRED_KEY}'`).test(deviceSrc),
+    `_setLive('${PRED_KEY}', ...) call site is still there`);
+  assert.ok(/this\._persistPvPredictions\(/.test(deviceSrc),
+    'no _persistPvPredictions(...) call site found');
+});
+
+test('app.js drops the stale settings key on boot, not only on a version change', () => {
+  const appSrc = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
+  const migrateBlock = appSrc.slice(0, appSrc.indexOf('_runSettingsMigration(currentVersion)'));
+  assert.ok(appSrc.includes(PRED_KEY), `app.js never mentions ${PRED_KEY}`);
+  assert.ok(!migrateBlock.includes(PRED_KEY),
+    `${PRED_KEY} is unset before the version-change branch — it must be unconditional, after it`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

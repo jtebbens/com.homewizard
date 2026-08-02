@@ -30,6 +30,8 @@ const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/A
 // tuned against.
 const MODE_HISTORY_PREFIX    = 'policy_mode_history_';
 const MODE_HISTORY_DIR       = '/userdata';
+// The 300-sample PV accuracy buffer, on /userdata rather than in settings — see _persistPvPredictions.
+const PV_PREDICTIONS_FILE    = 'pv-predictions-recent';
 const MODE_HISTORY_DAYS      = 23;
 const MODE_HISTORY_BUCKET_MS = 15 * 60 * 1000;
 const MODE_HISTORY_FILE_RE   = /^mode-history-(\d{4}-\d{2}-\d{2})\.json$/;
@@ -86,7 +88,7 @@ function _settingsFootprintKB(settings) {
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
     'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
-    'policy_pv_predictions_recent', 'battery_policy_state', 'device_settings',
+    'battery_policy_state', 'device_settings',
   ];
   try {
     // The mode history lives in ~23 day chunks; report them as one line so they can't crowd the
@@ -659,6 +661,26 @@ class BatteryPolicyDevice extends Homey.Device {
     this._deadArrayGuard(key, value);
     this._liveState[key] = value;
     this._queueSettingsPersist(key, value);
+  }
+
+  // The 300-sample PV accuracy buffer (~50 kB) goes to /userdata, not through _setLive. Giving it
+  // its own settings key already bought all it could: the SDK ships the WHOLE settings object on
+  // every set() (manager/settings.js _save -> emitApp), so 50 kB sitting in the blob was charged to
+  // every unrelated write, dedupe or not. Nothing in the UI reads it — only a diagnostic curl.
+  //
+  // The stamp guard survives the move for a different reason than before. It used to keep an
+  // unchanged buffer out of the settings queue; now it keeps ~6.5 policy runs/hour from rewriting
+  // 50 kB of flash for a buffer that only mutates once per PV slot. Armed only after a write that
+  // actually landed, so a failed write retries on the next run instead of being silently skipped.
+  // Returns true when the file was rewritten.
+  _persistPvPredictions(preds) {
+    const stamp = preds && preds.length
+      ? `${preds.length}|${preds[preds.length - 1]?.timestamp ?? ''}`
+      : 'empty';
+    if (stamp === this._pvPredStamp) return false;
+    if (!userdataStore.writeJson(PV_PREDICTIONS_FILE, preds)) return false;
+    this._pvPredStamp = stamp;
+    return true;
   }
 
   // An instrument that writes an all-null/NaN array is dead but looks alive: it fires on cadence,
@@ -2486,12 +2508,11 @@ if (debug) this.log(
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
           // Temp: raw per-slot om/sc/actual W for divergence-mining analysis
           // (project_roadmap_perslot_blend_divergence). Remove after analysis done.
-          // Its OWN key, not a field of result.debug: _queueSettingsPersist dedupes per key, and
-          // the debug blob changes every policy run through the scalars below — riding along meant
-          // this ~45 kB array was re-serialized ~6.5x/hour while it only mutates once per PV slot.
-          // settings.set is 79.9% of app allocation and cost scales with payload size
-          // (project_app_rss_step_0722), so the skipped writes are the point, not the split itself.
-          this._setLive('policy_pv_predictions_recent', _pvAcc.pv_predictions?.slice(-300) ?? null);
+          // On /userdata, not in settings: it used to ride inside result.debug, then got its own
+          // settings key, and both still charged ~50 kB to every unrelated settings.set() because
+          // the SDK ships the whole blob each time (project_app_rss_step_0722). Read it with
+          // `curl /app/com.homewizard/userdata/pv-predictions-recent.json`.
+          this._persistPvPredictions(_pvAcc.pv_predictions?.slice(-300) ?? null);
           // Learned scalar sat yield-factor (panel-plane basis) — exposed so it's checkable
           // against the SAT_YF_PRIOR warm-start without a debug-flag flip + restart.
           result.debug.satYieldFactors = _pvAcc.solar_sat_yield_factor ?? null;
@@ -5905,6 +5926,7 @@ if (debug) this.log(
       'policy_pv_forecast_hourly',
       'policy_pv_actual_today',
       'policy_pv_bias',
+      // Pre-/userdata key; harmless once the boot migration in app.js has unset it.
       'policy_pv_predictions_recent',
       `batt_mode_hist_${this.getData().id}`,
       // Day keys from before the /userdata move; harmless when the migration already unset them.
@@ -5919,6 +5941,7 @@ if (debug) this.log(
       try { require('fs').unlinkSync(this._modeHistoryFile(dayKey)); } catch (_) {}
     }
     this._modeHist = null;
+    userdataStore.removeJson(PV_PREDICTIONS_FILE);
 
     // Clear p1Device reference
     this.p1Device = null;
