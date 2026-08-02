@@ -5967,6 +5967,14 @@ if (debug) this.log(
       const hashToday    = hashSlots(todaySlots);
       const hashTomorrow = hashSlots(tomorrowSlots);
 
+      // Back-to-back the three renders land in one CPU sample (30% peak, 15-min cadence).
+      // A gap between them spreads the same work over separate samples; costs wall-time only.
+      let _rendered = 0;
+      const _spreadRender = async () => {
+        if (_rendered > 0) await new Promise(r => this.homey.setTimeout(r, 4000));
+        _rendered++;
+      };
+
       // Today image
       if (!this.planningImageToday) {
         this.planningImageToday = await this.homey.images.createImage();
@@ -5986,6 +5994,7 @@ if (debug) this.log(
         this._chartHashToday = null; // force first update
       }
       if (hashToday !== this._chartHashToday) {
+        await _spreadRender();
         await this.planningImageToday.update();
         this._chartHashToday = hashToday;
       }
@@ -6011,6 +6020,7 @@ if (debug) this.log(
         this._chartHashTomorrow = null; // force first update
       }
       if (this.planningImageTomorrow && tomorrowSlots.length > 0 && hashTomorrow !== this._chartHashTomorrow) {
+        await _spreadRender();
         await this.planningImageTomorrow.update();
         this._chartHashTomorrow = hashTomorrow;
       }
@@ -6034,6 +6044,7 @@ if (debug) this.log(
 
       const pvHash = _amsDayKeyFormatter.format(new Date()) + JSON.stringify(pvActual?.sums) + JSON.stringify(pvForecast);
       if (pvHash !== this._pvChartHash) {
+        await _spreadRender();
         await this.planningImagePv.update();
         this._pvChartHash = pvHash;
       }
