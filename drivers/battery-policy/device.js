@@ -2486,6 +2486,8 @@ if (debug) this.log(
         result.debug.refillConfidence = this._lastRefillConfidence ?? null;
         result.debug.reserveFloorPct  = this._lastReserveFloorPct ?? null;
         result.debug.minDischargePriceRange = this._lastMinDischargePriceRange ?? null;
+        // Shadow range of the fixed per-slot floor. null = PV-headroom block did not run.
+        result.debug.minDischargeFixRange = this._lastMinDischargeFixRange ?? null;
         result.debug.consumptionMarginRange = this._lastConsumptionMarginRange ?? null;
         // Night bias correction actually applied, in W (≤ 0). null = flag off. Expect a non-zero
         // min on a run whose horizon spans 23-06 and 0/0 on a pure daytime horizon.
@@ -3844,6 +3846,7 @@ if (debug) this.log(
       const tomorrowStr = _amsDayKeyFormatter.format(new Date(Date.now() + 24 * 3600_000));
       this.learningEngine.savePvNetSurplusPrediction(tomorrowStr, pvKwhTomorrow);
     }
+    this._lastMinDischargeFixRange = null;
     if (pvKwhTomorrow >= capacityKwh * 0.9 && minDischargePrice > 0 && pvForecast) {
       const effectiveRte = learnedRte ?? 0.75;
       const cycleCostKwh = this.optimizationEngine.cycleCostPerKwh ?? 0.075;
@@ -3877,7 +3880,7 @@ if (debug) this.log(
         suffixMinChargePrice[i] = runningMin;
         if (prices[i].price < dayFloor) runningMin = Math.min(runningMin, prices[i].price);
       }
-      const perSlotFloors = prices.map((p, i) => {
+      const perSlotFloorsOld = prices.map((p, i) => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
         if (pvW >= pvStrongW && !atMaxSoc) return dayFloor;
         if (pvW >= 50 || (pvW >= pvStrongW && atMaxSoc)) {
@@ -3887,8 +3890,20 @@ if (debug) this.log(
         }
         return nightFloor;
       });
+      // The line above looks up PV with the raw pvForecast and an ISO timestamp, while
+      // _getPvForSlot expects the _buildPvIndex output and epoch ms — so every slot silently
+      // gets pvForecast[0] and the whole horizon collapses onto one regime. Shadow the fixed
+      // array next to it; `pv_floor_fix`=1 switches the DP over to it.
+      const perSlotFloorsNew = this.optimizationEngine.buildPerSlotDischargeFloors(prices, pvForecast, {
+        dayFloor, nightFloor, weakPvFloorBase, pvStrongW, atMaxSoc, effectiveRte
+      });
+      const floorFixLive = Number(this.homey.settings.get('pv_floor_fix') || 0) === 1;
+      const nDiff = perSlotFloorsOld.reduce((n, v, i) => n + (Math.abs(v - perSlotFloorsNew[i]) > 1e-6 ? 1 : 0), 0);
+      const _f = a => `€${Math.min(...a).toFixed(3)}–${Math.max(...a).toFixed(3)}`;
+      this.log(`[FLOORFIX] ${floorFixLive ? 'live' : 'shadow'}: ${nDiff}/${prices.length} slots differ | old ${_f(perSlotFloorsOld)} | new ${_f(perSlotFloorsNew)} | pv[0]=${pvForecast[0]?.pvPowerW ?? '?'}W`);
+      this._lastMinDischargeFixRange = { min: +Math.min(...perSlotFloorsNew).toFixed(3), max: +Math.max(...perSlotFloorsNew).toFixed(3) };
       this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor ≥€${weakPvFloorBase} (RTE-spread guard: ≥ refillAhead/${effectiveRte.toFixed(2)}), day floor €${dayFloor}${atMaxSoc ? ` (SoC ${soc}%=max → weak-PV floor on PV-strong slots too)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
-      minDischargePrice = perSlotFloors;
+      minDischargePrice = floorFixLive ? perSlotFloorsNew : perSlotFloorsOld;
     }
     // Negative tariff headroom: when strongly negative prices are coming (< -€0.10),
     // lower the discharge floor to €0.00 for all slots before the first negative window.
