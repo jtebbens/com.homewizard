@@ -10,6 +10,7 @@ const OptimizationEngine = require('../../lib/optimization-engine');
 const { exportValue } = require('../../lib/price-formulas');
 const ChartRenderer = require('../../lib/chart-renderer');
 const { sanitizeSoc, createState } = require('../../lib/soc-glitch-guard');
+const userdataStore = require('../../lib/userdata-store');
 
 const debug = false;
 
@@ -32,6 +33,7 @@ const MODE_HISTORY_DIR       = '/userdata';
 const MODE_HISTORY_DAYS      = 23;
 const MODE_HISTORY_BUCKET_MS = 15 * 60 * 1000;
 const MODE_HISTORY_FILE_RE   = /^mode-history-(\d{4}-\d{2}-\d{2})\.json$/;
+const FLOORFIX_SAMPLES_MAX   = 250;
 
 // [DP-INPUT-DUMP] lands one compute()-input snapshot per file next to the mode history. It used to
 // go to this.log(), but /tmp/homey.log is tmpfs: a ~150 kB dump line rolls out of reach as the log
@@ -569,6 +571,20 @@ class BatteryPolicyDevice extends Homey.Device {
         try { require('fs').unlinkSync(this._modeHistoryFile(d)); } catch (_) {}
       }
     }
+  }
+
+  // Shadow-harvest sink for the per-slot discharge-floor fix (`pv_floor_fix`).
+  //
+  // The [FLOORFIX] log line only fires on a real DP recompute — a handful per day, not per policy
+  // run — and /tmp/homey.log is tmpfs, so a restart takes the whole harvest with it. This keeps the
+  // same samples on /userdata instead. Bounded: newest FLOORFIX_SAMPLES_MAX entries, ~200 B each.
+  _appendFloorFixSample(sample) {
+    try {
+      const prev = userdataStore.readJson('floorfix_samples');
+      const rows = Array.isArray(prev) ? prev : [];
+      rows.push({ ts: new Date().toISOString(), ...sample });
+      userdataStore.writeJson('floorfix_samples', rows.slice(-FLOORFIX_SAMPLES_MAX));
+    } catch (_) { /* diagnostic only — never break a policy run */ }
   }
 
   // Concatenated history, oldest first. With lastN only the newest chunks needed to cover N are
@@ -3880,27 +3896,39 @@ if (debug) this.log(
         suffixMinChargePrice[i] = runningMin;
         if (prices[i].price < dayFloor) runningMin = Math.min(runningMin, prices[i].price);
       }
+      const oldBranches = new Array(prices.length);
       const perSlotFloorsOld = prices.map((p, i) => {
         const pvW = this.optimizationEngine._getPvForSlot(pvForecast, p.timestamp);
-        if (pvW >= pvStrongW && !atMaxSoc) return dayFloor;
+        if (pvW >= pvStrongW && !atMaxSoc) { oldBranches[i] = 'day'; return dayFloor; }
         if (pvW >= 50 || (pvW >= pvStrongW && atMaxSoc)) {
+          oldBranches[i] = 'weakPv';
           const refill = suffixMinChargePrice[i];
           const rteFloor = (refill !== Infinity && refill > 0) ? refill / effectiveRte : 0;
           return Math.max(weakPvFloorBase, rteFloor);
         }
+        oldBranches[i] = 'night';
         return nightFloor;
       });
       // The line above looks up PV with the raw pvForecast and an ISO timestamp, while
       // _getPvForSlot expects the _buildPvIndex output and epoch ms — so every slot silently
       // gets pvForecast[0] and the whole horizon collapses onto one regime. Shadow the fixed
       // array next to it; `pv_floor_fix`=1 switches the DP over to it.
+      const newBranches = new Array(prices.length);
       const perSlotFloorsNew = this.optimizationEngine.buildPerSlotDischargeFloors(prices, pvForecast, {
         dayFloor, nightFloor, weakPvFloorBase, pvStrongW, atMaxSoc, effectiveRte
-      });
+      }, newBranches);
       const floorFixLive = Number(this.homey.settings.get('pv_floor_fix') || 0) === 1;
       const nDiff = perSlotFloorsOld.reduce((n, v, i) => n + (Math.abs(v - perSlotFloorsNew[i]) > 1e-6 ? 1 : 0), 0);
       const _f = a => `€${Math.min(...a).toFixed(3)}–${Math.max(...a).toFixed(3)}`;
       this.log(`[FLOORFIX] ${floorFixLive ? 'live' : 'shadow'}: ${nDiff}/${prices.length} slots differ | old ${_f(perSlotFloorsOld)} | new ${_f(perSlotFloorsNew)} | pv[0]=${pvForecast[0]?.pvPowerW ?? '?'}W`);
+      this._appendFloorFixSample({
+        nDiff, nSlots: prices.length, soc,
+        oldMin: +Math.min(...perSlotFloorsOld).toFixed(3), oldMax: +Math.max(...perSlotFloorsOld).toFixed(3),
+        newMin: +Math.min(...perSlotFloorsNew).toFixed(3), newMax: +Math.max(...perSlotFloorsNew).toFixed(3),
+        pv0W: Math.round(pvForecast[0]?.pvPowerW ?? -1),
+        oldBranch: [...new Set(oldBranches)].join('+'),
+        newBranchCounts: newBranches.reduce((c, b) => { c[b] = (c[b] || 0) + 1; return c; }, {})
+      });
       this._lastMinDischargeFixRange = { min: +Math.min(...perSlotFloorsNew).toFixed(3), max: +Math.max(...perSlotFloorsNew).toFixed(3) };
       this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor ≥€${weakPvFloorBase} (RTE-spread guard: ≥ refillAhead/${effectiveRte.toFixed(2)}), day floor €${dayFloor}${atMaxSoc ? ` (SoC ${soc}%=max → weak-PV floor on PV-strong slots too)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = floorFixLive ? perSlotFloorsNew : perSlotFloorsOld;

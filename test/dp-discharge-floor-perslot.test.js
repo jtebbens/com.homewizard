@@ -120,4 +120,20 @@ const OPTS = {
   ok('empty pvForecast degrades to the night floor');
 }
 
+// --- outBranches labels the regime that produced each floor ---------------------------------------
+{
+  const branches = [];
+  const floors = eng.buildPerSlotDischargeFloors(prices, pvForecast, OPTS, branches);
+  assert.strictEqual(branches.length, floors.length, 'one branch label per slot');
+  assert.ok(branches.every((b) => ['day', 'weakPv', 'night'].includes(b)), 'labels are the three regimes');
+  // The label must agree with the floor it produced, or the harvest counts a regime that never ran.
+  floors.forEach((f, i) => {
+    if (branches[i] === 'day') assert.strictEqual(f, OPTS.dayFloor, `slot ${i} labelled day carries dayFloor`);
+    if (branches[i] === 'night') assert.strictEqual(f, OPTS.nightFloor, `slot ${i} labelled night carries nightFloor`);
+    if (branches[i] === 'weakPv') assert.ok(f >= OPTS.weakPvFloorBase, `slot ${i} labelled weakPv is at or above the weak-PV base`);
+  });
+  assert.ok(new Set(branches).size > 1, 'a day/night profile splits across more than one regime');
+  ok('outBranches labels match the floors they produced');
+}
+
 console.log(`\n${passed} passed`);
