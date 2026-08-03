@@ -696,7 +696,14 @@ class BaseloadMonitor {
     // Re-derive it here so a changed filter takes effect at startup instead of at the next 05:00.
     if (this.nightHistory.length) {
       const recomputed = this._computeSmartBaseload();
-      if (typeof recomputed === 'number') this.currentBaseload = recomputed;
+      if (typeof recomputed === 'number' && recomputed !== this.currentBaseload) {
+        this.currentBaseload = recomputed;
+        // Persist it: the settings page renders this blob, and without a write it would show the
+        // superseded value until _finalizeNight() next runs at 05:00 while the DP already uses the
+        // new one. Debounced by 5 min, and only reached when the value actually moved, so this
+        // costs one extra settings.set() per app start at most.
+        this._save();
+      }
     }
     if (Array.isArray(s.deviceNotificationPrefs)) this.deviceNotificationPrefs=new Map(s.deviceNotificationPrefs);
     if (typeof s.invalidNightCounter==='number') this.invalidNightCounter=s.invalidNightCounter;

@@ -174,6 +174,22 @@ test('_loadState re-derives currentBaseload, so a stale stored value does not su
   m.stateDir = '/nonexistent'; // samples come from the inline history, not from disk
   m._loadState();
   assert.strictEqual(m.currentBaseload, 260);
+  assert.ok(m._saveTimer, 'must schedule a write, or the settings page keeps rendering the old value');
+  clearTimeout(m._saveTimer);
+});
+
+test('_loadState does not schedule a write when the stored value already agrees', () => {
+  const stored = {
+    currentBaseload: 260,
+    nightHistory: [fullNight('2026-08-01', 250), fullNight('2026-08-02', 260), fullNight('2026-08-03', 270)],
+  };
+  const m = new BaseloadMonitor({
+    settings: { get: (k) => (k === 'baseload_state' ? stored : null), set: () => {} },
+    setTimeout, clearTimeout,
+  });
+  m.stateDir = '/nonexistent';
+  m._loadState();
+  assert.ok(!m._saveTimer);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);
