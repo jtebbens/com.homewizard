@@ -22,7 +22,7 @@ const Homey = require('homey');
 const v8 = require('v8');
 const { clearDebugLogs } = require('./lib/debug-logs');
 
-const Testing = true; // TEMP: opens the CDP inspector in onInit. Set back to false after profiling.
+const Testing = false; // Opens the CDP inspector in onInit. Keep false outside profiling sessions.
 
 // Helper: log V8 heap + (if available) process RSS. Memory Warning Limit on Homey
 // could be RSS-based rather than heap — try both so we can correlate which bucket
