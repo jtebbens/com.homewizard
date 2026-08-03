@@ -3951,6 +3951,10 @@ if (debug) this.log(
         newBranchCounts: newBranches.reduce((c, b) => { c[b] = (c[b] || 0) + 1; return c; }, {})
       });
       this._lastMinDischargeFixRange = { min: +Math.min(...perSlotFloorsNew).toFixed(3), max: +Math.max(...perSlotFloorsNew).toFixed(3) };
+      // Carried to the [DP-INPUT-DUMP] payload below: the dump ships the LIVE minDischargePrice,
+      // which is the old array while `pv_floor_fix` is off. Without the fixed array alongside it,
+      // an offline replay has to rebuild the six floor params from the tmpfs `PV headroom` log line.
+      this._lastPerSlotFloorsNew = perSlotFloorsNew;
       this.log(`☀️ PV headroom: pvTomorrow=${pvKwhTomorrow}kWh ≥ ${(capacityKwh * 0.9).toFixed(1)}kWh → night floor €${nightFloor}, weak-PV floor ≥€${weakPvFloorBase} (RTE-spread guard: ≥ refillAhead/${effectiveRte.toFixed(2)}), day floor €${dayFloor}${atMaxSoc ? ` (SoC ${soc}%=max → weak-PV floor on PV-strong slots too)` : ''} (pvStrong≥${pvStrongW}W, break-even €${actualBreakEven})`);
       minDischargePrice = floorFixLive ? perSlotFloorsNew : perSlotFloorsOld;
     }
@@ -4101,6 +4105,7 @@ if (debug) this.log(
         learnedRte, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow,
         adjustedTerminalPvKwh, pvCloudFactor: _pvCloudFactor, refillConfidence, maxChargePrice,
         prices, pvForecast, consumptionWPerSlot,
+        minDischargePriceNew: this._lastPerSlotFloorsNew,
       });
       // Log the pointer, not the payload: the file is the artefact, the line only says where.
       if (_file) this.log(`[DP-INPUT-DUMP] wrote ${_file} (${_dumpsLeft - 1} left)`);
