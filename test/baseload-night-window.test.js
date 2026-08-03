@@ -99,5 +99,82 @@ test('does not fire outside the pvStartupEarliest-pvStartupLatest hour range', (
   assert.strictEqual(m.flags.sawPVStartup, undefined);
 });
 
+// ── _hasWindowCoverage: partially-measured nights ──────────────────────────
+// Night history stores ts as epoch ms (see _downsampleSamples).
+function night(date, { minutes, count, powers }) {
+  const start = Date.UTC(2026, 6, 9, 0, 0, 0);
+  const step = count > 1 ? (minutes * 60000) / (count - 1) : 0;
+  const samples = [];
+  for (let i = 0; i < count; i++) {
+    samples.push({ ts: start + Math.round(i * step), power: powers(i) });
+  }
+  return { date, avg: 300, invalid: false, samples };
+}
+
+const fullNight = (date, w) => night(date, { minutes: 239, count: 240, powers: () => w });
+// The 2026-07-09 incident: 39 samples over 32 minutes, 18 of them at 0 W once PV covered the house.
+const truncatedNight = night('2026-07-09', { minutes: 32, count: 39, powers: (i) => (i >= 21 ? 0 : 300) });
+
+test('coverage: a full 239-minute night passes', () => {
+  const m = makeMonitor();
+  assert.strictEqual(m._hasWindowCoverage(fullNight('2026-08-03', 250).samples), true);
+});
+
+test('coverage: the 32-minute night of 2026-07-09 is rejected', () => {
+  const m = makeMonitor();
+  assert.strictEqual(m._hasWindowCoverage(truncatedNight.samples), false);
+});
+
+test('coverage: 173 minutes (the real 2026-07-05 night) still passes — threshold is not too strict', () => {
+  const m = makeMonitor();
+  const n = night('2026-07-05', { minutes: 173, count: 209, powers: () => 259 });
+  assert.strictEqual(m._hasWindowCoverage(n.samples), true);
+});
+
+test('coverage: span alone is not enough — 2 samples 4h apart still fail the >=10 sample check', () => {
+  const m = makeMonitor();
+  const sparse = night('2026-08-01', { minutes: 240, count: 2, powers: () => 250 });
+  assert.strictEqual(m._hasWindowCoverage(sparse.samples), true);
+  m.nightHistory = [sparse];
+  // No night survives the sample-count check, so smart filtering yields nothing and _compute() runs.
+  assert.strictEqual(m._computeSmartBaseload(), 300); // _compute() averages the stored avg
+});
+
+test('smart baseload ignores the truncated night (was: dragged down to 170 W by its 0 W median)', () => {
+  const m = makeMonitor();
+  m.nightHistory = [
+    fullNight('2026-08-01', 250),
+    fullNight('2026-08-02', 260),
+    fullNight('2026-08-03', 270),
+    truncatedNight,
+  ];
+  assert.strictEqual(m._computeSmartBaseload(), 260); // avg of 250, 260, 270
+});
+
+test('fallback ignores the truncated night too', () => {
+  const m = makeMonitor();
+  m.nightHistory = [fullNight('2026-08-01', 250), truncatedNight];
+  assert.strictEqual(m._fallback(), 250);
+});
+
+test('_loadState re-derives currentBaseload, so a stale stored value does not survive a restart', () => {
+  const stored = {
+    currentBaseload: 170, // what the old filter produced, including the truncated night
+    nightHistory: [
+      fullNight('2026-08-01', 250),
+      fullNight('2026-08-02', 260),
+      fullNight('2026-08-03', 270),
+      truncatedNight,
+    ],
+  };
+  const m = new BaseloadMonitor({
+    settings: { get: (k) => (k === 'baseload_state' ? stored : null), set: () => {} },
+    setTimeout, clearTimeout,
+  });
+  m.stateDir = '/nonexistent'; // samples come from the inline history, not from disk
+  m._loadState();
+  assert.strictEqual(m.currentBaseload, 260);
+});
+
 console.log(`\n${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

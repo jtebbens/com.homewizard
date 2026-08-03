@@ -1174,10 +1174,18 @@
         const values = history.map(n => n.avg || null);
         const invalid = history.map(n => n.invalid);
 
+        // Window bounds come from the backend so the coverage rule below is not a second
+        // hard-coded copy; the defaults only cover state written before those fields existed.
+        const winMs = ((state?.nightEndHour ?? 5) - (state?.nightStartHour ?? 1)) * 3600000;
+        const minCoverage = state?.minWindowCoverage ?? 0.5;
+
         // Per-night filtered minimum: median of lowest 50% of samples <1000W
-        // mirrors _computeSmartBaseload() in baseloadMonitor.js
+        // mirrors _computeSmartBaseload() in baseloadMonitor.js, coverage rule included —
+        // a night measured for only part of the window reads low and must draw a gap, not a point.
         const filteredMinima = history.map(n => {
           if (n.invalid || !Array.isArray(n.samples) || n.samples.length < 10) return null;
+          const span = Number(n.samples[n.samples.length - 1].ts) - Number(n.samples[0].ts);
+          if (!(span >= winMs * minCoverage)) return null;
           const ps = n.samples.map(s => s.power).filter(p => typeof p === 'number' && p >= 0 && p < 1000);
           if (ps.length < 10) return null;
           ps.sort((a, b) => a - b);

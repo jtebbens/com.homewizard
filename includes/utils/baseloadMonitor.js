@@ -26,6 +26,10 @@ class BaseloadMonitor {
     this.nightStartHour = 1;
     this.nightEndHour = 5;
     this.maxNights = 30;
+    // Fraction of the night window a stored night's samples must span to count. See
+    // _hasWindowCoverage(). Measured separation is wide: good nights span 173-240 min,
+    // the two truncated ones 27 and 32 min.
+    this.minWindowCoverage = 0.5;
 
     // Per-night samples live on disk, not in the settings blob: they are 99% of this
     // state's 260 kB, and every settings.set() re-serializes all 111 keys (~1338 kB).
@@ -162,6 +166,18 @@ class BaseloadMonitor {
   _isInNightWindow(d) {
     const h = this._getAmsterdamHour(d);
     return h >= this.nightStartHour && h < this.nightEndHour;
+  }
+
+  // A stored night only counts once its samples span at least half the night window. Sample COUNT
+  // is not enough: 39 samples over 32 minutes clear the >=10 bar just as easily as 300 over 4
+  // hours, and a partially measured night reads artificially low -- which is exactly what
+  // _computeSmartBaseload() selects for, since it averages the three LOWEST night medians.
+  // (2026-07-09: samples ran 06:27-06:59 only, 18 of them at 0 W once PV covered the house, so
+  // that night's median was 0 and dragged the baseload from 211 W down to 126 W.)
+  _hasWindowCoverage(samples) {
+    if (!Array.isArray(samples) || samples.length < 2) return false;
+    const span = Number(samples[samples.length - 1].ts) - Number(samples[0].ts);
+    return span >= (this.nightEndHour - this.nightStartHour) * 3600000 * this.minWindowCoverage;
   }
 
   _isWithinCurrentNightWindow(now = new Date()) {
@@ -528,6 +544,10 @@ class BaseloadMonitor {
     const nightMedians = [];
     
     for (const night of validNights) {
+      // A night measured for only part of the window reads low; skip it before it can win a
+      // spot in the three-lowest average below.
+      if (!this._hasWindowCoverage(night.samples)) continue;
+
       // Filter out obvious non-baseload consumption (EV charging, heat pumps, etc.)
       // Keep only samples that look like true baseload (<1000W)
       const baseloadSamples = night.samples
@@ -598,7 +618,9 @@ class BaseloadMonitor {
 
   _fallback() {
     const r=[];
-    for (const n of this.nightHistory.slice(-7)) if (Array.isArray(n.samples)) r.push(...n.samples);
+    // Same coverage rule as _computeSmartBaseload(): a truncated night's near-zero samples would
+    // otherwise dominate the bottom-10% slice below.
+    for (const n of this.nightHistory.slice(-7)) if (this._hasWindowCoverage(n.samples)) r.push(...n.samples);
     const p=[];
     for (const s of r) {
       // Filter: only non-negative values < 1000W (same logic as _computeSmartBaseload)
@@ -655,6 +677,11 @@ class BaseloadMonitor {
     this.homey.settings.set('baseload_state',{
       nightHistory:this.nightHistory.map(({ samples: _s, ...rest }) => rest),
       currentBaseload:this.currentBaseload,
+      // Published so the settings chart can apply the same coverage rule as _hasWindowCoverage()
+      // instead of hard-coding the window a second time.
+      nightStartHour:this.nightStartHour,
+      nightEndHour:this.nightEndHour,
+      minWindowCoverage:this.minWindowCoverage,
       deviceNotificationPrefs:Array.from(this.deviceNotificationPrefs.entries()),
       invalidNightCounter:this.invalidNightCounter
     });
@@ -665,6 +692,12 @@ class BaseloadMonitor {
     if (!s) return;
     if (Array.isArray(s.nightHistory)) this.nightHistory=this._restoreSamples(s.nightHistory);
     if (typeof s.currentBaseload==='number') this.currentBaseload=s.currentBaseload;
+    // The stored value is derived, not a source: it is only ever recomputed at _finalizeNight().
+    // Re-derive it here so a changed filter takes effect at startup instead of at the next 05:00.
+    if (this.nightHistory.length) {
+      const recomputed = this._computeSmartBaseload();
+      if (typeof recomputed === 'number') this.currentBaseload = recomputed;
+    }
     if (Array.isArray(s.deviceNotificationPrefs)) this.deviceNotificationPrefs=new Map(s.deviceNotificationPrefs);
     if (typeof s.invalidNightCounter==='number') this.invalidNightCounter=s.invalidNightCounter;
   }
