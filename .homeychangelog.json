@@ -1612,5 +1612,8 @@
   },
   "3.17.11": {
     "en": "Battery plan fix after PIB calibration, Energy-socket standby warning, Corrected payback/profit measurement"
+  },
+  "3.19.0": {
+    "en": "Simplified PV forecast source setting (satellite/Solcast merged into one dropdown) plus fixes for peak shaving, discharge floor, battery cycle cost, and standby consumption learning"
   }
 }

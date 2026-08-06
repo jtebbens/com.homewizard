@@ -51,37 +51,37 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.18.0)
+## 📝 Latest Updates (v3.15.63–v3.19.0)
 
-### Simplified PV Forecast Source Setting (v3.18.0)
+### Simplified PV Forecast Source Setting (v3.19.0)
 
 * **Replaced three overlapping checkboxes with a single, clearer choice.** The settings page used to have separate toggles for "Use satellite in DP optimizer" and "Satellite replaces Solcast", plus a Solcast enable checkbox — with unwritten precedence rules deciding what happened when more than one was switched on. These are now one setting: blend Open-Meteo's forecast with nothing extra, with a satellite-based nowcast, or with Solcast. Only one secondary source can be active at a time, so there's no longer a hidden "which one wins" question. The satellite option no longer requires a Solcast account to use — previously the satellite blend only worked at all when Solcast was also configured, which wasn't intentional and just wasn't caught until now. Existing configurations are migrated automatically on the first restart after updating; nothing needs to be re-entered. Satellite nowcast images captured in the few minutes just before sunrise carry no usable signal but were previously blended in anyway, dragging the near-term PV forecast down to near-zero for the following, already-sunlit hour — those images are now ignored.
 
-### Peak Shaving No Longer Silently Downgrades to Standby (v3.18.0)
+### Peak Shaving No Longer Silently Downgrades to Standby (v3.19.0)
 
 * **Fixed peak shaving occasionally doing nothing when it should have discharged.** Peak shaving is meant to be a hard, price-blind safety cap that discharges the battery whenever grid import threatens to exceed your configured limit — but a shared internal profitability check could veto that discharge and drop it back to standby whenever the electricity price sat below your minimum discharge price, with nothing logged to explain why. Peak-shaving discharges now bypass that price check entirely, as intended; normal price-driven discharging is unaffected.
 
-### Corrected Battery Discharge Floor Calculation (v3.18.0)
+### Corrected Battery Discharge Floor Calculation (v3.19.0)
 
 * **Fixed the minimum state of charge the planner protects near the end of a discharge window sometimes being computed from the wrong time slot.** The per-slot floor that keeps a reserve in the battery could end up flat, or based on the first slot of the forecast instead of the slot actually being planned, occasionally letting the plan aim closer to empty than intended.
 
-### Corrected Battery Wear Cost in Store-vs-Export Decisions (v3.18.0)
+### Corrected Battery Wear Cost in Store-vs-Export Decisions (v3.19.0)
 
 * **Fixed the cost of battery wear (charge/discharge cycling) not being weighed in some cases when deciding whether to store surplus solar or export it.** The same decision made through the low-PV "trickle" path used a separate piece of code that had been missed the first time this was fixed. Both now consistently account for cycle cost, so the plan no longer stores PV in the battery when exporting it would actually have been more profitable.
 
-### Fixed an Underestimate in Learned Standby Consumption (v3.18.0)
+### Fixed an Underestimate in Learned Standby Consumption (v3.19.0)
 
 * **Fixed nights that were only partially measured (for example due to a restart) being able to win selection as one of the "lowest consumption" reference nights used to learn your household's standby power.** A partial night's total looks artificially low, so it could pull the learned baseline down and understate your real overnight consumption. Incomplete nights are now excluded from that selection.
 
-### Corrected a Timezone Bug in a Dynamic Price Window (v3.18.0)
+### Corrected a Timezone Bug in a Dynamic Price Window (v3.19.0)
 
 * **Fixed a price-release time window that was reading the clock in local time on a server that actually runs in UTC, shifting the window two hours later than intended in winter (one hour in summer).** Also stopped the price fetcher from unnecessarily re-downloading and re-parsing the full day-ahead price page on every policy run when the cached prices already covered the full stretch through tomorrow.
 
-### CDP Debug Inspector Off by Default (v3.18.0)
+### CDP Debug Inspector Off by Default (v3.19.0)
 
 * **Closed a debug-only network listener that could be left open unintentionally.** A Chrome DevTools inspector port used for live performance profiling during development now stays off unless explicitly enabled by a developer-only flag.
 
-### Reduced Background Memory Usage (v3.18.0)
+### Reduced Background Memory Usage (v3.19.0)
 
 * **Moved several large internal buffers (PV accuracy samples, debug logs, price-provider caches) out of the app's settings storage and into local files.** Every settings write ships the app's entire settings data over an internal channel, so unrelated data sitting in that storage was being re-sent on every single write regardless of what actually changed. This measurably reduced background memory and CPU use, and lowers the chance of hitting Homey's memory-warning limit on setups with many HomeWizard devices.
 
