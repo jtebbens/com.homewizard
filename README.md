@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.17.11)
+## 📝 Latest Updates (v3.15.63–v3.18.0)
+
+### Simplified PV Forecast Source Setting (v3.18.0)
+
+* **Replaced three overlapping checkboxes with a single, clearer choice.** The settings page used to have separate toggles for "Use satellite in DP optimizer" and "Satellite replaces Solcast", plus a Solcast enable checkbox — with unwritten precedence rules deciding what happened when more than one was switched on. These are now one setting: blend Open-Meteo's forecast with nothing extra, with a satellite-based nowcast, or with Solcast. Only one secondary source can be active at a time, so there's no longer a hidden "which one wins" question. The satellite option no longer requires a Solcast account to use — previously the satellite blend only worked at all when Solcast was also configured, which wasn't intentional and just wasn't caught until now. Existing configurations are migrated automatically on the first restart after updating; nothing needs to be re-entered.
 
 ### Battery Plan No Longer Collapses After a Charge-Rate Calibration (v3.17.11)
 
