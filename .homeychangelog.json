@@ -1612,8 +1612,5 @@
   },
   "3.17.11": {
     "en": "Battery plan fix after PIB calibration, Energy-socket standby warning, Corrected payback/profit measurement"
-  },
-  "3.18.0": {
-    "en": "Simplified PV forecast source setting: one dropdown (off/satellite/Solcast) replaces three overlapping checkboxes; satellite no longer requires a Solcast account"
   }
 }
