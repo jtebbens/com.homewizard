@@ -311,6 +311,9 @@ class BatteryPolicyDevice extends Homey.Device {
     // Migrate legacy weather_location (city name) to weather_latitude/weather_longitude
     await this._migrateWeatherLocation();
 
+    // Migrate legacy solcast_enabled/satellite_dp_active/sat_replaces_sc to pv_secondary_source
+    await this._migrateSatelliteMode();
+
     // Weather fetch only in dynamic.
     // Deferred 30s past onInit: Open-Meteo ensemble fetch + parsing allocates ~30 MB
     // and pushed peak heap to 71 MB on a user's setup with 15 devices, tripping the
@@ -2141,6 +2144,23 @@ if (debug) this.log(
     }
   }
 
+  // Merges the three legacy checkboxes (solcast_enabled, satellite_dp_active, sat_replaces_sc)
+  // into the single pv_secondary_source dropdown. satellite_dp_active alone (the full 0-2h
+  // override mode) maps to 'satellite' too — that mode had no data backing (F4 verdict only
+  // supports sat replacing the Solcast leg, not overriding OM), so the blend mode is the
+  // evidence-backed replacement for it.
+  async _migrateSatelliteMode() {
+    const settings = this.getSettings();
+    if (settings.pv_secondary_source != null) return; // already migrated
+
+    const mode = settings.sat_replaces_sc === true ? 'satellite'
+      : settings.satellite_dp_active === true ? 'satellite'
+      : settings.solcast_enabled === true ? 'solcast'
+      : 'off';
+    if (mode !== 'off') this.log(`Migrated PV secondary source → ${mode}`);
+    await this.setSettings({ pv_secondary_source: mode });
+  }
+
   _getLocationFromSetting() {
     const settings = this.getSettings();
 
@@ -3176,10 +3196,11 @@ if (debug) this.log(
     // Lazy-loaded; caches in homey.settings survive app restarts.
     if (Array.isArray(pvForecast) && pvForecast.length > 0) {
       const blendSettings = inputs.settings;
+      const pvSource = blendSettings?.pv_secondary_source || 'off';
 
       // ── Solcast (optional, 30-min → grouped to hourly) ──────────────────────
       let solcastByHourMs = null;
-      if (blendSettings?.solcast_enabled && blendSettings.solcast_api_key && blendSettings.solcast_resource_id) {
+      if (pvSource === 'solcast' && blendSettings.solcast_api_key && blendSettings.solcast_resource_id) {
         if (!this._solcastProvider) {
           const SolcastProvider = require('../../lib/solcast-provider');
           this._solcastProvider = new SolcastProvider(this.homey);
@@ -3208,12 +3229,15 @@ if (debug) this.log(
       // Save unblended OM forecast for per-model accuracy tracking
       this._pvForecastOM = pvForecast;
 
-      // ── Blend all available sources per hourly slot ──────────────────────────
-      if (solcastByHourMs) {
+      // ── Blend the secondary source (satellite or Solcast, mutually exclusive) ─
+      // per hourly slot. _blendOmScSlot (below) is source-agnostic: satUsed depends
+      // only on satActive/satW, so it already supports an OM+satellite call with no
+      // Solcast data at all — no need to duplicate the blend formula per source.
+      if (pvSource !== 'off') {
         this._pvForecastSC = solcastByHourMs;
 
         const { wOM: baseWom, wSC: baseWsc } = this.learningEngine?.getPvBlendWeights?.() ?? { wOM: 0.5, wSC: 0.5 };
-        // Lever A: fixed 50/50 OM↔SC. getPvBlendWeights already returns 0.5/0.5 here, but the
+        // Lever A: fixed 50/50 OM↔secondary. getPvBlendWeights already returns 0.5/0.5 here, but the
         // per-day divergence penalty and per-slot p10-pessimism below would still shift it —
         // bypass both so the blend is exactly the measured unbiased average. Toggle off to revert.
         const unbiasedBlend = this.getSetting('pv_unbiased_blend') !== false;
@@ -3222,18 +3246,20 @@ if (debug) this.log(
         const tomorrowNLDate = _amsDayKeyFormatter.format(new Date(Date.now() + 86_400_000));
         const byDay = { [todayNLDate]: { om: 0, sc: 0, bl: 0 }, [tomorrowNLDate]: { om: 0, sc: 0, bl: 0 } };
 
-        // Pre-scan per-day OM vs SC totals for divergence detection.
-        // When SC optimistically exceeds OM, OM's NWP ensemble captures cloud/rain faster
-        // (SC satellite/ML lags on approaching weather fronts). Compute separately per day so
-        // tomorrow's blend isn't skewed by today's weather divergence.
+        // Pre-scan per-day OM vs SC totals for divergence detection (Solcast only — the
+        // divergence penalty models NWP-vs-ML front-lag, which doesn't apply to the
+        // satellite nowcast). For satellite, dayTotals stays 0/0 so getDayWeights below
+        // naturally falls through to the base accuracy/unbiased weights, unchanged.
         const dayTotals = { [todayNLDate]: { om: 0, sc: 0 }, [tomorrowNLDate]: { om: 0, sc: 0 } };
-        for (const slot of pvForecast) {
-          const dk = _amsDayKeyFormatter.format(new Date(slot.timestamp));
-          if (!dayTotals[dk]) continue;
-          const scSlots = solcastByHourMs.get(new Date(slot.timestamp).getTime());
-          if (scSlots?.p50?.length > 0) {
-            dayTotals[dk].om += slot.pvPowerW;
-            dayTotals[dk].sc += scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length;
+        if (pvSource === 'solcast' && solcastByHourMs) {
+          for (const slot of pvForecast) {
+            const dk = _amsDayKeyFormatter.format(new Date(slot.timestamp));
+            if (!dayTotals[dk]) continue;
+            const scSlots = solcastByHourMs.get(new Date(slot.timestamp).getTime());
+            if (scSlots?.p50?.length > 0) {
+              dayTotals[dk].om += slot.pvPowerW;
+              dayTotals[dk].sc += scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length;
+            }
           }
         }
         const getDayWeights = (dk, applyDivergence = true) => {
@@ -3254,76 +3280,57 @@ if (debug) this.log(
         const weightsToday    = getDayWeights(todayNLDate, true);
         const weightsTomorrow = getDayWeights(tomorrowNLDate, false);
 
-        // Satellite-for-Solcast swap on near-term slots (chunk 2). Two gates live here; the
-        // third (lead window ≤3h, elevation ≥15°) is already baked into satPanelW being null.
-        // Freshness is checked per slot against the issue that produced that slot's value —
-        // a slot outside the current lead window keeps its previous satPanelW, so the latest
-        // issue being fresh says nothing about the value actually sitting on the slot.
+        // Satellite freshness: checked per slot against the issue that produced that
+        // slot's value — a slot outside the current lead window keeps its previous
+        // satPanelW, so the latest issue being fresh says nothing about the value
+        // actually sitting on the slot.
         const SAT_MAX_AGE_MS = 3600_000;
-        const SAT_LEAD_MS    = 3 * 3600_000;
-        const satReplSc  = this.getSetting('sat_replaces_sc') === true;
-        const satIssueMs = this.weatherForecaster?.getSatIssueMs?.() ?? null;
-        const satLog     = [];
-        let satDeltaWh   = 0;
-        // Coverage denominator: blend-eligible slots overlapping the current sat lead window
-        // that carry any PV signal. Without it, n= has no scale.
-        let satWindowSlots = 0;
-        let satStaleSlots  = 0;
+        const satLog = [];
+        let satCount = 0;
 
-        const scEffectiveSlots = []; // collect effective SC per slot for chart transparency
+        const scEffectiveSlots = []; // collect effective secondary-source value per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
           const slotMs = new Date(slot.timestamp).getTime();
           const dayKey = _amsDayKeyFormatter.format(new Date(slot.timestamp));
           const { wOM, wSC } = dayKey === todayNLDate ? weightsToday : weightsTomorrow;
 
-          const scSlots = solcastByHourMs.get(slotMs);
-          let blendedW;
-          if (scSlots?.p50?.length > 0) {
-            const scP50 = Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length);
-            const scP10 = Math.round(scSlots.p10.reduce((a, b) => a + b, 0) / scSlots.p10.length);
-            // Hourly slot overlaps the lead window when it ends after the issue and starts
-            // before issue+3h — the current, partly-elapsed hour counts.
-            if (satIssueMs != null && slotMs + 3600_000 > satIssueMs && slotMs < satIssueMs + SAT_LEAD_MS
-                && (slot.pvPowerW > 0 || slot.satPanelW != null)) satWindowSlots++;
+          let blendedW = slot.pvPowerW; // pure OM fallback when this slot has no secondary-source value
+          let r = null;
+
+          if (pvSource === 'solcast' && solcastByHourMs) {
+            const scSlots = solcastByHourMs.get(slotMs);
+            if (scSlots?.p50?.length > 0) {
+              const scP50 = Math.round(scSlots.p50.reduce((a, b) => a + b, 0) / scSlots.p50.length);
+              const scP10 = Math.round(scSlots.p10.reduce((a, b) => a + b, 0) / scSlots.p10.length);
+              r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
+            }
+          } else if (pvSource === 'satellite') {
             const satAgeOk = typeof slot.satIssueMs === 'number' && (Date.now() - slot.satIssueMs) <= SAT_MAX_AGE_MS;
-            if (!satAgeOk && slot.satPanelW != null) satStaleSlots++;
-            const satW  = (satAgeOk && typeof slot.satPanelW === 'number')
+            const satW = (satAgeOk && typeof slot.satPanelW === 'number')
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
-            const base  = { omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend };
-            let r;
-            if (satW == null) {
-              r = BatteryPolicyDevice._blendOmScSlot(base);
-            } else {
-              // Shadow: score both legs every run so the swap is measurable before the
-              // toggle flips, and stays measurable after it.
-              const rSc  = BatteryPolicyDevice._blendOmScSlot(base);
-              const rSat = BatteryPolicyDevice._blendOmScSlot({ ...base, satW, satActive: true });
-              r = satReplSc ? rSat : rSc;
-              satDeltaWh += rSat.blendedW - rSc.blendedW;
-              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sc=${scP50} sat=${satW} blend ${rSc.blendedW}→${rSat.blendedW}W`);
+            if (satW != null) {
+              r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true });
+              satCount++;
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
             }
+          }
+
+          if (r) {
             blendedW = r.blendedW;
             if (byDay[dayKey]) { byDay[dayKey].sc += r.scAvg; if (r.useP10) byDay[dayKey].p10slots = (byDay[dayKey].p10slots ?? 0) + 1; }
             scEffectiveSlots.push({ ts: slot.timestamp, w: r.scAvg, dayKey });
-          } else {
-            blendedW = slot.pvPowerW;
           }
 
           if (byDay[dayKey]) { byDay[dayKey].om += slot.pvPowerW; byDay[dayKey].bl += blendedW; }
           return { ...slot, pvPowerW: blendedW };
         });
 
-        // Satellite swap trace. Slots here are hourly, so W sums straight to Wh. The Δ is
-        // always sat-leg minus SC-leg regardless of the toggle, and is bounded to the 0-3h
-        // lead window — it is NOT a whole-horizon plan delta.
-        if (satIssueMs != null) {
-          const ageMin = Math.round((Date.now() - satIssueMs) / 60_000);
-          this.log(`[SAT-SC] n=${satLog.length}/${satWindowSlots} ΔkWh=${(satDeltaWh / 1000).toFixed(2)} mode=${satReplSc ? 'active' : 'shadow'} satAge=${ageMin}min stale=${satStaleSlots}`);
-          if (satLog.length > 0) this.log(`[SAT-SC] ${satLog.join(' | ')}`);
+        if (pvSource === 'satellite' && satLog.length > 0) {
+          this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
         }
 
-        // Aggregate effective SC to hourly for chart (shows p10 where actually used)
+        // Aggregate effective secondary-source value to hourly for chart (shows p10 where actually used)
         const scEffByDay = [{}, {}];
         const scEffBuckets = [{}, {}];
         for (const { ts, w, dayKey } of scEffectiveSlots) {
@@ -3343,14 +3350,14 @@ if (debug) this.log(
         const fmt = wh => (wh / 1000).toFixed(1);
         const pct = (v, base) => (base > 0 ? `${v >= base ? '+' : ''}${((v - base) / base * 100).toFixed(0)}%` : '—');
         const td = byDay[todayNLDate], tm = byDay[tomorrowNLDate];
-        // Label the SC total honestly: with sat_replaces_sc on, the near-term slots inside it
-        // are satellite, not Solcast (byDay.sc sums the leg that was actually blended).
-        const scLabel    = satReplSc && satLog.length > 0 ? `SC*sat${satLog.length}` : 'SC';
+        const scLabel    = pvSource === 'satellite' ? 'SAT' : 'SC';
         const scToday    = td.sc > 0 ? ` ${scLabel}=${fmt(td.sc)}kWh(${pct(td.sc, td.om)})${td.p10slots ? ` p10=${td.p10slots}slots` : ''}` : '';
-        const scTomorrow = tm.sc > 0 ? ` SC=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})${tm.p10slots ? ` p10=${tm.p10slots}slots` : ''}` : '';
+        const scTomorrow = tm.sc > 0 ? ` ${scLabel}=${fmt(tm.sc)}kWh(${pct(tm.sc, tm.om)})${tm.p10slots ? ` p10=${tm.p10slots}slots` : ''}` : '';
         const accOM = this.learningEngine?.data?.pv_accuracy_om;
-        const accSC = this.learningEngine?.data?.pv_accuracy_sc;
-        const accLog = accOM != null && accSC != null ? ` acc: om=${(accOM*100).toFixed(0)}% sc=${(accSC*100).toFixed(0)}%` : ' learning';
+        const accSC = pvSource === 'satellite'
+          ? this.learningEngine?.data?.pv_accuracy_sat
+          : this.learningEngine?.data?.pv_accuracy_sc;
+        const accLog = accOM != null && accSC != null ? ` acc: om=${(accOM*100).toFixed(0)}% ${scLabel.toLowerCase()}=${(accSC*100).toFixed(0)}%` : ' learning';
         const wTd = weightsToday,    dTd = wTd.div != null    ? ` div=${wTd.div.toFixed(2)}`    : '';
         const wTm = weightsTomorrow, dTm = wTm.div != null    ? ` div=${wTm.div.toFixed(2)}`    : '';
         this.log(`[PV blend] today:    OM=${fmt(td.om)}kWh${scToday} → blended=${fmt(td.bl)}kWh [w_om=${wTd.wOM.toFixed(2)} w_sc=${wTd.wSC.toFixed(2)}${dTd}${accLog}]`);
@@ -3678,41 +3685,16 @@ if (debug) this.log(
       pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.min(s.pvPowerW, pvCapacityW) }));
     }
 
-    // Satellite nowcast: override 0-2h pvForecast with sat-derived panel-W.
-    // sat_replaces_sc already swapped the satellite into the Solcast leg of the blend above.
-    // Letting this override run too would substitute the satellite twice — the second time
-    // over the OM half as well, which the F4 head-to-head does not support (OM ≥ sat).
-    const satDpActive = this.getSetting('satellite_dp_active') === true
-      && this.getSetting('sat_replaces_sc') !== true;
+    // Satellite dip warning: independent of pv_secondary_source — the blend above (if
+    // pv_secondary_source==='satellite') already folded satellite into pvPowerW; this is
+    // a separate near-term dip diagnostic, always logged when fresh dip data exists.
     if (pvForecast) {
-      const _nowMs = Date.now();
-      const _SAT_MAX_LEAD_MS = 2 * 3600_000;
-      let _satCount = 0;
-      pvForecast = pvForecast.map(slot => {
-        const slotMs = new Date(slot.timestamp).getTime();
-        const lead = slotMs - _nowMs;
-        if (lead < -1800_000 || lead >= _SAT_MAX_LEAD_MS) return slot;
-        const hSlot = (this.weatherData?.hourlyForecast || []).find(h =>
-          (h.time instanceof Date ? h.time.getTime() : new Date(h.time).getTime()) === slotMs);
-        if (hSlot?.satPanelW == null) return slot;
-        const satPvW = pvCapacityW > 0 ? Math.min(hSlot.satPanelW, pvCapacityW) : hSlot.satPanelW;
-        if (!satDpActive) {
-          this.log(`[SAT shadow] h=${new Date(slotMs).getUTCHours()} sat=${satPvW}W om=${slot.pvPowerW}W`);
-          return slot;
-        }
-        _satCount++;
-        this.log(`[SAT DP] h=${new Date(slotMs).getUTCHours()} sat=${satPvW}W om=${slot.pvPowerW}W`);
-        return { ...slot, pvPowerW: satPvW, spreadFrac: 0 };
-      });
-      if (_satCount > 0) this.log(`[SAT DP] Override ${_satCount} slots (0-2h) with satellite PV`);
-      // 4h horizon (was 2h) — matches raw satellite data extent, so dips beyond
-      // the 0-2h DP override window (e.g. today's 165-195min front) now log.
       const _satDip = this.weatherForecaster?.getNextSatDip?.(Date.now(), 0.15, maxChargePowerW);
       if (_satDip) this.log(`[SAT DIP] dip in ${_satDip.leadMin}min @ ${new Date(_satDip.dipStartMs).toISOString()} → ${new Date(_satDip.dipEndMs).toISOString()} min=${_satDip.minPanelW}W`);
     }
 
     // Upwind cloud modulation: clouds at upwind KNMI station → lower pvForecast for lead-time slot.
-    // Runs independently of satDpActive (upwind data is always fetched when _satUrl is set).
+    // Runs independently of pv_secondary_source (upwind data is always fetched when _satUrl is set).
     {
       const upwind = this._upwindData;
       const nowMs  = Date.now();
@@ -4835,11 +4817,12 @@ if (debug) this.log(
     return pvFcByDay;
   }
 
-  // satW/satActive: the satellite nowcast takes over the SOLCAST leg for near-term slots
-  // (sat_replaces_sc). F4 verdict 2026-07-28 — sat beats Solcast at every sstd threshold
-  // (n=302-642, no crossover) but OM stays marginally ahead of sat, so the satellite may
-  // only ever occupy the SC half; the OM half is untouched. The caller owns the freshness,
-  // lead-time and elevation gates (see the blend loop).
+  // satW/satActive: when pv_secondary_source==='satellite', the satellite nowcast fills
+  // the secondary leg directly (no Solcast involved). F4 verdict 2026-07-28 — sat beats
+  // Solcast at every sstd threshold (n=302-642, no crossover) but OM stays marginally
+  // ahead of sat, so this function is never called with satActive AND a Solcast leg at
+  // once; the OM half is always untouched. The caller owns the freshness, lead-time and
+  // elevation gates (see the blend loop).
   static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false }) {
     const satUsed = satActive && typeof satW === 'number' && Number.isFinite(satW) && satW >= 0;
     // The p10 pessimism is a Solcast property (percentile spread); the satellite has none.

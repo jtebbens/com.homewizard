@@ -4767,8 +4767,8 @@
         {
           "type": "group",
           "label": {
-            "en": "Solcast PV Forecast (optional)",
-            "nl": "Solcast PV-voorspelling (optioneel)"
+            "en": "PV Forecast Secondary Source",
+            "nl": "PV-voorspelling tweede bron"
           },
           "visible": {
             "when": "pv_estimation_enabled",
@@ -4776,34 +4776,53 @@
           },
           "children": [
             {
-              "id": "solcast_enabled",
-              "type": "checkbox",
+              "id": "pv_secondary_source",
+              "type": "dropdown",
               "label": {
-                "en": "Use Solcast for PV forecast",
-                "nl": "Solcast gebruiken voor PV-voorspelling"
+                "en": "Blend Open-Meteo with",
+                "nl": "Meng Open-Meteo met"
               },
               "hint": {
-                "en": "When enabled, Solcast satellite-based forecasts replace the Open-Meteo radiation model. Requires a free Solcast account with a rooftop site configured. Max 10 API calls/day — the app caches results for 6 hours.",
-                "nl": "Indien ingeschakeld vervangen Solcast satellietgebaseerde voorspellingen het Open-Meteo stralingsmodel. Vereist een gratis Solcast-account met een geconfigureerde dakinstallatie. Max 10 API-aanroepen/dag — de app cachet resultaten 6 uur."
+                "en": "'Off': Open-Meteo only. 'Satellite': blend with a satellite-derived nowcast (pySTEPS, ⚠️ experimental, single location only NL, may be unavailable without notice) — no API key needed, uses your PV location. 'Solcast': blend with Solcast forecasts — requires a free Solcast account with a rooftop site configured (max 10 API calls/day, cached 6h). Only one secondary source can be active at a time.",
+                "nl": "'Uit': alleen Open-Meteo. 'Satelliet': meng met een satelliet-nowcast (pySTEPS, ⚠️ experimenteel, alleen NL, kan zonder aankondiging wegvallen) — geen API-key nodig, gebruikt uw PV-locatie. 'Solcast': meng met Solcast-voorspellingen — vereist een gratis Solcast-account met een geconfigureerde dakinstallatie (max 10 API-aanroepen/dag, 6u gecachet). Slechts één tweede bron tegelijk actief."
               },
-              "value": false
+              "value": "off",
+              "values": [
+                {
+                  "id": "off",
+                  "label": {
+                    "en": "Off",
+                    "nl": "Uit"
+                  }
+                },
+                {
+                  "id": "satellite",
+                  "label": {
+                    "en": "Satellite (experimental)",
+                    "nl": "Satelliet (experimenteel)"
+                  }
+                },
+                {
+                  "id": "solcast",
+                  "label": {
+                    "en": "Solcast",
+                    "nl": "Solcast"
+                  }
+                }
+              ]
             },
             {
               "id": "pv_unbiased_blend",
               "type": "checkbox",
               "label": {
-                "en": "Unbiased OM+Solcast blend (50/50)",
-                "nl": "Ongewogen OM+Solcast-mix (50/50)"
+                "en": "Unbiased OM+secondary blend (50/50)",
+                "nl": "Ongewogen OM+tweede-bron-mix (50/50)"
               },
               "hint": {
-                "en": "Blend Open-Meteo and Solcast with a fixed 50/50 weight instead of accuracy-derived weights. A fixed average cancels the opposite biases of the two models (OM under-, Solcast over-forecasts) and measured ~10% lower error on the 300-sample buffer (2026-06-15). Disable to fall back to learned accuracy weights.",
-                "nl": "Mix Open-Meteo en Solcast met een vaste 50/50-weging in plaats van op nauwkeurigheid gebaseerde gewichten. Een vaste middeling heft de tegengestelde afwijkingen van beide modellen op (OM onder-, Solcast overvoorspelt) en mat ~10% lagere fout op de 300-samplebuffer (2026-06-15). Uitschakelen valt terug op geleerde nauwkeurigheidsgewichten."
+                "en": "Blend Open-Meteo and the secondary source with a fixed 50/50 weight instead of accuracy-derived weights. A fixed average cancels opposite biases between models and measured ~10% lower error on a 300-sample buffer (2026-06-15, Solcast). Disable to fall back to learned accuracy weights.",
+                "nl": "Mix Open-Meteo en de tweede bron met een vaste 50/50-weging in plaats van op nauwkeurigheid gebaseerde gewichten. Een vaste middeling heft tegengestelde afwijkingen tussen modellen op en mat ~10% lagere fout op een 300-samplebuffer (2026-06-15, Solcast). Uitschakelen valt terug op geleerde nauwkeurigheidsgewichten."
               },
-              "value": true,
-              "visible": {
-                "when": "solcast_enabled",
-                "is": true
-              }
+              "value": true
             },
             {
               "id": "solcast_resource_id",
@@ -4818,8 +4837,8 @@
               },
               "value": "",
               "visible": {
-                "when": "solcast_enabled",
-                "is": true
+                "when": "pv_secondary_source",
+                "is": "solcast"
               }
             },
             {
@@ -4835,48 +4854,9 @@
               },
               "value": "",
               "visible": {
-                "when": "solcast_enabled",
-                "is": true
+                "when": "pv_secondary_source",
+                "is": "solcast"
               }
-            }
-          ]
-        },
-        {
-          "type": "group",
-          "label": {
-            "en": "Satellite Nowcast (experimental)",
-            "nl": "Satelliet Nowcast (experimenteel)"
-          },
-          "visible": {
-            "when": "pv_estimation_enabled",
-            "is": true
-          },
-          "children": [
-            {
-              "id": "satellite_dp_active",
-              "type": "checkbox",
-              "label": {
-                "en": "Use satellite in DP optimizer",
-                "nl": "Gebruik satelliet in DP-optimizer"
-              },
-              "hint": {
-                "en": "⚠️ Experimental — single location only (NL). Overrides 0-2h PV forecast with satellite-derived panel power (pySTEPS nowcast). May be unavailable without notice.",
-                "nl": "⚠️ Experimenteel — één locatie (NL). Overschrijft 0-2u PV-verwachting met satelliet-afgeleide paneelkracht (pySTEPS nowcast). Kan zonder aankondiging wegvallen."
-              },
-              "value": false
-            },
-            {
-              "id": "sat_replaces_sc",
-              "type": "checkbox",
-              "label": {
-                "en": "Satellite replaces Solcast (0-3h)",
-                "nl": "Satelliet vervangt Solcast (0-3u)"
-              },
-              "hint": {
-                "en": "⚠️ Experimental — single location only (NL). For slots up to 3h ahead the satellite nowcast takes the Solcast half of the PV blend; the Open-Meteo half is untouched. Do not combine with \"Use satellite in DP optimizer\" — this setting wins and disables that override.",
-                "nl": "⚠️ Experimenteel — één locatie (NL). Voor slots tot 3u vooruit neemt de satelliet-nowcast de Solcast-helft van de PV-blend over; de Open-Meteo-helft blijft ongemoeid. Niet combineren met \"Gebruik satelliet in DP-optimizer\" — deze instelling wint en schakelt die override uit."
-              },
-              "value": false
             },
             {
               "id": "night_consumption_bias_corr",
