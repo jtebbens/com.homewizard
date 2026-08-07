@@ -4242,9 +4242,16 @@ if (debug) this.log(
           // resets on restart, which is exactly how the nearfloor ring silently lost its catches
           // before c4acba6.
           const _persisted = this.homey.settings.get('topup_miss_samples');
-          const _ring = Array.isArray(this._liveState?.topup_miss_samples)
+          const _rawRing = Array.isArray(this._liveState?.topup_miss_samples)
             ? this._liveState.topup_miss_samples
             : (Array.isArray(_persisted) ? _persisted : []);
+          // Drop samples the pre-d4c7af8 horizon scan put a day out (pvEnd landed on TOMORROW's PV,
+          // 2026-08-06 and 2026-08-03). They cannot be repaired — the run that produced them now
+          // returns null — and leaving them in would poison the median this ring exists to answer.
+          // Entries written by the fixed code are day-consistent, so this settles after one pass.
+          // eveTs is deliberately NOT checked: a night peak past midnight is a legitimate sell slot.
+          const _ring = _rawRing.filter(e => !e?.pvEndTs
+            || _amsDayKeyFormatter.format(new Date(e.pvEndTs)) === e.day);
           const _today = _ring.find(e => e.day === _day);
           let _runs = 1;
           if (_today) {
