@@ -51,7 +51,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.0)
+## 📝 Latest Updates (v3.15.63–v3.19.1)
+
+### Tomorrow's Plan No Longer Falls Back to Flat Hourly Prices (v3.19.1)
+
+* **Fixed the battery planning tomorrow on averaged hourly prices instead of the real quarter-hourly ones.** Once the hourly price table ran through the end of tomorrow, the app treated its price data as complete and stopped fetching for the rest of the day. But a complete hourly table says nothing about the quarter-hourly one: on days where hourly prices for tomorrow arrived first and quarter-hourly prices were only published later in the afternoon, the app never went back for them. Tomorrow then stayed on four identical prices per hour until midnight, hiding exactly the within-the-hour price differences the planner uses to pick charge and discharge moments. Price refreshes now check the quarter-hourly horizon as well, and re-open a fetch when it stops short — at most once an hour, so this adds no meaningful load. Setups running on hourly prices are unaffected. Separately, quarter-hourly prices from the ENTSO-E fallback source are now kept across an app restart instead of being dropped and re-fetched.
 
 ### Simplified PV Forecast Source Setting (v3.19.0)
 

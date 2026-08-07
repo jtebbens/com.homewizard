@@ -66,4 +66,44 @@ const hourly = [
   assert.strictEqual(prices[0].price, 0.51, 'KwhPrice should keep highest priority for overlapping native slots');
 }
 
+// KwhPrice serves today only; the second hour stands in for tomorrow, where ENTSOE is the
+// only native 15-min source. Without ENTSOE reaching this merge those slots stay expanded —
+// four identical quarters per hour, which is what the DP then plans tomorrow on.
+{
+  const manager = makeManager({
+    hourly,
+    kwh15: [
+      slot(base, 0, 0.51, 'kwhprice'),
+      slot(base, 15, 0.52, 'kwhprice'),
+      slot(base, 30, 0.53, 'kwhprice'),
+      slot(base, 45, 0.54, 'kwhprice')
+    ],
+    entsoe15: [
+      slot(base, 0, 0.11, 'entsoe'),
+      slot(base, 15, 0.12, 'entsoe'),
+      slot(base, 30, 0.13, 'entsoe'),
+      slot(base, 45, 0.14, 'entsoe'),
+      slot(base, 60, 0.21, 'entsoe'),
+      slot(base, 75, 0.22, 'entsoe'),
+      slot(base, 90, 0.23, 'entsoe'),
+      slot(base, 105, 0.24, 'entsoe')
+    ]
+  });
+
+  const prices = manager.getAll15MinPrices();
+  assert.strictEqual(prices.length, 8);
+  assert.deepStrictEqual(
+    prices.slice(0, 4).map(p => p.price), [0.51, 0.52, 0.53, 0.54],
+    'KwhPrice must outrank ENTSOE where both have native data'
+  );
+  assert.deepStrictEqual(
+    prices.slice(4).map(p => p.price), [0.21, 0.22, 0.23, 0.24],
+    'ENTSOE native quarters must replace the expanded hourly price on the day KwhPrice does not cover'
+  );
+  assert.strictEqual(
+    new Set(prices.slice(4).map(p => p.price)).size, 4,
+    'no flat block of four identical quarters may survive when native 15-min data exists'
+  );
+}
+
 console.log('tariff-15min-coverage tests passed');
