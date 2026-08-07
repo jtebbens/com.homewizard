@@ -125,6 +125,77 @@ test('PV surplus runs to the last slot → null (nothing left to sell into)', ()
   assert.strictEqual(metrics(s), null);
 });
 
+// ── Day boundary (2026-08-07) ────────────────────────────────────────────────────────────────────
+// On a >24h horizon the "last slot with pvCoverage > 0" is TOMORROW's PV, not today's. 2026-08-06
+// stored pvEndTs 2026-08-07T14:45Z and dragged eveMax to 2026-08-07T18:00Z with it. The log prints
+// hh:mm without a date, so it read as a plausible "16:45" all day.
+
+const D0 = Date.parse('2026-07-30T08:00:00.000Z'); // 10:00 Amsterdam
+
+// 31 hourly slots spanning two Amsterdam days: today's PV block, tonight's peak, the night, then
+// tomorrow's PV block and a HIGHER peak tomorrow afternoon. Both wrong answers are distinguishable
+// from the right one.
+function twoDay() {
+  const s = [];
+  const at = (i, price, pvCoverage, soc = 44) => s.push({
+    timestamp: new Date(D0 + i * H).toISOString(),
+    price, pvCoverage, socProjected: soc, pvForecastW: 700, consumptionW: 500,
+  });
+  for (let i = 0; i <= 5; i++) at(i, 0.20, 0.5);        // 10:00-15:00 today, PV surplus
+  at(6, 0.12, 0);                                       // 16:00 today, cheapest pre-peak slot
+  for (let i = 7; i <= 8; i++) at(i, 0.25, 0);
+  at(9, 0.40, 0);                                       // 19:00 today, TONIGHT's peak
+  for (let i = 10; i <= 20; i++) at(i, 0.22, 0);        // 20:00 → 06:00 tomorrow
+  for (let i = 21; i <= 26; i++) at(i, 0.18, 0.5);      // 07:00-12:00 tomorrow, PV surplus
+  at(27, 0.30, 0);
+  at(28, 0.30, 0);
+  at(29, 0.60, 0);                                      // TOMORROW's peak — must not be selected
+  at(30, 0.30, 0);
+  return s;
+}
+
+const amsHour = ts => new Date(ts).toLocaleString('en-GB', {
+  timeZone: 'Europe/Amsterdam', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+});
+
+test('pvEnd stays on TODAY’s PV block, not tomorrow’s', () => {
+  const m = metrics(twoDay());
+  assert.ok(m, 'expected a sample, got null');
+  assert.strictEqual(m.pvEndTs, new Date(D0 + 5 * H).toISOString(),
+    `pvEnd ${amsHour(m.pvEndTs)}, expected today 15:00`);
+});
+
+test('eveMax is tonight’s peak, not tomorrow’s higher one', () => {
+  const m = metrics(twoDay());
+  assert.strictEqual(m.eveMax, 0.40, `picked ${m.eveMax} @ ${amsHour(m.eveTs)}`);
+  assert.strictEqual(m.eveTs, new Date(D0 + 9 * H).toISOString());
+});
+
+test('buy stays before tonight’s peak once the sell window is bounded', () => {
+  // 0.18 during tomorrow's PV is cheaper than tonight's 0.12, and the night is 0.22 — with the peak
+  // correctly at idx 9 none of those are reachable.
+  const m = metrics(twoDay());
+  assert.strictEqual(m.buy, 0.12, `picked ${m.buy} @ ${amsHour(m.buyTs)}`);
+  assert.strictEqual(m.buyTs, new Date(D0 + 6 * H).toISOString());
+});
+
+test('run after today’s PV has ended → null (the top-up decision is settled)', () => {
+  // Drop today's PV block: the first surplus in the horizon is now tomorrow's, so there is no
+  // headroom left that today's PV could still fill. Measuring tomorrow here is what put the
+  // 2026-08-06 sample a day out.
+  const s = twoDay().slice(6);
+  assert.strictEqual(metrics(s), null);
+});
+
+test('a cloud gap inside the PV block does not truncate pvEnd', () => {
+  // The fix must not become "first contiguous run": pvCoverage drops to 0 on a passing cloud.
+  const s = twoDay();
+  s[3].pvCoverage = 0;
+  const m = metrics(s);
+  assert.strictEqual(m.pvEndTs, new Date(D0 + 5 * H).toISOString(),
+    `pvEnd ${amsHour(m.pvEndTs)}, expected today 15:00`);
+});
+
 test('reports input coverage instead of assuming it', () => {
   const s = overcastDay();
   s[5].consumptionW = null;

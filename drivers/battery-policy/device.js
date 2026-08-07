@@ -19,6 +19,9 @@ const debug = false;
 // (139 samples in one profiled second) since it's called once per slot in a filter().
 const _amsDayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
 const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false });
+const _amsDayTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+});
 
 // The mode history is stored as one JSON file per Amsterdam day on /userdata. It lived in settings
 // before -- first as a single 2200-entry key (~596 kB), then as per-day keys -- but chunking only
@@ -1539,18 +1542,37 @@ if (debug) this.log(
 
     // End of PV surplus = last slot the plan still expects to store PV. pvCoverage is net surplus
     // / maxChargeW (optimization-engine.js:227), so > 0 means "there is something to store".
+    //
+    // Bounded to the Amsterdam day the surplus starts on. Scanning the whole horizon for the last
+    // such slot put pvEnd on TOMORROW's PV whenever the horizon ran past midnight (2026-08-06
+    // stored pvEndTs 2026-08-07T14:45Z) and dragged eveMax to tomorrow's peak with it. Invisible in
+    // the log, which prints hh:mm without a date.
+    const _amsDay = ts => _amsDayKeyFormatter.format(new Date(ts));
+    let pvStart = -1;
+    for (let i = 0; i < N; i++) { if ((slots[i].pvCoverage ?? 0) > 0) { pvStart = i; break; } }
+    if (pvStart < 0) return null;                                 // no surplus anywhere
+    const pvDay = _amsDay(slots[pvStart].timestamp);
+    // Surplus starting on a later day means today's PV is already done: there is no top-up decision
+    // left to judge, and measuring tomorrow's is what put the 2026-08-06 sample a day out.
+    if (pvDay !== _amsDay(slots[0].timestamp)) return null;
+    // Last surplus slot of that day — deliberately not "end of the first contiguous run": a passing
+    // cloud drops pvCoverage to 0 mid-block.
     let pvEnd = -1;
-    for (let i = 0; i < N; i++) { if ((slots[i].pvCoverage ?? 0) > 0) pvEnd = i; }
-    if (pvEnd < 0 || pvEnd >= N - 1) return null; // no surplus at all, or nothing left to sell into
+    for (let i = pvStart; i < N && _amsDay(slots[i].timestamp) === pvDay; i++) {
+      if ((slots[i].pvCoverage ?? 0) > 0) pvEnd = i;
+    }
+    if (pvEnd >= N - 1) return null; // nothing left to sell into
 
     const socAtEnd = slots[pvEnd].socProjected;
     if (!Number.isFinite(socAtEnd)) return null;
     const headroomKwh = capacityKwh * Math.max(0, maxSoc - socAtEnd) / 100;
     if (headroomKwh < 0.2) return null; // essentially full on PV alone → nothing worth buying
 
-    // Sell side: the highest price after the PV surplus ends.
+    // Sell side: the highest price after the PV surplus ends, up to the next PV block. Tomorrow's
+    // peak is not reachable with energy bought today — tomorrow's own PV fills the battery first.
     let eveMax = -Infinity, eveIdx = -1;
     for (let i = pvEnd + 1; i < N; i++) {
+      if ((slots[i].pvCoverage ?? 0) > 0) break;
       const p = slots[i].price;
       if (Number.isFinite(p) && p > eveMax) { eveMax = p; eveIdx = i; }
     }
@@ -4235,9 +4257,10 @@ if (debug) this.log(
             _ring.unshift({ day: _day, nRuns: 1, firstValueEur: _tm.valueEur, ..._tm });
           }
           this._setLive('topup_miss_samples', _ring.slice(0, 14));
-          const _hhmm = t => new Date(t).toLocaleTimeString('en-GB', {
-            timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit', hour12: false,
-          });
+          // Day included on purpose: printing hh:mm alone is why pvEnd sitting on TOMORROW's PV
+          // read as a plausible "16:45" for two weeks. Module-level formatter, not an inline
+          // toLocaleString — that allocates a new Intl.DateTimeFormat per call (2026-07-06 sweep).
+          const _hhmm = t => _amsDayTimeFormatter.format(new Date(t)).replace(',', '');
           const _sgn = n => (n >= 0 ? '+' : '') + n.toFixed(3);
           this.log(`[TOPUP-MISS] ${_day} pvEnd=${_hhmm(_tm.pvEndTs)} soc=${_tm.socAtEnd.toFixed(0)}% `
             + `headroom=${_tm.headroomKwh.toFixed(2)}kWh | buy=${_tm.buy.toFixed(3)}@${_hhmm(_tm.buyTs)} `
