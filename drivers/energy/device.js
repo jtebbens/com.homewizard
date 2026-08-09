@@ -927,10 +927,17 @@ async _processGasDelta(data, tasks, settings, nowLocal) {
         this._hasChanged('measure_current.l1', data.active_current_l1_a)) {
       tasks.push(updateCapability(this, 'measure_current.l1', data.active_current_l1_a));
     }
-    // Legacy measure_current (mirror of L1)
-    if (data.active_current_l1_a !== undefined &&
-        this._hasChanged('measure_current', data.active_current_l1_a)) {
-      tasks.push(updateCapability(this, 'measure_current', data.active_current_l1_a));
+    // measure_current: total, prefer API's own total; fall back to summed phases
+    let totalCurrent = data.active_current_a;
+    if (totalCurrent === undefined && data.active_current_l1_a !== undefined) {
+      totalCurrent = data.active_current_l1_a;
+      if (this._phases === 3) {
+        if (data.active_current_l2_a !== undefined) totalCurrent += data.active_current_l2_a;
+        if (data.active_current_l3_a !== undefined) totalCurrent += data.active_current_l3_a;
+      }
+    }
+    if (totalCurrent !== undefined && this._hasChanged('measure_current', totalCurrent)) {
+      tasks.push(updateCapability(this, 'measure_current', totalCurrent));
     }
 
     if (data.active_power_l1_w !== undefined &&
