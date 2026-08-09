@@ -308,7 +308,7 @@ _flushDebugLogs() {
    * Daily baseline logic — deletion‑safe
    */
   async _ensureDailyBaseline(totalM3) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toLocaleString('en-CA', { timeZone: 'Europe/Amsterdam' }).slice(0, 10);
 
     const storedDate = await this.getStoreValue('dailyStartDate');
     const storedValue = await this.getStoreValue('dailyStartM3');
