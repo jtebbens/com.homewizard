@@ -53,6 +53,26 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.19.1)
 
+### Dynamic Prices Now Come From Power by the Hour (v3.19.1)
+
+* **Replaced the built-in price scrapers with the Power by the Hour app as the price source.** Dynamic prices used to be fetched by two scrapers maintained inside this app, which broke whenever a supplier changed their website. Instead, the app now reads the day-ahead prices from a device in the Power by the Hour app (`com.gruijter.powerhour`) — select which device to use in the battery policy settings. That app already supports a long list of suppliers and keeps them working, including quarter-hourly prices where the supplier publishes them. If those prices are unavailable for any reason, the app falls back to ENTSO-E day-ahead data as before, so planning keeps running. One thing worth checking after updating: the import markup is configured in both apps, and the price the planner uses comes from Power by the Hour. If the two don't match, the prices shown in the charts won't line up with the ones the battery plans on. Power by the Hour shows the markup including VAT; this app's "Import Markup" setting expects it excluding VAT (divide by 1.21).
+
+### Elapsed Hours and the Current Hour Now Priced Correctly (v3.19.1)
+
+* **Fixed today's earlier hours disappearing from the price chart, and the current hour's price being slightly off.** The new price source only serves slots from now onwards, which caused two problems. First, the hours that had already passed today vanished from the price table after a refresh and stayed gone until midnight, leaving the chart starting halfway through the day. Those hours are now filled in from the ENTSO-E data, which covers whole days. Second, the hour currently in progress was averaged over only the quarter-hours still remaining in it rather than all four, so its price could read a few cents too high or too low depending on how the hour was shaped. The complete average is now used. Neither issue affected the battery's decisions — those are made on quarter-hourly prices and on hours still ahead — but both were visible in the chart.
+
+### Evening Safety Check No Longer Blocks Waiting for Cheaper Solar (v3.19.1)
+
+* **Fixed the planner buying from the grid instead of waiting for solar that was still coming, on batteries smaller than an evening's consumption.** When the plan sees cheaper solar ahead it can defer a grid charge, and a safety check is supposed to override that whenever waiting would leave too little in the battery for the evening. That check compared what the battery can hold against the full learned evening consumption — so on any battery too small to cover a whole evening on its own, it was true no matter what, and the deferral was cancelled every single time. Measured over 24 real planning runs: 198 deferrals attempted, 182 overruled. The check now asks whether the remaining solar still fills the battery, which is the question it was meant to ask.
+
+### Correct Total Current on Three-Phase P1 Meters (v3.19.1)
+
+* **Fixed the total current reading showing the L1 phase value instead of the actual total on three-phase installations.** The `measure_current` capability simply mirrored phase 1, so on a three-phase meter it under-reported whenever the load wasn't evenly spread. It now uses the meter's own total-current reading, falling back to adding up the three phases when the meter doesn't publish a total. Single-phase installations were never affected.
+
+### Water Meter Daily Total Now Resets at Local Midnight (v3.19.1)
+
+* **Fixed the daily water total rolling over at 2:00 in the morning instead of midnight during summer time.** The reset compared dates in UTC rather than local time, so the "today" total kept counting for the first two hours of each new day (one hour in winter). It now uses the Amsterdam local date.
+
 ### Tomorrow's Plan No Longer Falls Back to Flat Hourly Prices (v3.19.1)
 
 * **Fixed the battery planning tomorrow on averaged hourly prices instead of the real quarter-hourly ones.** Once the hourly price table ran through the end of tomorrow, the app treated its price data as complete and stopped fetching for the rest of the day. But a complete hourly table says nothing about the quarter-hourly one: on days where hourly prices for tomorrow arrived first and quarter-hourly prices were only published later in the afternoon, the app never went back for them. Tomorrow then stayed on four identical prices per hour until midnight, hiding exactly the within-the-hour price differences the planner uses to pick charge and discharge moments. Price refreshes now check the quarter-hourly horizon as well, and re-open a fetch when it stops short — at most once an hour, so this adds no meaningful load. Setups running on hourly prices are unaffected. Separately, quarter-hourly prices from the ENTSO-E fallback source are now kept across an app restart instead of being dropped and re-fetched.
