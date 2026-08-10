@@ -69,6 +69,7 @@
   "homeyCommunityTopicId": 19267,
   "support": "https://community.homey.app/t/app-pro-homewizard/19267",
   "permissions": [
-    "homey:manager:ledring"
+    "homey:manager:ledring",
+    "homey:app:com.gruijter.powerhour"
   ]
 }

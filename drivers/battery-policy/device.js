@@ -152,6 +152,13 @@ class BatteryPolicyDevice extends Homey.Device {
     }, 45 * 1000);
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
+
+    // pbth_device_id lives in app-level homey.settings (set from the settings-page dropdown),
+    // not device settings, so it doesn't reach onSettings()/updateSettings() — react here instead.
+    this.homey.settings.on('set', (key) => {
+      if (key !== 'pbth_device_id') return;
+      this.tariffManager.refreshPbthDevice();
+    });
     this.explainabilityEngine = null; // lazy-loaded on first policy check
     this.chartGenerator = null;       // lazy-loaded on first chart request
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
@@ -1514,105 +1521,6 @@ if (debug) this.log(
     return { heldKwh, bothReachMax, offServesEvening, eurAtStake };
   }
 
-  /**
-   * Shadow metric: the € value of a grid top-up the DP declined, on days where the PV surplus
-   * dries up before the battery is full. Log-only — nothing here changes a decision.
-   *
-   * The DP skips midday grid charging via preserve:pv_strong / trickle:pv_weak, betting free PV
-   * will fill the battery anyway. On an overcast day that bet fails: 2026-07-30 peaked at 44%
-   * while midday slots cost €0.144-0.152 and the evening peak was €0.396. Whether buying would
-   * actually have paid is still OPEN (project_dp_daytime_pv_timing_no_hedge, "measure first,
-   * then decide" — 2026-07-05); this collects the numbers to settle it.
-   *
-   * marginPerKwh charges the FULL cycleCostPerKwh, not half: the DP books cycleCostPerKwh*0.5 on
-   * charge (optimization-engine.js:904) AND on discharge (:946), so a round trip pays both.
-   *
-   * Deliberately NOT clamped at zero (feedback_metric_must_allow_negative): a low evening peak or
-   * an expensive midday has to be able to come out negative, otherwise the measurement can only
-   * ever confirm the hypothesis that prompted it.
-   *
-   * Returns null when there is nothing to measure (no PV surplus in the horizon, nothing left to
-   * sell into, headroom under 0.2 kWh) or when any value would be non-finite.
-   * socProjected is in percent (socG/GRID, 0-100), like _morningWaiveShadowMetrics.
-   */
-  _topupMissMetrics(slots, capacityKwh, rte, cycleCostKwh, maxSoc) {
-    if (!slots?.length || !Number.isFinite(capacityKwh) || capacityKwh <= 0) return null;
-    if (!Number.isFinite(rte) || !Number.isFinite(cycleCostKwh) || !Number.isFinite(maxSoc)) return null;
-    const N = slots.length;
-
-    // End of PV surplus = last slot the plan still expects to store PV. pvCoverage is net surplus
-    // / maxChargeW (optimization-engine.js:227), so > 0 means "there is something to store".
-    //
-    // Bounded to the Amsterdam day the surplus starts on. Scanning the whole horizon for the last
-    // such slot put pvEnd on TOMORROW's PV whenever the horizon ran past midnight (2026-08-06
-    // stored pvEndTs 2026-08-07T14:45Z) and dragged eveMax to tomorrow's peak with it. Invisible in
-    // the log, which prints hh:mm without a date.
-    const _amsDay = ts => _amsDayKeyFormatter.format(new Date(ts));
-    let pvStart = -1;
-    for (let i = 0; i < N; i++) { if ((slots[i].pvCoverage ?? 0) > 0) { pvStart = i; break; } }
-    if (pvStart < 0) return null;                                 // no surplus anywhere
-    const pvDay = _amsDay(slots[pvStart].timestamp);
-    // Surplus starting on a later day means today's PV is already done: there is no top-up decision
-    // left to judge, and measuring tomorrow's is what put the 2026-08-06 sample a day out.
-    if (pvDay !== _amsDay(slots[0].timestamp)) return null;
-    // Last surplus slot of that day — deliberately not "end of the first contiguous run": a passing
-    // cloud drops pvCoverage to 0 mid-block.
-    let pvEnd = -1;
-    for (let i = pvStart; i < N && _amsDay(slots[i].timestamp) === pvDay; i++) {
-      if ((slots[i].pvCoverage ?? 0) > 0) pvEnd = i;
-    }
-    if (pvEnd >= N - 1) return null; // nothing left to sell into
-
-    const socAtEnd = slots[pvEnd].socProjected;
-    if (!Number.isFinite(socAtEnd)) return null;
-    const headroomKwh = capacityKwh * Math.max(0, maxSoc - socAtEnd) / 100;
-    if (headroomKwh < 0.2) return null; // essentially full on PV alone → nothing worth buying
-
-    // Sell side: the highest price after the PV surplus ends, up to the next PV block. Tomorrow's
-    // peak is not reachable with energy bought today — tomorrow's own PV fills the battery first.
-    let eveMax = -Infinity, eveIdx = -1;
-    for (let i = pvEnd + 1; i < N; i++) {
-      if ((slots[i].pvCoverage ?? 0) > 0) break;
-      const p = slots[i].price;
-      if (Number.isFinite(p) && p > eveMax) { eveMax = p; eveIdx = i; }
-    }
-    if (eveIdx < 0) return null;
-
-    // Buy side: cheapest slot from now up to that peak — the window a top-up could have used.
-    let buy = Infinity, buyIdx = -1;
-    for (let i = 0; i < eveIdx; i++) {
-      const p = slots[i].price;
-      if (Number.isFinite(p) && p < buy) { buy = p; buyIdx = i; }
-    }
-    if (buyIdx < 0) return null;
-
-    const marginPerKwh = eveMax * rte - buy - cycleCostKwh;
-    const valueEur = headroomKwh * marginPerKwh;
-
-    // Input coverage is measured, not assumed: a flat default or synthetic tail has to be visible
-    // in the sample, or a later verdict rests on made-up inputs (the flatten-gate replay ran
-    // 126/134 slots on a 400W consumption default and flipped sign once fed real data).
-    let covPv = 0, covCons = 0;
-    for (const s of slots) {
-      if (Number.isFinite(s.pvForecastW)) covPv++;
-      if (Number.isFinite(s.consumptionW)) covCons++;
-    }
-
-    // Never hand a NaN to the ring: c4acba6 stored NaN prices and made every collected sample
-    // unusable, c6d9fe8 added the same guard for all-null arrays.
-    for (const v of [socAtEnd, headroomKwh, buy, eveMax, marginPerKwh, valueEur]) {
-      if (!Number.isFinite(v)) return null;
-    }
-
-    return {
-      pvEndTs: slots[pvEnd].timestamp, socAtEnd, headroomKwh,
-      buy, buyTs: slots[buyIdx].timestamp,
-      eveMax, eveTs: slots[eveIdx].timestamp,
-      rte, cycleCostKwh, marginPerKwh, valueEur,
-      covPv, covCons, nSlots: N,
-    };
-  }
-
   _schedulePolicyCheck() {
     const intervalMinutes = this.getSetting('policy_interval') || 15;
     const intervalMs = intervalMinutes * 60 * 1000;
@@ -1695,7 +1603,7 @@ if (debug) this.log(
 
   _schedulePriceRefresh() {
     // Adaptive interval: 15 min during price-release window (14:00–16:00 CET),
-    // 30 min otherwise. kwhprice.eu publishes tomorrow's prices at ~13:15 CET.
+    // 30 min otherwise. Day-ahead prices are typically published ~13:15 CET.
     const getRefreshInterval = () => {
       const hour = parseInt(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
       return (hour >= 14 && hour <= 16) ? 15 * 60 * 1000 : 30 * 60 * 1000;
@@ -1717,7 +1625,7 @@ if (debug) this.log(
             this.log(`🔄 Refreshing prices... (${nowAms} Amsterdam)${predictiveSuffix}`);
 
             try {
-              // Force-refresh the merged provider (fetches Xadi + KwhPrice concurrently)
+              // Force-refresh the merged provider (fetches PBTH, ENTSOE fallback if needed)
               this.homey.app.logMem?.('[BatteryPolicy] before-price-refresh');
               await this.tariffManager.mergedProvider.fetchPrices(true);
               this.homey.app.logMem?.('[BatteryPolicy] after-price-refresh');
@@ -3779,8 +3687,8 @@ if (debug) this.log(
     // BaseloadMonitor is optional (requires P1 baseload feature to be active).
     const baseloadW = this.homey.app?.baseloadMonitor?.currentBaseload ?? 0;
     let consumptionWPerSlot = null;
-    // Prefer explicit Amsterdam hour/minute fields from the price record (both KwhPrice and
-    // Xadi provide these via toLocaleString / item.hour). This avoids any UTC/local timestamp
+    // Prefer explicit Amsterdam hour/minute fields from the price record (PBTH and ENTSOE
+    // fallback both provide these via toLocaleString / item.hour). This avoids any UTC/local timestamp
     // parsing ambiguity: if a provider returns Amsterdam-local times without a UTC indicator,
     // _getAmsterdamTime() would shift the hour by +2 (CEST), causing all consumption lookups
     // to land on the wrong slot and return baseload-floor (~314 W) everywhere.
@@ -4223,62 +4131,6 @@ if (debug) this.log(
         }
       }
       this._setLive('policy_optimizer_schedule', planningSchedule);
-
-      // ── Shadow: € value of the grid top-up the DP declined ─────────────────
-      // Log-only, no behaviour change. This is the measurement the 2026-07-05 decision asked for
-      // ("first just LOG, then decide whether it is worth the DP complexity") and that was never
-      // built — the question then came back on 07-10 and 07-24 and got answered off the code each
-      // time, with no data. One entry per Amsterdam day, overwritten with the latest estimate.
-      // Exit condition lives in project_running_experiments_tracker.md, not here.
-      try {
-        const _tmMaxSoc = this.getSettings().max_soc ?? 100;
-        const _tm = this._topupMissMetrics(
-          slots, capacityKwh, learnedRte ?? 0.75,
-          this.optimizationEngine.cycleCostPerKwh ?? 0.075, _tmMaxSoc,
-        );
-        if (_tm) {
-          const _day = _amsDayKeyFormatter.format(new Date());
-          // Seed from the PERSISTED setting, not only from _liveState: _liveState is in-memory and
-          // resets on restart, which is exactly how the nearfloor ring silently lost its catches
-          // before c4acba6.
-          const _persisted = this.homey.settings.get('topup_miss_samples');
-          const _rawRing = Array.isArray(this._liveState?.topup_miss_samples)
-            ? this._liveState.topup_miss_samples
-            : (Array.isArray(_persisted) ? _persisted : []);
-          // Drop samples the pre-d4c7af8 horizon scan put a day out (pvEnd landed on TOMORROW's PV,
-          // 2026-08-06 and 2026-08-03). They cannot be repaired — the run that produced them now
-          // returns null — and leaving them in would poison the median this ring exists to answer.
-          // Entries written by the fixed code are day-consistent, so this settles after one pass.
-          // eveTs is deliberately NOT checked: a night peak past midnight is a legitimate sell slot.
-          const _ring = _rawRing.filter(e => !e?.pvEndTs
-            || _amsDayKeyFormatter.format(new Date(e.pvEndTs)) === e.day);
-          const _today = _ring.find(e => e.day === _day);
-          let _runs = 1;
-          if (_today) {
-            // Keep the first estimate of the day alongside the latest, so intraday drift stays
-            // visible without writing 96 entries per day.
-            _runs = (_today.nRuns ?? 1) + 1;
-            const _first = _today.firstValueEur ?? _tm.valueEur;
-            Object.assign(_today, _tm, { day: _day, nRuns: _runs, firstValueEur: _first });
-          } else {
-            _ring.unshift({ day: _day, nRuns: 1, firstValueEur: _tm.valueEur, ..._tm });
-          }
-          this._setLive('topup_miss_samples', _ring.slice(0, 14));
-          // Day included on purpose: printing hh:mm alone is why pvEnd sitting on TOMORROW's PV
-          // read as a plausible "16:45" for two weeks. Module-level formatter, not an inline
-          // toLocaleString — that allocates a new Intl.DateTimeFormat per call (2026-07-06 sweep).
-          const _hhmm = t => _amsDayTimeFormatter.format(new Date(t)).replace(',', '');
-          const _sgn = n => (n >= 0 ? '+' : '') + n.toFixed(3);
-          this.log(`[TOPUP-MISS] ${_day} pvEnd=${_hhmm(_tm.pvEndTs)} soc=${_tm.socAtEnd.toFixed(0)}% `
-            + `headroom=${_tm.headroomKwh.toFixed(2)}kWh | buy=${_tm.buy.toFixed(3)}@${_hhmm(_tm.buyTs)} `
-            + `eveMax=${_tm.eveMax.toFixed(3)}@${_hhmm(_tm.eveTs)} rte=${_tm.rte.toFixed(3)} `
-            + `cyc=${_tm.cycleCostKwh.toFixed(3)} | margin=${_sgn(_tm.marginPerKwh)}/kWh `
-            + `value=${_sgn(_tm.valueEur)} | cov pv=${_tm.covPv}/${_tm.nSlots} `
-            + `cons=${_tm.covCons}/${_tm.nSlots} runs=${_runs}`);
-        }
-      } catch (err) {
-        this.error('topup-miss shadow failed', err);
-      }
 
       // ── PV surplus forecast ────────────────────────────────────────────────
       // Use mapped hwModes (not raw DP actions) so mapper overrides like standby→to_full

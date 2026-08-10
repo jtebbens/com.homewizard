@@ -21,6 +21,7 @@
 const Homey = require('homey');
 const v8 = require('v8');
 const { clearDebugLogs } = require('./lib/debug-logs');
+const PbthProvider = require('./lib/pbth-provider');
 
 const Testing = false; // Opens the CDP inspector in onInit. Keep false outside profiling sessions.
 
@@ -128,6 +129,37 @@ class HomeWizardApp extends Homey.App {
     this.homey.settings.on('set', (key) => {
       if (key !== 'debug_logs_clear') return;
       clearDebugLogs();
+    });
+
+    // The settings page's PBTH device dropdown needs the app-to-app device list, which it
+    // cannot fetch itself — it asks the app to do it and poll the result back via this key.
+    this.homey.settings.on('set', async (key) => {
+      if (key !== 'pbth_poll_request') return;
+      try {
+        const list = await PbthProvider.fetchDeviceList(this.homey);
+        this.homey.settings.set('pbth_device_list', list);
+      } catch (err) {
+        this.error('PBTH device list poll failed:', err.message);
+      }
+    });
+
+    // The merged price cache's "already covers through tomorrow" brake (see
+    // merged-price-provider.js fetchPrices) keeps a stale pre-PBTH cache from ever being
+    // re-fetched — clearing the in-memory cache forces the brake open for one round.
+    this.homey.settings.on('set', (key) => {
+      if (key !== 'pbth_cache_clear_request') return;
+      try {
+        const driver = this.homey.drivers.getDriver('battery-policy');
+        for (const device of driver.getDevices()) {
+          const provider = device.tariffManager?.mergedProvider;
+          if (!provider) continue;
+          provider.cache = null;
+          provider.cacheExpiry = null;
+          provider.fetchPrices(true).catch(err => this.error('PBTH forced re-fetch failed:', err.message));
+        }
+      } catch (err) {
+        this.error('PBTH cache clear failed:', err.message);
+      }
     });
 
     // Support diagnostics: periodic app-health snapshot (version, uptime, heap,

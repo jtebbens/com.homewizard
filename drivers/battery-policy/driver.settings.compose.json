@@ -194,7 +194,7 @@
         "value": 0.11,
         "min": 0,
         "max": 0.30,
-        "step": 0.005,
+        "step": 0.0001,
         "units": "€/kWh",
         "visible": { "when": "tariff_type", "is": "dynamic" }
       },
@@ -561,8 +561,8 @@
         "type": "dropdown",
         "label": { "en": "Price Resolution", "nl": "Prijsresolutie" },
         "hint": {
-          "en": "Set to 15 minutes for providers with quarter-hour prices (e.g. Xadi). Set to 1 hour for providers with hourly prices.",
-          "nl": "Zet op 15 minuten voor providers met kwartierprijzen (bijv. Xadi). Zet op 1 uur voor providers met uurprijzen."
+          "en": "Only used when no Power by the Hour device is selected in the app settings (ENTSOE fallback). With a device selected, resolution follows that device automatically.",
+          "nl": "Alleen gebruikt als er geen Power by the Hour device is gekozen in de app-instellingen (ENTSOE fallback). Met een gekozen device volgt de resolutie automatisch dat device."
         },
         "value": "15min",
         "values": [

@@ -90,8 +90,8 @@
             "nl": "Prijsresolutie"
           },
           "hint": {
-            "en": "Set to 15 minutes for providers with quarter-hour prices (e.g. Xadi). Set to 1 hour for providers with hourly prices (e.g. Zonneplan).",
-            "nl": "Zet op 15 minuten voor providers met kwartierprijzen (bijv. Xadi). Zet op 1 uur voor providers met uurprijzen (bijv. Zonneplan)."
+            "en": "Only used when no Power by the Hour device is selected in the app settings (ENTSOE fallback). With a device selected, resolution follows that device automatically.",
+            "nl": "Alleen gebruikt als er geen Power by the Hour device is gekozen in de app-instellingen (ENTSOE fallback). Met een gekozen device volgt de resolutie automatisch dat device."
           },
           "value": "15min",
           "values": [

@@ -633,6 +633,16 @@
   <!-- TAB: EXPLAINABILITY -->
   <div id="explain" class="tab-content">
     <h2>Battery Policy Explainability</h2>
+
+    <!-- PBTH PRICE SOURCE -->
+    <div style="margin-bottom:15px;padding:12px 14px;border-radius:8px;background:#1a1a1a;border:1px solid #2d2d2d;font-size:13px;">
+      <label for="pbthDeviceSelector" style="display:block;margin-bottom:6px;color:#A0A0A0;">Power by the Hour prijsbron</label>
+      <select id="pbthDeviceSelector" style="width:100%;max-width:400px;background:#0f0f0f;color:#fff;border:1px solid #2d2d2d;border-radius:6px;padding:6px 8px;">
+        <option value="">— geen (ENTSOE-fallback) —</option>
+      </select>
+      <button id="pbth-force-refresh-btn" style="margin-top:10px;">Forceer prijs-herfetch</button>
+    </div>
+
     <div id="explain-summary" style="margin-bottom:15px;font-size:14px;"></div>
     <!-- ⭐ ECONOMICS PANEL -->
     <div id="economics-panel" style="margin:15px 0;padding:14px;border-radius:8px;background:#1a1a1a;border:1px solid #2d2d2d;font-size:13px;line-height:1.6;">
@@ -1135,6 +1145,28 @@
       Homey.get(async (err, settings) => {
         if (err) return;
 
+        /* ── PBTH PRICE SOURCE ── */
+        function renderPbthDropdown(s) {
+          const sel = document.getElementById('pbthDeviceSelector');
+          const list = s['pbth_device_list'] || [];
+          const current = s['pbth_device_id'] || '';
+          sel.innerHTML = '<option value="">— geen (ENTSOE-fallback) —</option>';
+          list.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.deviceId;
+            opt.textContent = `${d.deviceName} (${d.driverType})`;
+            sel.appendChild(opt);
+          });
+          sel.value = list.some(d => d.deviceId === current) ? current : '';
+        }
+        renderPbthDropdown(settings);
+        document.getElementById('pbthDeviceSelector').addEventListener('change', e => {
+          Homey.set('pbth_device_id', e.target.value);
+        });
+        // Settings page cannot call the PBTH app-to-app API itself — ask the app to fetch the
+        // device list and write it back to 'pbth_device_list' (see app.js's settings.on('set')).
+        Homey.set('pbth_poll_request', Date.now());
+
         /* ── BASELOAD ── */
         const state = settings['baseload_state'];
         const history = state?.nightHistory || [];
@@ -1393,6 +1425,9 @@
         refreshFetchLogs = renderFetchLogs;
 
         Homey.on('settings.set', changedKey => {
+          if (changedKey === 'pbth_device_list') {
+            Homey.get((e, s) => { if (!e) renderPbthDropdown(s); });
+          }
           if (changedKey === 'fetch_device_stats') {
             Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
           }
@@ -1420,6 +1455,12 @@
              app.js watches this key and deletes the file. Re-read once it has had a moment. */
           Homey.set('debug_logs_clear', Date.now());
           setTimeout(renderFetchLogs, 500);
+        });
+
+        document.getElementById('pbth-force-refresh-btn').addEventListener('click', () => {
+          /* Merged price cache lives on /userdata — app.js watches this key, deletes the
+             cache file and force-fetches, so a stale pre-PBTH cache stops blocking PBTH. */
+          Homey.set('pbth_cache_clear_request', Date.now());
         });
 
         document.getElementById('reset-fetch-stats-btn').addEventListener('click', () => {
