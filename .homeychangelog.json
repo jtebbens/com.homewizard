@@ -1615,5 +1615,8 @@
   },
   "3.19.0": {
     "en": "Simplified PV forecast source setting (satellite/Solcast merged into one dropdown) plus fixes for peak shaving, discharge floor, battery cycle cost, and standby consumption learning"
+  },
+  "3.19.1": {
+    "en": "PTHB api added to pull dap prices, dropped xadi and kwhprice. Fixed watermeter day usage reset counter at 2:00 CEST."
   }
 }
