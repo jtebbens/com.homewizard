@@ -87,4 +87,53 @@ const f5 = [{ 0: 5, 1: 7 }, {}];
 preserve(f5, [{ 0: 999, 1: 999 }, {}], 0);
 assert.deepStrictEqual(f5[0], { 0: 5, 1: 7 }, 'at hour 0 no hour is in the past');
 
+// --- 9. _buildPvChartByDay must not overwrite an elapsed hour -----------------
+//
+// Regression 2026-08-11 (second writer). weather-forecaster._processForecast picks
+// currentIndex = first OM label with t > now (:510), then shifts each slot back one hour
+// for the "preceding hour" convention (:599). So hourlyForecast[0] is always the hour that
+// was RUNNING at fetch time. The weather cache lives 1h while the optimizer runs every
+// 15 min, so after the clock passes the next hour that leading slot is fully elapsed and
+// still sits at the head of the array. device.js:3069 filters on radiationWm2 only — no
+// time filter — so the stale slot reaches _buildPvChartByDay, which overwrote its hour on
+// every run with a freshly re-corrected value (measured: h18 254→259→252 while h2..h17,
+// absent from the array, stayed frozen).
+//
+// The DP itself is unaffected: _getPvForSlot brackets per PRICE slot and sumPvNetWindow
+// drops slotMs <= startMs, so no future slot ever reads the stale entry.
+
+const build = BatteryPolicyDevice._buildPvChartByDay.bind(BatteryPolicyDevice);
+
+const NOW = new Date('2026-08-11T17:10:00Z'); // 19:10 Amsterdam → h18 elapsed, h19 running
+const pvFc = [
+  { timestamp: '2026-08-11T16:00:00Z', pvPowerW: 999 }, // h18 Ams — stale, already elapsed
+  { timestamp: '2026-08-11T17:00:00Z', pvPowerW: 196 }, // h19 Ams — running hour
+  { timestamp: '2026-08-11T18:00:00Z', pvPowerW: 83 },  // h20 Ams — future
+  { timestamp: '2026-08-12T16:00:00Z', pvPowerW: 244 }, // tomorrow h18 — future
+];
+const stored = [{ 17: 796, 18: 254, 19: 153 }, { 18: 184 }];
+
+const b = build(stored, pvFc, 3000, NOW);
+
+assert.strictEqual(b[0][18], 254, 'elapsed hour 18 must keep the stored value, not the stale slot');
+assert.notStrictEqual(b[0][18], 999, 'the stale leading slot must not reach the chart');
+assert.strictEqual(b[0][17], 796, 'an hour absent from pvForecast is carried through unchanged');
+assert.strictEqual(b[0][19], 196, 'the running hour still takes the fresh value');
+assert.strictEqual(b[0][20], 83, 'future hours take the fresh value');
+assert.strictEqual(b[1][18], 244, 'tomorrow has no elapsed hours — always fresh');
+
+// Cold start: nothing stored for the elapsed hour → fall back to the fresh value rather
+// than leaving a hole in the chart.
+const bCold = build([{}, {}], pvFc, 3000, NOW);
+assert.strictEqual(bCold[0][18], 999, 'no stored value → elapsed hour falls back to fresh');
+
+// A non-numeric stored value must not win over a real fresh value.
+const bNull = build([{ 18: null }, {}], pvFc, 3000, NOW);
+assert.strictEqual(bNull[0][18], 999, 'null stored value → elapsed hour falls back to fresh');
+
+// Midnight: at hour 0 nothing is elapsed yet.
+const bMid = build([{ 0: 999 }, {}], [{ timestamp: '2026-08-10T22:10:00Z', pvPowerW: 5 }],
+  3000, new Date('2026-08-10T22:10:00Z')); // 00:10 Ams on the 11th
+assert.strictEqual(bMid[0][0], 5, 'at hour 0 no hour is in the past');
+
 console.log('pv-chart-past-hour-preserve: all assertions passed');

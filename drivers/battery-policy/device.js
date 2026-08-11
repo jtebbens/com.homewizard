@@ -4733,8 +4733,16 @@ if (debug) this.log(
       pvSumByDayHour[sIdx][sHour] = (pvSumByDayHour[sIdx][sHour] ?? 0) + fc.pvPowerW;
       pvCntByDayHour[sIdx][sHour] = (pvCntByDayHour[sIdx][sHour] ?? 0) + 1;
     }
+    // hourlyForecast leads with the hour that was RUNNING when the weather was fetched
+    // (weather-forecaster.js:510 filters on the OM label, :599 then shifts the slot back an
+    // hour for the "preceding hour" convention). The cache lives 1h while the optimizer runs
+    // every 15 min, so past the hour boundary that leading slot is elapsed and still present.
+    // Keep whatever was stored for an elapsed hour; only fall back to the fresh value when
+    // there is nothing stored (cold start), so the chart never holds a hole.
+    const _nowAmsHour = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
     for (let d = 0; d < 2; d++) {
       for (const h of Object.keys(pvSumByDayHour[d])) {
+        if (d === 0 && parseInt(h, 10) < _nowAmsHour && typeof _ex[0]?.[h] === 'number') continue;
         pvFcByDay[d][h] = cap(Math.round(pvSumByDayHour[d][h] / pvCntByDayHour[d][h]));
       }
     }
