@@ -1954,6 +1954,9 @@ if (debug) this.log(
               }
               return byDay;
             };
+            const _prevFcByDay = this._liveState.policy_pv_forecast_hourly
+              ?? this.homey.settings.get('policy_pv_forecast_hourly');
+            BatteryPolicyDevice._preservePastHours(pvFcByDay, _prevFcByDay, _nowAmsHr);
             this._setLive('policy_pv_forecast_hourly', pvFcByDay);
             this._setLive('policy_pv_forecast_om', _scaleChartFc(omFcByDay));
             if (scFcByDay) this._setLive('policy_pv_forecast_sc', scFcByDay);
@@ -4690,6 +4693,21 @@ if (debug) this.log(
       const corr = enabled ? BatteryPolicyDevice._nightBiasCorrW(hourly, hoursAms[i]) : 0;
       return Math.max(v + corr, baseloadW);
     });
+  }
+
+  // Keep today's already-elapsed hours from the previously stored chart forecast.
+  // The weather path rebuilds the whole day from raw OM x learned-YF, past hours included,
+  // which drops the optimizer corrections those hours were stored with. The loss is
+  // permanent: _recomputeOptimizer re-reads this same key as _preExistingPvForecast and
+  // _buildPvChartByDay carries its past hours straight back out. Injectable `nowAmsHour`
+  // enables unit testing.
+  static _preservePastHours(fresh, previous, nowAmsHour) {
+    const prevToday = previous?.[0];
+    if (!prevToday || !fresh?.[0]) return fresh;
+    for (const [h, w] of Object.entries(prevToday)) {
+      if (parseInt(h, 10) < nowAmsHour && typeof w === 'number') fresh[0][h] = w;
+    }
+    return fresh;
   }
 
   // Build policy_pv_forecast_hourly for today+tomorrow from DP pvForecast.
