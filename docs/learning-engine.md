@@ -2,6 +2,10 @@
 
 - Records TRUE house load `houseConsumptionW = gridPower − batteryPower + pvW` (battery charge/discharge and PV self-consumption removed), skipped when `< 0` or during battery_power sensor lag. Mean of right-skewed load sits above the typical slot → plan-accuracy shows a persistent negative consumption bias (forecast > actual); observe-only, not a measurement bug.
 - `pv_predictions` capped at 300 entries (only last 100 used for accuracy calc via `slice(-100)`)
+- **Two PV accuracy EMAs, differing only in forecast vintage** (same slot, same actual, same bounded formula `1 − |actual−fc|/max(actual,fc,1)`, same α=0.1):
+  - `pv_accuracy_score` ← `_pvDayStartForecast`, frozen once per day (`de8e9eb`). Measures *planning* accuracy — how good the forecast was that the day was planned on. Feeds the settings pill **and** the PV-conservatism gate (`device.js`, discounts `pvForecast` when `< 0.80`).
+  - `pv_accuracy_score_live` ← `_pvForecastBlended`, refreshed every run. Measures the vintage the DP actually consumes. **Shadow only — nothing reads it yet.** Exists because the gate above judges a live forecast by a frozen snapshot, which understates it whenever a provider revises mid-day (measured gap 201 W mean, 2026-08-05→08-10).
+  - `_pvAccLiveOnlyCount` counts samples the day-start early return (`predictedW <= 50`) dropped while the live blend had usable data — the blind spot in the head-to-head. Surfaced as `policy_last_run_debug.pvAccuracyLiveOnly`.
 - `getPredictedConsumption()` falls back: specific day → day-group (weekday/weekend) → all days → 0
 - Consumption forecast in optimizer: `learned > 0 ? learned : baseloadW` — baseload only used when slot has no learned data at all
 - `getConsumptionSampleCount(targetTime)` — returns raw sample count (0–100) for a specific day-of-week + hour. Count < 4 means below direct-use threshold (learning engine falls back to group average). Used for confidence badges in planning UI.

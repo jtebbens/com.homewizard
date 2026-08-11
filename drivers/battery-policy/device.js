@@ -2440,6 +2440,10 @@ if (debug) this.log(
           result.debug.pvAccuracyOm = _pvAcc.pv_accuracy_om ?? null;
           result.debug.pvAccuracySc = _pvAcc.pv_accuracy_sc ?? null;
           result.debug.pvAccuracyScore = _pvAcc.pv_accuracy_score ?? null;
+          // Shadow: same formula on the live-vintage forecast. liveOnly = samples the day-start
+          // early return dropped but the live blend covered (see _recordPvAccuracySample).
+          result.debug.pvAccuracyScoreLive = _pvAcc.pv_accuracy_score_live ?? null;
+          result.debug.pvAccuracyLiveOnly = this._pvAccLiveOnlyCount ?? 0;
           result.debug.pvAccuracySamples = _pvAcc.pv_predictions?.length ?? null;
           // Temp: raw per-slot om/sc/actual W for divergence-mining analysis
           // (project_roadmap_perslot_blend_divergence). Remove after analysis done.
@@ -4559,7 +4563,27 @@ if (debug) this.log(
     const pvDayIdx   = this.optimizationEngine._buildPvIndex(this._pvDayStartForecast);
     const predictedW = this.optimizationEngine._getPvForSlot(pvDayIdx, nowMs) || 0;
     const actualW = this._pvProductionW;
-    if (predictedW <= 50 || actualW <= 100) return;
+
+    // Same slot taken from the un-frozen blended forecast (_pvForecastBlended, snapshotted
+    // alongside _pvDayStartForecast before any discount). Shadow metric: the conservatism gate
+    // still reads the day-start score — this only records what the live vintage would have scored.
+    const liveIdx = this._pvForecastBlended
+      ? this.optimizationEngine._buildPvIndex(this._pvForecastBlended)
+      : null;
+    const predictedLiveW = liveIdx
+      ? (this.optimizationEngine._getPvForSlot(liveIdx, nowMs) || 0)
+      : null;
+
+    if (predictedW <= 50 || actualW <= 100) {
+      // This early return is keyed on the DAY-START value. Slots where the morning forecast said
+      // ~nothing but the live blend sees real production therefore reach neither EMA — exactly the
+      // samples where the live vintage would prove its worth. Count them so that blind spot is
+      // visible in the head-to-head instead of silently absent from it.
+      if (predictedLiveW != null && predictedLiveW > 50 && actualW > 100) {
+        this._pvAccLiveOnlyCount = (this._pvAccLiveOnlyCount || 0) + 1;
+      }
+      return;
+    }
 
     const bucketMs = Math.floor(nowMs / (15 * 60 * 1000)) * (15 * 60 * 1000);
     if (this._lastPvAccuracyBucket === bucketMs) return;
@@ -4609,7 +4633,7 @@ if (debug) this.log(
       perModel: Object.fromEntries(Object.entries(perModelW).map(([m, w]) => [m, this._correctOverlayW(w, true)])),
     };
 
-    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW, chartW).catch(e =>
+    this.learningEngine.recordPvAccuracy(predictedW, actualW, omW, scW, perModelW, satW, chartW, predictedLiveW).catch(e =>
       this.error('PV accuracy recording failed:', e)
     );
   }
