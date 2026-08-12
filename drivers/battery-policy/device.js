@@ -4370,10 +4370,11 @@ if (debug) this.log(
   }
 
   /**
-   * OM-standalone forecast-quality tracker (observe-only). Logs OM/SC/blend same-slot
+   * OM-standalone forecast-quality tracker (observe-only). Logs OM/SAT/blend same-slot
    * MAE+bias and the MAE-optimal OM weight from the pv_predictions buffer (midday actual
-   * >300W), over the full buffer and the last 50 samples. OM's MAE is independent of the
-   * fixed 50/50 blend weight, so this surfaces whether OM-the-forecast is actually
+   * >300W), over the full buffer and the last 50 samples. Both OM and SAT are raw
+   * (uncorrected) — no dayCorr/intraday bias applied to either leg. OM's MAE is independent
+   * of the fixed 50/50 blend weight, so this surfaces whether OM-the-forecast is actually
    * improving and whether its optimal weight is earning >0.50 (→ revisit the blend).
    */
   _logOmTrend() {
@@ -4388,17 +4389,17 @@ if (debug) this.log(
       let bw = 0.5, bm = Infinity;
       for (let w = 0; w <= 1.0001; w += 0.05) {
         let ae = 0;
-        for (const r of rows) ae += Math.abs(w * r.om + (1 - w) * r.sc - r.actual);
+        for (const r of rows) ae += Math.abs(w * r.om + (1 - w) * r.satRaw - r.actual);
         if (ae < bm) { bm = ae; bw = w; }
       }
       return bw;
     };
     const all = buf.filter(r => typeof r.actual === 'number' && r.actual > 300
-      && typeof r.om === 'number' && typeof r.sc === 'number');
+      && typeof r.om === 'number' && typeof r.satRaw === 'number');
     if (all.length < 20) { this.log(`[OM trend] n=${all.length} midday samples (<20, need more)`); return; }
     const line = (lbl, rows) => {
-      const o = stat(rows, r => r.om), s = stat(rows, r => r.sc), b = stat(rows, r => r.predicted);
-      return `${lbl} n=${rows.length} OM=${o.mae}/${o.bias} SC=${s.mae}/${s.bias} blend=${b.mae}/${b.bias} optW_om=${optW(rows).toFixed(2)}`;
+      const o = stat(rows, r => r.om), s = stat(rows, r => r.satRaw), b = stat(rows, r => r.predicted);
+      return `${lbl} n=${rows.length} OM=${o.mae}/${o.bias} SAT=${s.mae}/${s.bias} blend=${b.mae}/${b.bias} optW_om=${optW(rows).toFixed(2)}`;
     };
     this.log(`[OM trend] ${line('all', all)} | ${line('last50', all.slice(-50))} (MAE/bias W; OM standalone, independent of fixed 50/50)`);
   }
