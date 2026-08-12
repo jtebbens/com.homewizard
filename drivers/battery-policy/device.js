@@ -4446,7 +4446,13 @@ if (debug) this.log(
         const satPanelGhi = typeof satHourSlot?.gtiOverGhi === 'number' && satHourSlot.gtiOverGhi > 0
           ? satGhiWm2 * satHourSlot.gtiOverGhi
           : satGhiWm2;
-        this.learningEngine.recordSatYield(new Date(satLookupMs).getUTCHours(), satPanelGhi, powerW);
+        // Hand over the two quality inputs behind satPanelGhi: a gtiOverGhi pinned to the
+        // clamp floor inflates the denominator, and a grazing-sun bucket is the same reading
+        // satGhiToPanelW already refuses to convert. Either way the yf would be understated.
+        this.learningEngine.recordSatYield(new Date(satLookupMs).getUTCHours(), satPanelGhi, powerW, {
+          gtiOverGhi: typeof satHourSlot?.gtiOverGhi === 'number' ? satHourSlot.gtiOverGhi : null,
+          elevDeg: this.weatherForecaster.satElevAt?.(satLookupMs) ?? null,
+        });
       }
     }
 
@@ -5962,7 +5968,8 @@ if (debug) this.log(
     if (sat && this.planningImagePv) this.planningImagePv.update().catch(() => {});
   }
 
-  _buildSatForecastForChart(weatherData, pvCapW) {
+  // Injectable `now` enables unit testing, same convention as _buildPvChartByDay.
+  _buildSatForecastForChart(weatherData, pvCapW, now = new Date()) {
     const store = this.homey.settings.get('policy_pv_sat_obs') || {};
     const slots = weatherData?.hourlyForecast;
     if (Array.isArray(slots)) {
@@ -5974,7 +5981,7 @@ if (debug) this.log(
         store[String(t.getTime())] = { ghi: s.satGhiWm2, ratio: typeof s.gtiOverGhi === 'number' ? s.gtiOverGhi : null };
       }
     }
-    const todayAms = _amsDayKeyFormatter.format(new Date());
+    const todayAms = _amsDayKeyFormatter.format(now);
     const result = [{}, {}];
     for (const key of Object.keys(store)) {
       const t = new Date(Number(key));
@@ -5990,6 +5997,13 @@ if (debug) this.log(
       result[dayIdx][amsH] = pvCapW > 0 ? Math.min(raw, pvCapW) : raw;
     }
     this._queueSettingsPersist('policy_pv_sat_obs', store);
+    // Every hour above is recomputed with the yield factor as it stands right now, so a
+    // scalar that drifts during the day would silently redraw hours that are already over.
+    // Freeze the elapsed ones, same guard the DP forecast line uses (see _preservePastHours).
+    const _nowAmsHr = parseInt(now.toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+    const _prevSat = this._liveState.policy_pv_forecast_sat
+      ?? this.homey.settings.get('policy_pv_forecast_sat');
+    BatteryPolicyDevice._preservePastHours(result, _prevSat, _nowAmsHr);
     return (Object.keys(result[0]).length + Object.keys(result[1]).length) > 0 ? result : null;
   }
 

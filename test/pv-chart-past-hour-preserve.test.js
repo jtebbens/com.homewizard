@@ -136,4 +136,64 @@ const bMid = build([{ 0: 999 }, {}], [{ timestamp: '2026-08-10T22:10:00Z', pvPow
   3000, new Date('2026-08-10T22:10:00Z')); // 00:10 Ams on the 11th
 assert.strictEqual(bMid[0][0], 5, 'at hour 0 no hour is in the past');
 
+// --- 10. the satellite table must freeze elapsed hours too --------------------
+//
+// Regression 2026-08-11 (third surface). _buildSatForecastForChart recomputes EVERY hour in
+// policy_pv_sat_obs with resolveSatYieldFactor() as it stands at that moment. The sat yield
+// factor is one pooled scalar, so late-afternoon samples drag it down during the day
+// (measured: 2.302 → 1.926 within an hour) and the whole day's purple line was redrawn
+// against the lower value — 13:00 Ams fell from a live 2749W to a stored 1625W while the
+// satellite GHI (809) and the transposition ratio (1.043) never changed.
+
+const buildSat = BatteryPolicyDevice.prototype._buildSatForecastForChart;
+
+const SAT_NOW = new Date('2026-08-11T17:10:00Z'); // 19:10 Amsterdam
+const amsHourOf = (ms) => parseInt(new Date(ms).toLocaleString('en-US',
+  { hour: 'numeric', hour12: false, timeZone: 'Europe/Amsterdam' }), 10);
+
+// Two buckets: one whole hour back (elapsed) and one hour ahead (still to come).
+const pastMs   = SAT_NOW.getTime() - 3_600_000;
+const futureMs = SAT_NOW.getTime() + 3_600_000;
+const satStore = {
+  [String(pastMs)]:   { ghi: 809, ratio: 1.043 },
+  [String(futureMs)]: { ghi: 700, ratio: 1.000 },
+};
+
+// Stub converter standing in for the DROPPED scalar (~1.93 instead of the ~3.26 that was
+// live when the elapsed hour actually happened).
+const DROPPED_YF = 1.926;
+const makeSatDevice = (prevSat) => ({
+  _liveState: {},
+  homey: {
+    settings: {
+      get: (key) => (key === 'policy_pv_sat_obs' ? { ...satStore }
+        : key === 'policy_pv_forecast_sat' ? prevSat : null),
+    },
+  },
+  weatherForecaster: {
+    satGhiToPanelW: (ghi, _utcH, ratio) => Math.round(ghi * ratio * DROPPED_YF),
+  },
+  _queueSettingsPersist: () => {},
+});
+
+const storedSat = [{ [amsHourOf(pastMs)]: 2749 }, {}];
+const satOut = buildSat.call(makeSatDevice(storedSat), null, 3600, SAT_NOW);
+const freshPast = Math.round(809 * 1.043 * DROPPED_YF); // 1625 — what the drop would redraw
+
+assert.strictEqual(satOut[0][amsHourOf(pastMs)], 2749,
+  'elapsed sat hour must keep the value computed while it was running');
+assert.notStrictEqual(satOut[0][amsHourOf(pastMs)], freshPast,
+  'the dropped-scalar recompute must not reach the chart');
+assert.strictEqual(satOut[0][amsHourOf(futureMs)], Math.round(700 * 1.0 * DROPPED_YF),
+  'the hour ahead still takes the freshly computed value');
+
+// Cold start: nothing stored for the elapsed hour → fall back to fresh, no hole.
+const satCold = buildSat.call(makeSatDevice(null), null, 3600, SAT_NOW);
+assert.strictEqual(satCold[0][amsHourOf(pastMs)], freshPast,
+  'no stored sat value → elapsed hour falls back to fresh');
+
+// The panel cap still applies to the fresh hours.
+const satCapped = buildSat.call(makeSatDevice(null), null, 1000, SAT_NOW);
+assert.strictEqual(satCapped[0][amsHourOf(futureMs)], 1000, 'fresh sat hour is capped at pvCapW');
+
 console.log('pv-chart-past-hour-preserve: all assertions passed');
