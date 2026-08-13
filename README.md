@@ -53,6 +53,10 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.19.1)
 
+### Battery No Longer Stops Discharging While Prices Are Still High (v3.19.1)
+
+* **Fixed a near-empty battery going idle at a profitable price whenever a little solar was forecast.** When the planner compared "stay idle and let solar export" against "keep discharging", it credited the export revenue to the idle option only. In reality the battery does not give that revenue up by discharging: it covers the house load while solar exports the surplus at the same time, so the revenue is earned either way. Counting it on one side made idling look better than it was. The error was small in absolute terms, so it only tipped the decision when there was little left to discharge — which is exactly why it showed up on a nearly empty battery, leaving it parked at 1–3% while prices were still well above the discharge threshold. Both options are now valued on what actually distinguishes them. Behaviour at negative prices is unchanged.
+
 ### Dynamic Prices Now Come From Power by the Hour (v3.19.1)
 
 * **Replaced the built-in price scrapers with the Power by the Hour app as the price source.** Dynamic prices used to be fetched by two scrapers maintained inside this app, which broke whenever a supplier changed their website. Instead, the app now reads the day-ahead prices from a device in the Power by the Hour app (`com.gruijter.powerhour`) — select which device to use in the battery policy settings. That app already supports a long list of suppliers and keeps them working, including quarter-hourly prices where the supplier publishes them. If those prices are unavailable for any reason, the app falls back to ENTSO-E day-ahead data as before, so planning keeps running. One thing worth checking after updating: the import markup is configured in both apps, and the price the planner uses comes from Power by the Hour. If the two don't match, the prices shown in the charts won't line up with the ones the battery plans on. Power by the Hour shows the markup including VAT; this app's "Import Markup" setting expects it excluding VAT (divide by 1.21).
