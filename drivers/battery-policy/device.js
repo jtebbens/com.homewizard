@@ -48,6 +48,16 @@ const DP_DUMP_DIR     = '/userdata';
 const DP_DUMP_KEEP    = 12;
 const DP_DUMP_FILE_RE = /^dp-input-\d{8}T\d{6}\.\d{3}Z\.json$/;
 
+// [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
+// stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
+// plan underperformed and never why. Append-only JSONL rather than a field on the mode-history
+// entry: _writeModeDay rewrites the whole day array per upsert, and hanging per-slot arrays off
+// that would reintroduce exactly the allocation the /userdata move removed. Retention rides on
+// MODE_HISTORY_DAYS so a trace always has its mode-history bucket to join against.
+const DP_TRACE_FILE_RE = /^dp-trace-(\d{4}-\d{2}-\d{2})\.jsonl$/;
+// One char per slot keeps a 68-slot horizon at ~1.5 kB/run instead of ~10 kB.
+const DP_TRACE_ACTION_CHAR = { charge: 'C', discharge: 'D', preserve: 'P', standby: 'S', trickle: 'T' };
+
 // Night bias correction (see _nightBiasCorrW). The window is the block the 08-01 reading
 // verified as a LEVEL error (bias ≈ median, negative in 7/7 nights); daytime hours are excluded
 // because their error is tail-driven and h8/h10 additionally feed pvCoverage.
@@ -495,6 +505,81 @@ class BatteryPolicyDevice extends Homey.Device {
       const names = fs.readdirSync(dir).filter(n => DP_DUMP_FILE_RE.test(n)).sort();
       for (const n of names.slice(0, Math.max(0, names.length - DP_DUMP_KEEP))) fs.unlinkSync(`${dir}/${n}`);
     } catch (e) { /* prune failed: dumps stay, retention slips a run */ }
+    return file;
+  }
+
+  // ---- decision trace: one JSONL line per policy run on /userdata (see DP_TRACE_* above) ----
+
+  // Builds the record from state the run already produced: the four t=0 action values the DP
+  // compared (_flattenDebug), the arrays that bound the choice (_lastDpArrays) and the projected
+  // path. Pure — no I/O, no clock beyond `now` — so the shape is testable without a device.
+  // Returns null when the engine has nothing to describe; a half record is worse than no record,
+  // because a gap is visible in the join and a silently-empty array is not.
+  _buildDecisionTrace({ engine, now, soc, refillConfidence, pvKwhTomorrow, maxChargePrice }) {
+    const slots = engine?._schedule?.slots;
+    const fd    = engine?._flattenDebug;
+    const arr   = engine?._lastDpArrays;
+    if (!Array.isArray(slots) || !slots.length || !fd || !arr?.reserveFloorG || !arr?.effectiveDischargePowerW) return null;
+
+    const n = slots.length;
+    // reserveFloorG counts 0.1% steps (GRID in optimization-engine), so /10 gives percent.
+    const floorG = arr.reserveFloorG;
+    const dischW = arr.effectiveDischargePowerW;
+    return {
+      ts: new Date(now).toISOString(),
+      soc,
+      n,
+      v0: {
+        pre: fd.vPreserve ?? null,
+        chg: fd.vCharge ?? null,
+        dis: fd.vDischarge ?? null,
+        stb: fd.vStandby ?? null,
+        act: fd.chosenAction ?? null,
+      },
+      conf: refillConfidence != null ? +refillConfidence.toFixed(3) : null,
+      pvTom: pvKwhTomorrow != null ? +pvKwhTomorrow.toFixed(2) : null,
+      maxChP: maxChargePrice != null ? +maxChargePrice.toFixed(4) : null,
+      floorPct0: floorG.length ? +(floorG[0] / 10).toFixed(1) : null,
+      act: slots.map(s => DP_TRACE_ACTION_CHAR[s.action] ?? '?').join(''),
+      socP: slots.map(s => (s.socProjected == null ? null : Math.round(s.socProjected))),
+      floor: Array.from(floorG).slice(0, n).map(g => +(g / 10).toFixed(1)),
+      dischW: Array.from(dischW).slice(0, n).map(w => Math.round(w)),
+    };
+  }
+
+  _dpTraceFile(dayKey) {
+    return `${this._modeStateDir || MODE_HISTORY_DIR}/dp-trace-${dayKey}.jsonl`;
+  }
+
+  // Appends one line and prunes only on a day change: the prune reads the directory, and doing that
+  // every run costs a readdir for nothing 95 times out of 96. A failed append costs this run's
+  // reasons, never the policy run itself.
+  _appendDecisionTrace(rec) {
+    if (!rec) return null;
+    const fs     = require('fs');
+    const dayKey = _amsDayKeyFormatter.format(new Date(rec.ts));
+    const file   = this._dpTraceFile(dayKey);
+    try {
+      fs.appendFileSync(file, `${JSON.stringify(rec)}\n`);
+    } catch (e) {
+      this.error(`[DP-TRACE] append ${dayKey} failed: ${e.message}`);
+      return null;
+    }
+    if (this._dpTraceDay !== dayKey) {
+      // First write of this process or of a new day: name the file once so the log says where the
+      // artefact is, then stay silent for the other ~96 writes.
+      this.log(`[DP-TRACE] → ${file}`);
+      this._dpTraceDay = dayKey;
+      try {
+        const dir   = this._modeStateDir || MODE_HISTORY_DIR;
+        const names = fs.readdirSync(dir).filter(nm => DP_TRACE_FILE_RE.test(nm)).sort();
+        const cutoff = new Date(new Date(`${dayKey}T00:00:00Z`).getTime() - (MODE_HISTORY_DAYS - 1) * 86400000)
+          .toISOString().slice(0, 10);
+        for (const nm of names) {
+          if (DP_TRACE_FILE_RE.exec(nm)[1] < cutoff) fs.unlinkSync(`${dir}/${nm}`);
+        }
+      } catch (e) { /* prune failed: traces stay, retention slips a day */ }
+    }
     return file;
   }
 
@@ -4169,6 +4254,22 @@ if (debug) this.log(
       this.error('nearfloor-chatter catcher failed', err);
     }
 
+    // Decision trace (always on, write-only). The catcher above only fires in the near-floor band;
+    // this is the unconditional record, so a question about ANY past run can be answered from disk
+    // instead of by waiting for the state to recur (feedback_persist_state_for_posthoc_analysis).
+    try {
+      this._appendDecisionTrace(this._buildDecisionTrace({
+        engine: this.optimizationEngine,
+        now: Date.now(),
+        soc,
+        refillConfidence,
+        pvKwhTomorrow: effectivePvKwhTomorrow,
+        maxChargePrice,
+      }));
+    } catch (err) {
+      this.error('decision trace failed', err);
+    }
+
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-catcher');
 
     // Compact planning summary — always visible in user diagnostics.
@@ -6472,5 +6573,6 @@ if (debug) this.log(
 }
 
 BatteryPolicyDevice.DP_DUMP_KEEP = DP_DUMP_KEEP;
+BatteryPolicyDevice.MODE_HISTORY_DAYS = MODE_HISTORY_DAYS;
 
 module.exports = BatteryPolicyDevice;
