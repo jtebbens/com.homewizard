@@ -31,18 +31,44 @@ function token() {
   return cachedToken;
 }
 
-async function get(path) {
+async function get(path, asText = false) {
   const res = await fetch(`${ADDRESS}${path}`, {
     headers: { Authorization: `Bearer ${token()}` },
     signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} on ${path.split('?')[0]}`);
-  return res.json();
+  return asText ? res.text() : res.json();
 }
 
 /** One app settings key. Returns null when the key does not exist. */
 async function getAppSetting(name, appId = APP_ID) {
   return get(`/api/manager/apps/app/${encodeURIComponent(appId)}/setting/${encodeURIComponent(name)}`);
+}
+
+/**
+ * One file from the app's /userdata directory. The mode history moved there when the settings
+ * blob was split up (settings key policy_mode_history_YYYY-MM-DD no longer exists), and the
+ * settings page reads it over this same path. A missing file yields null, like a missing key.
+ */
+async function getUserdata(name, appId = APP_ID) {
+  // .jsonl (dp-trace-*) is one JSON object per line, so res.json() rejects the whole file at the
+  // first newline ("Unexpected non-whitespace character after JSON"). Fetch it as text and parse
+  // per line; a truncated last line — the file is appended to while we read — is dropped rather
+  // than failing the read. Returns an array of records, so callers treat it like any other file.
+  const jsonl = name.endsWith('.jsonl');
+  try {
+    const body = await get(`/app/${encodeURIComponent(appId)}/userdata/${encodeURIComponent(name)}`, jsonl);
+    if (!jsonl) return body;
+    const out = [];
+    for (const line of body.split('\n')) {
+      if (!line.trim()) continue;
+      try { out.push(JSON.parse(line)); } catch (err) { /* partial trailing line: skip */ }
+    }
+    return out;
+  } catch (err) {
+    if (/HTTP 40[34]/.test(err.message)) return null;
+    throw err;
+  }
 }
 
 /** Insights log entries. `logId` is the full id; the uri is its first three segments. */
@@ -52,16 +78,18 @@ async function getInsightsEntries(logId, resolution = 'last24Hours') {
   return get(`/api/manager/insights/log/${encodeURIComponent(uri)}/${encodeURIComponent(logId)}/entry?${qs}`);
 }
 
-module.exports = { getAppSetting, getInsightsEntries, ADDRESS };
+module.exports = { getAppSetting, getUserdata, getInsightsEntries, ADDRESS };
 
 if (require.main === module) {
   const [cmd, a, b] = process.argv.slice(2);
   const run = {
     setting: () => getAppSetting(a, b || APP_ID),
+    userdata: () => getUserdata(a, b || APP_ID),
     insights: () => getInsightsEntries(a, b || 'last24Hours'),
   }[cmd];
   if (!run || !a) {
-    console.error('usage: homey-local.js setting <name> [appId] | insights <logId> [resolution]');
+    console.error('usage: homey-local.js setting <name> [appId] | userdata <file> [appId] '
+      + '| insights <logId> [resolution]');
     process.exit(2);
   }
   run()
