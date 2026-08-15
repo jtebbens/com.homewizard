@@ -541,6 +541,10 @@ class BatteryPolicyDevice extends Homey.Device {
       maxChP: maxChargePrice != null ? +maxChargePrice.toFixed(4) : null,
       floorPct0: floorG.length ? +(floorG[0] / 10).toFixed(1) : null,
       act: slots.map(s => DP_TRACE_ACTION_CHAR[s.action] ?? '?').join(''),
+      // Who wrote each action (OptimizationEngine.ACTION_SRC). Without this the trace shows an
+      // action next to the backward DP's t=0 values and any difference reads as the DP changing
+      // its mind, while a post-DP pass may have rewritten the slot. 'D' = the DP itself.
+      src: slots.map(s => s.actionSrc ?? '?').join(''),
       socP: slots.map(s => (s.socProjected == null ? null : Math.round(s.socProjected))),
       floor: Array.from(floorG).slice(0, n).map(g => +(g / 10).toFixed(1)),
       dischW: Array.from(dischW).slice(0, n).map(w => Math.round(w)),

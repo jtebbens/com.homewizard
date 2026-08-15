@@ -15,6 +15,15 @@ const { getUserdata } = require('./homey-local');
 
 const ACTION = { P: 'preserve', C: 'charge', D: 'discharge', S: 'standby', T: 'trickle' };
 const V0_KEY = { P: 'pre', C: 'chg', D: 'dis', S: 'stb' };
+// OptimizationEngine.ACTION_SRC — who wrote a slot's action. Only 'D' is the DP itself.
+const SRC = {
+  D: 'the backward DP',
+  S: 'forward-pass override (PV storage beats export)',
+  T: 'forward-pass override (weak-PV trickle)',
+  R: 'post-DP reorder (night discharge by price)',
+  I: 'post-DP island override',
+  F: 'post-DP feasibility sweep',
+};
 
 const dayFmt  = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
 const timeFmt = new Intl.DateTimeFormat('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit' });
@@ -39,7 +48,7 @@ function analyse(rows) {
     // from a pass with no t=0 value of its own (trickle), so the gap is reported only when known.
     const vPicked = r.v0[V0_KEY[picked[0].toUpperCase()]] ?? null;
     const vFinal  = V0_KEY[finalChar] ? r.v0[V0_KEY[finalChar]] : null;
-    diverged.push({ r, from: picked, to: ACTION[finalChar] ?? finalChar, gap: (vPicked != null && vFinal != null) ? vPicked - vFinal : null });
+    diverged.push({ r, from: picked, to: ACTION[finalChar] ?? finalChar, src: r.src?.[0] ?? null, gap: (vPicked != null && vFinal != null) ? vPicked - vFinal : null });
   }
 
   const floored = rows.filter((r) => r.conf != null && r.conf < 1);
@@ -107,7 +116,31 @@ async function detail(day, rows) {
     for (const d of a.diverged.slice(0, 10)) {
       console.log(`  ${timeFmt.format(new Date(d.r.ts))}  ${d.from} → ${d.to}${d.gap != null ? `  (€${d.gap.toFixed(4)} of horizon value)` : ''}`);
     }
-    console.log('  A post-DP pass (reorder/island/topup/trickle) relabelled slot 0. Which one is not in the trace.');
+    const named = a.diverged.filter((d) => d.src && d.src !== '?');
+    if (named.length) {
+      for (const d of named.slice(0, 10)) {
+        console.log(`  ${timeFmt.format(new Date(d.r.ts))}  relabelled by ${SRC[d.src] ?? d.src}`);
+      }
+    } else {
+      console.log('  Which pass relabelled slot 0 is not in these runs (written before the src stamp shipped).');
+    }
+  }
+
+  // Attribution over the whole horizon, not just slot 0: how much of each plan the DP still owns.
+  const srcRuns = rows.filter((r) => typeof r.src === 'string' && r.src.length);
+  if (srcRuns.length) {
+    const tally = new Map();
+    let total = 0;
+    for (const r of srcRuns) {
+      for (const c of r.src) {
+        tally.set(c, (tally.get(c) || 0) + 1);
+        total++;
+      }
+    }
+    console.log(`\nWho wrote the actions (${srcRuns.length}/${rows.length} runs carry the stamp, ${total} slots):`);
+    for (const [c, n] of [...tally].sort((x, y) => y[1] - x[1])) {
+      console.log(`  ${String(((n / total) * 100).toFixed(1)).padStart(5)}%  ${SRC[c] ?? c}`);
+    }
   }
 }
 

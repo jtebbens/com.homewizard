@@ -136,6 +136,56 @@ function runEngine(refillConfidence = 0.5) {
   ok('record carries one entry per slot in every per-slot field');
 }
 
+// --- the src stamp: every action is attributable to the layer that wrote it ----------------------
+// Without this the trace puts the backward DP's t=0 values next to an action that a post-DP pass
+// may have rewritten, and the difference reads as the DP changing its mind. Measured live on
+// 2026-08-15: 7 of 10 runs "diverged" with no way to say which pass did it.
+{
+  const engine = runEngine();
+  const n = engine._schedule.slots.length;
+  const rec = build.call(ctx('/tmp'), {
+    engine, now: Date.parse('2026-06-01T12:00:00Z'), soc: 50,
+    refillConfidence: 0.5, pvKwhTomorrow: 3.0, maxChargePrice: 0.30,
+  });
+
+  const known = new Set(Object.values(OptimizationEngine.ACTION_SRC));
+  assert.strictEqual(rec.src.length, n, 'one src char per slot');
+  assert.ok(!/\?/.test(rec.src), `every slot names its writer, got ${rec.src}`);
+  for (const c of rec.src) assert.ok(known.has(c), `unknown src char ${c} in ${rec.src}`);
+
+  // The invariant the stamp exists to enforce: slot 0 may only carry the DP's own label when the
+  // executed action still IS the DP's t=0 pick. Any disagreement must name a different writer.
+  const { ACTION_SRC } = OptimizationEngine;
+  const act0 = { P: 'preserve', C: 'charge', D: 'discharge', S: 'standby', T: 'trickle' }[rec.act[0]];
+  if (rec.src[0] === ACTION_SRC.DP) {
+    assert.strictEqual(act0, rec.v0.act, `src says the DP owns slot 0 but ${act0} !== ${rec.v0.act}`);
+  } else {
+    assert.notStrictEqual(act0, rec.v0.act, `slot 0 is stamped ${rec.src[0]} yet matches the DP's pick`);
+  }
+  ok('src stamps every slot with the layer that wrote its action');
+}
+
+// --- a post-DP rewrite is credited to the pass, not to the DP ------------------------------------
+// The feasibility sweep relabels a discharge slot sitting at the reserve floor. Whatever it
+// touches must stop being 'D', or the attribution is decorative.
+{
+  const engine = runEngine();
+  const { ACTION_SRC } = OptimizationEngine;
+  const known2 = new Set(Object.values(ACTION_SRC));
+  const slots = engine._schedule.slots;
+  const floor = engine._lastDpArrays.reserveFloorG;
+  for (let t = 0; t < slots.length; t++) {
+    if (slots[t].action === 'discharge') {
+      assert.ok(slots[t].socProjected > floor[t] / 10,
+        `slot ${t} discharges at the floor and should have been relabelled`);
+    }
+    if (slots[t].actionSrc !== ACTION_SRC.DP) {
+      assert.ok(known2.has(slots[t].actionSrc), `slot ${t} carries an unknown writer ${slots[t].actionSrc}`);
+    }
+  }
+  ok('no discharge slot survives at the reserve floor unattributed');
+}
+
 // --- size: a 68-slot horizon must stay writable ~96x/day for 23 days ------------------------------
 {
   const engine = new OptimizationEngine(SETTINGS);
