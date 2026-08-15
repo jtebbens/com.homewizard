@@ -11,6 +11,7 @@ const { exportValue } = require('../../lib/price-formulas');
 const ChartRenderer = require('../../lib/chart-renderer');
 const { sanitizeSoc, createState } = require('../../lib/soc-glitch-guard');
 const userdataStore = require('../../lib/userdata-store');
+const hindcast = require('../../lib/model-hindcast');
 
 const debug = false;
 
@@ -606,6 +607,61 @@ class BatteryPolicyDevice extends Homey.Device {
 
   _readModeHistoryDay(dayKey) {
     return this._modeHistMap().get(dayKey) || [];
+  }
+
+  // 14-day per-model hindcast (lib/model-hindcast.js). At most once per 24h, fire-and-forget.
+  // Scores the 5 ensemble models on their archived DAY-AHEAD run against the panel means the mode
+  // history already holds, which widens the per-model learning window from the ~3 days that fit in
+  // pv_predictions to 14. Shadow-only unless learning_model_hindcast_apply is set: the log line
+  // prints the hindcast ranking next to the live EMA ranking so the two can be compared before the
+  // flag is flipped.
+  async _maybeRunModelHindcast(lat, lon, tilt, azimuth) {
+    if (!this.learningEngine) return;
+    if (typeof tilt !== 'number' || typeof azimuth !== 'number') return;
+
+    this.learningEngine.hindcastEnabled = this.homey.settings.get('learning_model_hindcast_apply') === true;
+
+    const now = Date.now();
+    if (this._hindcastLastRun != null && now - this._hindcastLastRun < 24 * 3600 * 1000) return;
+    // The weather update at init can beat _loadModeHistory(); running then would burn the daily
+    // slot on an empty window. Bail WITHOUT arming the guard so the next update retries.
+    if (this._modeHistMap().size === 0) return;
+    this._hindcastLastRun = now;
+
+    let json;
+    try {
+      json = await hindcast.fetchPreviousRuns(lat, lon, tilt, azimuth);
+    } catch (e) {
+      // A transient API failure must not cost the whole day — retry in an hour.
+      this._hindcastLastRun = now - 23 * 3600 * 1000;
+      throw e;
+    }
+    const gti    = hindcast.buildForecastMaps(json);
+    const actual = hindcast.buildActualHourMap(this._readModeHistory());
+    const result = hindcast.scoreModels(gti, actual);
+
+    // Alignment sweep. Open-Meteo labels hourly radiation at the end of the interval; a ±1h
+    // mismatch inflates every model's error and can reorder the ranking, so the offset that
+    // model-hindcast assumes is printed against its neighbours instead of being taken on faith.
+    const meanScore = s => {
+      const v = Object.values(s);
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+    };
+    const sweep = [-1, 0, 1]
+      .map(s => `${s >= 0 ? '+' : ''}${s}:${meanScore(hindcast.scoreModels(gti, actual, s).scores).toFixed(3)}`)
+      .join(' ');
+
+    const live = this.learningEngine.data?.pv_model_accuracy ?? {};
+    const best = o => Object.entries(o).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const agree = best(result.scores) != null && best(result.scores) === best(live);
+
+    this.log(`[HINDCAST] n=${result.n} ranking=${hindcast.formatRanking(result.scores) || 'n/a'} `
+      + `live=${hindcast.formatRanking(live) || 'n/a'} agree=${agree} sweep=${sweep} `
+      + `apply=${this.learningEngine.hindcastEnabled}`);
+
+    if (result.n >= hindcast.MIN_PAIRED_HOURS) {
+      await this.learningEngine.recordModelHindcast(result);
+    }
   }
 
   // One-time move out of settings, covering both shapes that ever shipped: the legacy single-key
@@ -1746,6 +1802,10 @@ if (debug) this.log(
       if (this.learningEngine) {
         await this.learningEngine.checkPanelGeometry(pvTilt, pvAzimuth);
       }
+
+      // 14-day per-model hindcast: fire-and-forget, non-critical, self-limited to once per 24h.
+      this._maybeRunModelHindcast(latitude, longitude, pvTilt, pvAzimuth)
+        .catch(e => this.error('Model hindcast failed:', e.message));
 
       // Buienradar: 5-min precipitation radar for next 2 hours (fire-and-forget, non-critical)
       this.weatherForecaster.fetchBuienradar(latitude, longitude)
