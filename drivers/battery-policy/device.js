@@ -1521,6 +1521,38 @@ if (debug) this.log(
     return { heldKwh, bothReachMax, offServesEvening, eurAtStake };
   }
 
+  /**
+   * Shadow-2027 (log-only, project_saldering_2027). Compares the live saldering plan's per-slot
+   * `action` against a second engine run under `asymmetric_2027` pricing, on the SAME inputs.
+   * Deliberately action-divergence only, no €/profit number: a profit delta here would repeat the
+   * 2026-07-06 shadow-diag tautology (see device.js ~:3438) if the two runs ever shared an objective
+   * by construction; asymmetric_2027 genuinely changes vCharge/vDischarge, but a divergence-only
+   * metric needs no such argument at all — it can't be tautological because it isn't a comparison of
+   * magnitudes, just of choices. Returns null when the slot arrays are unusable.
+   */
+  _shadow2027DivergenceMetrics(liveSlots, shadowSlots, prices) {
+    if (!liveSlots?.length || !shadowSlots?.length || liveSlots.length !== shadowSlots.length) return null;
+    const total = liveSlots.length;
+    let divergentCount = 0;
+    let example = null;
+    for (let i = 0; i < total; i++) {
+      const liveAction = liveSlots[i].action;
+      const shadowAction = shadowSlots[i].action;
+      if (liveAction === shadowAction) continue;
+      divergentCount++;
+      if (!example) {
+        example = {
+          time: prices?.[i]?.timestamp ?? i,
+          price: prices?.[i]?.price ?? 0,
+          exportPrice: prices?.[i]?.exportPrice,
+          liveAction,
+          shadowAction,
+        };
+      }
+    }
+    return { divergentCount, total, example };
+  }
+
   _schedulePolicyCheck() {
     const intervalMinutes = this.getSetting('policy_interval') || 15;
     const intervalMs = intervalMinutes * 60 * 1000;
@@ -3991,6 +4023,26 @@ if (debug) this.log(
         }
       } catch (err) {
         this.error('morning-waive shadow failed', err);
+      }
+    }
+
+    // Shadow-2027 (log-only, project_saldering_2027). Internal toggle only (not in app.json compose,
+    // same pattern as `dp_input_dump`) — re-runs the DP under `asymmetric_2027` pricing on a SEPARATE
+    // engine so the live schedule stays untouched, and logs how many slots' action would differ.
+    // No €-verdict: see _shadow2027DivergenceMetrics doc comment for why.
+    if (this.homey.settings.get('shadow_2027_enabled')) {
+      try {
+        if (!this._shadow2027Engine) {
+          this._shadow2027Engine = new OptimizationEngine({ ...this.getSettings(), tariff_model: 'asymmetric_2027' });
+        }
+        this._shadow2027Engine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
+        const d = this._shadow2027DivergenceMetrics(
+          this.optimizationEngine._schedule?.slots, this._shadow2027Engine._schedule?.slots, prices);
+        if (d) {
+          this.log(`🔬 shadow-2027: divergent=${d.divergentCount}/${d.total} slots${d.example ? ` e.g. t=${d.example.time} price=${d.example.price.toFixed(3)} exp=${d.example.exportPrice?.toFixed(3)} live=${d.example.liveAction} shadow=${d.example.shadowAction}` : ''}`);
+        }
+      } catch (err) {
+        this.error('shadow-2027 failed', err);
       }
     }
 
