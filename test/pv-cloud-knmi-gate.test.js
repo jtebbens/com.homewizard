@@ -69,4 +69,37 @@ fc.assert(fc.property(cloudArb, (c) => {
   assert.ok(omOnlyFactor(cloud) < 1.0, 'baseline OM-only factor would have discounted (sanity)');
 }
 
+// --- measured cloud cover (okta) as a second release route -------------------------------
+// kt needs ≥4 qualifying daylight hours, so it is null all morning and the KNMI-clear release
+// cannot fire before ~09:00 UTC no matter how clear the sky is. Measured okta is available from
+// the first fetch. It may only ever RELEASE the discount, never tighten it — a point measurement
+// 18km away is not trusted to overrule the forecast downward.
+const oktaArb = fc.oneof(fc.constant(null), fc.double({ min: 0, max: 1, noNaN: true }));
+
+// 6. Passing no okta leaves the existing behaviour bit-for-bit unchanged.
+fc.assert(fc.property(cloudArb, ktArb, (c, k) => {
+  return factor(c, k, null) === factor(c, k);
+}));
+
+// 7. Okta only ever relaxes: adding a measured-cover reading never lowers the factor.
+fc.assert(fc.property(cloudArb, ktArb, oktaArb, (c, k, o) => {
+  return factor(c, k, o) >= factor(c, k, null) - 1e-9;
+}));
+
+// 8. Bounds hold with okta in play.
+fc.assert(fc.property(cloudArb, ktArb, oktaArb, (c, k, o) => {
+  const f = factor(c, k, o);
+  return f >= 0.6 && f <= 1;
+}));
+
+// 9. Measured-clear release: ground says ≤2 okta while OM claims overcast → no discount.
+{
+  const cloud = 85;
+  assert.strictEqual(factor(cloud, null, 0.25), 1.0, 'measured-clear must release the discount');
+  assert.ok(factor(cloud, null, null) < 1.0, 'baseline without okta would have discounted (sanity)');
+  // Measured overcast must NOT deepen the discount beyond what OM alone produced.
+  assert.strictEqual(factor(cloud, null, 1.0), omOnlyFactor(cloud),
+    'measured overcast must not tighten beyond the OM-only discount');
+}
+
 console.log('pv-cloud-knmi-gate.test.js: all properties hold');

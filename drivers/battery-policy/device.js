@@ -48,6 +48,10 @@ const DP_DUMP_DIR     = '/userdata';
 const DP_DUMP_KEEP    = 12;
 const DP_DUMP_FILE_RE = /^dp-input-\d{8}T\d{6}\.\d{3}Z\.json$/;
 
+// Measured cloud cover at or below 2 okta reads as "mostly clear" — the same bar the kt≥0.65
+// cross-check applies, expressed on the cover scale. The one tunable in the okta path.
+const OKTA_CLEAR_MAX = 2 / 8;
+
 // [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
 // stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
 // plan underperformed and never why. Append-only JSONL rather than a field on the mode-history
@@ -3628,11 +3632,15 @@ if (debug) this.log(
     let _pvCloudFactor = 1.0;
     if (_pvBiasCloud != null && _pvBiasCloud > 70) {
       const _todayKtForCloudGate = this.weatherForecaster?.getTodayKt() ?? null;
+      const _okta = this._oktaForGates();
       const _omOnlyCloudFactor = Math.max(0.6, 1.0 - 0.5 * Math.min(1, (_pvBiasCloud - 70) / 30));
-      _pvCloudFactor = BatteryPolicyDevice._pvCloudUncertaintyFactor(_pvBiasCloud, _todayKtForCloudGate);
+      _pvCloudFactor = BatteryPolicyDevice._pvCloudUncertaintyFactor(_pvBiasCloud, _todayKtForCloudGate, _okta.applied);
       if (_pvCloudFactor !== _omOnlyCloudFactor) {
         this.log(`[PV cloud KNMI gate] cloud=${Math.round(_pvBiasCloud)}% kt=${_todayKtForCloudGate != null ? _todayKtForCloudGate.toFixed(2) : 'null'} → applied factor ${_omOnlyCloudFactor.toFixed(2)}→${_pvCloudFactor.toFixed(2)}`);
       }
+      this._logOktaShadow('pvCloud', _okta, _pvCloudFactor,
+        BatteryPolicyDevice._pvCloudUncertaintyFactor(_pvBiasCloud, _todayKtForCloudGate, _okta.raw),
+        `cloud=${Math.round(_pvBiasCloud)}% kt=${_todayKtForCloudGate != null ? _todayKtForCloudGate.toFixed(2) : 'null'}`);
       this.log(`[PV cloud uncertainty] cloud=${Math.round(_pvBiasCloud)}% → pvCoverageFactor=${_pvCloudFactor.toFixed(2)}`);
     }
     this._setLive('policy_pv_bias', {
@@ -3690,8 +3698,13 @@ if (debug) this.log(
         // forecast cloud rises (1.0 at ≤70% → 0 at full overcast). KNMI clearness overrides a
         // false-overcast so it doesn't suppress a legitimate upward correction. See
         // _knmiAwareCloudGate. Downward correction is left intact.
+        const gateKt    = this.weatherForecaster?.getTodayKt() ?? null;
+        const gateOkta  = this._oktaForGates();
         const cloudGate = BatteryPolicyDevice._knmiAwareCloudGate(
-          correctedMeanRatio, _pvBiasCloud, this.weatherForecaster?.getTodayKt() ?? null);
+          correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.applied);
+        this._logOktaShadow('cloudGate', gateOkta, cloudGate,
+          BatteryPolicyDevice._knmiAwareCloudGate(correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.raw),
+          `ratio=${correctedMeanRatio.toFixed(2)} cloud=${_pvBiasCloud != null ? Math.round(_pvBiasCloud) : 'null'}% kt=${gateKt != null ? gateKt.toFixed(2) : 'null'}`);
         const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
 
         this._lastIntradayPvRatio = ratio;
@@ -5000,14 +5013,59 @@ if (debug) this.log(
    * @param {number} correctedMeanRatio - intraday actual/post-bias ratio (>1 = under-forecast)
    * @param {number|null} effectiveCloud - OM effective cloud cover 0–100 (max of total, low×1.2)
    * @param {number|null} knmiKt - KNMI clearness index for today, or null
+   * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} gate factor in [0,1]
    */
-  static _knmiAwareCloudGate(correctedMeanRatio, effectiveCloud, knmiKt) {
-    const knmiClear = knmiKt != null && knmiKt >= 0.65;
-    if (correctedMeanRatio > 1.0 && effectiveCloud != null && effectiveCloud > 70 && !knmiClear) {
+  static _knmiAwareCloudGate(correctedMeanRatio, effectiveCloud, knmiKt, oktaFrac = null) {
+    const groundClear = BatteryPolicyDevice._groundClear(knmiKt, oktaFrac);
+    if (correctedMeanRatio > 1.0 && effectiveCloud != null && effectiveCloud > 70 && !groundClear) {
       return Math.max(0, 1 - (effectiveCloud - 70) / 30);
     }
     return 1.0;
+  }
+
+  /**
+   * Does ground truth say the sky is clear, contradicting a high OM cloud%?
+   *
+   * Two independent routes, both measurements, both release-only:
+   *  - kt ≥ 0.65 — measured clearness from the qg station. Needs ≥4 qualifying daylight hours,
+   *    so it is null every morning until ~09:00 UTC.
+   *  - okta ≤ 2/8 — measured cloud cover from the nearest station that reports `n` (a different
+   *    station: the nearest one need not report cover). Available from the first fetch, which is
+   *    what closes the morning gap.
+   * Measured OVERCAST deliberately does nothing: a point reading up to 60km away is not trusted
+   * to tighten a discount the forecast did not ask for.
+   * @param {number|null} knmiKt
+   * @param {number|null} oktaFrac - measured cloud cover 0-1, or null
+   * @returns {boolean}
+   */
+  static _groundClear(knmiKt, oktaFrac = null) {
+    if (knmiKt != null && knmiKt >= 0.65) return true;
+    return oktaFrac != null && oktaFrac <= BatteryPolicyDevice.OKTA_CLEAR_MAX;
+  }
+
+  /**
+   * Measured cloud cover for the two cloud gates, split into what is actually fed to them and
+   * what would be fed if the toggle were on. `applied` is null until `weather_okta_apply` is
+   * set, so the live decision is unchanged; `raw` drives the shadow comparison.
+   * @returns {{raw: number|null, applied: number|null}}
+   * @private
+   */
+  _oktaForGates() {
+    const raw = this.weatherForecaster?.getTodayOkta() ?? null;
+    const apply = this.homey.settings.get('weather_okta_apply') === true;
+    return { raw, applied: apply ? raw : null };
+  }
+
+  /**
+   * Log how the okta cross-check would have moved a gate, but only when it actually differs.
+   * The count of these lines over a full day is the decision basis for switching the toggle on:
+   * no divergences means there is nothing to enable.
+   * @private
+   */
+  _logOktaShadow(name, okta, applied, wouldBe, ctx) {
+    if (okta.raw == null || applied === wouldBe) return;
+    this.log(`[OKTA SHADOW] ${name} ${ctx} okta=${okta.raw.toFixed(2)} → ${applied.toFixed(2)}→${wouldBe.toFixed(2)}`);
   }
 
   /**
@@ -5018,12 +5076,12 @@ if (debug) this.log(
    * cloud%, don't discount. Returns a factor in [0.6,1]; only ever relaxes the OM-only discount.
    * @param {number|null} effectiveCloud - OM effective cloud cover 0–100 (max of total, low×1.2)
    * @param {number|null} knmiKt - KNMI clearness index for today, or null
+   * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} pvCoverage factor in [0.6,1]
    */
-  static _pvCloudUncertaintyFactor(effectiveCloud, knmiKt) {
+  static _pvCloudUncertaintyFactor(effectiveCloud, knmiKt, oktaFrac = null) {
     if (effectiveCloud == null || effectiveCloud <= 70) return 1.0;
-    const knmiClear = knmiKt != null && knmiKt >= 0.65;
-    if (knmiClear) return 1.0;
+    if (BatteryPolicyDevice._groundClear(knmiKt, oktaFrac)) return 1.0;
     return Math.max(0.6, 1.0 - 0.5 * Math.min(1, (effectiveCloud - 70) / 30));
   }
 
@@ -6578,5 +6636,6 @@ if (debug) this.log(
 
 BatteryPolicyDevice.DP_DUMP_KEEP = DP_DUMP_KEEP;
 BatteryPolicyDevice.MODE_HISTORY_DAYS = MODE_HISTORY_DAYS;
+BatteryPolicyDevice.OKTA_CLEAR_MAX = OKTA_CLEAR_MAX;
 
 module.exports = BatteryPolicyDevice;
