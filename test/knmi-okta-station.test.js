@@ -4,13 +4,17 @@
 //
 // The nearest-station pick (_nearest) is distance-only and does not check which parameters a
 // station actually reports. For this user the nearest station (Cabauw, 14km) never reports `n`
-// (0/7381 readings over 52 days) while De Bilt (18km) reports it on 99.7% of hours. EDR's
-// /locations endpoint supports server-side `?parameter-name=` filtering, so "nearest station that
-// reports n" is a single filtered call — no per-station probing, no hardcoded station.
+// (0/7381 readings over 52 days) while De Bilt (18km) reports it on 99.7% of hours.
 //
-// Guards covered here: the filtered lookup is really used, the distance cap, the okta scale
-// (KNMI codes 9 = "sky obscured", which must never read as clear), the no-second-HTTP-call reuse
-// when both parameters come from the same station, and the staleness cut-off on getTodayOkta().
+// The first build asked /locations for an `n`-filtered station list. EDR ignores the filter there
+// (verified live 16-08: filtered == unfiltered == 77 stations, Cabauw included), so it picked
+// Cabauw and returned a null reading in silence. Selection now runs off the /area query, which
+// does honour the filter and returns the readings themselves — a station counts as reporting `n`
+// only when it actually hands one over.
+//
+// Guards covered here: selection skips a nearer station whose `n` is null, the distance cap, the
+// okta scale (KNMI codes 9 = "sky obscured", which must never read as clear), an empty area
+// (404) reading as "no station" rather than an error, and the staleness cut-off on getTodayOkta().
 
 const assert = require('assert');
 const Module = require('module');
@@ -50,21 +54,30 @@ const FAR = station('06280', 'Eelde', 53.12, 6.585);       // ~140km
 function ok(body) {
   return { ok: true, status: 200, json: () => Promise.resolve(body) };
 }
-function locations(features) {
-  return ok({ features });
-}
-function coverage(nValues) {
-  return ok({ type: 'Coverage', ranges: { n: { values: nValues } } });
+
+/** One station's slice of an /area CoverageJSON response. */
+function areaStation(st, nValues) {
+  const [lon, lat] = st.geometry.coordinates;
+  return {
+    type: 'Coverage',
+    domain: { axes: { x: { values: [lon] }, y: { values: [lat] } } },
+    ranges: { n: { values: nValues } },
+    'eumetnet:locationId': st.id,
+  };
 }
 
-/** Serve a filtered /locations list plus an observation coverage. */
-function makeResponder({ filtered, unfiltered, nValues }) {
+/** Serve the /area query plus the unfiltered station list used to name the winner. */
+function makeResponder({ area, stations = [], areaStatus = 200 }) {
   return (url) => {
-    // The observation URL is /locations/<id>?…; the station list is /locations or /locations?…
-    if (!/\/locations\//.test(url)) {
-      return url.includes('parameter-name=n') ? locations(filtered) : locations(unfiltered);
+    if (url.includes('/area')) {
+      if (areaStatus !== 200) {
+        return { ok: false, status: areaStatus, json: () => Promise.resolve({ detail: 'no stations' }) };
+      }
+      return ok({ type: 'CoverageCollection', coverages: area });
     }
-    return coverage(nValues);
+    // /locations/<id> is the qg observation call; bare /locations is the station list.
+    if (/\/locations\/[^?]/.test(url)) return ok({ type: 'Coverage', ranges: { qg: { values: [200] } } });
+    return ok({ features: stations });
   };
 }
 
@@ -74,29 +87,33 @@ function reset() {
 }
 
 (async () => {
-  // 1. Station selection uses the `n`-filtered list, not the raw nearest station.
-  //    Cabauw is nearer but absent from the filtered list, so De Bilt must win.
+  // 1. THE LIVE BUG. Cabauw is nearer and is returned by the area query, but its `n` is null.
+  //    Selection must skip it for De Bilt instead of taking the null and going quiet.
   {
     reset();
     responder = makeResponder({
-      filtered: [DE_BILT, FAR], unfiltered: [CABAUW, DE_BILT, FAR], nValues: [4],
+      area: [areaStation(CABAUW, [null, null]), areaStation(DE_BILT, [3, 4])],
+      stations: [CABAUW, DE_BILT, FAR],
     });
     const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
     assert.ok(res, 'expected an okta reading');
+    assert.strictEqual(res.n, 4, 'must take the latest reading of the chosen station');
     assert.strictEqual(res.stationName, 'De Bilt', 'must pick the nearest station that reports n');
-    const locCall = calls.find((c) => c.url.includes('/locations'));
-    assert.ok(locCall.url.includes('parameter-name=n'),
-      `/locations must be filtered server-side, got ${locCall.url}`);
+    const areaCall = calls.find((c) => c.url.includes('/area'));
+    assert.ok(areaCall, 'selection must run off the /area query');
+    assert.ok(areaCall.url.includes('parameter-name=n') && /POLYGON/i.test(decodeURIComponent(areaCall.url)),
+      `/area must be a POLYGON query filtered on n, got ${areaCall.url}`);
+    assert.ok(!calls.some((c) => /\/locations\/[^?]/.test(c.url)),
+      'the area readings make a per-station observation call redundant');
   }
 
-  // 2. Distance cap: no okta station within range → null, not a useless far-away reading.
+  // 2. Distance cap: the box corners reach past the cap, so a far station inside the box must
+  //    still be rejected — an okta reading 140km away says nothing about the sky here.
   {
     reset();
-    responder = makeResponder({ filtered: [FAR], unfiltered: [CABAUW, FAR], nValues: [4] });
+    responder = makeResponder({ area: [areaStation(FAR, [4])], stations: [CABAUW, FAR] });
     const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
     assert.strictEqual(res, null, 'station beyond the distance cap must yield null');
-    assert.ok(!calls.some((c) => c.url.includes('/locations/')),
-      'must not fetch observations from an out-of-range station');
   }
 
   // 3. Okta scale. KNMI codes n in okta 0-8, with 9 = "sky obscured" (fog/precipitation):
@@ -105,43 +122,38 @@ function reset() {
     const cases = [[0, 0], [2, 0.25], [8, 1], [9, 1]];
     for (const [n, expected] of cases) {
       reset();
-      responder = makeResponder({ filtered: [DE_BILT], unfiltered: [DE_BILT], nValues: [n] });
+      responder = makeResponder({ area: [areaStation(DE_BILT, [n])], stations: [DE_BILT] });
       const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
       assert.strictEqual(res.oktaFrac, expected, `n=${n} must map to oktaFrac ${expected}`);
     }
-    // No reading at all → null oktaFrac, never a defaulted 0 (which would read as clear sky).
+    // Nobody reporting at all → null, never a defaulted 0 (which would read as clear sky).
     reset();
-    responder = makeResponder({ filtered: [DE_BILT], unfiltered: [DE_BILT], nValues: [null] });
+    responder = makeResponder({ area: [areaStation(DE_BILT, [null])], stations: [DE_BILT] });
     const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
-    assert.strictEqual(res.oktaFrac, null, 'missing n must be null, not 0');
+    assert.strictEqual(res, null, 'a station without a reading must not be selected');
   }
 
-  // 4. Reuse: when the okta station is the same station the qg fetch already used, skip the
-  //    second HTTP round-trip and take `n` from the reading we already have.
+  // 4. An empty area is an empty answer, not a failure: EDR 404s with "the query returned no
+  //    stations". Throwing here would log a fetch error every hour for users with no okta nearby.
   {
     reset();
-    responder = makeResponder({ filtered: [DE_BILT], unfiltered: [DE_BILT], nValues: [6] });
-    const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON, {
-      knownStationId: '06260', knownN: 3,
-    });
-    assert.strictEqual(res.oktaFrac, 0.375, 'must reuse the already-fetched n');
-    assert.ok(!calls.some((c) => c.url.includes('/locations/')),
-      'must not re-fetch observations for a station already read');
+    responder = makeResponder({ area: [], stations: [DE_BILT], areaStatus: 404 });
+    const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
+    assert.strictEqual(res, null, 'an empty area must return null, not throw');
   }
 
-  // 5. Locations cache is keyed per parameter filter — the filtered list must not be served
-  //    from (or poison) the unfiltered cache used by the qg lookup.
+  // 5. The station list is only consulted to name the winner, and it is shared with the qg
+  //    lookup: one list fetch, cached for both.
   {
     reset();
     responder = makeResponder({
-      filtered: [DE_BILT], unfiltered: [CABAUW, DE_BILT], nValues: [4],
+      area: [areaStation(DE_BILT, [4])], stations: [CABAUW, DE_BILT],
     });
     await knmi.fetchKnmiObservations('key', USER_LAT, USER_LON);
-    const first = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
-    assert.strictEqual(first.stationName, 'De Bilt',
-      'filtered lookup must not reuse the unfiltered station list');
-    const locCalls = calls.filter((c) => !/\/locations\//.test(c.url)).length;
-    assert.strictEqual(locCalls, 2, 'each parameter filter needs its own cached list');
+    const res = await fetchKnmiCloudObservations('key', USER_LAT, USER_LON);
+    assert.strictEqual(res.stationName, 'De Bilt', 'must name the okta station, not the qg one');
+    const listCalls = calls.filter((c) => /\/locations$/.test(c.url)).length;
+    assert.strictEqual(listCalls, 1, 'the station list must be fetched once and cached');
   }
 
   // 6. Staleness: the fetch cadence is 55 min, so a missed fetch must not let the signal live on.
