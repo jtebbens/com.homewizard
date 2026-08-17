@@ -4933,6 +4933,19 @@
                 "nl": "⚠️ Experimenteel — verandert de planning van de optimizer. De optimizer beschouwt een accuniveau dat de zon nog vol kan laden als gelijkwaardig aan een volle accu. Zonder deze optie valt een niveau net onder dat punt in één klap terug in waarde, waardoor stroom inkopen winstgevend kan lijken terwijl dat niet zo is. Met deze optie aan volgt de waarde de zon vloeiend."
               },
               "value": false
+            },
+            {
+              "id": "dp_weak_pv_tie_standby",
+              "type": "checkbox",
+              "label": {
+                "en": "Weigh weak solar surplus against export (experimental)",
+                "nl": "Zwak zonoverschot afwegen tegen teruglevering (experimenteel)"
+              },
+              "hint": {
+                "en": "⚠️ Experimental — changes optimizer planning. With a small solar surplus (roughly under 400 W) the optimizer normally keeps the battery idle and the surplus goes to the grid. With this on it weighs storing that surplus against exporting it. Under net metering exporting almost always wins, so leaving this off is the cheaper choice for now.",
+                "nl": "⚠️ Experimenteel — verandert de planning van de optimizer. Bij een klein zonoverschot (ruwweg onder 400 W) houdt de optimizer de accu stil en gaat het overschot naar het net. Met deze optie aan weegt hij opslaan af tegen terugleveren. Onder saldering wint terugleveren vrijwel altijd, dus uit laten staan is voorlopig voordeliger."
+              },
+              "value": false
             }
           ]
         },

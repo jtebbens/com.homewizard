@@ -53,6 +53,10 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.19.1)
 
+### New Setting: Weigh a Weak Solar Surplus Against Exporting (v3.19.1, off by default)
+
+* **Added a setting that lets the planner decide what to do with a small solar surplus, instead of always exporting it.** When solar produces only a little more than the house uses — roughly under 400 W — the planner treats staying idle and holding the battery as the same thing and never asks whether storing that surplus would be worth more than sending it to the grid. The new "Weigh weak solar surplus against export" setting makes it ask. It ships **off**: while net metering applies, exported energy is credited at the full slot price, so exporting a weak surplus is worth more than storing it (storing loses round-trip efficiency and battery wear). The setting exists for when net metering ends and export is paid less than consumption, and for anyone who prefers to bank every kilowatt-hour. Turning it on does not change what the battery earns on a normal sunny day: strong-sun behaviour is untouched.
+
 ### Battery No Longer Stops Discharging While Prices Are Still High (v3.19.1)
 
 * **Fixed a near-empty battery going idle at a profitable price whenever a little solar was forecast.** When the planner compared "stay idle and let solar export" against "keep discharging", it credited the export revenue to the idle option only. In reality the battery does not give that revenue up by discharging: it covers the house load while solar exports the surplus at the same time, so the revenue is earned either way. Counting it on one side made idling look better than it was. The error was small in absolute terms, so it only tipped the decision when there was little left to discharge — which is exactly why it showed up on a nearly empty battery, leaving it parked at 1–3% while prices were still well above the discharge threshold. Both options are now valued on what actually distinguishes them. Behaviour at negative prices is unchanged.

@@ -14,7 +14,10 @@
 // and `weakReachable` (:438) additionally requires pvCoverage < pvStrongCoverage — the
 // very condition that forces the tie. So the branch written for this case cannot fire.
 //
-// These tests pin the CURRENT behaviour, so a fix flips them deliberately.
+// `dp_weak_pv_tie_standby` (default on) breaks that tie the other way, so the forward pass
+// sees code === 3 again and the store-vs-export test runs. The first half of this file pins
+// the flag-off behaviour (what shipped between b6432af and the flag), the second half pins
+// what the flag restores.
 
 const assert = require('assert');
 const OptimizationEngine = require('../lib/optimization-engine');
@@ -52,7 +55,11 @@ const SETTINGS = {
   max_soc: 100,
   cycle_cost_per_kwh: 0.075,
   export_price_ratio: 1.0,
+  dp_weak_pv_tie_standby: false,
 };
+
+// Same inputs, tie broken toward standby (the shipped default).
+const SETTINGS_ON = { ...SETTINGS, dp_weak_pv_tie_standby: true };
 
 const MAX_CHARGE_W = 2000;          // → pvStrongCoverage = 400 / 2000 = 0.20
 const CONS_W = 500;
@@ -61,13 +68,15 @@ const CONS_W = 500;
  * Build a 12-slot horizon with a single PV slot at t=0 producing `pvW`.
  * Evening peak at t=6..9 gives the battery somewhere profitable to discharge.
  */
-function run(pvW, soc = 50, settings = SETTINGS) {
+const eveningPeak = t => ((t >= 6 && t <= 9) ? PEAK : CHEAP);
+
+function run(pvW, soc = 50, settings = SETTINGS, priceFn = eveningPeak, pvAt = 0) {
   const prices = [];
   const pv = [];
   const cons = [];
   for (let t = 0; t < 12; t++) {
-    prices.push({ timestamp: new Date(BASE + t * H).toISOString(), price: (t >= 6 && t <= 9) ? PEAK : CHEAP });
-    pv.push({ timestamp: new Date(BASE + t * H).toISOString(), pvPowerW: t === 0 ? pvW : 0 });
+    prices.push({ timestamp: new Date(BASE + t * H).toISOString(), price: priceFn(t) });
+    pv.push({ timestamp: new Date(BASE + t * H).toISOString(), pvPowerW: t === pvAt ? pvW : 0 });
     cons.push(CONS_W);
   }
   const eng = new OptimizationEngine(settings);
@@ -161,6 +170,75 @@ test('400 W floor is a cliff: 399 W surplus stores nothing, 401 W stores', () =>
     `expected zero SoC gain at 399 W surplus, got ${gain(below)} pp`);
   assert.ok(gain(above) > 0,
     `expected a positive SoC gain at 401 W surplus, got ${gain(above)} pp`);
+});
+
+// ── Flag on (default): the tie falls to standby and the test runs again ──────
+test('flag on — weak PV: the tie resolves to standby, not preserve', () => {
+  const { eng } = run(WEAK_PV_W, 50, SETTINGS_ON);
+  const d = eng._flattenDebug;
+  assert.strictEqual(d.vPreserve, d.vStandby,
+    `the tie itself must be untouched, got preserve=${d.vPreserve} standby=${d.vStandby}`);
+  assert.strictEqual(d.chosenAction, 'standby',
+    `expected the weak-PV tie to resolve to standby, got ${d.chosenAction}`);
+});
+
+test('flag on — weak PV: trickle fires when storing beats exporting', () => {
+  const { slots } = run(WEAK_PV_W, 50, SETTINGS_ON);
+  const s0 = slots[0];
+  assert.ok(s0.pvStoreValue > s0.price,
+    `scenario is only meaningful when storing wins: store=${s0.pvStoreValue} vs export=${s0.price}`);
+  assert.strictEqual(s0.action, 'trickle',
+    `expected the weak surplus to be trickled, got ${s0.action}`);
+});
+
+// Surplus on t=1: slot 0 is only partly ahead of us (slot0RemainingFrac shrinks its SoC
+// step to fractions of a pp), so a full slot is the only place a stored kWh is legible.
+test('flag on — weak PV: the trickled surplus shows up as SoC', () => {
+  const on  = run(WEAK_PV_W, 50, SETTINGS_ON, eveningPeak, 1);
+  const off = run(WEAK_PV_W, 50, SETTINGS, eveningPeak, 1);
+  assert.strictEqual(on.slots[1].action, 'trickle',
+    `expected a trickle slot at t=1, got ${on.slots[1].action}`);
+  // 200 W for one hour = 0.2 kWh = 4.0 pp on a 5 kWh battery.
+  const gain = s => s[2].socProjected - s[1].socProjected;
+  assert.ok(gain(on.slots) > 1.0,
+    `expected the free surplus to raise the projected SoC, got ${gain(on.slots).toFixed(1)} pp`);
+  assert.strictEqual(gain(off.slots), 0,
+    `expected the same surplus to go unstored with the flag off, got ${gain(off.slots)} pp`);
+});
+
+// The economic-dominance half: standby must win when exporting is worth more. A horizon
+// whose only high price is the current slot leaves nothing worth storing for — the suffix
+// max behind pvStoreValue is CHEAP, so exporting at PEAK now strictly beats banking it.
+const peakNow = t => (t === 0 ? PEAK : CHEAP);
+
+test('flag on — weak PV: exports when exporting beats storing (no hoarding)', () => {
+  const { slots } = run(WEAK_PV_W, 50, SETTINGS_ON, peakNow);
+  const s0 = slots[0];
+  assert.ok(s0.pvStoreValue < s0.price,
+    `scenario is only meaningful when exporting wins: store=${s0.pvStoreValue} vs export=${s0.price}`);
+  assert.strictEqual(s0.action, 'standby',
+    `expected the surplus to be exported, got ${s0.action}`);
+  assert.strictEqual(s0.pvExportWins, true,
+    'expected the DP to carry an explicit export verdict for this slot');
+});
+
+test('flag on — strong PV is untouched: preserve still strictly beats standby', () => {
+  const { eng } = run(STRONG_PV_W, 50, { ...SETTINGS_2027, dp_weak_pv_tie_standby: true });
+  const d = eng._flattenDebug;
+  assert.ok(d.vPreserve > d.vStandby,
+    `expected preserve to keep winning above the floor, got preserve=${d.vPreserve} standby=${d.vStandby}`);
+  assert.strictEqual(d.chosenAction, 'preserve',
+    `expected preserve above the floor, got ${d.chosenAction}`);
+});
+
+test('flag on — the 400 W cliff no longer swallows the surplus', () => {
+  const below = run(CONS_W + 399, 50, SETTINGS_ON);
+  const above = run(CONS_W + 401, 50, SETTINGS_ON);
+  const gain = r => r.slots[1].socProjected - r.slots[0].socProjected;
+  assert.ok(gain(below) > 0,
+    `expected a 399 W surplus to be stored too, got ${gain(below)} pp`);
+  assert.ok(gain(above) > 0,
+    `expected the 401 W surplus to keep being stored, got ${gain(above)} pp`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
