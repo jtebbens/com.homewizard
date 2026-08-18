@@ -52,6 +52,11 @@ const DP_DUMP_FILE_RE = /^dp-input-\d{8}T\d{6}\.\d{3}Z\.json$/;
 // cross-check applies, expressed on the cover scale. The one tunable in the okta path.
 const OKTA_CLEAR_MAX = 2 / 8;
 
+// How old a satellite issue may be before the slot value derived from it stops counting as a
+// nowcast. Used by the blend leg AND by the dailyBias exemption further down the correction stack,
+// which sits outside the blend block's scope — one constant rather than two copies of 3600_000.
+const SAT_MAX_AGE_MS = 3600_000;
+
 // [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
 // stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
 // plan underperformed and never why. Append-only JSONL rather than a field on the mode-history
@@ -3406,9 +3411,19 @@ if (debug) this.log(
         // slot's value — a slot outside the current lead window keeps its previous
         // satPanelW, so the latest issue being fresh says nothing about the value
         // actually sitting on the slot.
-        const SAT_MAX_AGE_MS = 3600_000;
         const satLog = [];
         let satCount = 0;
+        // Full-override leg: inside the fresh satellite window the nowcast takes the whole slot
+        // instead of half of it (see _blendOmScSlot). Read once — loop-invariant.
+        const satOverride = this.getSetting('pv_sat_full_override') === true;
+        const satNowMs    = Date.now();
+        const satIssueMs  = this.weatherForecaster?.getSatIssueMs?.() ?? null;
+        const SAT_LEAD_MS = 3 * 3600_000;
+        let satDeltaWh    = 0;
+        // Coverage denominator: blend-eligible slots overlapping the current lead window that
+        // carry any PV signal. Without it, n= has no scale.
+        let satWindowSlots = 0;
+        let satStaleSlots  = 0;
 
         const scEffectiveSlots = []; // collect effective secondary-source value per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
@@ -3427,12 +3442,23 @@ if (debug) this.log(
               r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
             }
           } else if (pvSource === 'satellite') {
-            const satAgeOk = typeof slot.satIssueMs === 'number' && (Date.now() - slot.satIssueMs) <= SAT_MAX_AGE_MS;
-            const satW = (satAgeOk && typeof slot.satPanelW === 'number')
+            // Hourly slot overlaps the lead window when it ends after the issue and starts
+            // before issue+3h — the current, partly-elapsed hour counts.
+            if (satIssueMs != null && slotMs + 3600_000 > satIssueMs && slotMs < satIssueMs + SAT_LEAD_MS
+                && (slot.pvPowerW > 0 || slot.satPanelW != null)) satWindowSlots++;
+            const satFresh = BatteryPolicyDevice._satSlotIsFresh(slot, satNowMs);
+            if (!satFresh && slot.satPanelW != null) satStaleSlots++;
+            const satW = satFresh
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
             if (satW != null) {
-              r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true });
+              // Score both legs every run so the override stays measurable before the toggle
+              // flips, and after it. Two calls of a trivial function on a handful of slots.
+              const base  = { omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true };
+              const rSat  = BatteryPolicyDevice._blendOmScSlot(base);
+              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true });
+              r = satOverride ? rOvr : rSat;
+              satDeltaWh += rOvr.blendedW - rSat.blendedW;
               satCount++;
               satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
             }
@@ -3450,6 +3476,12 @@ if (debug) this.log(
 
         if (pvSource === 'satellite' && satLog.length > 0) {
           this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
+          // Override trace. Slots are hourly, so W sums straight to Wh. Δ is always the
+          // override leg minus the blend leg regardless of the toggle, and is bounded to the
+          // fresh satellite window — it is NOT a whole-horizon plan delta, and not euros.
+          const ageMin = satIssueMs != null ? Math.round((satNowMs - satIssueMs) / 60_000) : null;
+          this.log(`[SAT OVR] mode=${satOverride ? 'active' : 'shadow'} n=${satCount}/${satWindowSlots} `
+            + `ΔkWh=${(satDeltaWh / 1000).toFixed(2)} satAge=${ageMin}min stale=${satStaleSlots}`);
         }
 
         // Aggregate effective secondary-source value to hourly for chart (shows p10 where actually used)
@@ -3585,10 +3617,34 @@ if (debug) this.log(
       }
       _pvDailyBiasFactor = cappedDailyBias;
 
+      // Satellite exemption — KEPT OFF, THE REASONING DID NOT SURVIVE REVIEW. Do not switch this
+      // on without redoing the argument. It was built on "the sky is observed, so a weather-type
+      // guess should not touch the slot", but dailyBias is not a cloud-amount correction: it is a
+      // YIELD-FACTOR residual (learning-engine.js:1026 — clear days put more direct beam on tilted
+      // panels than the slot's average yf assumes). The satellite measures IRRADIANCE and goes
+      // through the same satGHI x gtiOverGhi x scale conversion, so that residual applies to the
+      // sat leg exactly as it does to OM. Exempting upward would under-forecast clear days.
+      //
+      // What was actually wrong on 2026-08-17 is the CLASSIFICATION, not the factor: with KNMI kt
+      // still null before ~09:43 UTC, getDailyPvBiasFactor falls back to OM cloud > 75% and picked
+      // the overcast bucket (0.440) on a day whose measured kt never went below 0.36. The blend put
+      // h8 at 1250W, the roof did 1403W, the DP got 550W. Fixing that belongs in the classifier
+      // (sat GHI as a kt substitute before kt exists), not here.
+      //
+      // Left in place deliberately, default off, for the shadow line below — it measures how often
+      // and how hard the bucket disagrees with a fresh satellite reading, which is the input the
+      // classifier fix needs. See project_daily_bias_overcast_bucket_halves_blend_0817 §9.
+      const _satExempt = this.getSetting('pv_sat_slots_skip_dailybias') === true;
+      const _nowMs = Date.now();
+      const _satFresh = s => BatteryPolicyDevice._satSlotIsFresh(s, _nowMs);
+      const _skip = s => _satExempt && _satFresh(s);
+
       if (!simplified) {
         // Legacy path: apply dailyBias to ALL slots (today + tomorrow).
         if (cappedDailyBias !== 1.0) {
-          pvForecast = pvForecast.map(s => ({ ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) }));
+          pvForecast = pvForecast.map(s => (_skip(s)
+            ? s
+            : { ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) }));
         }
       } else {
         // Simplified path: dailyBias only on tomorrow's slots (today handled by intradayRatio).
@@ -3596,9 +3652,25 @@ if (debug) this.log(
         if (cappedDailyBias !== 1.0) {
           pvForecast = pvForecast.map(s => {
             const slotDate = _amsDayKeyFormatter.format(new Date(s.timestamp));
-            if (slotDate === todayNL) return s;
+            if (slotDate === todayNL || _skip(s)) return s;
             return { ...s, pvPowerW: Math.round(s.pvPowerW * cappedDailyBias) };
           });
+        }
+      }
+
+      // Shadow: fires whether or not the exemption is switched on, so the size of the effect is
+      // readable before anyone flips the setting. `applied=false` means nothing changed this run.
+      if (cappedDailyBias !== 1.0) {
+        const _satSlots = pvForecast.filter(_satFresh);
+        if (_satSlots.length > 0) {
+          const _detail = _satSlots.slice(0, 4).map(s => {
+            const h = new Date(s.timestamp).getUTCHours();
+            // Report both sides regardless of which one is live this run.
+            const kept = _satExempt ? s.pvPowerW : Math.round(s.pvPowerW / cappedDailyBias);
+            const cut  = _satExempt ? Math.round(s.pvPowerW * cappedDailyBias) : s.pvPowerW;
+            return `h${h} ${kept}→${cut}`;
+          }).join(' ');
+          this.log(`[PV daily bias][SAT] factor=${cappedDailyBias.toFixed(3)} exempt=${_satSlots.length} slots (${_detail}) applied=${_satExempt}`);
         }
       }
       const cloudLabel = todayAvgCloud != null ? `, cloud=${todayAvgCloud.toFixed(0)}%` : '';
@@ -4992,14 +5064,22 @@ if (debug) this.log(
   // ahead of sat, so this function is never called with satActive AND a Solcast leg at
   // once; the OM half is always untouched. The caller owns the freshness, lead-time and
   // elevation gates (see the blend loop).
-  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false }) {
+  // satOverride: give the satellite the whole slot instead of half of it, for slots that carry a
+  // fresh nowcast. The F4 boundary above ("sat may only occupy the SC half") rested on a claim F4
+  // never scored — it tested sat ≤ SC, not sat ≤ OM. The 7-day head-to-head of 2026-08-17 tested
+  // exactly that claim, against the roof in panel-W over 85 daylight hours: OM MAE 912 W vs sat
+  // 566 W, sat ahead in every bin of OM's own forecast. Default off; the caller owns the toggle.
+  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false, satOverride = false }) {
     const satUsed = satActive && typeof satW === 'number' && Number.isFinite(satW) && satW >= 0;
     // The p10 pessimism is a Solcast property (percentile spread); the satellite has none.
     const useP10 = !satUsed && !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
     const scAvg = satUsed ? satW : (useP10 ? scP10 : scP50);
-    const w_om = unbiased ? 0.5 : wOM;
-    const w_sc = unbiased ? 0.5 : wSC;
-    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10, satUsed };
+    // Gated on satUsed, not on satActive: without a usable satellite value there is nothing to
+    // override with, so the flag is inert everywhere the nowcast is absent or stale.
+    const fullSat = satUsed && satOverride;
+    const w_om = fullSat ? 0 : (unbiased ? 0.5 : wOM);
+    const w_sc = fullSat ? 1 : (unbiased ? 0.5 : wSC);
+    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10, satUsed, fullSat };
   }
 
   /**
@@ -5022,6 +5102,24 @@ if (debug) this.log(
       return Math.max(0, 1 - (effectiveCloud - 70) / 30);
     }
     return 1.0;
+  }
+
+  /**
+   * Is this forecast slot carrying a satellite nowcast that is still current?
+   *
+   * The blend leg and the dailyBias exemption both need this test, and they sit in different
+   * scopes of the same method — one predicate rather than two copies of the age arithmetic.
+   * A slot keeps its previous satPanelW when it falls outside the current lead window, so the
+   * age must be read off the issue that produced THIS slot's value, not off the latest fetch.
+   * @param {{satPanelW?: number|null, satIssueMs?: number|null}} slot
+   * @param {number} nowMs
+   * @returns {boolean}
+   */
+  static _satSlotIsFresh(slot, nowMs) {
+    return !!slot
+      && slot.satPanelW != null
+      && typeof slot.satIssueMs === 'number'
+      && (nowMs - slot.satIssueMs) <= SAT_MAX_AGE_MS;
   }
 
   /**

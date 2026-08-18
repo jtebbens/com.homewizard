@@ -473,6 +473,26 @@
         "value": true
       },
       {
+        "id": "pv_sat_full_override",
+        "type": "checkbox",
+        "label": { "en": "Satellite takes the whole slot when fresh (experimental)", "nl": "Satelliet neemt het hele slot als hij vers is (experimenteel)" },
+        "hint": {
+          "en": "⚠️ Experimental — changes what the optimizer plans on. Normally a fresh satellite nowcast counts for half a slot and Open-Meteo for the other half. With this on, the satellite takes the slot entirely for the next few hours (only where its reading is under an hour old). Measured over 7 days against the roof: satellite off by 566 W on average, Open-Meteo by 912 W, with the satellite ahead in every band. Affects only the next few hours, not tomorrow's plan.",
+          "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. Normaal telt een verse satellietwaarneming voor de helft van een slot en Open-Meteo voor de andere helft. Met deze optie aan neemt de satelliet het slot helemaal over voor de eerstvolgende uren (alleen waar zijn waarde jonger dan een uur is). Gemeten over 7 dagen tegen het dak: satelliet zat er gemiddeld 566 W naast, Open-Meteo 912 W, met de satelliet voor in elke band. Raakt alleen de eerstvolgende uren, niet het plan voor morgen."
+        },
+        "value": false
+      },
+      {
+        "id": "pv_sat_slots_skip_dailybias",
+        "type": "checkbox",
+        "label": { "en": "Satellite slots skip the daily weather-type bias", "nl": "Satellietslots slaan de dagelijkse weertype-bijstelling over" },
+        "hint": {
+          "en": "The daily weather-type bias is one factor for the whole day, classified on Open-Meteo cloud cover until KNMI clearness becomes available (~08:00-09:45 UTC). Slots carrying a fresh satellite nowcast have had the actual sky observed, so this skips that factor for them, in both directions. Measured 2026-08-17: the blend put 08:00 UTC at 1250 W (the roof did 1403 W) and a bias factor of 0.440 handed the optimizer 550 W. Off by default; the log line reports what it would change while it is off.",
+          "nl": "De dagelijkse weertype-bijstelling is een factor voor de hele dag, ingedeeld op Open-Meteo-bewolking totdat de KNMI-helderheid beschikbaar is (~08:00-09:45 UTC). Slots met een verse satellietwaarneming hebben de lucht echt gezien, dus die slaan deze factor over, in beide richtingen. Gemeten 17-08-2026: de mix zette 08:00 UTC op 1250 W (het dak deed 1403 W) en een factor 0,440 gaf de optimalisator 550 W. Standaard uit; de logregel meldt wat het zou veranderen terwijl het uit staat."
+        },
+        "value": false
+      },
+      {
         "id": "solcast_resource_id",
         "type": "text",
         "label": { "en": "Solcast Resource ID", "nl": "Solcast Resource ID" },
