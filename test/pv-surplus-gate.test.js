@@ -39,7 +39,8 @@ assert.strictEqual(surplusDetected(0, 551, 450), true, 'PV +101W → surplus');
 // needed. _pvExporting (first write after the gate, line 343) staying undefined
 // proves the block no-opped.
 function runFlags(p1) {
-  const ctx = { settings: { max_soc: 95 }, log: () => {} };
+  const ctx = { settings: { max_soc: 95 }, log: () => {},
+    _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW };
   const inputs = { battery: { stateOfCharge: 15 }, p1 };
   PolicyEngine.prototype._computePvFlags.call(ctx, inputs);
   return inputs;
