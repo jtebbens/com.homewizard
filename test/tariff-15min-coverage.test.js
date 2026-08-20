@@ -1,7 +1,7 @@
 const assert = require('assert');
 const TariffManager = require('../lib/tariff-manager');
 
-function makeManager({ hourly, xadi15 = [], kwh15 = [], entsoe15 = [] }) {
+function makeManager({ hourly, pbth15 = [], entsoe15 = [] }) {
   const manager = Object.create(TariffManager.prototype);
   manager.log = () => {};
   manager.dynamicProvider = {
@@ -10,11 +10,8 @@ function makeManager({ hourly, xadi15 = [], kwh15 = [], entsoe15 = [] }) {
       getAll15MinPrices: () => entsoe15
     }
   };
-  manager.xadiProvider = {
-    getAll15MinPrices: () => xadi15
-  };
-  manager.kwhpriceProvider = {
-    getAll15MinPrices: () => kwh15
+  manager.pbthProvider = {
+    getAll15MinPrices: () => pbth15
   };
   return manager;
 }
@@ -39,17 +36,16 @@ const hourly = [
 {
   const manager = makeManager({
     hourly,
-    xadi15: [
-      slot(base, 0, 0.41, 'xadi'),
-      slot(base, 15, 0.42, 'xadi')
-    ],
-    kwh15: []
+    pbth15: [
+      slot(base, 0, 0.41, 'pbth'),
+      slot(base, 15, 0.42, 'pbth')
+    ]
   });
 
   const prices = manager.getAll15MinPrices();
   assert.strictEqual(prices.length, 8, 'partial native data must not shrink expanded fallback coverage');
-  assert.strictEqual(prices[0].price, 0.41, 'native Xadi price should override matching fallback slot');
-  assert.strictEqual(prices[1].price, 0.42, 'native Xadi price should override matching fallback slot');
+  assert.strictEqual(prices[0].price, 0.41, 'native PBTH price should override matching fallback slot');
+  assert.strictEqual(prices[1].price, 0.42, 'native PBTH price should override matching fallback slot');
   assert.strictEqual(prices[2].price, 0.31, 'missing native slot should keep expanded fallback price');
   assert.strictEqual(prices[7].price, 0.32, 'later fallback slot should remain available');
 }
@@ -57,26 +53,27 @@ const hourly = [
 {
   const manager = makeManager({
     hourly,
-    xadi15: [slot(base, 0, 0.41, 'xadi')],
-    kwh15: [slot(base, 0, 0.51, 'kwhprice')]
+    pbth15: [slot(base, 0, 0.51, 'pbth')],
+    entsoe15: [slot(base, 0, 0.11, 'entsoe')]
   });
 
   const prices = manager.getAll15MinPrices();
   assert.strictEqual(prices.length, 8);
-  assert.strictEqual(prices[0].price, 0.51, 'KwhPrice should keep highest priority for overlapping native slots');
+  assert.strictEqual(prices[0].price, 0.51, 'PBTH should keep highest priority over ENTSOE for overlapping native slots');
 }
 
-// KwhPrice serves today only; the second hour stands in for tomorrow, where ENTSOE is the
-// only native 15-min source. Without ENTSOE reaching this merge those slots stay expanded —
-// four identical quarters per hour, which is what the DP then plans tomorrow on.
+// PBTH's paired 'dap' device serves today only; the second hour stands in for tomorrow,
+// where ENTSOE is the only native 15-min source. Without ENTSOE reaching this merge those
+// slots stay expanded — four identical quarters per hour, which is what the DP then plans
+// tomorrow on.
 {
   const manager = makeManager({
     hourly,
-    kwh15: [
-      slot(base, 0, 0.51, 'kwhprice'),
-      slot(base, 15, 0.52, 'kwhprice'),
-      slot(base, 30, 0.53, 'kwhprice'),
-      slot(base, 45, 0.54, 'kwhprice')
+    pbth15: [
+      slot(base, 0, 0.51, 'pbth'),
+      slot(base, 15, 0.52, 'pbth'),
+      slot(base, 30, 0.53, 'pbth'),
+      slot(base, 45, 0.54, 'pbth')
     ],
     entsoe15: [
       slot(base, 0, 0.11, 'entsoe'),
@@ -94,11 +91,11 @@ const hourly = [
   assert.strictEqual(prices.length, 8);
   assert.deepStrictEqual(
     prices.slice(0, 4).map(p => p.price), [0.51, 0.52, 0.53, 0.54],
-    'KwhPrice must outrank ENTSOE where both have native data'
+    'PBTH must outrank ENTSOE where both have native data'
   );
   assert.deepStrictEqual(
     prices.slice(4).map(p => p.price), [0.21, 0.22, 0.23, 0.24],
-    'ENTSOE native quarters must replace the expanded hourly price on the day KwhPrice does not cover'
+    'ENTSOE native quarters must replace the expanded hourly price on the day PBTH does not cover'
   );
   assert.strictEqual(
     new Set(prices.slice(4).map(p => p.price)).size, 4,

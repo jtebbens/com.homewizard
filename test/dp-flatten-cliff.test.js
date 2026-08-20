@@ -57,10 +57,15 @@ const H = 3_600_000;
 //   idx 1  pv 400  cons  100 → coverage 0.375
 //   idx 2  pv 1000 cons  100 → coverage 1.000   (closes the gate at idx 1)
 //   idx 3  pv 1000 cons  100 → coverage 1.000
-//   idx 4  pv  200 cons  100 → coverage 0.125   (last PV slot; gate needs PV ahead → closed)
-// pvKwhFromT[1] = (0.375 + 1 + 1 + 0.125) × 0.8 = 2.0 kWh of the 2.69 kWh pack, so PV alone
-// refills any level at or above 25.6% — the cliff sits there, and an empty battery is below it.
-const PV_W   = [250, 400, 1000, 1000, 200, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+//   idx 4  pv  500 cons  100 → coverage 0.500   (last PV slot; gate needs PV ahead → closed)
+// The flatten counts only PV the preserve branch will actually store (coverage >= 0.5), so
+// idx 1 (0.375) contributes nothing. Storable PV from slot 1 = (1 + 1 + 0.5) × 0.8 = 2.0 kWh
+// of the 2.69 kWh pack, so PV alone refills any level at or above 25.6% — the cliff sits there,
+// and an empty battery is below it. That is the same 2.0 kWh / 25.6% this scenario always used;
+// idx 4 was 200 W (coverage 0.125) back when sub-threshold PV was counted too. With it excluded
+// the total fell to 1.6 kWh, moving the plateau beyond a single charge step so the cliff stopped
+// being reachable at all. Assertions are unchanged — only the PV shape that reaches 2.0 kWh is.
+const PV_W   = [250, 400, 1000, 1000, 500, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const CONS_W = [2119, 100, 100, 100, 100, 300, 300, 300, 800, 800, 800, 800, 300, 300];
 // Slot 0 at €0.26 is above the round-trip break-even: the best price ahead is €0.376, so
 // 0.376 × 0.733 − 0.075 = €0.2006/kWh is the most a stored kWh can be bought for. Charging
@@ -80,19 +85,28 @@ function run(shiftOn) {
 }
 
 // Grid kWh bought and battery kWh discharged over the whole plan. pvCoverage is the PV-funded
-// fraction of a charge slot, so the grid pays for the rest.
+// fraction of a charge slot, so the grid pays for the rest. netEur nets the whole round trip:
+// discharge revenue minus what the grid charge cost minus half-cycle wear on everything moved.
 function tally(slots) {
-  let gridKwh = 0, gridCost = 0, dischargeKwh = 0;
+  let gridKwh = 0, gridCost = 0, dischargeKwh = 0, revenue = 0, throughputKwh = 0;
   for (const s of slots) {
     if (s.action === 'charge') {
       const kwh = (s.actionKwh ?? 0) * (1 - (s.pvCoverage ?? 0));
       gridKwh  += kwh;
       gridCost += kwh * s.price;
+      throughputKwh += s.actionKwh ?? 0;
     } else if (s.action === 'discharge') {
-      dischargeKwh += s.actionKwh ?? 0;
+      dischargeKwh  += s.actionKwh ?? 0;
+      revenue       += s.price * (s.actionKwh ?? 0) * SETTINGS.battery_efficiency;
+      throughputKwh += s.actionKwh ?? 0;
     }
   }
-  return { gridKwh, gridCost, dischargeKwh, endSoc: slots[slots.length - 1].socProjected };
+  const wear = SETTINGS.cycle_cost_per_kwh * 0.5 * throughputKwh;
+  return {
+    gridKwh, gridCost, dischargeKwh, revenue,
+    netEur: revenue - gridCost - wear,
+    endSoc: slots[slots.length - 1].socProjected,
+  };
 }
 
 // ── 1. Reproduction: the cliff makes the DP buy grid power above break-even ──
@@ -123,21 +137,23 @@ test('shift on → no grid charge at slot 0, cliff collapses', () => {
     `expected the cliff to collapse to roughly the real gradient, got €${debug.flatMaxCliffEur}`);
 });
 
-// ── 3. Economic dominance: same energy delivered, less money spent ───────────
+// ── 3. Economic dominance: the shift plan is worth more end to end ──────────
 // projectedProfit is not comparable across the two branches — the clamp inflates its own
-// value function, which is the defect. Compare what the plans physically do instead.
-test('shift plan is not worse — same end SoC and discharge, strictly less grid spend', () => {
+// value function, which is the defect. Compare what the plans physically earn instead.
+// Net, not grid spend alone: the clamp buys grid and then delivers that energy too, so a
+// bare "spends less" reads as a win when it is only a smaller round trip. Equal delivered
+// energy held in this scenario by coincidence and is not a property either branch owes.
+test('shift plan is not worse — same end SoC, strictly higher net value', () => {
   const off = tally(run(false).slots);
   const on  = tally(run(true).slots);
 
   assert.ok(Math.abs(on.endSoc - off.endSoc) <= 1.0,
     `plans must end at the same SoC to be comparable, got ${on.endSoc}% vs ${off.endSoc}%`);
-  assert.ok(Math.abs(on.dischargeKwh - off.dischargeKwh) <= 0.05,
-    `plans must deliver the same energy, got ${on.dischargeKwh.toFixed(3)} vs `
-    + `${off.dischargeKwh.toFixed(3)} kWh`);
-  assert.ok(on.gridCost < off.gridCost,
-    `expected the shift plan to spend less on grid power, got €${on.gridCost.toFixed(3)} vs `
-    + `€${off.gridCost.toFixed(3)}`);
+  assert.ok(on.netEur > off.netEur,
+    `expected the shift plan to be worth more, got €${on.netEur.toFixed(4)} vs `
+    + `€${off.netEur.toFixed(4)} (revenue €${on.revenue.toFixed(4)}/€${off.revenue.toFixed(4)}, `
+    + `grid €${on.gridCost.toFixed(4)}/€${off.gridCost.toFixed(4)}, `
+    + `discharged ${on.dischargeKwh.toFixed(3)}/${off.dischargeKwh.toFixed(3)} kWh)`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed\n`);

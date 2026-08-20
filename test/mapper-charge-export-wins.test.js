@@ -45,7 +45,7 @@ const SETTINGS = {
 
 // Live shape of the 07:15Z run: DP says charge, price far above the ceiling, real PV export
 // on the meter, mid SoC so no floor/ceiling guard fires first.
-function runtimeCtx(pvStoreWins) {
+function runtimeCtx(pvStoreWins, over = {}) {
   const now = Date.now();
   return {
     policyMode: 'balanced',
@@ -64,10 +64,11 @@ function runtimeCtx(pvStoreWins) {
     batteryCost: { avgCost: 0.1, energyKwh: 1 },
     batteryEfficiency: 0.85,
     weather: { todaySunset: new Date(now + 6 * 3_600_000), todaySunrise: new Date(now - 3 * 3_600_000) },
+    ...over,
   };
 }
 
-function planningArgs(pvStoreValue) {
+function planningArgs(pvStoreValue, over = {}) {
   return {
     price: 0.378,
     soc: 50,
@@ -86,6 +87,7 @@ function planningArgs(pvStoreValue) {
     battCapKwh: 2.688,
     pvKwhTomorrow: 0,
     refillConfidence: 1,
+    ...over,
   };
 }
 
@@ -137,6 +139,37 @@ test('chart: no store value → unchanged behaviour', () => {
   const { hwMode } = eng._mapActionToHwModeForPlanning('charge', planningArgs(null));
   assert.strictEqual(hwMode, 'zero_charge_only',
     `slots without a DP store value must not flip, got '${hwMode}'`);
+});
+
+// ─── Below the price ceiling — live miss 2026-08-20 11:45 ─────────────────────
+// Both mappers returned to_full on `price <= maxChargePrice` before their own export test
+// could run. Live: "cheap hour €0.200 <= max_charge_price €0.206 → to_full" on a slot where
+// storing was worth €0.195 against a €0.200 export. Same veto as above the ceiling, one
+// branch earlier.
+
+test('runtime: cheap hour but export wins → standby, not to_full', () => {
+  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+  const mode = eng._mapPolicyToHwMode('charge', runtimeCtx(false, { tariff: { currentPrice: 0.200 } }));
+  assert.strictEqual(mode, 'standby',
+    `€0.200 under the ceiling with _pvStoreWins=false must idle and export, got '${mode}'`);
+});
+
+test('chart: cheap hour but export wins → standby, not to_full', () => {
+  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+  const { hwMode } = eng._mapActionToHwModeForPlanning('charge',
+    planningArgs(0.195, { price: 0.200, maxChargePrice: 0.206 }));
+  assert.strictEqual(hwMode, 'standby',
+    `chart must project the same idle-and-export the runtime performs, got '${hwMode}'`);
+});
+
+// The guard that keeps the two mappers symmetric: without PV the runtime has no _pvStoreWins
+// verdict at all, so the chart must not veto a grid charge the battery does perform.
+test('chart: cheap hour without PV still charges from the grid', () => {
+  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+  const { hwMode } = eng._mapActionToHwModeForPlanning('charge',
+    planningArgs(0.195, { price: 0.200, maxChargePrice: 0.206, pvW: 0 }));
+  assert.strictEqual(hwMode, 'to_full',
+    `night grid charge must survive the export test, got '${hwMode}'`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

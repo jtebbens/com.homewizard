@@ -6,7 +6,9 @@ function makeHomey() {
     log: () => {},
     error: () => {},
     settings: {
-      get: async () => null,
+      // homey.settings.get() is synchronous in the real SDK — _initializeDynamicProvider()
+      // now calls it directly (for pbth_device_id), so the stub must match that shape.
+      get: () => null,
       set: () => {}
     }
   };
