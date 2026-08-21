@@ -140,6 +140,32 @@ function makeHomey(getApiApp) {
     console.log('Test H (fetch failure returns stale cache): PASSED');
   }
 
+  // ── Test I: getAll15MinPrices() must carry exportPrice through — this array feeds compute()
+  // directly (tariff-manager.js merges it with native-source priority over the expanded hourly
+  // fallback), so a dropped field here silently starves the DP of exportPrice on every quarter. ──
+  {
+    const base = new Date();
+    base.setUTCMinutes(0, 0, 0);
+    const slots = [0, 15, 30, 45].map((m, i) => ({
+      time: new Date(base.getTime() + m * 60_000).toISOString(),
+      importPrice: 0.10 + i * 0.01,
+      exportPrice: 0.04 + i * 0.01
+    }));
+
+    const homey = makeHomey(() => ({
+      get: async () => ({ prices: [{ deviceId: 'dev-15', deviceName: 'NL_Netherlands', driverType: 'dap15', slots }] })
+    }));
+
+    const provider = new PbthProvider(homey, { deviceId: 'dev-15' });
+    await provider.fetchPrices(true);
+
+    const quarters = provider.getAll15MinPrices();
+    assert.strictEqual(quarters.length, 4);
+    assert.ok(quarters.every(q => typeof q.exportPrice === 'number'), 'getAll15MinPrices() dropped exportPrice');
+    assert.ok(Math.abs(quarters[0].exportPrice - 0.04) < 1e-9, 'exportPrice value must match the source quarter, not just be present');
+    console.log('Test I (getAll15MinPrices carries exportPrice): PASSED');
+  }
+
   console.log('pbth-provider.test.js: all assertions passed');
 })().catch(err => {
   console.error('pbth-provider.test.js FAILED:', err.message);

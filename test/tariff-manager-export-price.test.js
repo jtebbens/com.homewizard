@@ -1,5 +1,6 @@
 const assert = require('assert');
 const TariffManager = require('../lib/tariff-manager');
+const EntsoeFallbackProvider = require('../lib/entsoe-fallback-provider');
 
 function makeHomey() {
   return {
@@ -68,6 +69,25 @@ function makeHomey() {
   assert.strictEqual(intervals.length, 4, 'one hour must expand to 4 15-min slots');
   assert.ok(intervals.every(i => i.exportPrice === 0.077), 'exportPrice must survive the hourly→15min expansion');
   console.log('Test C (exportPrice survives 15-min expansion fallback): PASSED');
+}
+
+// ── Test D: EntsoeFallbackProvider.getAll15MinPrices() must carry exportPrice through, same
+// bug class as pbth-provider — this native array wins the merge-priority race in
+// TariffManager.getAll15MinPrices() (r.279+) over the expanded-hourly fallback, so a dropped
+// field here silently erases exportPrice for every quarter the DP sees under this provider. ──
+{
+  const provider = Object.create(EntsoeFallbackProvider.prototype);
+  const base = new Date('2026-07-01T00:00:00.000Z');
+  provider.cache15min = [
+    { timestamp: base, hour: 0, minute: 0, price: 0.19, exportPrice: 0.077 },
+    { timestamp: new Date(base.getTime() + 15 * 60_000), hour: 0, minute: 15, price: 0.19, exportPrice: 0.077 }
+  ];
+
+  const quarters = provider.getAll15MinPrices();
+  assert.strictEqual(quarters.length, 2);
+  assert.ok(quarters.every(q => typeof q.exportPrice === 'number'), 'getAll15MinPrices() dropped exportPrice');
+  assert.ok(Math.abs(quarters[0].exportPrice - 0.077) < 1e-9, 'exportPrice value must match the source quarter, not just be present');
+  console.log('Test D (EntsoeFallbackProvider.getAll15MinPrices carries exportPrice): PASSED');
 }
 
 console.log('tariff-manager-export-price.test.js: all assertions passed');
