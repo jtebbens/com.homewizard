@@ -2624,6 +2624,9 @@ if (debug) this.log(
         const _sched = this.optimizationEngine?._schedule;
         if (_sched?.terminalFactor != null) result.debug.pvTermFactor = +_sched.terminalFactor.toFixed(2);
         if (_sched?.terminalPvKwh != null)  result.debug.pvTermKwh = +_sched.terminalPvKwh.toFixed(1);
+        // Shadow counter for the charge-repayability gate (dp_charge_repay_gate, default off):
+        // horizon-wide, so a midday run without a t=0 charge slot still shows whether it fired.
+        if (_sched?.chargeRepay) result.debug.chargeRepay = _sched.chargeRepay;
         // PV forecast-accuracy EMAs (learning-engine.js recordPvAccuracy) — exposed here so they're
         // readable from settings/diagnose without flipping learning-engine.js's debug flag + restart.
         // Gates project_satellite_dp_integration_playbook's CHUNK 0 go/no-go on pv_accuracy_sat.
