@@ -3477,6 +3477,13 @@ if (debug) this.log(
           return { ...slot, pvPowerW: blendedW };
         });
 
+        if (pvSource === 'satellite') {
+          // Denominator for the freshness-gate stats: fires on every satellite-mode run,
+          // including satCount=0, so "usable slot" runs can be scaled against attempts —
+          // the [SAT blend]/[SAT OVR] lines below only fire when satLog.length > 0 and so
+          // silently drop the zero-usable-slot runs from any count taken off them alone.
+          this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots}`);
+        }
         if (pvSource === 'satellite' && satLog.length > 0) {
           this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
           // Override trace. Slots are hourly, so W sums straight to Wh. Δ is always the
