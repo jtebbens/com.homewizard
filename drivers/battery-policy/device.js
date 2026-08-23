@@ -1829,10 +1829,14 @@ if (debug) this.log(
                   this.log('📡 Tomorrow prices detected — refreshing weather for terminal value accuracy');
                   await this._updateWeather().catch(e => this.error('Weather refresh on tomorrow prices failed:', e));
                 }
-                // Always recompute optimizer after price refresh — new data may include
+                // Invalidate cached schedule after price refresh — new data may include
                 // tomorrow's prices (96→192 slots) that change the optimal schedule.
+                // Don't force-apply here: this timer isn't slot-aligned (adaptive 15/30min,
+                // drifts from :00/:15/:30/:45), so an immediate _runPolicyCheck() caused
+                // off-slot mode switches (188/736 late switches, 66% traced to this call —
+                // see project_zonneplan_offslot_dispatch_0822). The next slot-aligned
+                // _schedulePolicyCheck() run picks up the invalidated schedule instead.
                 this.optimizationEngine.updateSettings({});
-                await this._runPolicyCheck();
               }
             } catch (err) {
               this.error('❌ Price refresh failed:', err);
