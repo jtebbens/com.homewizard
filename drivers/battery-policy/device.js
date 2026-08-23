@@ -1795,6 +1795,14 @@ if (debug) this.log(
       return (hour >= 14 && hour <= 16) ? 15 * 60 * 1000 : 30 * 60 * 1000;
     };
 
+    // Per-slot (timestamp, price, exportPrice) fingerprint. Most ticks outside the
+    // publish window hit the merged provider's coverage brake and return the same
+    // cache unchanged — fingerprinting lets the caller skip the recompute/policy-run
+    // for those instead of treating "we polled" as "prices changed".
+    const priceFingerprint = cache => (cache || [])
+      .map(p => `${new Date(p.timestamp).toISOString()}:${p.price}:${p.exportPrice}`)
+      .join('|');
+
     const scheduleNext = () => {
       if (this.priceRefreshTimeout) {
         this.homey.clearTimeout(this.priceRefreshTimeout);
@@ -1812,15 +1820,17 @@ if (debug) this.log(
 
             try {
               // Force-refresh the merged provider (fetches PBTH, ENTSOE fallback if needed)
+              const beforeFingerprint = priceFingerprint(this.tariffManager.mergedProvider.cache);
               this.homey.app.logMem?.('[BatteryPolicy] before-price-refresh');
               await this.tariffManager.mergedProvider.fetchPrices(true);
               this.homey.app.logMem?.('[BatteryPolicy] after-price-refresh');
               const priceCount = this.tariffManager.mergedProvider.cache?.length || 0;
               const sources    = this.tariffManager.mergedProvider.lastFetchSources.join('+');
               const days       = priceCount > 24 ? 'today + tomorrow' : 'today only';
-              this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources})`);
+              const pricesChanged = priceFingerprint(this.tariffManager.mergedProvider.cache) !== beforeFingerprint;
+              this.log(`✅ Prices refreshed: ${priceCount}h (${days}, sources: ${sources}, changed=${pricesChanged})`);
 
-              if (!this._isPredictiveMode && priceCount > 0 && this.getCapabilityValue('policy_enabled')) {
+              if (!this._isPredictiveMode && priceCount > 0 && this.getCapabilityValue('policy_enabled') && pricesChanged) {
                 // When tomorrow's prices arrive for the first time today, refresh weather
                 // so pvKwhTomorrow in the terminal value uses an up-to-date PV forecast.
                 const todayDate = new Date().toDateString();
@@ -1829,13 +1839,12 @@ if (debug) this.log(
                   this.log('📡 Tomorrow prices detected — refreshing weather for terminal value accuracy');
                   await this._updateWeather().catch(e => this.error('Weather refresh on tomorrow prices failed:', e));
                 }
-                // Invalidate cached schedule after price refresh — new data may include
-                // tomorrow's prices (96→192 slots) that change the optimal schedule.
-                // Don't force-apply here: this timer isn't slot-aligned (adaptive 15/30min,
-                // drifts from :00/:15/:30/:45), so an immediate _runPolicyCheck() caused
-                // off-slot mode switches (188/736 late switches, 66% traced to this call —
-                // see project_zonneplan_offslot_dispatch_0822). The next slot-aligned
-                // _schedulePolicyCheck() run picks up the invalidated schedule instead.
+                // Invalidate cached schedule — prices actually changed (fingerprint diff), so the
+                // optimal schedule may too. Don't force-apply here: this timer isn't slot-aligned
+                // (adaptive 15/30min, drifts from :00/:15/:30/:45), so an immediate
+                // _runPolicyCheck() caused off-slot mode switches (188/736 late switches, 66%
+                // traced to this call — see project_zonneplan_offslot_dispatch_0822). The next
+                // slot-aligned _schedulePolicyCheck() run picks up the invalidated schedule.
                 this.optimizationEngine.updateSettings({});
               }
             } catch (err) {
