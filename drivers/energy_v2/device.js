@@ -368,6 +368,27 @@ function detailedBatteryMode(data) {
   return normalizeBatteryMode(data);
 }
 
+// Battery stall detection — commanded direction not reflected in SoC movement:
+// target_power_w is the HW setpoint (must), SoC the ground truth. The WS power_w
+// is unreliable in predictive mode (reports 0 W while the battery actually charges),
+// so we judge progress by SoC trend, with power_w as a secondary progress signal
+// for zero/zero_charge_only/zero_discharge_only — the only modes reaching this
+// check, where power_w is real. Not to_full: its power_w is a synthetic
+// batteryCount*800 fallback (see _handleBatteries) whenever the firmware reports 0,
+// so it can't distinguish real delivery from a real stall.
+//
+// 2026-08-23: near 100% SoC, the reported value can plateau for 12+ min while
+// power_w tracks target_w exactly (real discharge happening) — SoC-only detection
+// false-triggered on that plateau. deliveringPower catches this without weakening
+// detection of a true stall (June 2026: power_w stuck at 0 despite target=892W).
+function evaluateStallProgress({ commandedCharge, avgSoC, baselineSoc, powerW, normalizedMode }) {
+  const socDelta = avgSoC - baselineSoc;
+  const socProgressed = commandedCharge ? socDelta >= 1 : socDelta <= -1;
+  const deliveringPower = normalizedMode !== 'to_full' && (commandedCharge
+    ? (powerW ?? 0) > 100
+    : (powerW ?? 0) < -100);
+  return socProgressed || deliveringPower;
+}
 
 
 
@@ -2127,13 +2148,8 @@ async _handleBatteries(data) {
       this.batteryErrorTriggered = false;
     }
 
-    // Battery stall detection — commanded direction not reflected in SoC movement:
-    // target_power_w is the HW setpoint (must), SoC the ground truth. The WS power_w
-    // is unreliable in predictive mode (reports 0 W while the battery actually charges),
-    // so we judge progress by SoC trend instead. When the HW commands >200W charge but
-    // SoC does not rise ≥1pp within 10 min (or commands discharge but SoC does not fall),
-    // the battery is stalled → fault. Resets on progress; SoC guards skip natural
-    // full/empty. |target|>200 gate excludes the firmware discharge cap (~96W).
+    // Battery stall detection — see evaluateStallProgress() above for the fault
+    // definition. |target|>200 gate excludes the firmware discharge cap (~96W).
     const targetW = payload.target_power_w ?? 0;
     const avgSoC = this.getCapabilityValue('battery_group_average_soc');
     // Stall is only meaningful in modes that actually command the given direction.
@@ -2157,8 +2173,13 @@ async _handleBatteries(data) {
         this._stallBaselineTime = now;
         this._stallTriggered = false;
       } else {
-        const socDelta = avgSoC - this._stallBaselineSoc;
-        const progressed = commandedCharge ? socDelta >= 1 : socDelta <= -1;
+        const progressed = evaluateStallProgress({
+          commandedCharge,
+          avgSoC,
+          baselineSoc: this._stallBaselineSoc,
+          powerW: payload.power_w,
+          normalizedMode,
+        });
 
         if (progressed) {
           // Battery is moving as commanded → healthy, advance baseline.
@@ -2987,3 +3008,5 @@ async _setCapabilityValue(capability, value) {
   }
 
 };
+
+module.exports.evaluateStallProgress = evaluateStallProgress;
