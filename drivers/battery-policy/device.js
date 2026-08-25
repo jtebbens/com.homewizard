@@ -3482,24 +3482,15 @@ if (debug) this.log(
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
             if (satW != null) {
-              // Ramp the override strength with lead-time and issue-age instead of a hard cliff
-              // at the window/staleness edge — 1 = just issued and inside the window, 0 = at
-              // either boundary. Anchored on slot.satIssueMs (this slot's own issue), not the
-              // run-level satIssueMs: a slot can carry an older value than the latest fetch.
-              const lead = slotMs - slot.satIssueMs;
-              const ageMs = satNowMs - slot.satIssueMs;
-              const leadRamp = Math.max(0, Math.min(1, 1 - lead / SAT_LEAD_MS));
-              const freshRamp = Math.max(0, Math.min(1, 1 - ageMs / SAT_MAX_AGE_MS));
-              const satRamp = leadRamp * freshRamp;
               // Score both legs every run so the override stays measurable before the toggle
               // flips, and after it. Two calls of a trivial function on a handful of slots.
               const base  = { omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true };
               const rSat  = BatteryPolicyDevice._blendOmScSlot(base);
-              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true, satRamp });
+              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true });
               r = satOverride ? rOvr : rSat;
               satDeltaWh += rOvr.blendedW - rSat.blendedW;
               satCount++;
-              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W ramp=${satRamp.toFixed(2)}`);
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
             }
           }
 
