@@ -1,5 +1,6 @@
 const assert = require('assert');
 const PbthProvider = require('../lib/pbth-provider');
+const { exportPrice: computeExportPrice } = require('../lib/price-formulas');
 
 // Minimal homey stub
 function makeHomey(getApiApp) {
@@ -67,7 +68,11 @@ function makeHomey(getApiApp) {
     assert.strictEqual(provider.cache15min.length, 4, 'dap15 device must populate native 15-min cache');
     assert.strictEqual(result.length, 1, 'Four quarters in one hour must aggregate to a single hourly slot');
     assert.ok(Math.abs(result[0].price - 0.115) < 1e-9, 'Hourly aggregate must average the four import prices');
-    assert.ok(Math.abs(result[0].exportPrice - 0.055) < 1e-9, 'Hourly aggregate must average the four export prices');
+    // exportPrice is derived (reconstructed spot -> price-formulas.exportPrice), not passed
+    // through raw — PBTH's own exportPrice mirrors importPrice 1:1, see _mapSlot.
+    const expectedExportAvg = slots.reduce((sum, s) =>
+      sum + computeExportPrice(s.importPrice / 1.21 - provider.markup, provider.exportAddon, provider.exportMultiplier), 0) / slots.length;
+    assert.ok(Math.abs(result[0].exportPrice - expectedExportAvg) < 1e-9, 'Hourly aggregate must average the four derived export prices');
     console.log('Test C (dap15 device: native 15-min + hourly aggregate): PASSED');
   }
 
@@ -140,30 +145,34 @@ function makeHomey(getApiApp) {
     console.log('Test H (fetch failure returns stale cache): PASSED');
   }
 
-  // ── Test I: getAll15MinPrices() must carry exportPrice through — this array feeds compute()
-  // directly (tariff-manager.js merges it with native-source priority over the expanded hourly
-  // fallback), so a dropped field here silently starves the DP of exportPrice on every quarter. ──
+  // ── Test I: getAll15MinPrices() must carry a derived exportPrice through — this array feeds
+  // compute() directly (tariff-manager.js merges it with native-source priority over the expanded
+  // hourly fallback), so a dropped/raw-passthrough field here silently starves the DP of real
+  // per-slot export values (PBTH's own exportPrice mirrors importPrice 1:1). ──
   {
     const base = new Date();
     base.setUTCMinutes(0, 0, 0);
     const slots = [0, 15, 30, 45].map((m, i) => ({
       time: new Date(base.getTime() + m * 60_000).toISOString(),
       importPrice: 0.10 + i * 0.01,
-      exportPrice: 0.04 + i * 0.01
+      exportPrice: 0.04 + i * 0.01 // PBTH's own value — must NOT be the one that comes out
     }));
 
     const homey = makeHomey(() => ({
       get: async () => ({ prices: [{ deviceId: 'dev-15', deviceName: 'NL_Netherlands', driverType: 'dap15', slots }] })
     }));
 
-    const provider = new PbthProvider(homey, { deviceId: 'dev-15' });
+    const options = { deviceId: 'dev-15', markup: 0.10, exportAddon: 0.02, exportMultiplier: 1.10 };
+    const provider = new PbthProvider(homey, options);
     await provider.fetchPrices(true);
 
     const quarters = provider.getAll15MinPrices();
     assert.strictEqual(quarters.length, 4);
     assert.ok(quarters.every(q => typeof q.exportPrice === 'number'), 'getAll15MinPrices() dropped exportPrice');
-    assert.ok(Math.abs(quarters[0].exportPrice - 0.04) < 1e-9, 'exportPrice value must match the source quarter, not just be present');
-    console.log('Test I (getAll15MinPrices carries exportPrice): PASSED');
+    const expected0 = computeExportPrice(slots[0].importPrice / 1.21 - options.markup, options.exportAddon, options.exportMultiplier);
+    assert.ok(Math.abs(quarters[0].exportPrice - expected0) < 1e-9,
+      'exportPrice must be derived via price-formulas from the reconstructed spot, not PBTH\'s raw passthrough');
+    console.log('Test I (getAll15MinPrices carries a derived exportPrice): PASSED');
   }
 
   console.log('pbth-provider.test.js: all assertions passed');
