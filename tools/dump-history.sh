@@ -1,15 +1,13 @@
 #!/bin/bash
 # Dump policy_mode_history to tools/_hist-chunks/*.json, one file per Amsterdam day.
 #
-# The app stores the history as one settings key per day (policy_mode_history_YYYY-MM-DD,
-# ~35 kB full) instead of one 596 kB blob. A day chunk is well under the 64 KiB
-# get-app-setting cap, so the old index paging is gone — each day is one request.
+# The app writes one file per day to /userdata (mode-history-YYYY-MM-DD.json, ~45 kB full).
+# That is where the store landed when the settings blob was cut down for RSS; before that it
+# was one settings key per day, and before that a single 596 kB blob. All three are tried, in
+# that order, so this keeps working against an older build.
 #
-# Day keys are derived from the calendar, not enumerated: get-app-setting takes a name, and
-# there is no list-keys call. Missing days (app down, key pruned) return null and are skipped.
-#
-# Falls back to the pre-chunk single key when no day chunk answers, so this keeps working
-# against a Homey still running a build from before the split.
+# Days are derived from the calendar, not enumerated: neither the userdata route nor
+# get-app-setting lists names. Missing days (app down, chunk pruned) answer null and are skipped.
 set -euo pipefail
 
 APP=com.homewizard
@@ -27,11 +25,24 @@ mkdir -p "$OUT"; rm -f "$OUT"/*.json
 get() {
   local out
   for _ in 1 2; do
-    out=$(node "$(dirname "$0")/homey-local.js" setting "$1" "$APP" 2>/dev/null | jq "${2:-.}" 2>/dev/null || true)
-    if printf '%s' "$out" | jq -e . >/dev/null 2>&1; then printf '%s' "$out"; return 0; fi
+    out=$(node "$(dirname "$0")/homey-local.js" "${3:-setting}" "$1" "$APP" 2>/dev/null | jq "${2:-.}" 2>/dev/null || true)
+    # Valid JSON is enough; `jq -e` is deliberately not used, as it exits non-zero on `null`
+    # and would turn an absent day (pruned, or app down that day) into a transport failure.
+    if [ -n "$out" ] && printf '%s' "$out" | jq . >/dev/null 2>&1; then printf '%s' "$out"; return 0; fi
     sleep 2
   done
   return 1
+}
+
+# A day comes from the userdata file when the running build has one, else from the settings key
+# the older build wrote. Both are asked for before a day is called missing: a build change must
+# not look like a pruned day.
+get_day() {
+  local json
+  if json=$(get "mode-history-$1.json" '.' userdata) && [ "$json" != "null" ]; then
+    printf '%s' "$json"; return 0
+  fi
+  get "policy_mode_history_$1"
 }
 
 total=0
@@ -39,7 +50,7 @@ files=0
 missing=0
 for ((d = DAYS - 1; d >= 0; d--)); do
   day=$(TZ=Europe/Amsterdam date -d "-$d day" +%Y-%m-%d)
-  if ! json=$(get "policy_mode_history_$day"); then
+  if ! json=$(get_day "$day"); then
     printf 'WARN %s: no valid answer after retry — day MISSING from this dump\n' "$day" >&2
     missing=$((missing + 1))
     continue
