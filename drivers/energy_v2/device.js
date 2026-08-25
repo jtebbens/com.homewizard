@@ -500,6 +500,7 @@ async reconnectWithManualIP(ip) {
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
     await updateCapability(this, 'connection_error', 'No errors').catch(this.error);
+    await updateCapability(this, 'alarm_connectivity', false).catch(this.error);
 
     this.token = await getStoreValueSafe(this, 'token');
     //console.log('P1 Token:', this.token);
@@ -1070,7 +1071,14 @@ this.homey.flow
     this._boundHandleBatteries = this._handleBatteries.bind(this);
     this._boundLog = this.log.bind(this);
     this._boundError = this.error.bind(this);
-    this._boundSetAvailable = this.setAvailable.bind(this);
+    this._boundSetAvailable = async () => {
+      await this.setAvailable();
+      updateCapability(this, 'alarm_connectivity', false).catch(this.error);
+    };
+    this._boundSetUnavailable = async (msg) => {
+      await this.setUnavailable(msg);
+      updateCapability(this, 'alarm_connectivity', true).catch(this.error);
+    };
     this._boundGetSetting = this.getSetting.bind(this);
 
     // this.onPollInterval = setInterval(this.onPoll.bind(this), 1000 * settings.polling_interval);
@@ -1092,6 +1100,7 @@ this.homey.flow
         log: this._boundLog,
         error: this._boundError,
         setAvailable: this._boundSetAvailable,
+        setUnavailable: this._boundSetUnavailable,
         getSetting: this._boundGetSetting,
         handleMeasurement: this._boundHandleMeasurement,
         handleSystem: this._boundHandleSystem,
@@ -2742,6 +2751,7 @@ async _setCapabilityValue(capability, value) {
         this.url = settings.url;
       } else {
         await this.setUnavailable('Missing URL');
+        updateCapability(this, 'alarm_connectivity', true).catch(this.error);
         this._pollInFlight = false;
         return;
       }
@@ -2782,11 +2792,13 @@ async _setCapabilityValue(capability, value) {
       }
 
       await this.setAvailable();
+      updateCapability(this, 'alarm_connectivity', false).catch(this.error);
 
      } catch (err) {
       if (!this.__deleted) {
         this.log(`Polling error: ${err.message}`);
         this.setUnavailable(err.message || 'Polling error').catch(this.error);
+        updateCapability(this, 'alarm_connectivity', true).catch(this.error);
       }
     } finally {
       this._pollInFlight = false;

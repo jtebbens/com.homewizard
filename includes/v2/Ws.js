@@ -41,17 +41,19 @@ const SHARED_AGENT = new https.Agent({
  *  - token: bearer token for authorization
  *  - log, error: logging functions
  *  - setAvailable: mark device available
+ *  - setUnavailable: mark device unavailable (zombie/idle detection)
  *  - getSetting: read device settings
  *  - handleMeasurement, handleSystem, handleBatteries: data callbacks
  */
 class WebSocketManager {
-  constructor({ device, url, token, log, error, setAvailable, getSetting, handleMeasurement, handleSystem, handleBatteries, onJournalEvent, measurementThrottleMs }) {
+  constructor({ device, url, token, log, error, setAvailable, setUnavailable, getSetting, handleMeasurement, handleSystem, handleBatteries, onJournalEvent, measurementThrottleMs }) {
     this.device = device;
     this.url = url;
     this.token = token;
     this.log = log;
     this.error = error;
     this.setAvailable = setAvailable;
+    this.setUnavailable = setUnavailable;
     this.getSetting = getSetting;
 
     this._handleMeasurement = handleMeasurement;
@@ -236,12 +238,14 @@ class WebSocketManager {
       if (!res || typeof res.cloud_enabled === 'undefined') {
         this.error(`❌ Device unreachable at ${this.url} — skipping WebSocket`);
         this._journalThrottled('preflight_fail', `Device unreachable at ${this.url}`);
+        this.setUnavailable?.('Device unreachable').catch(this.error);
         this._scheduleReconnect();
         return;
       }
     } catch (err) {
       this.error(`❌ Preflight check failed: ${err.message}`);
       this._journalThrottled('preflight_fail', err.message);
+      this.setUnavailable?.(err.message || 'Preflight check failed').catch(this.error);
       this._scheduleReconnect();
       return;
     }
@@ -308,6 +312,7 @@ class WebSocketManager {
         if (!this.pongReceived && idle > 60000) {
           this.log('🧨 No pong & idle — force closing zombie WebSocket');
           this._journal('zombie', `No pong & idle ${Math.round(idle / 1000)}s — terminating`);
+          this.setUnavailable?.('WebSocket unresponsive').catch(this.error);
           try { this.ws.terminate(); } catch (e) {}
           this.ws = null;
           this.wsActive = false;
@@ -324,6 +329,7 @@ class WebSocketManager {
         if (idle > 180000) {
           this.log(`💤 No measurement in 3min (${Math.round(idle / 1000)}s) — force closing zombie WebSocket`);
           this._journal('zombie', `Idle ${Math.round(idle / 1000)}s, no measurements — force restart`);
+          this.setUnavailable?.('WebSocket idle — no measurements').catch(this.error);
           try { this.ws.terminate(); } catch (e) {}
           this.ws = null;
           this.wsActive = false;

@@ -6397,6 +6397,7 @@
         "measure_power.battery_group_max_consumption_w",
         "measure_power.battery_group_max_production_w",
         "connection_error",
+        "alarm_connectivity",
         "battery_group_total_capacity_kwh",
         "battery_group_average_soc",
         "battery_group_state",
