@@ -186,6 +186,39 @@ function runEngine(refillConfidence = 0.5) {
   ok('no discharge slot survives at the reserve floor unattributed');
 }
 
+// --- the charge-repay shadow counter survives the run ---------------------------------------------
+// _chargeRepayDebug decides whether dp_charge_repay_gate is worth switching on, but it lives on the
+// engine and every run overwrites it: policy_last_run_debug keeps exactly one sample. Carrying it in
+// the trace is what turns it into a series that can be counted over days.
+{
+  const engine = runEngine();
+  const rec = build.call(ctx('/tmp'), {
+    engine, now: Date.parse('2026-06-01T12:00:00Z'), soc: 50,
+    refillConfidence: 0.5, pvKwhTomorrow: 3.0, maxChargePrice: 0.30,
+  });
+  const dbg = engine._chargeRepayDebug;
+  assert.ok(dbg, 'compute() stashes _chargeRepayDebug');
+  assert.ok(rec.repay, 'the trace record carries the repay counter');
+  assert.strictEqual(rec.repay.flag, dbg.flag, 'flag mirrors the engine');
+  assert.strictEqual(rec.repay.n, dbg.wouldFire, 'wouldFire mirrors the engine');
+  assert.strictEqual(rec.repay.kwh, +dbg.kwh.toFixed(3), 'kwh mirrors the engine');
+  assert.strictEqual(rec.repay.short, +dbg.worstShortfall.toFixed(4), 'worstShortfall mirrors the engine');
+  assert.strictEqual(rec.repay.at, dbg.worstAt, 'worstAt mirrors the engine');
+  ok('the trace carries the charge-repay shadow counter');
+}
+
+// --- a probe pass must not clobber the shipped run's repay counter --------------------------------
+// Same trap as _lastDpArrays above: computeExpectedProfit() re-runs the DP, and if the counter were
+// written on that path every trace after a "what if" call would describe the wrong run.
+{
+  const engine = runEngine();
+  const before = { ...engine._chargeRepayDebug };
+  engine.computeExpectedProfit(prices, 50, 9.0, 2200, 800, pv, 0.90, cons);
+  assert.deepStrictEqual({ ...engine._chargeRepayDebug }, before,
+    'a probe pass leaves the shipped run\'s repay counter untouched');
+  ok('probe pass does not clobber the repay counter');
+}
+
 // --- size: a 68-slot horizon must stay writable ~96x/day for 23 days ------------------------------
 {
   const engine = new OptimizationEngine(SETTINGS);

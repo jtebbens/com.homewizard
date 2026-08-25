@@ -534,6 +534,11 @@ class BatteryPolicyDevice extends Homey.Device {
     // reserveFloorG counts 0.1% steps (GRID in optimization-engine), so /10 gives percent.
     const floorG = arr.reserveFloorG;
     const dischW = arr.effectiveDischargePowerW;
+    // Charge-repay shadow counter. It only ever lives on the engine, so policy_last_run_debug keeps
+    // one sample and every run drops the previous one; carrying it here is what makes "how often
+    // would the gate have fired, over how many kWh" answerable after the fact. Omitted rather than
+    // nulled when the engine predates it, so a gap in the series reads as "no counter", not "zero".
+    const rd = engine._chargeRepayDebug;
     return {
       ts: new Date(now).toISOString(),
       soc,
@@ -549,6 +554,15 @@ class BatteryPolicyDevice extends Homey.Device {
       pvTom: pvKwhTomorrow != null ? +pvKwhTomorrow.toFixed(2) : null,
       maxChP: maxChargePrice != null ? +maxChargePrice.toFixed(4) : null,
       floorPct0: floorG.length ? +(floorG[0] / 10).toFixed(1) : null,
+      ...(rd ? {
+        repay: {
+          flag:  rd.flag,
+          n:     rd.wouldFire,
+          kwh:   +rd.kwh.toFixed(3),
+          short: +rd.worstShortfall.toFixed(4),
+          at:    rd.worstAt,
+        },
+      } : {}),
       act: slots.map(s => DP_TRACE_ACTION_CHAR[s.action] ?? '?').join(''),
       // Who wrote each action (OptimizationEngine.ACTION_SRC). Without this the trace shows an
       // action next to the backward DP's t=0 values and any difference reads as the DP changing
