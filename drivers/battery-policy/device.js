@@ -3448,7 +3448,7 @@ if (debug) this.log(
         const satOverride = this.getSetting('pv_sat_full_override') === true;
         const satNowMs    = Date.now();
         const satIssueMs  = this.weatherForecaster?.getSatIssueMs?.() ?? null;
-        const SAT_LEAD_MS = 3 * 3600_000;
+        const SAT_LEAD_MS = 4 * 3600_000;
         let satDeltaWh    = 0;
         // Coverage denominator: blend-eligible slots overlapping the current lead window that
         // carry any PV signal. Without it, n= has no scale.
@@ -3482,15 +3482,24 @@ if (debug) this.log(
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
             if (satW != null) {
+              // Ramp the override strength with lead-time and issue-age instead of a hard cliff
+              // at the window/staleness edge — 1 = just issued and inside the window, 0 = at
+              // either boundary. Anchored on slot.satIssueMs (this slot's own issue), not the
+              // run-level satIssueMs: a slot can carry an older value than the latest fetch.
+              const lead = slotMs - slot.satIssueMs;
+              const ageMs = satNowMs - slot.satIssueMs;
+              const leadRamp = Math.max(0, Math.min(1, 1 - lead / SAT_LEAD_MS));
+              const freshRamp = Math.max(0, Math.min(1, 1 - ageMs / SAT_MAX_AGE_MS));
+              const satRamp = leadRamp * freshRamp;
               // Score both legs every run so the override stays measurable before the toggle
               // flips, and after it. Two calls of a trivial function on a handful of slots.
               const base  = { omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true };
               const rSat  = BatteryPolicyDevice._blendOmScSlot(base);
-              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true });
+              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true, satRamp });
               r = satOverride ? rOvr : rSat;
               satDeltaWh += rOvr.blendedW - rSat.blendedW;
               satCount++;
-              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W ramp=${satRamp.toFixed(2)}`);
             }
           }
 
@@ -5106,17 +5115,22 @@ if (debug) this.log(
   // never scored — it tested sat ≤ SC, not sat ≤ OM. The 7-day head-to-head of 2026-08-17 tested
   // exactly that claim, against the roof in panel-W over 85 daylight hours: OM MAE 912 W vs sat
   // 566 W, sat ahead in every bin of OM's own forecast. Default off; the caller owns the toggle.
-  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false, satOverride = false }) {
+  static _blendOmScSlot({ omW, scP50, scP10, wOM, wSC, unbiased, satW = null, satActive = false, satOverride = false, satRamp = 1 }) {
     const satUsed = satActive && typeof satW === 'number' && Number.isFinite(satW) && satW >= 0;
     // The p10 pessimism is a Solcast property (percentile spread); the satellite has none.
     const useP10 = !satUsed && !unbiased && scP50 > 0 && scP10 > 0 && scP50 > omW * 1.10;
     const scAvg = satUsed ? satW : (useP10 ? scP10 : scP50);
     // Gated on satUsed, not on satActive: without a usable satellite value there is nothing to
     // override with, so the flag is inert everywhere the nowcast is absent or stale.
-    const fullSat = satUsed && satOverride;
-    const w_om = fullSat ? 0 : (unbiased ? 0.5 : wOM);
-    const w_sc = fullSat ? 1 : (unbiased ? 0.5 : wSC);
-    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10, satUsed, fullSat };
+    // satRamp interpolates the override strength (1 = full override, 0 = inert) instead of a
+    // binary jump — the caller feeds a lead/freshness-based ramp; default 1 keeps every existing
+    // caller that passes satOverride:true without a ramp at full strength, unchanged.
+    const rampEff = satUsed && satOverride ? satRamp : 0;
+    const fullSat = rampEff >= 1;
+    const baseWsc = unbiased ? 0.5 : wSC;
+    const w_sc = baseWsc + rampEff * (1 - baseWsc);
+    const w_om = 1 - w_sc;
+    return { blendedW: Math.round(w_om * omW + w_sc * scAvg), scAvg, useP10, satUsed, fullSat, satRamp: rampEff };
   }
 
   /**

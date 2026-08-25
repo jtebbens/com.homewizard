@@ -90,15 +90,18 @@ fc.assert(fc.property(omArb, scArb, scArb, satArb, wOMArb, fc.boolean(), fc.bool
   }));
 passed++;
 
-// 5. Direction. The override moves the slot toward the satellite and never past it: strictly
-//    higher than the 50/50 blend where sat > OM, strictly lower where sat < OM, equal on a tie.
+// 5. Direction. The override moves the slot toward the satellite and never past it: at least as
+//    high as the 50/50 blend where sat > OM, at most where sat < OM, equal on a tie. Non-strict
+//    because integer rounding of the 50/50 average can coincide with satW itself at some
+//    omW/satW pairs (e.g. omW=10, satW=11 rounds to 11) — that's a rounding tie, not a direction
+//    miss, so strict inequality is the wrong bar here.
 //    Pins that the flag works the way the 7-day measurement points, not the opposite way.
 fc.assert(fc.property(omArb, satArb, (omW, satW) => {
   const base = { omW, wOM: 0.5, wSC: 0.5, unbiased: true, satW, satActive: true };
   const ovr = blend({ ...base, satOverride: true }).blendedW;
   const bl  = blend(base).blendedW;
-  if (satW > omW) return ovr > bl && ovr === satW;
-  if (satW < omW) return ovr < bl && ovr === satW;
+  if (satW > omW) return ovr >= bl && ovr === satW;
+  if (satW < omW) return ovr <= bl && ovr === satW;
   return ovr === bl;
 }));
 passed++;
@@ -130,4 +133,29 @@ passed++;
 }
 passed++;
 
-console.log(`✅ pv-sat-full-override: ${passed}/9 properties hold`);
+// 9. satRamp interpolates: for ramp in [0,1], blendedW lies between the ramp=0 (base weight)
+//    and ramp=1 (full override) outcomes — the lead/freshness ramp from device.js must not
+//    overshoot either endpoint.
+fc.assert(fc.property(omArb, satArb, wOMArb, fc.double({ min: 0, max: 1, noNaN: true }), fc.boolean(),
+  (omW, satW, wOM, satRamp, unbiased) => {
+    const base = { omW, wOM, wSC: 1 - wOM, unbiased, satW, satActive: true, satOverride: true };
+    const at0 = blend({ ...base, satRamp: 0 }).blendedW;
+    const at1 = blend({ ...base, satRamp: 1 }).blendedW;
+    const mid = blend({ ...base, satRamp }).blendedW;
+    const lo = Math.min(at0, at1) - 1; // rounding slack
+    const hi = Math.max(at0, at1) + 1;
+    return mid >= lo && mid <= hi;
+  }));
+passed++;
+
+// 10. satRamp: 0 with satOverride: true is bit-identical to satOverride: false — a ramp that
+//     has decayed to zero must be exactly as inert as the flag being off.
+fc.assert(fc.property(omArb, scArb, scArb, satArb, wOMArb, fc.boolean(),
+  (omW, scP50, scP10, satW, wOM, unbiased) => {
+    const zero = blend({ omW, scP50, scP10, wOM, wSC: 1 - wOM, unbiased, satW, satActive: true, satOverride: true, satRamp: 0 });
+    const off  = blend({ omW, scP50, scP10, wOM, wSC: 1 - wOM, unbiased, satW, satActive: true, satOverride: false });
+    return zero.blendedW === off.blendedW && zero.fullSat === false && off.fullSat === false;
+  }));
+passed++;
+
+console.log(`✅ pv-sat-full-override: ${passed}/11 properties hold`);
