@@ -4357,6 +4357,39 @@ if (debug) this.log(
       }
     }
 
+    // Shadow-curtailment (log-only, chunk 6 sub-chunk 2, project_pv_limit_cap). Internal toggle
+    // only (not in app.json compose, same pattern as `shadow_2027_enabled` above) — re-runs the DP
+    // with `pv_curtailment_enabled`, which floors every forgone-export term at 0 because throttling
+    // the inverter dodges a negative export price for free. Runs on a SEPARATE engine so the live
+    // schedule stays untouched. Logs on every run, including when the floor cannot bind: a silent
+    // instrument is indistinguishable from a dead one.
+    if (this.homey.settings.get('shadow_curtailment_enabled')) {
+      try {
+        const _tm    = this.getSetting('tariff_model') || 'saldering';
+        const _ratio = this.getSetting('export_price_ratio') ?? 1.0;
+        const _exportVals  = prices.map(p => exportValue(p, _tm, _ratio));
+        const _minExport   = Math.min(...(_exportVals.length ? _exportVals : [0]));
+        // Input coverage: how many slots the floor could touch at all. Zero means the run
+        // proves the instrument is alive and nothing else.
+        const _negSlots    = _exportVals.filter(v => v < 0).length;
+        if (_negSlots === 0) {
+          this.log(`🔬 shadow-curtail: skipped (minExport=€${_minExport.toFixed(3)}, neg=0/${_exportVals.length}) — floor cannot bind`);
+        } else {
+          if (!this._shadowCurtailEngine) {
+            this._shadowCurtailEngine = new OptimizationEngine({ ...this.getSettings(), pv_curtailment_enabled: true });
+          }
+          this._shadowCurtailEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
+          const d = this._shadow2027DivergenceMetrics(
+            this.optimizationEngine._schedule?.slots, this._shadowCurtailEngine._schedule?.slots, prices);
+          if (d) {
+            this.log(`🔬 shadow-curtail: divergent=${d.divergentCount}/${d.total} slots neg=${_negSlots}/${_exportVals.length} minExport=€${_minExport.toFixed(3)}${d.example ? ` e.g. t=${d.example.time} price=${d.example.price.toFixed(3)} exp=${d.example.exportPrice?.toFixed(3)} live=${d.example.liveAction} shadow=${d.example.shadowAction}` : ''}`);
+          }
+        }
+      } catch (err) {
+        this.error('shadow-curtailment failed', err);
+      }
+    }
+
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-shadow');
 
     // Near-floor chatter catcher (log-only, project_soc_near_floor_chatter_0723). When SoC sits just
