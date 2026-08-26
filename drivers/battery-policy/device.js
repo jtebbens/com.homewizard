@@ -3644,15 +3644,48 @@ if (debug) this.log(
         : todayAvgCloud;
       _pvBiasCloud = effectiveCloud;
       const todayKt   = this.weatherForecaster?.getTodayKt() ?? null;
+      // Satellite clearness index as a stand-in while KNMI's kt does not exist yet (it needs 4
+      // daylight hours, so it arrives ~08:06-09:43Z). Measured over 33 days: 108 runs on 5 days
+      // sat in the overcast bucket on days whose kt never went below 0.30 — see
+      // project_daily_bias_overcast_bucket_halves_blend_0817 §6. The shadow line below fires
+      // regardless of the setting; only the classifier input is gated.
+      const satKtInfo   = this.weatherForecaster?.getTodaySatKtInfo?.()
+        ?? { kt: null, n: 0, raw: 0, mapN: 0, coords: false };
+      const satKtEnabled = this.getSetting('pv_sat_kt_substitute') === true;
+      const classifierKt = BatteryPolicyDevice._resolveClassifierKt(todayKt, satKtInfo.kt, satKtEnabled);
       const dailyBias = this.getSetting('pv_weathertype_bias') === false
         ? 1.0
-        : this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
+        : this.learningEngine.getDailyPvBiasFactor(effectiveCloud, classifierKt);
       let cappedDailyBias = dailyBias;
       if (dailyBias > 1.0 && effectiveCloud != null && effectiveCloud > 75) {
         const cloudFrac = Math.min(1, (effectiveCloud - 75) / 25);
         cappedDailyBias = Math.max(1.0, 1.0 + (dailyBias - 1.0) * (1 - cloudFrac));
       }
       _pvDailyBiasFactor = cappedDailyBias;
+
+      // Shadow: how often, and how hard, does the OM-cloud fallback disagree with an observed sky?
+      // Fires on the policy-run cadence whenever there is anything to say — a satellite verdict, or
+      // a KNMI kt without one (which is what an emptied accumulator after a restart looks like).
+      // Silent at night, when both are absent. Cadence-alive is the point: a line that only fires
+      // when it has news cannot be told apart from a dead one (feedback_verify_instrument_cadence).
+      //
+      // Gated on `raw`, not on `n`: `raw` is counted BEFORE the elevation gate, which needs the
+      // coordinates the weather fetch caches. Gating on `n` made a coord-less process silent
+      // during exactly the morning window this line exists to observe (2026-08-26: four runs
+      // logged n=0 with no way to tell "no coords" from "no buckets"), so the three causes now
+      // travel on the line: map=held buckets, raw=today's past daylight buckets, coords.
+      if (satKtInfo.raw > 0 || todayKt != null) {
+        // Both bucket factors, always — not a delta against whatever is live. With the setting on
+        // the live factor IS the sat one, so a single arrow would collapse to "no change" and hide
+        // exactly the disagreement this line exists to count.
+        const fOm  = this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt);
+        const fSat = this.learningEngine.getDailyPvBiasFactor(effectiveCloud, todayKt ?? satKtInfo.kt);
+        this.log(`[PV daily bias][SAT kt] satKt=${satKtInfo.kt != null ? satKtInfo.kt.toFixed(2) : 'null'} n=${satKtInfo.n}`
+          + ` knmiKt=${todayKt != null ? todayKt.toFixed(2) : 'null'}`
+          + ` cloud=${effectiveCloud != null ? Math.round(effectiveCloud) : 'null'}%`
+          + ` raw=${satKtInfo.raw} map=${satKtInfo.mapN} coords=${satKtInfo.coords}`
+          + ` bucket om=${fOm.toFixed(3)} sat=${fSat.toFixed(3)} applied=${satKtEnabled}`);
+      }
 
       // Satellite exemption — KEPT OFF, THE REASONING DID NOT SURVIVE REVIEW. Do not switch this
       // on without redoing the argument. It was built on "the sky is observed, so a weather-type
@@ -5179,6 +5212,27 @@ if (debug) this.log(
    * @param {number|null} oktaFrac - measured cloud cover 0-1, or null
    * @returns {boolean}
    */
+  /**
+   * Which clearness index classifies today's weather type for the daily-bias bucket.
+   *
+   * KNMI's measured kt always wins — the satellite value is an estimate and only fills the gap
+   * before KNMI has its 4 daylight hours (~08:06-09:43Z). Returning null keeps the existing
+   * OM-cloud fallback in `getDailyPvBiasFactor`, so with the setting off behaviour is unchanged.
+   *
+   * Deliberately NOT folded into `WeatherForecaster.getTodayKt()`: two other consumers read that
+   * getter (`_pvCloudUncertaintyFactor`, `_knmiAwareCloudGate`) and moving all three at once would
+   * make any change in forecast MAE unattributable.
+   *
+   * @param {number|null} knmiKt
+   * @param {number|null} satKt
+   * @param {boolean} enabled - the `pv_sat_kt_substitute` setting
+   * @returns {number|null}
+   */
+  static _resolveClassifierKt(knmiKt, satKt, enabled) {
+    if (knmiKt != null) return knmiKt;
+    return enabled ? (satKt ?? null) : null;
+  }
+
   static _groundClear(knmiKt, oktaFrac = null) {
     if (knmiKt != null && knmiKt >= 0.65) return true;
     return oktaFrac != null && oktaFrac <= BatteryPolicyDevice.OKTA_CLEAR_MAX;

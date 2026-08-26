@@ -493,6 +493,16 @@
         "value": false
       },
       {
+        "id": "pv_sat_kt_substitute",
+        "type": "checkbox",
+        "label": { "en": "Use satellite clearness to classify the morning (experimental)", "nl": "Gebruik satelliet-helderheid om de ochtend in te delen (experimenteel)" },
+        "hint": {
+          "en": "⚠️ Experimental — changes what the optimizer plans on. The daily weather-type bias picks one factor for the whole day, and until KNMI clearness arrives (~08:00-09:45 UTC) it classifies on Open-Meteo cloud cover alone. Measured over 33 days: 108 runs across 5 days were called overcast on days whose measured clearness never dropped that low, including two clearly sunny ones. With this on, the satellite's own clearness — same formula, from its observed radiation — classifies the day until KNMI's measurement takes over, which it always outranks. Needs about two hours of satellite data first, so roughly 07:45 UTC in summer. Off by default; the log line reports what it would change while it is off.",
+          "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. De dagelijkse weertype-bijstelling kiest één factor voor de hele dag, en tot de KNMI-helderheid binnen is (~08:00-09:45 UTC) doet hij dat alleen op Open-Meteo-bewolking. Gemeten over 33 dagen: 108 runs op 5 dagen werden zwaar bewolkt genoemd op dagen waarvan de gemeten helderheid nooit zo laag kwam, waaronder twee uitgesproken zonnige. Met deze optie aan deelt de helderheid van de satelliet zelf — zelfde formule, uit zijn waargenomen straling — de dag in totdat de KNMI-meting het overneemt, die altijd voorgaat. Vergt eerst ongeveer twee uur satellietdata, dus ruwweg 07:45 UTC in de zomer. Standaard uit; de logregel meldt wat het zou veranderen terwijl het uit staat."
+        },
+        "value": false
+      },
+      {
         "id": "solcast_resource_id",
         "type": "text",
         "label": { "en": "Solcast Resource ID", "nl": "Solcast Resource ID" },
