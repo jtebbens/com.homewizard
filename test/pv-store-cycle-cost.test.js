@@ -58,6 +58,7 @@ function runFlags({ currentPrice, maxFuture, slotMeta = undefined, settings = {}
     settings: { max_soc: 95, cycle_cost_per_kwh: CYCLE, ...settings },
     BATTERY_EFFICIENCY: 0.72,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
+    _disposalValue: PolicyEngine.prototype._disposalValue,
     log: () => {},
   };
   // One future slot at the peak price, one cheap-but-not-negative slot so the

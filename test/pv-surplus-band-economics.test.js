@@ -62,6 +62,7 @@ function runFlags({ maxFuture = 0.387, currentPrice = 0.280, p1 = null, soc = 3 
     settings: { max_soc: 95, cycle_cost_per_kwh: CYCLE, tariff_model: 'saldering' },
     BATTERY_EFFICIENCY: RTE,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
+    _disposalValue: PolicyEngine.prototype._disposalValue,
     log: () => {},
   };
   const inputs = {
