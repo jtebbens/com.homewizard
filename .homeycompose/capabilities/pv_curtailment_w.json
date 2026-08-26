@@ -1,0 +1,21 @@
+{
+  "type": "number",
+  "title": {
+    "en": "PV Curtailment Target",
+    "nl": "PV Knijp-doel"
+  },
+  "desc": {
+    "en": "Maximum PV power worth producing this slot — house load plus battery charge demand",
+    "nl": "Maximaal zinvol PV-vermogen dit slot — huisverbruik plus laadvraag van de accu"
+  },
+  "units": {
+    "en": "W",
+    "nl": "W"
+  },
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": true,
+  "icon": "assets/icon.svg"
+}

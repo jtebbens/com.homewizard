@@ -85,6 +85,29 @@
       }
     },
     {
+      "id": "pv_curtailment_target",
+      "title": { "en": "PV curtailment target changed", "nl": "PV knijp-doel gewijzigd" },
+      "titleFormatted": { "en": "PV curtailment target changed", "nl": "PV knijp-doel gewijzigd" },
+      "hint": {
+        "en": "Triggers when exporting costs money and PV is worth throttling. Feed the watts token to your own inverter flow — the app never talks to the inverter itself.",
+        "nl": "Vuurt als teruglevering geld kost en het loont PV af te knijpen. Geef het watt-token door aan je eigen omvormer-flow — de app stuurt de omvormer nooit zelf aan."
+      },
+      "tokens": [
+        {
+          "name": "watts",
+          "type": "number",
+          "title": { "en": "Target power", "nl": "Doelvermogen" },
+          "example": 1600
+        },
+        {
+          "name": "reason",
+          "type": "string",
+          "title": { "en": "Reason", "nl": "Reden" },
+          "example": { "en": "export -0.03/kWh", "nl": "teruglevering -0,03/kWh" }
+        }
+      ]
+    },
+    {
       "id": "policy_override_set",
       "title": { "en": "Manual override activated" },
       "titleFormatted": { "en": "Manual override activated" },

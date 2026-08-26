@@ -29,7 +29,8 @@
     "policy_profit_eur",
     "pv_forecast_kwh",
     "bias_factor",
-    "plan_summary"
+    "plan_summary",
+    "pv_curtailment_w"
   ],
   "pair": [
     {

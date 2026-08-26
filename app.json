@@ -395,6 +395,51 @@
         ]
       },
       {
+        "id": "pv_curtailment_target",
+        "title": {
+          "en": "PV curtailment target changed",
+          "nl": "PV knijp-doel gewijzigd"
+        },
+        "titleFormatted": {
+          "en": "PV curtailment target changed",
+          "nl": "PV knijp-doel gewijzigd"
+        },
+        "hint": {
+          "en": "Triggers when exporting costs money and PV is worth throttling. Feed the watts token to your own inverter flow — the app never talks to the inverter itself.",
+          "nl": "Vuurt als teruglevering geld kost en het loont PV af te knijpen. Geef het watt-token door aan je eigen omvormer-flow — de app stuurt de omvormer nooit zelf aan."
+        },
+        "tokens": [
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Target power",
+              "nl": "Doelvermogen"
+            },
+            "example": 1600
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "title": {
+              "en": "Reason",
+              "nl": "Reden"
+            },
+            "example": {
+              "en": "export -0.03/kWh",
+              "nl": "teruglevering -0,03/kWh"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
         "id": "policy_override_set",
         "title": {
           "en": "Manual override activated"
@@ -4082,7 +4127,8 @@
         "policy_profit_eur",
         "pv_forecast_kwh",
         "bias_factor",
-        "plan_summary"
+        "plan_summary",
+        "pv_curtailment_w"
       ],
       "pair": [
         {
@@ -10067,6 +10113,27 @@
           }
         }
       ]
+    },
+    "pv_curtailment_w": {
+      "type": "number",
+      "title": {
+        "en": "PV Curtailment Target",
+        "nl": "PV Knijp-doel"
+      },
+      "desc": {
+        "en": "Maximum PV power worth producing this slot — house load plus battery charge demand",
+        "nl": "Maximaal zinvol PV-vermogen dit slot — huisverbruik plus laadvraag van de accu"
+      },
+      "units": {
+        "en": "W",
+        "nl": "W"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": true,
+      "icon": "assets/icon.svg"
     },
     "pv_forecast_kwh": {
       "type": "number",

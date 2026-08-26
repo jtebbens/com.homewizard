@@ -8,6 +8,7 @@ const LearningEngine = require('../../lib/learning-engine');
 const EfficiencyEstimator = require('../../lib/efficiency-estimator');
 const OptimizationEngine = require('../../lib/optimization-engine');
 const { exportValue } = require('../../lib/price-formulas');
+const { houseLoadW } = require('../../lib/curtailment');
 const ChartRenderer = require('../../lib/chart-renderer');
 const { sanitizeSoc, createState } = require('../../lib/soc-glitch-guard');
 const userdataStore = require('../../lib/userdata-store');
@@ -905,7 +906,10 @@ class BatteryPolicyDevice extends Homey.Device {
       policy_profit_eur: 0,
       pv_forecast_kwh: 0,
       bias_factor: 1,
-      plan_summary: '-'
+      plan_summary: '-',
+      // null, not 0: until the first policy run computes a target there is no
+      // "throttle to this" answer, and 0 would read as "throttle to nothing".
+      pv_curtailment_w: null
     };
 
     for (const [capability, defaultValue] of Object.entries(defaults)) {
@@ -1300,7 +1304,7 @@ if (debug) this.log(
           gridPower, batteryPower,
           sunScore: this.getCapabilityValue('sun_score') ?? 0,
         });
-        const houseConsumptionW = gridPower - batteryPower + pvW;
+        const houseConsumptionW = houseLoadW(pvW, gridPower, batteryPower);
         // Skip suspiciously-low readings caused by battery_power sensor lag:
         // when in discharge mode, battery_power can read 0W for 1–2 poll cycles while
         // still discharging, making consumption appear 0W and corrupting the learned EMA.
@@ -2566,9 +2570,12 @@ if (debug) this.log(
         batteryCount: Math.max(1, Math.round((inputs.battery?.totalCapacityKwh ?? 2.688) / 2.688)),
         pvLearnedSlots: this.learningEngine?.getSolarLearnedSlotCount() ?? 0,
         avgCost: inputs.batteryCost?.avgCost ?? 0,
+        curtailment: result.curtailment ?? null,
         lastUpdate: new Date().toISOString()
       };
       this._setLive('battery_policy_state', planningData);
+
+      await this._publishCurtailmentTarget(result.curtailment ?? null);
 
       // Push device settings to app settings so planning page can read them
       // (device settings are not accessible via Homey.get() in the settings page)
@@ -5913,6 +5920,51 @@ if (debug) this.log(
         reason: explanation?.summary ?? ''
       }).catch(this.error);
     }
+  }
+
+  /**
+   * Surface the curtailment target (chunk 6, sub-chunk 1 — plumbing only).
+   *
+   * The capability always shows the shadow target so the calculation can be
+   * checked on any sunny day. The flow trigger is the part that can actually
+   * make something happen, so it only fires when exporting is worth less than
+   * nothing — which the current (saldering) contract never produces. The app
+   * never drives the inverter itself: the user's own flow consumes the token,
+   * which keeps this hardware-agnostic (Steca buttons, Modbus, anything).
+   */
+  async _publishCurtailmentTarget(curtailment) {
+    const targetW = curtailment?.targetW ?? null;
+    if (targetW !== null && this.hasCapability('pv_curtailment_w')) {
+      const prev = this.getCapabilityValue('pv_curtailment_w');
+      // Throttled like the grid-power mirror above — the target jitters with every
+      // appliance, and Homey does not need a write per 15s poll.
+      if (prev == null || Math.abs(prev - targetW) >= 25) {
+        await this.setCapabilityValue('pv_curtailment_w', targetW).catch(this.error);
+      }
+    }
+
+    const active = curtailment?.shouldCurtail === true && targetW !== null;
+    if (!active) {
+      this._curtailmentActive = false;
+      return;
+    }
+    // Edge-guarded: fire on the transition into curtailment, and again only when
+    // the target actually moves, not on every run while it holds.
+    const moved = this._lastCurtailTargetW == null
+                  || Math.abs(this._lastCurtailTargetW - targetW) >= 25;
+    if (this._curtailmentActive && !moved) return;
+
+    this._curtailmentActive = true;
+    this._lastCurtailTargetW = targetW;
+    const ev = curtailment.exportValue;
+    const trigger = this.homey.flow.getDeviceTriggerCard('pv_curtailment_target');
+    if (trigger) {
+      await trigger.trigger(this, {
+        watts: targetW,
+        reason: `export ${ev != null ? ev.toFixed(3) : '?'}/kWh, house ${curtailment.houseLoadW}W`,
+      }).catch(this.error);
+    }
+    this.log(`[CURTAIL] target ${targetW}W (house ${curtailment.houseLoadW}W, export €${ev != null ? ev.toFixed(3) : '?'}/kWh) → trigger fired`);
   }
 
   async _triggerModeApplied(mode, confidence) {
