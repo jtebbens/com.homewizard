@@ -242,6 +242,17 @@
         "step": 0.01,
         "units": "€/kWh",
         "visible": { "when": "tariff_type", "is": "dynamic" }
+      },
+      {
+        "id": "pv_curtailment_enabled",
+        "type": "checkbox",
+        "label": { "en": "Inverter Can Be Curtailed", "nl": "Omvormer kan geknepen worden" },
+        "hint": {
+          "en": "Tick this ONLY if you have a Homey flow that throttles your inverter on the 'PV curtailment target changed' trigger card. It tells the optimizer that surplus solar which does not fit in the battery can be thrown away for free instead of exported. This changes the plan only in hours where the export price is NEGATIVE — then throttling beats paying the grid to take your kWh. Leave off without such a flow: the optimizer would plan on a disposal route your installation does not have.",
+          "nl": "Vink dit ALLEEN aan als u een Homey-flow heeft die uw omvormer knijpt op de triggerkaart 'PV-curtailment-doel gewijzigd'. Het vertelt de optimizer dat overschot-zon dat niet in de batterij past gratis weggegooid kan worden in plaats van teruggeleverd. Dit verandert het plan alleen in uren met een NEGATIEVE terugleverprijs — dan is knijpen beter dan het net betalen om uw kWh af te nemen. Laat uit zonder zo'n flow: de optimizer rekent dan op een afvoerroute die uw installatie niet heeft."
+        },
+        "value": false,
+        "visible": { "when": "tariff_type", "is": "dynamic" }
       }
     ]
   },
