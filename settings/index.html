@@ -1026,6 +1026,9 @@
           const maxPrice = prices.length ? Math.max(...prices) : null;
           const priceVariation = (maxPrice && minPrice) ? maxPrice - minPrice : 0;
 
+          const exportPrices = hourIntervals.filter(i => i.exportPrice != null).map(i => i.exportPrice);
+          const avgExportPrice = exportPrices.length ? exportPrices.reduce((a, b) => a + b) / exportPrices.length : null;
+
           const modes = hourIntervals.map(i => i.hwMode);
           const dominantMode = modes.sort((a, b) => modes.filter(m => m === a).length - modes.filter(m => m === b).length).pop();
 
@@ -1044,7 +1047,7 @@
             ? plannedConsumptions.reduce((s, v) => s + v, 0) / plannedConsumptions.length : null;
 
           hourly.push({
-            day, hour: h, intervals: hourIntervals, avgPrice, minPrice, maxPrice, priceVariation,
+            day, hour: h, intervals: hourIntervals, avgPrice, avgExportPrice, minPrice, maxPrice, priceVariation,
             hasVariation: priceVariation > 0.02, dominantMode, avgPlannedSoc, avgPlannedConsumptionW,
             avgSoc: hourIntervals.reduce((sum, i) => sum + i.soc, 0) / hourIntervals.length,
             avgPvW: hourIntervals.reduce((sum, i) => sum + (i.pvW ?? 0), 0) / hourIntervals.length,
@@ -1087,9 +1090,12 @@
       `;
 
       intervals.forEach(interval => {
-        const { minute, price, hwMode, soc, priceKnown, reason } = interval;
+        const { minute, price, exportPrice, hwMode, soc, priceKnown, reason } = interval;
         const hwDef = HW_MODES[hwMode] || HW_MODES.standby;
         const priceDisplay = priceKnown ? `€${price.toFixed(3)}` : '?';
+        const exportDiverges = priceKnown && exportPrice != null && Math.abs(exportPrice - price) > 0.001;
+        const exportDisplay = exportDiverges
+          ? ` <span style="color:${exportPrice < 0 ? '#f87171' : 'var(--muted)'};">/ E €${exportPrice.toFixed(3)}</span>` : '';
         const timeLabel = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
         const reasonHtml = reason ? `<div style="grid-column:1/-1;font-size:11px;color:var(--dim);padding:0 4px 4px;font-style:italic;">${formatReason(reason, lang)}</div>` : '';
 
@@ -1098,7 +1104,7 @@
             <div class="interval-time">${timeLabel}</div>
             <div class="interval-icon">${hwDef.icon}</div>
             <div class="interval-mode">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
-            <div class="interval-price">${priceDisplay}</div>
+            <div class="interval-price">${priceDisplay}${exportDisplay}</div>
             <div class="interval-soc">SoC: ${soc.toFixed(0)}%</div>
             ${reasonHtml}
           </div>
@@ -2365,6 +2371,7 @@
             interval.policyMode = slot.action;   // 'charge' | 'discharge' | 'preserve'
             interval.soc        = slot.socProjected ?? currentSOC;
             interval.pvW          = slot.pvW          ?? 0;
+            interval.exportPrice  = slot.exportPrice  ?? null;
             interval.consumptionW = slot.consumptionW ?? null;
             interval.sampleCount  = slot.sampleCount  ?? null;
             interval.reason       = slot.reason       ?? null;
@@ -2456,7 +2463,7 @@
 
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
-        const { hour, avgPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgPlannedSoc, avgPlannedConsumptionW, avgConsumptionW, minSampleCount, day } = hourGroup;
+        const { hour, avgPrice, avgExportPrice, dominantMode, hasVariation, priceVariation, avgSoc, avgPlannedSoc, avgPlannedConsumptionW, avgConsumptionW, minSampleCount, day } = hourGroup;
         // Mirror renderPvCurve: prefer learned forecast, fall back to radiation estimate.
         const displayPvW = pvEnabled
           ? (pvForecastByDay[day]?.[hour] != null
@@ -2465,6 +2472,8 @@
           : 0;
         const hwDef = HW_MODES[dominantMode] || HW_MODES.standby;
         const priceDisplay = avgPrice !== null ? `€${avgPrice.toFixed(3)}` : '?';
+        const exportDiverges = avgPrice !== null && avgExportPrice !== null && Math.abs(avgExportPrice - avgPrice) > 0.001;
+        const exportDisplay = exportDiverges ? `€${avgExportPrice.toFixed(3)}` : null;
 
         let dayMarker = '';
         if (hour === 0) {
@@ -2635,7 +2644,8 @@
             ${opportunisticBadge}
             ${weatherBadge}
             <div class="planning-hour-time">${String(hour).padStart(2, '0')}:00</div>
-            <div class="planning-hour-price">${priceDisplay}</div>
+            <div class="planning-hour-price">${exportDisplay !== null ? `I ${priceDisplay}` : priceDisplay}</div>
+            ${exportDisplay !== null ? `<div class="planning-hour-price" style="font-size:11px;color:${avgExportPrice < 0 ? '#f87171' : 'var(--muted)'};">E ${exportDisplay}</div>` : ''}
             ${hasVariation ? `<div class="price-variation">⚠️ ±€${priceVariation.toFixed(3)}</div>` : ''}
             <div class="planning-hour-mode">${hwDef.icon}</div>
             <div class="planning-hour-mode-text">${lang === 'nl' ? hwDef.nl : hwDef.en}</div>
