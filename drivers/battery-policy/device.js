@@ -518,6 +518,51 @@ class BatteryPolicyDevice extends Homey.Device {
     return file;
   }
 
+  // PV-forecast sanity check (shadow-log only, project_dp_input_check_gaps_0815 point (c)):
+  // unlike the price feed (optimization-engine.js:280, whole horizon rejected on one bad value),
+  // pvForecast reaches compute() with zero value checks. Log-only for now -- no reject behaviour.
+  // "Daylight slot" reuses the sunrise/sunset window weather-forecaster.js already computes
+  // (todaySunrise/todaySunset/tomorrowSunrise/tomorrowSunset) rather than a fresh sun calc.
+  _pvForecastSanityCheck(pvForecast, pvCapacityW, weather, prices) {
+    if (!Array.isArray(pvForecast) || pvForecast.length === 0 || !prices?.length) return;
+
+    const ageMin = weather?.fetchedAt ? Math.round((Date.now() - weather.fetchedAt) / 60000) : null;
+
+    const sunWindows = [
+      (weather?.todaySunrise && weather?.todaySunset) ? [weather.todaySunrise.getTime(), weather.todaySunset.getTime()] : null,
+      (weather?.tomorrowSunrise && weather?.tomorrowSunset) ? [weather.tomorrowSunrise.getTime(), weather.tomorrowSunset.getTime()] : null,
+    ].filter(Boolean);
+    if (sunWindows.length === 0) return; // no sun data to judge daylight against
+    const isDaylight = ms => sunWindows.some(([a, b]) => ms > a && ms < b);
+
+    // pvForecast carries one entry per UTC hour; bucket by hour to check which daylight
+    // hours in the horizon actually have a forecast entry (vs. interpolated/extrapolated).
+    const pvHours = new Set(pvForecast.map(s => Math.floor(new Date(s.timestamp).getTime() / 3_600_000)));
+    const pvIdx = this.optimizationEngine._buildPvIndex(pvForecast);
+
+    let daylightSlots = 0, realSlots = 0, maxPvW = 0, daylightAllZero = true;
+    for (const p of prices) {
+      const ms = new Date(p.timestamp).getTime();
+      if (!isDaylight(ms)) continue;
+      daylightSlots++;
+      if (pvHours.has(Math.floor(ms / 3_600_000))) realSlots++;
+      const pvW = this.optimizationEngine._getPvForSlot(pvIdx, ms);
+      if (pvW > 0) daylightAllZero = false;
+      if (pvW > maxPvW) maxPvW = pvW;
+    }
+    if (daylightSlots === 0) return; // horizon fully outside daylight (e.g. deep-night run)
+
+    const flags = [];
+    if (ageMin != null && ageMin > 180) flags.push(`STALE age=${ageMin}min`);
+    if (realSlots < daylightSlots) flags.push(`COVERAGE ${realSlots}/${daylightSlots} daylight slots`);
+    if (pvCapacityW > 0 && maxPvW > pvCapacityW * 1.2) flags.push(`IMPLAUSIBLE maxPvW=${maxPvW}>1.2×cap(${pvCapacityW})`);
+    if (daylightAllZero) flags.push(`ALL-ZERO ${daylightSlots} daylight slots`);
+
+    if (flags.length > 0) {
+      this.log(`⚠️ [PV sanity] ${flags.join(', ')} | age=${ageMin ?? 'n/a'}min cov=${realSlots}/${daylightSlots} maxW=${maxPvW} cap=${pvCapacityW}`);
+    }
+  }
+
   // ---- decision trace: one JSONL line per policy run on /userdata (see DP_TRACE_* above) ----
 
   // Builds the record from state the run already produced: the four t=0 action values the DP
@@ -4313,6 +4358,8 @@ if (debug) this.log(
       if (_file) this.log(`[DP-INPUT-DUMP] wrote ${_file} (${_dumpsLeft - 1} left)`);
       this.homey.settings.set('dp_input_dump', _dumpsLeft - 1);
     }
+
+    this._pvForecastSanityCheck(pvForecast, pvCapacityW, inputs.weather, prices);
 
     this.homey.app.logMem?.('[BatteryPolicy] opt:before-dp');
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
