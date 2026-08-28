@@ -440,6 +440,28 @@
         ]
       },
       {
+        "id": "pv_curtailment_released",
+        "title": {
+          "en": "PV curtailment released",
+          "nl": "PV knijp-doel losgelaten"
+        },
+        "titleFormatted": {
+          "en": "PV curtailment released",
+          "nl": "PV knijp-doel losgelaten"
+        },
+        "hint": {
+          "en": "Triggers when the app stops asking for curtailment, so your inverter flow can lift any ceiling it set.",
+          "nl": "Vuurt zodra de app niet langer om knijpen vraagt, zodat je omvormer-flow een eventueel plafond weer kan opheffen."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=battery-policy"
+          }
+        ]
+      },
+      {
         "id": "policy_override_set",
         "title": {
           "en": "Manual override activated"

@@ -5978,7 +5978,14 @@ if (debug) this.log(
 
     const active = curtailment?.shouldCurtail === true && targetW !== null;
     if (!active) {
-      this._curtailmentActive = false;
+      if (this._curtailmentActive) {
+        this._curtailmentActive = false;
+        const releaseTrigger = this.homey.flow.getDeviceTriggerCard('pv_curtailment_released');
+        if (releaseTrigger) {
+          await releaseTrigger.trigger(this, {}).catch(this.error);
+        }
+        this.log('[CURTAIL] released → trigger fired');
+      }
       return;
     }
     // Edge-guarded: fire on the transition into curtailment, and again only when
