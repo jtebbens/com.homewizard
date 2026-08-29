@@ -66,8 +66,9 @@ const { computeCurtailmentTarget } = require('../lib/curtailment');
     pvW: 2000, gridPowerW: -1200, battPowerW: 0,
     hwMode: 'standby', maxChargePowerW: 800,
     price: 0.25, exportPrice: -0.03, tariffModel: 'asymmetric_2027',
+    canCurtail: true,
   });
-  assert.strictEqual(negative.shouldCurtail, true, 'Negative export value must curtail');
+  assert.strictEqual(negative.shouldCurtail, true, 'Negative export value must curtail when enabled');
   assert.ok(Math.abs(negative.exportValue - (-0.03)) < 1e-9,
     `Export value must be the per-slot one: got ${negative.exportValue}`);
   console.log('Test D (per-slot negative export triggers): PASSED');
@@ -113,6 +114,31 @@ const { computeCurtailmentTarget } = require('../lib/curtailment');
   assert.strictEqual(r.targetW, null, `Missing readings must yield null: got ${r.targetW}`);
   assert.strictEqual(r.shouldCurtail, false, 'Missing readings must never curtail');
   console.log('Test G (missing readings degrade to null): PASSED');
+}
+
+// ── Test H: pv_curtailment_enabled off must gate the trigger, not just the DP ──
+// The flow trigger is the part that can actually make something happen (the
+// user's own inverter flow acts on it). Without canCurtail the setting is
+// off — the user never confirmed a flow exists — so shouldCurtail must stay
+// false even when the export price is negative. targetW keeps being computed
+// so the capability still shows the shadow value for diagnosis.
+{
+  const off = computeCurtailmentTarget({
+    pvW: 2000, gridPowerW: -1200, battPowerW: 0,
+    hwMode: 'standby', maxChargePowerW: 800,
+    price: 0.25, exportPrice: -0.03, tariffModel: 'asymmetric_2027',
+  });
+  assert.strictEqual(off.shouldCurtail, false, 'canCurtail default (off) must never trigger');
+  assert.strictEqual(off.targetW, 800, 'targetW must still be computed for the shadow capability');
+
+  const offExplicit = computeCurtailmentTarget({
+    pvW: 2000, gridPowerW: -1200, battPowerW: 0,
+    hwMode: 'standby', maxChargePowerW: 800,
+    price: 0.25, exportPrice: -0.03, tariffModel: 'asymmetric_2027',
+    canCurtail: false,
+  });
+  assert.strictEqual(offExplicit.shouldCurtail, false, 'canCurtail: false must never trigger');
+  console.log('Test H (pv_curtailment_enabled off gates the trigger): PASSED');
 }
 
 console.log('pv-curtailment-target.test.js: all assertions passed');
