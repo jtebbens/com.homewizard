@@ -53,6 +53,10 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.19.1)
 
+### PV Curtailment Trigger No Longer Fires With the Setting Off (v3.19.1)
+
+* **Fixed the "PV curtailment target changed" flow trigger firing even when the "Enable PV curtailment" setting was left off.** That setting exists so the app only asks your inverter to throttle solar production if you actually have a flow set up to act on it — leave it off and the app is supposed to never send that request. But the trigger card only checked whether exporting had gone negative-value (worth less than nothing), not whether you had turned the setting on. Under standard net metering this never showed up, because export can't go negative there. It became visible once export pricing that can turn negative was in use: the trigger fired, and any flow already listening on it acted on a request the setting said was off. The capability that shows the calculated target still updates regardless of the setting — that part is just for checking the number — but the trigger itself now only fires when the setting is switched on.
+
 ### New Setting: Weigh a Weak Solar Surplus Against Exporting (v3.19.1, off by default)
 
 * **Added a setting that lets the planner decide what to do with a small solar surplus, instead of always exporting it.** When solar produces only a little more than the house uses — roughly under 400 W — the planner treats staying idle and holding the battery as the same thing and never asks whether storing that surplus would be worth more than sending it to the grid. The new "Weigh weak solar surplus against export" setting makes it ask. It ships **off**: while net metering applies, exported energy is credited at the full slot price, so exporting a weak surplus is worth more than storing it (storing loses round-trip efficiency and battery wear). The setting exists for when net metering ends and export is paid less than consumption, and for anyone who prefers to bank every kilowatt-hour. Turning it on does not change what the battery earns on a normal sunny day: strong-sun behaviour is untouched.
