@@ -157,7 +157,7 @@ function getWifiQuality(strength) {
 async function applyMeasurementCapabilities(device, m) {
   try {
     const now = Date.now();
-    
+
     // ✅ CPU FIX: Categorize capabilities by update frequency
     // High-frequency (realtime) capabilities: update on every message (but already throttled at WS level to 3s)
     const realtimeCapabilities = {
@@ -194,6 +194,7 @@ async function applyMeasurementCapabilities(device, m) {
     // Very low-frequency capabilities: update every 60 seconds
     const veryLowFreqCapabilities = {
       'long_power_fail_count': m.long_power_fail_count,
+      'any_power_fail_count': m.any_power_fail_count,
       'voltage_sag_l1': m.voltage_sag_l1_count,
       'voltage_sag_l2': m.voltage_sag_l2_count,
       'voltage_sag_l3': m.voltage_sag_l3_count,
@@ -3022,3 +3023,4 @@ async _setCapabilityValue(capability, value) {
 };
 
 module.exports.evaluateStallProgress = evaluateStallProgress;
+module.exports.applyMeasurementCapabilities = applyMeasurementCapabilities;

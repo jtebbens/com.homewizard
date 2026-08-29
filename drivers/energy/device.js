@@ -948,11 +948,16 @@ async _processGasDelta(data, tasks, settings, nowLocal) {
     if (data.long_power_fail_count !== undefined &&
         this._hasChanged('long_power_fail_count', data.long_power_fail_count)) {
       tasks.push(updateCapability(this, 'long_power_fail_count', data.long_power_fail_count));
-      
+
       // Trigger flow card for long power failure
       this.homey.flow.getDeviceTriggerCard('long_power_fail_detected_v1')
         .trigger(this, { count: data.long_power_fail_count })
         .catch(this.error);
+    }
+
+    if (data.any_power_fail_count !== undefined &&
+        this._hasChanged('any_power_fail_count', data.any_power_fail_count)) {
+      tasks.push(updateCapability(this, 'any_power_fail_count', data.any_power_fail_count));
     }
 
     if (data.voltage_sag_l1_count !== undefined &&

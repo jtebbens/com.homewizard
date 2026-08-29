@@ -53,6 +53,7 @@
     "measure_power.average_power_15m_w",
     "tariff",
     "long_power_fail_count",
+    "any_power_fail_count",
     "voltage_sag_l1",
     "voltage_sag_l2",
     "voltage_sag_l3",

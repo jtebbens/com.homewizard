@@ -1,0 +1,19 @@
+{
+  "type": "number",
+  "title": {
+    "en": "Power failures (all)",
+    "nl": "Stroomstoringen (alle)",
+    "de": "Stromausfälle (alle)",
+    "da": "Strømudfald (alle)",
+    "fr": "Pannes de courant (toutes)",
+    "sv": "Strömavbrott (alla)",
+    "no": "Strømfeil (alle)",
+    "fi": "Sähkökatkot (kaikki)",
+    "hu": "Áramkimaradások (összes)"
+  },
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "insights": false,
+  "icon": "assets/power_fail.svg"
+}
