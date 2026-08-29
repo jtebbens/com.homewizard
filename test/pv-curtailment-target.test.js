@@ -141,4 +141,71 @@ const { computeCurtailmentTarget } = require('../lib/curtailment');
   console.log('Test H (pv_curtailment_enabled off gates the trigger): PASSED');
 }
 
+// ── Test I: a negative IMPORT price throttles the inverter all the way to 0W ──
+// Below zero the grid pays per kWh drawn, so PV that serves the house costs the
+// user that payment. Zero on the meter is no longer the optimum: the optimum is
+// maximum import, which means no PV at all. The target must jump from
+// house+charge straight to 0 — a genuine kink, not a slide.
+{
+  const r = computeCurtailmentTarget({
+    pvW: 2000, gridPowerW: -1200, battPowerW: 0,
+    hwMode: 'to_full', maxChargePowerW: 800,
+    price: -0.021, exportPrice: -0.021, tariffModel: 'asymmetric_2027',
+    canCurtail: true,
+  });
+  assert.strictEqual(r.targetW, 0, `Negative import price must target 0W: got ${r.targetW}`);
+  assert.strictEqual(r.shouldCurtail, true, 'Negative import price must curtail when enabled');
+  assert.strictEqual(r.fullCurtail, true, 'fullCurtail must flag the inverter-off case');
+  console.log('Test I (negative import price targets 0W): PASSED');
+}
+
+// ── Test J: the 0W answer does not depend on any live P1 reading ──
+// house load and charge room drop out of the formula entirely at a negative
+// import price, so a dropped sensor must not fall back to "unknown" here — that
+// would silently restore full production during the very slot it costs money.
+{
+  const r = computeCurtailmentTarget({
+    pvW: null, gridPowerW: null, battPowerW: null,
+    hwMode: 'to_full', maxChargePowerW: 800,
+    price: -0.021, exportPrice: -0.021, tariffModel: 'asymmetric_2027',
+    canCurtail: true,
+  });
+  assert.strictEqual(r.targetW, 0, `Missing readings must still target 0W: got ${r.targetW}`);
+  assert.strictEqual(r.shouldCurtail, true, 'Missing readings must not block the 0W case');
+  console.log('Test J (0W target survives missing readings): PASSED');
+}
+
+// ── Test K: the 0W case is tariff-model independent ──
+// Under saldering exportValue() returns the import price, so a negative import
+// price is negative on both sides of the meter. Curtailing to 0W and importing
+// everything wins there too — Test E only pins that a negative EXPORT price
+// alone is ignored under saldering.
+{
+  const r = computeCurtailmentTarget({
+    pvW: 2000, gridPowerW: -1200, battPowerW: 0,
+    hwMode: 'to_full', maxChargePowerW: 800,
+    price: -0.021, exportPrice: 0.14, tariffModel: 'saldering',
+    canCurtail: true,
+  });
+  assert.strictEqual(r.targetW, 0, `Saldering must also target 0W: got ${r.targetW}`);
+  assert.strictEqual(r.shouldCurtail, true, 'Saldering with a negative import price must curtail');
+  console.log('Test K (0W case is tariff-model independent): PASSED');
+}
+
+// ── Test L: with the setting off the 0W target is still shown, never triggered ──
+// Same split as Test H: targetW is the shadow value the capability displays, so
+// it must show the honest answer; shouldCurtail is the part that can act, and
+// stays false because the user never confirmed an inverter flow exists.
+{
+  const r = computeCurtailmentTarget({
+    pvW: 2000, gridPowerW: -1200, battPowerW: 0,
+    hwMode: 'to_full', maxChargePowerW: 800,
+    price: -0.021, exportPrice: -0.021, tariffModel: 'asymmetric_2027',
+    canCurtail: false,
+  });
+  assert.strictEqual(r.targetW, 0, `Shadow target must still be 0W: got ${r.targetW}`);
+  assert.strictEqual(r.shouldCurtail, false, 'canCurtail: false must never trigger');
+  console.log('Test L (0W shadow target with the setting off): PASSED');
+}
+
 console.log('pv-curtailment-target.test.js: all assertions passed');

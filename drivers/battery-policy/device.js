@@ -6044,14 +6044,16 @@ if (debug) this.log(
     this._curtailmentActive = true;
     this._lastCurtailTargetW = targetW;
     const ev = curtailment.exportValue;
+    // The inverter-off case has no house-load term — the target is 0W whatever the
+    // house draws — so it needs its own wording instead of "house nullW".
+    const reason = curtailment.fullCurtail === true
+      ? `import €${curtailment.importPrice.toFixed(3)}/kWh negative → inverter off`
+      : `export ${ev != null ? ev.toFixed(3) : '?'}/kWh, house ${curtailment.houseLoadW}W`;
     const trigger = this.homey.flow.getDeviceTriggerCard('pv_curtailment_target');
     if (trigger) {
-      await trigger.trigger(this, {
-        watts: targetW,
-        reason: `export ${ev != null ? ev.toFixed(3) : '?'}/kWh, house ${curtailment.houseLoadW}W`,
-      }).catch(this.error);
+      await trigger.trigger(this, { watts: targetW, reason }).catch(this.error);
     }
-    this.log(`[CURTAIL] target ${targetW}W (house ${curtailment.houseLoadW}W, export €${ev != null ? ev.toFixed(3) : '?'}/kWh) → trigger fired`);
+    this.log(`[CURTAIL] target ${targetW}W (${reason}) → trigger fired`);
   }
 
   async _triggerModeApplied(mode, confidence) {

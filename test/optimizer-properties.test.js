@@ -4309,6 +4309,136 @@ testInvariant('56:cvar-floor-never-suppresses-priciest-slot', inv56Arb, inv56, 4
 log(`Reserve floored ${inv56Floored} slots (claim a); the dominance comparison at the price `
   + `maximum ran in ${inv56Judged} scenarios (claim b — 0 there would make that half decorative).\n`);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 57
+// "Never discharge into a negative import price"
+//
+// Below zero the grid pays per kWh drawn. Discharging replaces an import that would
+// have EARNED price × kwh, so it books a strict loss against preserve — which is
+// always available. This is the economic-dominance half of the inverter-off change
+// (lib/curtailment.js fullCurtailSlot): the runtime throttles PV to 0W and lets the
+// grid serve house and battery, and that only pays off if the DP is not
+// simultaneously emptying the battery into the same slot.
+//
+// It also guards the assumption recorded in the plan: policy-engine's discharge
+// branch has no price < 0 guard of its own (the charge and preserve branches do),
+// so nothing but the DP's own arithmetic keeps discharge out of these slots.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('\n## Invariant 57 — never-discharge-into-negative-import-price\n');
+
+let inv57NegSlots = 0;
+
+const inv57Arb = fc.tuple(
+  fc.double({ min: 0.70, max: 0.95, noNaN: true, noDefaultInfinity: true }), // rte
+  fc.double({ min: 1.5, max: 8.0, noNaN: true, noDefaultInfinity: true }),   // capacityKwh
+  fc.array(fc.double({ min: -0.20, max: 0.45, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 8, maxLength: 16 }),                                       // import prices
+  fc.integer({ min: 600, max: 2500 }),                                      // maxChargeW
+  fc.integer({ min: 150, max: 900 }),                                       // consumption W
+  fc.integer({ min: 5, max: 90 }),                                          // starting SoC %
+);
+
+const inv57 = ([rte, capacityKwh, hourly, maxChargeW, consW, currentSoc]) => {
+  const prices = makePriceSlots(hourly, 1);
+  const pvW = hourly.map((_, h) => (h % 2 === 0 ? consW + maxChargeW + 400 : 0));
+  const r = runCompute({
+    battery_efficiency: rte, min_soc: 0, max_soc: 100, cycle_cost_per_kwh: 0.05,
+    tariff_model: 'saldering', pv_curtailment_enabled: true,
+  }, {
+    capacityKwh, maxChargeW, maxDischargeW: 1200, currentSoc, prices,
+    pvForecast: makePvForecast(prices, pvW),
+    consumptionW: prices.map(() => consW),
+    minDischargePrice: 0, refillConfidence: 1.0,
+    pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!r._schedule) return true;
+
+  const slots = r._schedule.slots;
+  for (let t = 0; t < slots.length; t++) {
+    if (!(hourly[t] < 0)) continue;
+    inv57NegSlots++;
+    if (slots[t].action === 'discharge') return false;
+    // Labels are not the ledger — check the SoC path too (feedback_score_energy_from_soc_path).
+    const next = slots[t + 1]?.socProjected;
+    if (next != null && next < slots[t].socProjected - 0.05) return false;
+  }
+  return true;
+};
+
+testInvariant('57:never-discharge-into-negative-import-price', inv57Arb, inv57);
+log(`Judged ${inv57NegSlots} negative-price slots — 0 would make this invariant decorative.\n`);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 58
+// "pv_curtailment_enabled does exactly two things and nothing else"
+//
+// The flag has two channels: the disposal floor on export value (invariant 54) and,
+// new, zeroing pvW on slots the plan will throttle to 0W (optimization-engine.js
+// masks pvWPerSlot, the single feed for pvKwhFromT / pvSaturatesAhead / pvAbundant /
+// refillConfidence / pvWForDischarge). If those are the only channels, the flag ON
+// must produce the identical plan to the flag OFF fed the already-transformed inputs.
+//
+// A mask applied in one of the two pv arrays but not the other, or a downstream
+// aggregate reading the raw forecast around the mask, diverges here. Actions AND the
+// SoC path are compared.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('\n## Invariant 58 — curtailment-flag-equals-masked-pv-and-clamped-export\n');
+
+let inv58NegSlots = 0;
+
+const inv58Arb = fc.tuple(
+  fc.double({ min: 0.70, max: 0.95, noNaN: true, noDefaultInfinity: true }), // rte
+  fc.double({ min: 1.5, max: 8.0, noNaN: true, noDefaultInfinity: true }),   // capacityKwh
+  fc.array(fc.tuple(
+    fc.double({ min: -0.20, max: 0.45, noNaN: true, noDefaultInfinity: true }),  // import price
+    fc.double({ min: -0.25, max: 0.25, noNaN: true, noDefaultInfinity: true }),  // export price
+  ), { minLength: 8, maxLength: 16 }),
+  fc.integer({ min: 600, max: 2500 }),                                      // maxChargeW
+  fc.integer({ min: 150, max: 900 }),                                       // consumption W
+  fc.integer({ min: 5, max: 90 }),                                          // starting SoC %
+);
+
+const inv58 = ([rte, capacityKwh, hourly, maxChargeW, consW, currentSoc]) => {
+  const base = {
+    battery_efficiency: rte, min_soc: 0, max_soc: 100, cycle_cost_per_kwh: 0.05,
+    tariff_model: 'asymmetric_2027', export_price_ratio: 1.0,
+  };
+  const mkPrices = (clampExport) => makePriceSlots(hourly.map(([p]) => p), 1)
+    .map((s, i) => ({ ...s, exportPrice: clampExport ? Math.max(0, hourly[i][1]) : hourly[i][1] }));
+
+  const pvW = hourly.map((_, h) => (h % 2 === 0 ? consW + maxChargeW + 400 : 0));
+  // The OFF run gets the transform applied by hand: PV gone where the import price
+  // is negative, export floored at zero everywhere.
+  const pvWMasked = pvW.map((w, i) => (hourly[i][0] < 0 ? 0 : w));
+  for (let i = 0; i < hourly.length; i++) if (hourly[i][0] < 0) inv58NegSlots++;
+
+  const run = (settings, prices, pv) => runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: 1200, currentSoc, prices,
+    pvForecast: makePvForecast(prices, pv),
+    consumptionW: prices.map(() => consW),
+    minDischargePrice: 0, refillConfidence: 1.0,
+    pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+
+  const on  = run({ ...base, pv_curtailment_enabled: true  }, mkPrices(false), pvW);
+  const off = run({ ...base, pv_curtailment_enabled: false }, mkPrices(true), pvWMasked);
+  if (!on._schedule || !off._schedule) return !on._schedule === !off._schedule;
+
+  const a = on._schedule.slots;
+  const b = off._schedule.slots;
+  if (a.length !== b.length) return false;
+  for (let t = 0; t < a.length; t++) {
+    if (a[t].action !== b[t].action) return false;
+    if (Math.abs(a[t].socProjected - b[t].socProjected) > 0.05) return false;
+  }
+  return true;
+};
+
+testInvariant('58:curtailment-flag-equals-masked-pv-and-clamped-export', inv58Arb, inv58);
+log(`Masked ${inv58NegSlots} negative-price slots across the runs.\n`);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
