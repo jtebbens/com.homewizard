@@ -5603,7 +5603,6 @@ if (debug) this.log(
     const accOM  = this.learningEngine?.data?.pv_accuracy_om ?? null;
     const accSC  = this.learningEngine?.data?.pv_accuracy_sc ?? null;
     const accSAT = this.learningEngine?.data?.pv_accuracy_sat ?? null;
-    const pvPredictions = this.learningEngine?.data?.pv_predictions?.slice(-864) ?? [];
     const _mAcc = this.learningEngine?.data?.pv_model_accuracy ?? {};
     const modelAcc = {
       mf:    _mAcc['meteofrance_arpege_europe']            != null ? +(_mAcc['meteofrance_arpege_europe'] * 100).toFixed(1)            : null,
@@ -5632,9 +5631,13 @@ if (debug) this.log(
       wSC:            +(wSC * 100).toFixed(0),
       updatedAt:      new Date().toISOString(),
     });
-    // Chart data (large: pvPredictions + modelAcc) written separately so the
-    // lightweight _updateWeather write above doesn't overwrite it.
-    this._setLive('learning_pv_chart_data', { pvPredictions, modelAcc });
+    // Per-model accuracy for the diagnose chart, written separately so the lightweight
+    // _updateWeather write above doesn't overwrite it. The per-sample array used to ride along
+    // here as pv_predictions.slice(-864); learning-engine.js:794 caps that source at 300, so it
+    // was a byte-identical duplicate of the slice(-300) already on /userdata — 59.5 kB shipped on
+    // every unrelated settings.set() (project_app_rss_step_0722). The settings page reads the
+    // array from pv-predictions-recent.json instead.
+    this._setLive('learning_pv_chart_data', { modelAcc });
     
     // NOTE: policy_all_prices is written by TariffManager._getDynamicTariff() every 5 min
     // — no need to duplicate here

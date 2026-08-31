@@ -2755,7 +2755,9 @@
       renderLearningStatus(settings);
 
       // ── PV forecast accuracy chart ─────────────────────────────────────────
-      renderPvAccuracy(settings);
+      // Async since the samples come off /userdata; fire-and-forget so a slow or missing file
+      // doesn't hold up the renders below it.
+      renderPvAccuracy(settings).catch(e => console.warn('PV accuracy error:', e));
 
       // ── Consumption profile chart ──────────────────────────────────────────
       renderConsumptionProfile(settings);
@@ -3129,16 +3131,25 @@
       _renderPvAccuracyDay();
     }
 
-    function renderPvAccuracy(settings) {
+    async function renderPvAccuracy(settings) {
       const st  = settings['learning_status'];
       const pvc = settings['learning_pv_chart_data'];
       const section = document.getElementById('pv-accuracy-section');
       if (!section || !st) return;
 
       const { accOM, accSC, accSAT, wOM, wSC, pvAccuracy } = st;
-      const { pvPredictions, modelAcc } = pvc ?? {};
+      const { modelAcc } = pvc ?? {};
       _pvModelAcc = modelAcc ?? null;
-      if (!pvPredictions || pvPredictions.length === 0) return;
+
+      /* Per-sample predictions live on /userdata, not in the settings blob: they were a duplicate
+         of the buffer already stored there and 20% of its 292 kB, shipped on every unrelated
+         settings.set. A failed fetch costs this chart, not the accuracy pills above it. */
+      let pvPredictions = null;
+      try {
+        const res = await fetch('/app/com.homewizard/userdata/pv-predictions-recent.json');
+        if (res.ok) pvPredictions = await res.json();
+      } catch (e) { /* file not written yet, or unreachable */ }
+      if (!Array.isArray(pvPredictions) || pvPredictions.length === 0) return;
 
       section.style.display = '';
 

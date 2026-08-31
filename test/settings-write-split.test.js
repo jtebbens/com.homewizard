@@ -179,6 +179,33 @@ test('device.js persists the samples via /userdata, not via a settings key', () 
     'no _persistPvPredictions(...) call site found');
 });
 
+// 2026-08-31: learning_pv_chart_data carried a SECOND copy of the same buffer —
+// pv_predictions.slice(-864) next to the slice(-300) above it. learning-engine.js:794 caps the
+// source at 300, so the two slices were byte-identical: 59.5 kB of duplicate, 20% of a 292 kB blob,
+// shipped on every unrelated settings.set(). The key keeps modelAcc (5 scalars) and the settings
+// page now reads the array from the /userdata file that already holds it.
+const CHART_KEY = 'learning_pv_chart_data';
+const settingsSrc = fs.readFileSync(path.join(__dirname, '../settings/index.html'), 'utf8');
+
+test('learning_pv_chart_data no longer carries the sample array', () => {
+  assert.ok(!/_setLive\('learning_pv_chart_data',\s*\{[^}]*pvPredictions/.test(deviceSrc),
+    `${CHART_KEY} is still written with pvPredictions in its payload`);
+  assert.ok(new RegExp(`_setLive\\('${CHART_KEY}',`).test(deviceSrc),
+    `${CHART_KEY} write site disappeared entirely — modelAcc must survive`);
+});
+
+test('device.js no longer takes a second slice of the prediction buffer', () => {
+  assert.ok(!/pv_predictions\?\.slice\(-864\)/.test(deviceSrc),
+    'the slice(-864) duplicate of the sample buffer is still there');
+});
+
+test('the settings page reads the samples from /userdata, not from the settings key', () => {
+  assert.ok(settingsSrc.includes(`/app/com.homewizard/userdata/${PRED_FILE}.json`),
+    `settings page never fetches ${PRED_FILE}.json`);
+  assert.ok(!/const \{ pvPredictions, modelAcc \} = pvc/.test(settingsSrc),
+    'settings page still destructures pvPredictions out of the settings key');
+});
+
 test('app.js drops the stale settings key on boot, not only on a version change', () => {
   const appSrc = fs.readFileSync(path.join(__dirname, '../app.js'), 'utf8');
   const migrateBlock = appSrc.slice(0, appSrc.indexOf('_runSettingsMigration(currentVersion)'));
