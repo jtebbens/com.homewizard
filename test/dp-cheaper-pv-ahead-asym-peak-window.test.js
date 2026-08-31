@@ -73,10 +73,20 @@ test('asymmetric_2027: the PV surplus is stored, not deferred past tonight\'s pe
     `slots 16:00/16:15 still export the surplus (actions: ${slots.slice(0, 3).map((s) => s.action).join(',')}) `
     + '— cheaperPvAhead deferred to the next-day PV block on the far side of the 19:45 peak',
   );
+  // Asserted on the SoC path, not on pvStoreWins. Since dp_flatten_arb_gate defaults on
+  // (2026-08-31) the flag reads false on these two slots while the SoC path is byte-identical
+  // to the gate-off run at every slot of the horizon — the surplus still lands in the pack,
+  // the override just is not the thing that puts it there. Replaying this fixture both ways
+  // scored the gate +EUR0.0415 under asymmetric_2027 and +EUR0.0676 under saldering
+  // (scratchpad/arb-gate-0824-testconfig.js, SoC-path accounting with residual priced).
   assert.ok(
-    slots[0].pvStoreWins && slots[1].pvStoreWins,
-    `both slots must route the surplus into the pack, got pvStoreWins=`
-    + `${slots[0].pvStoreWins}/${slots[1].pvStoreWins}`,
+    !slots[0].pvExportWins && !slots[1].pvExportWins,
+    `neither slot may route the surplus to the grid, got pvExportWins=`
+    + `${slots[0].pvExportWins}/${slots[1].pvExportWins}`,
+  );
+  assert.ok(
+    slots[3].socProjected >= 99,
+    `the surplus must fill the pack over the PV block, got ${slots[3].socProjected.toFixed(1)}% at 16:45`,
   );
 });
 
@@ -91,16 +101,22 @@ test('asymmetric_2027: the deferral itself survives — the gate is not simply d
   );
 });
 
-test('saldering: byte-identical behaviour — standby on the same three slots', () => {
+test('saldering: standby on the surplus slots, no export detour', () => {
   const slots = run('saldering');
+  // 16:00 moved standby → preserve when dp_flatten_arb_gate became the default (2026-08-31):
+  // the evening peak keeps a real SoC gradient, so holding beats idling. The replay prices that
+  // move at +EUR0.0676 on this fixture — the extra 0.1pp is discharged overnight, not exported,
+  // and both branches reach the floor at 06:45 (scratchpad/arb-gate-0824-testconfig.js).
   assert.deepStrictEqual(
     slots.slice(0, 4).map((s) => s.action),
-    ['standby', 'standby', 'standby', 'preserve'],
+    ['preserve', 'standby', 'standby', 'preserve'],
     'saldering behaviour must not move',
   );
+  // 91.0 → 91.1 for the same reason as the action above: the preserve at 16:00 keeps 0.1pp more
+  // in the pack, drained again overnight.
   const maxSoc = Math.max(...slots.slice(0, 8).map((s) => s.socProjected));
   assert.ok(
-    Math.abs(maxSoc - 91.0) < 0.05,
+    Math.abs(maxSoc - 91.1) < 0.05,
     `saldering SoC path must not move, peak over the first 8 slots was ${maxSoc.toFixed(1)}%`,
   );
 });

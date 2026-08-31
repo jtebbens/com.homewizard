@@ -34,8 +34,12 @@ function test(name, fn) {
 // does not exist. Only inside the band do standby and discharge actually compete — which is
 // exactly the regime the live miss happened in (consumptionMargin ran 1.141–1.35).
 function run() {
+  // dp_flatten_arb_gate pinned off: with it on (the default) the t6 peak keeps a real SoC
+  // gradient at 2%, so preserve edges out discharge by €0.0002 and the scenario's own
+  // precondition (discharge beats preserve) no longer holds. This test is about standby vs
+  // discharge, not about the flatten — pin the flag rather than retune the band.
   const oe = new OE({ battery_efficiency: 0.732, min_soc: 0, max_soc: 100,
-    cycle_cost_per_kwh: 0.075, export_price_ratio: 1.0 });
+    cycle_cost_per_kwh: 0.075, export_price_ratio: 1.0, dp_flatten_arb_gate: false });
   // Anchored to now: slot 0 is otherwise treated as a spent partial slot
   // (slot0RemainingFrac clamps to 0.01) and every t0 action becomes negligible.
   const base = Date.now();
