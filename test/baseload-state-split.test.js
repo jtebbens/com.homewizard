@@ -80,7 +80,10 @@ test('load merges file samples back onto the slim nights', () => {
   fresh._loadState();
 
   assert.strictEqual(fresh.nightHistory.length, 2);
-  assert.strictEqual(fresh.currentBaseload, 135);
+  // currentBaseload is derived, not restored: _loadState() re-runs _computeSmartBaseload() so a
+  // changed filter takes effect at startup instead of at the next 05:00. The stored 135 is
+  // therefore expected to be superseded by the value the fixture nights imply (min avg = 30).
+  assert.strictEqual(fresh.currentBaseload, 30);
   assert.strictEqual(fresh.nightHistory[0].samples.length, 3);
   assert.strictEqual(fresh.nightHistory[0].samples[2].power, 27);
 });
@@ -94,7 +97,8 @@ test('migrates an old settings blob that still carries samples inline', () => {
   });
   m._loadState();
 
-  assert.strictEqual(m.currentBaseload, 99);
+  // Same re-derivation as above: the inline 99 is superseded by the fixture nights' own avg.
+  assert.strictEqual(m.currentBaseload, 30);
   assert.strictEqual(m.nightHistory[1].samples.length, 3, 'inline samples survive the migration');
   assert.strictEqual(m.deviceNotificationPrefs.get('dev-1'), true);
 
