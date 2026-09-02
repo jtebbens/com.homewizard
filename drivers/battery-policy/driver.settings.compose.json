@@ -514,6 +514,16 @@
         "value": false
       },
       {
+        "id": "pv_clearsky_haurwitz",
+        "type": "checkbox",
+        "label": { "en": "Atmospheric clear-sky formula for day typing (experimental)", "nl": "Atmosferische clear-sky-formule voor dagindeling (experimenteel)" },
+        "hint": {
+          "en": "⚠️ Experimental — changes what the optimizer plans on. The day is typed clear / mixed / overcast from the clearness index kt = measured radiation / clear-sky radiation, and that type shifts the whole PV forecast. The clear-sky denominator is computed from solar elevation. The default formula prices only the oblique incidence and ignores that low sunlight crosses far more atmosphere, so it sets the bar too high exactly where the sun is low: 174 vs 137 W/m² at 10°, 87 vs 50 W/m² at 5°. In summer those hours carry ~5% of the day, in December all of it. Measured on 2 years of ERA5: the clearest days of each month score 0.687 (Dec) to 0.952 (Apr) on the default scale and 0.836 to 0.974 on this one — the atmosphere is not clearer in April, so the winter dip is an artefact. On 120 real winter days 19% land in a different bucket, always a brighter one; in summer 2 of 69. Also moves two other kt gates (ground-clear check, cloud-uncertainty factor), and the learned per-type bias factors have to re-learn on the new labels. Off by default; the [KT MODEL] log line reports both values and whether the bucket would change while it is off.",
+          "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. De dag wordt ingedeeld als helder / wisselvallig / grijs op basis van de helderheidsindex kt = gemeten straling / clear-sky-straling, en dat label verschuift de hele zonneverwachting. Die clear-sky-noemer wordt uit de zonnestand berekend. De standaardformule rekent alleen de schuine inval en negeert dat laag zonlicht veel meer dampkring doorkruist, waardoor de lat te hoog ligt juist bij lage zon: 174 tegen 137 W/m² bij 10°, 87 tegen 50 W/m² bij 5°. In de zomer leveren die uren ~5% van de dag, in december alles. Gemeten op 2 jaar ERA5: de helderste dagen van elke maand scoren 0,687 (dec) tot 0,952 (apr) op de standaardschaal en 0,836 tot 0,974 op deze — de atmosfeer is in april niet helderder, dus die winterdip is een artefact. Op 120 echte winterdagen valt 19% in een andere bucket, altijd een helderdere; in de zomer 2 van 69. Verschuift ook twee andere kt-poorten (grond-helder-check, bewolkingsonzekerheid), en de geleerde bias-factoren per weertype moeten opnieuw leren op de nieuwe labels. Standaard uit; de [KT MODEL]-logregel meldt beide waarden en of de bucket zou wisselen terwijl het uit staat."
+        },
+        "value": false
+      },
+      {
         "id": "solcast_resource_id",
         "type": "text",
         "label": { "en": "Solcast Resource ID", "nl": "Solcast Resource ID" },

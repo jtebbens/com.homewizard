@@ -3695,6 +3695,14 @@ if (debug) this.log(
         ? Math.min(100, Math.max(todayAvgCloud, todayAvgCloudLow * 1.2))
         : todayAvgCloud;
       _pvBiasCloud = effectiveCloud;
+      // Set before any getTodayKt/getTodaySatKtInfo call this run: the forecaster hands both kt
+      // sources out on this one model, so KNMI kt and satellite kt cannot end up on two scales
+      // while the 0.30/0.65 buckets stay fixed. Both values are always computed and logged;
+      // this only picks which one the rest of the run acts on.
+      if (this.weatherForecaster) {
+        this.weatherForecaster.clearSkyModel = this.getSetting('pv_clearsky_haurwitz') === true
+          ? 'haurwitz' : 'simple';
+      }
       const todayKt   = this.weatherForecaster?.getTodayKt() ?? null;
       // Satellite clearness index as a stand-in while KNMI's kt does not exist yet (it needs 4
       // daylight hours, so it arrives ~08:06-09:43Z). Measured over 33 days: 108 runs on 5 days
@@ -5323,7 +5331,7 @@ if (debug) this.log(
   }
 
   static _groundClear(knmiKt, oktaFrac = null) {
-    if (knmiKt != null && knmiKt >= 0.65) return true;
+    if (LearningEngine.classifyKt(knmiKt) === 'clear') return true;
     return oktaFrac != null && oktaFrac <= BatteryPolicyDevice.OKTA_CLEAR_MAX;
   }
 
