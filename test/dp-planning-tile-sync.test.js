@@ -93,14 +93,17 @@ test('mapper overrides DP (low-SoC grid top-up) → re-sim delta applies and slo
   const start = new Date('2026-05-12T01:00:00.000Z');
   const hour  = 3_600_000;
 
-  // DP says standby (pvExportWins) and projects a flat SoC. The mapper grid-charges
-  // anyway (lowSocGridTopUp), so there is no DP delta describing what it decided.
+  // DP says standby (pvExportWins) and projects a flat SoC, but flags the slot as a forced
+  // top-up. The mapper follows that flag and grid-charges, so there is no DP delta describing
+  // the energy it moves. (topupForced is the DP's own decision — the mapper stopped
+  // re-deriving it 2026-09-02, see test/planning-topup-dp-source.test.js.)
   const slots = [0, 1].map(i => ({
     timestamp: new Date(start.getTime() + i * hour).toISOString(),
     action: 'standby',
     price: 0.10,
     socProjected: 10,
     consumptionW: 0,
+    topupForced: true,
   }));
 
   const schedule = engine.buildPlanningSchedule(
