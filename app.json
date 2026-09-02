@@ -5446,6 +5446,7 @@
         "wifi_quality",
         "tariff",
         "long_power_fail_count",
+        "any_power_fail_count",
         "voltage_sag_l1",
         "voltage_sag_l2",
         "voltage_sag_l3",
@@ -6495,6 +6496,7 @@
         "measure_power.average_power_15m_w",
         "tariff",
         "long_power_fail_count",
+        "any_power_fail_count",
         "voltage_sag_l1",
         "voltage_sag_l2",
         "voltage_sag_l3",
@@ -8566,6 +8568,25 @@
       "setable": false,
       "uiComponent": "sensor",
       "icon": "assets/icon.svg"
+    },
+    "any_power_fail_count": {
+      "type": "number",
+      "title": {
+        "en": "Power failures (all)",
+        "nl": "Stroomstoringen (alle)",
+        "de": "Stromausfälle (alle)",
+        "da": "Strømudfald (alle)",
+        "fr": "Pannes de courant (toutes)",
+        "sv": "Strömavbrott (alla)",
+        "no": "Strømfeil (alle)",
+        "fi": "Sähkökatkot (kaikki)",
+        "hu": "Áramkimaradások (összes)"
+      },
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "insights": false,
+      "icon": "assets/power_fail.svg"
     },
     "auto_apply": {
       "type": "boolean",
