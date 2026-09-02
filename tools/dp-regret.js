@@ -32,13 +32,14 @@
  *    only on modes that DID run, so oracle€ carries an extrapolation error bar.
  *
  * Usage:
- *   node tools/dp-regret.js <history.json> [--pv avg|instant] [--consumption avg|instant]
+ *   node tools/dp-regret.js <history.json> [--pv avg|instant] [--consumption avg|instant] [--tariff saldering|asymmetric_2027]
  */
 
 const fs = require('fs');
 const OptimizationEngine = require('../lib/optimization-engine');
 const PolicyEngine = require('../lib/policy-engine');
 const { createSim } = require('./replay-sim');
+const { exportPrice: computeExportPrice } = require('../lib/price-formulas');
 
 // ── Battery configuration (device eca0f7a8) — matches replay-calibration.js ──────────────
 const CAPACITY_KWH    = 2.69;
@@ -53,13 +54,29 @@ const CYCLE_COST_PER_KWH = 0.075;  // engine default; real economic cost, kept f
 const args = process.argv.slice(2);
 const historyPath = args[0];
 if (!historyPath) {
-  console.error('usage: node tools/dp-regret.js <history.json> [--pv avg|instant] [--consumption avg|instant]');
+  console.error('usage: node tools/dp-regret.js <history.json> [--pv avg|instant] [--consumption avg|instant] [--tariff saldering|asymmetric_2027]');
   process.exit(1);
 }
 const pvArg = args.indexOf('--pv');
 const PV_MODE = pvArg >= 0 ? args[pvArg + 1] : 'avg';
 const consArg = args.indexOf('--consumption');
 const CONS_MODE = consArg >= 0 ? args[consArg + 1] : 'avg';
+// Tariff regime. The stub used to hardcode 'saldering' while the live device has run
+// 'asymmetric_2027' since 23-08, so the oracle played a different game than the DP it is
+// scored against. Under asymmetric_2027 export is valued per slot at prices[t].exportPrice;
+// the history only records the retail import price, so the spot is reconstructed exactly the
+// way the live PBTH provider does it (pbth-provider.js _mapSlot: spot = import/1.21 - markup)
+// and re-derived through the shared price-formulas.exportPrice — no second formula.
+// Defaults are the live device settings (eca0f7a8) read 27-08.
+const tariffArg = args.indexOf('--tariff');
+const TARIFF = tariffArg >= 0 ? args[tariffArg + 1] : 'saldering';
+const numArg = (flag, dflt) => { const i = args.indexOf(flag); return i >= 0 ? parseFloat(args[i + 1]) : dflt; };
+const MARKUP     = numArg('--markup', 0.1082);
+const EXP_ADDON  = numArg('--export-addon', 0.02);
+const EXP_MULT   = numArg('--export-mult', 1.1);
+const exportPriceOf = (importPrice) => (TARIFF === 'asymmetric_2027'
+  ? computeExportPrice(importPrice / 1.21 - MARKUP, EXP_ADDON, EXP_MULT)
+  : null);
 
 const { simulateSlot, scoreSocDelta } = createSim({
   rte: RTE, capacityKwh: CAPACITY_KWH, maxChargeW: MAX_CHARGE_W, maxDischargeW: MAX_DISCHARGE_W,
@@ -68,12 +85,18 @@ const { simulateSlot, scoreSocDelta } = createSim({
 
 const engine = new OptimizationEngine({
   battery_efficiency: RTE, min_soc: MIN_SOC, max_soc: MAX_SOC,
-  cycle_cost_per_kwh: CYCLE_COST_PER_KWH, tariff_model: 'saldering', export_price_ratio: 1.0,
+  cycle_cost_per_kwh: CYCLE_COST_PER_KWH, tariff_model: TARIFF, export_price_ratio: 1.0,
 });
 
-// The action→hwMode mapper only reads this.settings + this.BATTERY_EFFICIENCY (verified
-// policy-engine.js:1617-1780), so a stub `this` calls it offline without a full PolicyEngine.
-const mapperThis = { settings: { tariff_model: 'saldering', export_price_ratio: 1.0 }, BATTERY_EFFICIENCY: RTE };
+// The action→hwMode mapper only reads this.settings, this.BATTERY_EFFICIENCY and
+// this._disposalValue (verified policy-engine.js:1840-1995), so a stub `this` calls it offline
+// without a full PolicyEngine. _disposalValue is taken from the prototype rather than copied —
+// it reads this.settings, which the stub supplies, so the mapper and the app share one formula.
+const mapperThis = {
+  settings: { tariff_model: TARIFF, export_price_ratio: 1.0 },
+  BATTERY_EFFICIENCY: RTE,
+  _disposalValue: PolicyEngine.prototype._disposalValue,
+};
 const mapAction = PolicyEngine.prototype._mapActionToHwModeForPlanning;
 
 // Collapse the mapper's richer hwMode vocabulary onto the 4 modes the simulator is calibrated
@@ -107,6 +130,7 @@ for (const e of entries) {
     day: new Date(bucket).toLocaleDateString('en-CA', { timeZone: 'Europe/Amsterdam' }),
     hwMode: e.hwMode,
     price: e.price,
+    exportPrice: exportPriceOf(e.price),
     pvW: e.pvW, pvAvgW: e.pvAvgW ?? null,
     consW: e.consumW, consumAvgW: e.consumAvgW ?? null,
     socMeasured: e.soc,
@@ -123,6 +147,7 @@ for (let i = 0; i < slots.length - 1; i++) {
   if (nxt.bucket - cur.bucket !== BUCKET_MS) continue;
   paired.push({
     bucket: cur.bucket, day: cur.day, hwMode: cur.hwMode, price: cur.price,
+    exportPrice: cur.exportPrice,
     socStart: cur.socMeasured, socEnd: nxt.socMeasured,
     dSocMeasured: nxt.socMeasured - cur.socMeasured,
     pvW: PV_MODE === 'avg' ? (nxt.pvAvgW ?? cur.pvW) : cur.pvW,
@@ -168,7 +193,7 @@ for (const [day, daySlots] of [...byDay.entries()].sort()) {
   const socStart = daySlots[0].socStart;
 
   // Oracle: DP on realized inputs, hedges relaxed for a perfect-foresight upper bound.
-  const prices = daySlots.map(s => ({ timestamp: new Date(s.bucket).toISOString(), price: s.price }));
+  const prices = daySlots.map(s => ({ timestamp: new Date(s.bucket).toISOString(), price: s.price, exportPrice: s.exportPrice }));
   const pvForecast = daySlots.map(s => ({ timestamp: new Date(s.bucket).toISOString(), pvPowerW: s.pvW }));
   const consumptionWPerSlot = daySlots.map(s => s.consW);
   engine._schedule = null;
@@ -191,7 +216,7 @@ for (const [day, daySlots] of [...byDay.entries()].sort()) {
       .filter(d => d.bucket > s.bucket)
       .map(d => ({ price: d.price, pvW: d.pvW, consumptionW: d.consW }));
     const { hwMode } = mapAction.call(mapperThis, os.action, {
-      price: s.price, soc: os.socProjected ?? s.socStart, pvW: s.pvW, consumptionW: s.consW,
+      price: s.price, exportPrice: s.exportPrice, soc: os.socProjected ?? s.socStart, pvW: s.pvW, consumptionW: s.consW,
       tariffType: 'dynamic', userPolicyMode: 'auto',
       maxChargePrice: 1.0, minDischargePrice: 0, minSoc: MIN_SOC, maxSoc: MAX_SOC,
       futurePrices, battChargePowerW: MAX_CHARGE_W, battCapKwh: CAPACITY_KWH,
