@@ -4322,11 +4322,13 @@ if (debug) this.log(
         this.log(`🛡️ refill-reserve WAIVED: tomorrow PV (${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh) refills usable span → no overnight floor despite cv=${_cvStr}`);
       }
     }
-    // Dynamic-or-static ceiling (Math.max of both, policy-engine.js:25-66) — matches what
+    // Dynamic-or-static ceiling (Math.max of both, policy-engine.js:29-70) — matches what
     // the mapper/explainability already use everywhere (chunk 2, project_stability_focus_chunkplan).
     // Only ever raises the ceiling vs the static setting, so the DP's drain-avoidance/topup
     // checks (optimization-engine.js:423-436, :787) become more permissive, never stricter.
-    const maxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice);
+    // Fed the same learnedRte the DP gets below, so the gate and the DP's own round-trip test
+    // sit on one break-even instead of two (project_charge_ceiling_two_impls_0902).
+    const maxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice, learnedRte);
     // Spread-band (pvTimingRobust) retired 2026-07-04: unmeasured (pv_predictions.csv is blind to
     // a discharge-cap-only change) and inert live; dropped to reduce DP-stack complexity. Pass
     // false — the optimization-engine helper stays as dead-but-tested code (inv20/21).
