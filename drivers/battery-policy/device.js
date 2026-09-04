@@ -160,8 +160,11 @@ class BatteryPolicyDevice extends Homey.Device {
     this.weatherForecaster = new WeatherForecaster(this.homey, this.learningEngine);
     const _satLat = this.getSetting('weather_latitude');
     const _satLon = this.getSetting('weather_longitude');
+    // Round to ~1km grid before it leaves the device: the satellite nowcast pixel size
+    // is already kilometers, so this costs no forecast accuracy while dropping the
+    // address-level precision (~100m) the raw setting carries. GDPR minimisation.
     const SAT_NOWCAST_URL = (_satLat && _satLon)
-      ? `https://pv.tebbens.net/api/sat?lat=${_satLat}&lon=${_satLon}`
+      ? `https://pv.tebbens.net/api/sat?lat=${Number(_satLat).toFixed(2)}&lon=${Number(_satLon).toFixed(2)}`
       : 'https://pv.tebbens.net/msgcpp/latest.json';
     // Deferred 45s: starting this immediately at onInit fires its own out-of-band HTTPS
     // fetch at the exact same instant as every other driver's onInit + WS auth + first

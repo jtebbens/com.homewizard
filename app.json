@@ -4981,7 +4981,7 @@
             },
             {
               "id": "solcast_api_key",
-              "type": "text",
+              "type": "password",
               "label": {
                 "en": "Solcast API Key",
                 "nl": "Solcast API-sleutel"
@@ -5020,7 +5020,7 @@
           "children": [
             {
               "id": "knmi_api_key",
-              "type": "text",
+              "type": "password",
               "label": {
                 "en": "KNMI API Key",
                 "nl": "KNMI API-sleutel"

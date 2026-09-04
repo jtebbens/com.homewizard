@@ -536,7 +536,7 @@
       },
       {
         "id": "solcast_api_key",
-        "type": "text",
+        "type": "password",
         "label": { "en": "Solcast API Key", "nl": "Solcast API-sleutel" },
         "hint": {
           "en": "Your Solcast API key. Find it in the Solcast dashboard under Account → API Key.",
@@ -564,7 +564,7 @@
     "children": [
       {
         "id": "knmi_api_key",
-        "type": "text",
+        "type": "password",
         "label": { "en": "KNMI API Key", "nl": "KNMI API-sleutel" },
         "hint": {
           "en": "Optional. KNMI EDR API key for ground-truth solar radiation from nearest weather station. Register at dataplatform.knmi.nl.",

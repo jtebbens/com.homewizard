@@ -39,6 +39,28 @@ Control and monitor your HomeWizard Energy devices directly from your Homey smar
 * Water Meters (local & cloud)
 * Legacy Devices (thermometer, heatlink, rainmeter, windmeter, sensors)
 
+## 🔒 Privacy & Third-Party Services
+
+This only applies if you add the **Battery Policy** device - other HomeWizard devices (P1 Meter,
+Energy Socket, kWh meters, water/wind/rain meters) don't use any of the services below. Battery
+Policy's optional forecast and charting features send your home's coordinates and/or IP address
+to third-party services to provide their functionality:
+
+* **Open-Meteo, Buienradar, KNMI, Solcast** - weather/solar forecast providers. Open-Meteo
+  receives full-precision coordinates; the others receive coarser data (rounded coordinates,
+  a nearby weather station ID, or a user-owned site ID configured on the provider's own
+  platform).
+* **pv.tebbens.net** - a community-run satellite/weather relay used for the satellite PV
+  overlay, coordinates rounded to ~1km before sending.
+* **quickchart.io** - renders the planning chart image shown on the device tile.
+
+These calls only happen for the specific features that use them (e.g. Solcast and KNMI only if
+you configure an API key). No device IDs, energy readings, or account data are sent - only
+location and, inherent to any HTTP request, your IP address. Review each provider's own privacy
+policy if this matters to you. To opt out, leave the corresponding setting disabled/empty in the
+Battery Policy device settings (e.g. no Solcast/KNMI API key, satellite overlay off) - this stops
+that provider's calls entirely.
+
 ## 📊 Battery Policy Manager
 
 NEW in v3.13.14: Intelligent battery management system that:
