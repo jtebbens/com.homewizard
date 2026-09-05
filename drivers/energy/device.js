@@ -7,6 +7,24 @@ const BaseloadMonitor = require('../../includes/utils/baseloadMonitor');
 const http = require('http');
 
 
+// Cached formatters keyed by timezone: constructing Intl.DateTimeFormat per call
+// (via toLocaleString) was a real CPU hotspot in profiling — same pattern as
+// learning-engine.js's _amsterdamFormatter.
+const _localTimeFormatters = new Map();
+function _getLocalTimeFormatter(tz) {
+  let fmt = _localTimeFormatters.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23',
+    });
+    _localTimeFormatters.set(tz, fmt);
+  }
+  return fmt;
+}
+
 // All phase‑dependent capabilities (L2/L3/T3)
 const PHASE_CAPS = [
   'measure_power.l2', 'measure_power.l3',
@@ -624,7 +642,9 @@ async _onPollImpl() {
   _getLocalTimeAndLang() {
     const tz = this.homey.clock.getTimezone();
     const now = new Date();
-    const iso = now.toLocaleString('sv-SE', { timeZone: tz });
+    const parts = {};
+    for (const p of _getLocalTimeFormatter(tz).formatToParts(now)) parts[p.type] = p.value;
+    const iso = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}`;
     const nowLocal = new Date(iso);
     const homeyLang = this.homey.i18n.getLanguage();
     return { now, nowLocal, homeyLang };
