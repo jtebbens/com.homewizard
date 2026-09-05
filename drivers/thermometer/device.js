@@ -19,20 +19,12 @@ class HomeWizardThermometer extends Homey.Device {
 
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
 
-    const devices = this.homey.drivers.getDriver('thermometer').getDevices();
-
-    devices.forEach((device) => {
-      if (debug) { this.log(`add device: ${JSON.stringify(device.getName())}`); }
-      devices[device.getData().id] = device;
-      devices[device.getData().id].settings = device.getSettings();
-    });
-
-    if (Object.keys(devices).length > 0) {
-	    this.startPolling(devices);
-    }
+    // Each device polls only itself. Before, every device started a timer that looped over
+    // the whole driver's device list, so N devices produced N² updates per cycle.
+    this.startPolling();
   }
 
-  startPolling(devices) {
+  startPolling() {
 
     // Clear interval
     if (this.refreshIntervalId) {
@@ -43,114 +35,111 @@ class HomeWizardThermometer extends Homey.Device {
     this.refreshIntervalId = setInterval(() => {
       if (debug) { this.log('--Start Thermometer Polling-- '); }
 
-      this.getStatus(devices);
+      this.getStatus();
 
     }, 1000 * 20);
 
   }
 
-  async getStatus(devices) {
+  async getStatus() {
     try {
-		  const promises = devices.map(async (device) => { // parallel processing using Promise.all
-        if (device.settings.homewizard_id !== undefined) {
-			  const { homewizard_id } = device.settings;
-			  const { thermometer_id } = device.settings;
+      const settings = this.getSettings();
+      if (settings.homewizard_id !== undefined) {
+        const { homewizard_id } = settings;
+        const { thermometer_id } = settings;
 
-			  const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
+        const result = await homewizard.getDeviceData(homewizard_id, 'thermometers');
 
-			  if (Object.keys(result).length > 0) {
-            for (const index2 in result) {
-				  if (
-                result[index2].id == thermometer_id
-					&& result[index2].te != undefined
-					&& result[index2].hu != undefined
-					&& typeof result[index2].te != 'undefined'
-					&& typeof result[index2].hu != 'undefined'
-				  ) {
-                let te = (result[index2].te.toFixed(1) * 2) / 2;
-                let hu = (result[index2].hu.toFixed(1) * 2) / 2;
+        if (Object.keys(result).length > 0) {
+          for (const index2 in result) {
+            if (
+              result[index2].id == thermometer_id
+              && result[index2].te != undefined
+              && result[index2].hu != undefined
+              && typeof result[index2].te != 'undefined'
+              && typeof result[index2].hu != 'undefined'
+            ) {
+              let te = (result[index2].te.toFixed(1) * 2) / 2;
+              let hu = (result[index2].hu.toFixed(1) * 2) / 2;
 
-                // First adjust retrieved temperature with offset
-                const offset_temp = device.getSetting('offset_temperature');
-                te += offset_temp;
+              // First adjust retrieved temperature with offset
+              const offset_temp = this.getSetting('offset_temperature');
+              te += offset_temp;
 
-                // Check current temperature
-                if (device.getCapabilityValue('measure_temperature') != te) {
-                  if (debug) { this.log(`New TE - ${te}`); }
-                  await device.setCapabilityValue('measure_temperature', te).catch(this.error);
-                  await device.setStoreValue('lastTempUpdate', Date.now()).catch(this.error);
-                  // Reset trigger state 
-                  await device.setStoreValue('unchangedTriggered', false).catch(this.error);
-                }
+              // Check current temperature
+              if (this.getCapabilityValue('measure_temperature') != te) {
+                if (debug) { this.log(`New TE - ${te}`); }
+                await this.setCapabilityValue('measure_temperature', te).catch(this.error);
+                await this.setStoreValue('lastTempUpdate', Date.now()).catch(this.error);
+                // Reset trigger state
+                await this.setStoreValue('unchangedTriggered', false).catch(this.error);
+              }
 
-                // Check trigger condition
-                const last = await device.getStoreValue('lastTempUpdate');
-                if (last) {
-                  const diffHours = (Date.now() - last) / 1000 / 3600;
+              // Check trigger condition
+              const last = await this.getStoreValue('lastTempUpdate');
+              if (last) {
+                const diffHours = (Date.now() - last) / 1000 / 3600;
 
-                  const triggerCard = this.homey.flow.getDeviceTriggerCard('temp_not_changed_trigger');
+                const triggerCard = this.homey.flow.getDeviceTriggerCard('temp_not_changed_trigger');
 
-                  // Haal ingestelde uren op uit device settings of store
-                  const hours = device.getSetting('temp_not_changed_hours') 
-                            ?? await device.getStoreValue('temp_not_changed_hours');
+                // Haal ingestelde uren op uit device settings of store
+                const hours = this.getSetting('temp_not_changed_hours')
+                          ?? await this.getStoreValue('temp_not_changed_hours');
 
-                  if (hours && diffHours >= hours) {
-                    const alreadyTriggered = await device.getStoreValue('unchangedTriggered');
+                if (hours && diffHours >= hours) {
+                  const alreadyTriggered = await this.getStoreValue('unchangedTriggered');
 
-                    if (!alreadyTriggered) {
-                      await triggerCard.trigger(device, { hours }).catch(this.error);
-                      await device.setStoreValue('unchangedTriggered', true).catch(this.error);
-                    }
+                  if (!alreadyTriggered) {
+                    await triggerCard.trigger(this, { hours }).catch(this.error);
+                    await this.setStoreValue('unchangedTriggered', true).catch(this.error);
                   }
                 }
+              }
 
+              // First adjust retrieved humidity with offset
+              const offset_hu = this.getSetting('offset_humidity');
+              hu += offset_hu;
 
-                // First adjust retrieved humidity with offset
-                const offset_hu = device.getSetting('offset_humidity');
-                hu += offset_hu;
+              // Check current humidity
+              if (this.getCapabilityValue('measure_humidity') != hu) {
+                if (debug) { this.log(`New HU - ${hu}`); }
+                await this.setCapabilityValue('measure_humidity', hu).catch(this.error);
+              }
 
-                // Check current humidity
-                if (device.getCapabilityValue('measure_humidity') != hu) {
-					  if (debug) { this.log(`New HU - ${hu}`); }
-					  await device.setCapabilityValue('measure_humidity', hu).catch(this.error);
+              if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
+                if (!this.hasCapability('alarm_battery')) {
+                  await this.addCapability('alarm_battery').catch(this.error);
                 }
 
-                if (result[index2].lowBattery != undefined && result[index2].lowBattery != null) {
-					  if (!device.hasCapability('alarm_battery')) {
-                    await device.addCapability('alarm_battery').catch(this.error);
-					  }
+                const lowBattery_temp = result[index2].lowBattery;
+                const lowBattery_status = lowBattery_temp == 'yes';
 
-					  const lowBattery_temp = result[index2].lowBattery;
-					  const lowBattery_status = lowBattery_temp == 'yes';
-
-					  if (device.getCapabilityValue('alarm_battery') != lowBattery_status) {
-                    if (debug) { this.log(`New status - ${lowBattery_status}`); }
-                    await device.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
-					  }
-                } else if (device.hasCapability('alarm_battery')) {
-                  await device.removeCapability('alarm_battery').catch(this.error);
-					  }
-				  }
+                if (this.getCapabilityValue('alarm_battery') != lowBattery_status) {
+                  if (debug) { this.log(`New status - ${lowBattery_status}`); }
+                  await this.setCapabilityValue('alarm_battery', lowBattery_status).catch(this.error);
+                }
+              } else if (this.hasCapability('alarm_battery')) {
+                await this.removeCapability('alarm_battery').catch(this.error);
+              }
             }
-			  }
+          }
         }
-		  });
+      }
 
-		  await Promise.all(promises);
-
-		  await this.setAvailable().catch(this.error);
+      await this.setAvailable().catch(this.error);
     } catch (err) {
-		  this.error(err);
-		  await this.setUnavailable(err).catch(this.error);
+      this.error(err);
+      await this.setUnavailable(err).catch(this.error);
     }
-	  }
+  }
   
   onDeleted() {
     const deviceId = this.getData().id;
     homewizard.removeDevice(deviceId);
 
-    if (Object.keys(devices).length === 0) {
-      clearInterval(refreshIntervalId);
+    if (this.refreshIntervalId) {
+      clearInterval(this.refreshIntervalId);
+      this.refreshIntervalId = null;
       if (debug) { this.log('--Stopped Polling--'); }
     }
 
