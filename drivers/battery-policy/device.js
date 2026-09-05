@@ -163,17 +163,22 @@ class BatteryPolicyDevice extends Homey.Device {
     // Round to ~1km grid before it leaves the device: the satellite nowcast pixel size
     // is already kilometers, so this costs no forecast accuracy while dropping the
     // address-level precision (~100m) the raw setting carries. GDPR minimisation.
-    const SAT_NOWCAST_URL = (_satLat && _satLon)
+    this._satNowcastUrl = (_satLat && _satLon)
       ? `https://pv.tebbens.net/api/sat?lat=${Number(_satLat).toFixed(2)}&lon=${Number(_satLon).toFixed(2)}`
       : 'https://pv.tebbens.net/msgcpp/latest.json';
+    // Gated on pv_secondary_source==='satellite': the fetch used to run unconditionally
+    // whenever lat/lon were set, sending location to pv.tebbens.net every 15 min even with
+    // the dropdown on "Off" — GDPR gap, see project_gdpr_scan_and_local_chart_render_0903.
     // Deferred 45s: starting this immediately at onInit fires its own out-of-band HTTPS
     // fetch at the exact same instant as every other driver's onInit + WS auth + first
     // poll — one more uncoordinated concurrent connection during the busiest part of boot.
     // 45s (past the weather-fetch's own 30s defer + its 3s-staggered Buienradar/upwind
     // tail) lands this independent 15-min-repeating loop in a different phase of the cycle.
-    this.homey.setTimeout(() => {
-      this.weatherForecaster.startSatelliteLoop(SAT_NOWCAST_URL, '', () => this._onSatelliteOverlay());
-    }, 45 * 1000);
+    if (this.getSetting('pv_secondary_source') === 'satellite') {
+      this.homey.setTimeout(() => {
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+      }, 45 * 1000);
+    }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
     this.tariffManager = new TariffManager(this.homey, this.getSettings());
 
@@ -6252,6 +6257,16 @@ if (debug) this.log(
       this.homey.setTimeout(() => {
         this._runPolicyCheck().catch(e => this.error('Policy recheck after resolution change failed:', e));
       }, 200);
+    }
+
+    // Satellite fetch gate: start/stop the pv.tebbens.net loop with the dropdown so
+    // "Off" actually stops sending location, not just stops using the data in the DP.
+    if (changedKeys.includes('pv_secondary_source')) {
+      if (newSettings.pv_secondary_source === 'satellite') {
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+      } else {
+        this.weatherForecaster.stopSatelliteLoop();
+      }
     }
 
     // Weather update
