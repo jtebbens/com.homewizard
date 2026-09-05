@@ -394,12 +394,25 @@ class BatteryPolicyDevice extends Homey.Device {
     _memMB('onInit-done');
   }
 
+  // App setting `settings_wire_debug`, default off, gating the settings-wire diagnostics. Read
+  // once and cached: one of its two call sites sits in the settings write path this measures, so
+  // a get() per call would land inside the thing under measurement. Flipping it needs a restart,
+  // same as the other hidden diagnostics (`dp_input_dump`).
+  _wireDebugOn() {
+    if (this._wireDebug === undefined) {
+      this._wireDebug = !!this.homey.settings.get('settings_wire_debug');
+    }
+    return this._wireDebug;
+  }
+
   _logSettingsFootprint() {
     const fp = _settingsFootprintKB(this.homey.settings);
     // Cached for _accountSettingsWrite: re-scanning all keys per write would cost more than the
     // write it measures. Refreshed on this line's cadence, so a write in between reports the
-    // previous total -- fine for a kB/hour rate, not for a single-write figure.
+    // previous total -- fine for a kB/hour rate, not for a single-write figure. The scan stays
+    // unconditional because the counter depends on it; only the log line is gated.
     this._settingsWireBytes = fp.totalBytes;
+    if (!this._wireDebugOn()) return;
     this.log(`[MEM] settings footprint: ${fp.line}`);
   }
 
@@ -497,6 +510,10 @@ class BatteryPolicyDevice extends Homey.Device {
     }
     this._wireTotalBytes += wire;
     this._wireWrites += 1;
+    // The counters above are free and stay on, so the totals are there whenever they're needed.
+    // Only the per-write line is gated -- unguarded it costs ~300 log lines/hour, which pushes
+    // the lines that matter during an incident out of the log.
+    if (!this._wireDebugOn()) return;
     const hours = (Date.now() - this._wireStatsSince) / 3600_000;
     const rate = hours > 0 ? (this._wireTotalBytes / 1048576 / hours).toFixed(1) : '—';
     console.log(`[MEM][settings.set] ${key} value=${bytes}B n=${st.n} | wire=${(wire / 1024).toFixed(0)}kB writes=${this._wireWrites} cum=${(this._wireTotalBytes / 1048576).toFixed(1)}MB rate=${rate}MB/h`);
