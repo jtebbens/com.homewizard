@@ -4322,48 +4322,6 @@
               }
             },
             {
-              "id": "opportunistic_charge_multiplier",
-              "type": "number",
-              "label": {
-                "en": "Opportunistic charge spread multiplier",
-                "nl": "Opportunistisch laden spread vermenigvuldiger"
-              },
-              "hint": {
-                "en": "Multiplier for min_profit_margin to trigger opportunistic charging above max_charge_price. Formula: spread > (min_profit_margin × multiplier). Higher values = more conservative. Examples: 1.5 (aggressive, €0.015 spread), 2.0 (balanced, €0.02 spread), 3.0 (conservative, €0.03 spread). Only active when 'Strictly respect min/max prices' is DISABLED.",
-                "nl": "Vermenigvuldiger voor min_profit_margin om opportunistisch laden boven max_charge_price te activeren. Formule: spread > (min_profit_margin × vermenigvuldiger). Hogere waarden = conservatiever. Voorbeelden: 1,5 (agressief, €0,015 spread), 2,0 (gebalanceerd, €0,02 spread), 3,0 (conservatief, €0,03 spread). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
-              },
-              "value": 2,
-              "min": 1,
-              "max": 5,
-              "step": 0.5,
-              "units": "×",
-              "visible": {
-                "when": "respect_minmax",
-                "is": false
-              }
-            },
-            {
-              "id": "opportunistic_discharge_spread_threshold",
-              "type": "number",
-              "label": {
-                "en": "Opportunistic discharge spread threshold",
-                "nl": "Opportunistisch ontladen spread drempel"
-              },
-              "hint": {
-                "en": "Maximum negative spread to allow opportunistic discharge (when no better future price expected). More negative = stricter (less willing to discharge early). Formula: (future_max_price × efficiency) - current_price < threshold. Examples: -€0.10 (very strict), -€0.05 (balanced), -€0.01 (aggressive). Only active when 'Strictly respect min/max prices' is DISABLED.",
-                "nl": "Maximale negatieve spread om opportunistisch ontladen toe te staan (wanneer geen betere toekomstige prijs verwacht). Negatiever = strenger (minder bereid vroeg te ontladen). Formule: (toekomstige_max_prijs × efficiëntie) - huidige_prijs < drempel. Voorbeelden: -€0,10 (zeer streng), -€0,05 (gebalanceerd), -€0,01 (agressief). Alleen actief wanneer 'Min/max prijzen strikt respecteren' is UITGESCHAKELD."
-              },
-              "value": -0.05,
-              "min": -0.1,
-              "max": -0.01,
-              "step": 0.01,
-              "units": "€/kWh",
-              "visible": {
-                "when": "respect_minmax",
-                "is": false
-              }
-            },
-            {
               "id": "max_charge_price",
               "type": "number",
               "label": {
@@ -4668,19 +4626,6 @@
               }
             },
             {
-              "id": "preserve_cycles",
-              "type": "checkbox",
-              "label": {
-                "en": "Preserve Battery Cycles",
-                "nl": "Batterijcycli sparen"
-              },
-              "value": true,
-              "visible": {
-                "when": "tariff_type",
-                "is": "dynamic"
-              }
-            },
-            {
               "id": "cycle_cost_per_kwh",
               "type": "number",
               "label": {
@@ -4905,8 +4850,8 @@
                 "nl": "Ongewogen OM+tweede-bron-mix (50/50)"
               },
               "hint": {
-                "en": "Blend Open-Meteo and the secondary source with a fixed 50/50 weight instead of accuracy-derived weights. A fixed average cancels opposite biases between models and measured ~10% lower error on a 300-sample buffer (2026-06-15, Solcast). Disable to fall back to learned accuracy weights.",
-                "nl": "Mix Open-Meteo en de tweede bron met een vaste 50/50-weging in plaats van op nauwkeurigheid gebaseerde gewichten. Een vaste middeling heft tegengestelde afwijkingen tussen modellen op en mat ~10% lagere fout op een 300-samplebuffer (2026-06-15, Solcast). Uitschakelen valt terug op geleerde nauwkeurigheidsgewichten."
+                "en": "Blend Open-Meteo and the secondary source 50/50 instead of weighting by measured accuracy. Recommended default. Disable to fall back to learned accuracy weights.",
+                "nl": "Mix Open-Meteo en de tweede bron 50/50 in plaats van te wegen op gemeten nauwkeurigheid. Aanbevolen standaard. Uitschakelen valt terug op geleerde nauwkeurigheidsgewichten."
               },
               "value": true
             },
@@ -4918,8 +4863,8 @@
                 "nl": "Satelliet neemt het hele slot als hij vers is (experimenteel)"
               },
               "hint": {
-                "en": "⚠️ Experimental — changes what the optimizer plans on. Normally a fresh satellite nowcast counts for half a slot and Open-Meteo for the other half. With this on, the satellite takes the slot entirely for the next few hours (only where its reading is under an hour old). Measured over 7 days against the roof: satellite off by 566 W on average, Open-Meteo by 912 W, with the satellite ahead in every band. Affects only the next few hours, not tomorrow's plan.",
-                "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. Normaal telt een verse satellietwaarneming voor de helft van een slot en Open-Meteo voor de andere helft. Met deze optie aan neemt de satelliet het slot helemaal over voor de eerstvolgende uren (alleen waar zijn waarde jonger dan een uur is). Gemeten over 7 dagen tegen het dak: satelliet zat er gemiddeld 566 W naast, Open-Meteo 912 W, met de satelliet voor in elke band. Raakt alleen de eerstvolgende uren, niet het plan voor morgen."
+                "en": "⚠️ Experimental. Lets a fresh satellite reading fully replace Open-Meteo for the next few hours, instead of blending 50/50. Leave off unless you're testing it.",
+                "nl": "⚠️ Experimenteel. Laat een verse satellietwaarneming Open-Meteo voor de komende uren volledig vervangen, in plaats van 50/50 te mengen. Laat uit tenzij u dit test."
               },
               "value": false
             },
@@ -4931,8 +4876,8 @@
                 "nl": "Satellietslots slaan de dagelijkse weertype-bijstelling over"
               },
               "hint": {
-                "en": "The daily weather-type bias is one factor for the whole day, classified on Open-Meteo cloud cover until KNMI clearness becomes available (~08:00-09:45 UTC). Slots carrying a fresh satellite nowcast have had the actual sky observed, so this skips that factor for them, in both directions. Measured 2026-08-17: the blend put 08:00 UTC at 1250 W (the roof did 1403 W) and a bias factor of 0.440 handed the optimizer 550 W. Off by default; the log line reports what it would change while it is off.",
-                "nl": "De dagelijkse weertype-bijstelling is een factor voor de hele dag, ingedeeld op Open-Meteo-bewolking totdat de KNMI-helderheid beschikbaar is (~08:00-09:45 UTC). Slots met een verse satellietwaarneming hebben de lucht echt gezien, dus die slaan deze factor over, in beide richtingen. Gemeten 17-08-2026: de mix zette 08:00 UTC op 1250 W (het dak deed 1403 W) en een factor 0,440 gaf de optimalisator 550 W. Standaard uit; de logregel meldt wat het zou veranderen terwijl het uit staat."
+                "en": "⚠️ Experimental. Skips the daily weather-type correction for hours where a fresh satellite reading already shows the actual sky. Leave off unless you're testing it.",
+                "nl": "⚠️ Experimenteel. Slaat de dagelijkse weertype-correctie over voor uren waar een verse satellietwaarneming de lucht al echt heeft gezien. Laat uit tenzij u dit test."
               },
               "value": false
             },
@@ -4944,8 +4889,8 @@
                 "nl": "Gebruik satelliet-helderheid om de ochtend in te delen (experimenteel)"
               },
               "hint": {
-                "en": "⚠️ Experimental — changes what the optimizer plans on. The daily weather-type bias picks one factor for the whole day, and until KNMI clearness arrives (~08:00-09:45 UTC) it classifies on Open-Meteo cloud cover alone. Measured over 33 days: 108 runs across 5 days were called overcast on days whose measured clearness never dropped that low, including two clearly sunny ones. With this on, the satellite's own clearness — same formula, from its observed radiation — classifies the day until KNMI's measurement takes over, which it always outranks. Needs about two hours of satellite data first, so roughly 07:45 UTC in summer. Off by default; the log line reports what it would change while it is off.",
-                "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. De dagelijkse weertype-bijstelling kiest één factor voor de hele dag, en tot de KNMI-helderheid binnen is (~08:00-09:45 UTC) doet hij dat alleen op Open-Meteo-bewolking. Gemeten over 33 dagen: 108 runs op 5 dagen werden zwaar bewolkt genoemd op dagen waarvan de gemeten helderheid nooit zo laag kwam, waaronder twee uitgesproken zonnige. Met deze optie aan deelt de helderheid van de satelliet zelf — zelfde formule, uit zijn waargenomen straling — de dag in totdat de KNMI-meting het overneemt, die altijd voorgaat. Vergt eerst ongeveer twee uur satellietdata, dus ruwweg 07:45 UTC in de zomer. Standaard uit; de logregel meldt wat het zou veranderen terwijl het uit staat."
+                "en": "⚠️ Experimental. Uses the satellite's own sky-clearness reading to classify the morning, instead of waiting for KNMI data (available ~08:00-09:45 UTC). Leave off unless you're testing it.",
+                "nl": "⚠️ Experimenteel. Gebruikt de eigen helderheidswaarneming van de satelliet om de ochtend te classificeren, in plaats van te wachten op KNMI-data (beschikbaar ~08:00-09:45 UTC). Laat uit tenzij u dit test."
               },
               "value": false
             },
@@ -4957,8 +4902,8 @@
                 "nl": "Atmosferische clear-sky-formule voor dagindeling (experimenteel)"
               },
               "hint": {
-                "en": "⚠️ Experimental — changes what the optimizer plans on. The day is typed clear / mixed / overcast from the clearness index kt = measured radiation / clear-sky radiation, and that type shifts the whole PV forecast. The clear-sky denominator is computed from solar elevation. The default formula prices only the oblique incidence and ignores that low sunlight crosses far more atmosphere, so it sets the bar too high exactly where the sun is low: 174 vs 137 W/m² at 10°, 87 vs 50 W/m² at 5°. In summer those hours carry ~5% of the day, in December all of it. Measured on 2 years of ERA5: the clearest days of each month score 0.687 (Dec) to 0.952 (Apr) on the default scale and 0.836 to 0.974 on this one — the atmosphere is not clearer in April, so the winter dip is an artefact. On 120 real winter days 19% land in a different bucket, always a brighter one; in summer 2 of 69. Also moves two other kt gates (ground-clear check, cloud-uncertainty factor), and the learned per-type bias factors have to re-learn on the new labels. Off by default; the [KT MODEL] log line reports both values and whether the bucket would change while it is off.",
-                "nl": "⚠️ Experimenteel — verandert waar de optimalisator op plant. De dag wordt ingedeeld als helder / wisselvallig / grijs op basis van de helderheidsindex kt = gemeten straling / clear-sky-straling, en dat label verschuift de hele zonneverwachting. Die clear-sky-noemer wordt uit de zonnestand berekend. De standaardformule rekent alleen de schuine inval en negeert dat laag zonlicht veel meer dampkring doorkruist, waardoor de lat te hoog ligt juist bij lage zon: 174 tegen 137 W/m² bij 10°, 87 tegen 50 W/m² bij 5°. In de zomer leveren die uren ~5% van de dag, in december alles. Gemeten op 2 jaar ERA5: de helderste dagen van elke maand scoren 0,687 (dec) tot 0,952 (apr) op de standaardschaal en 0,836 tot 0,974 op deze — de atmosfeer is in april niet helderder, dus die winterdip is een artefact. Op 120 echte winterdagen valt 19% in een andere bucket, altijd een helderdere; in de zomer 2 van 69. Verschuift ook twee andere kt-poorten (grond-helder-check, bewolkingsonzekerheid), en de geleerde bias-factoren per weertype moeten opnieuw leren op de nieuwe labels. Standaard uit; de [KT MODEL]-logregel meldt beide waarden en of de bucket zou wisselen terwijl het uit staat."
+                "en": "⚠️ Experimental. Uses a more accurate clear-sky formula to judge how sunny a day is, which shifts the whole day's PV forecast — mainly matters in winter when the sun is low. Leave off unless you're testing it.",
+                "nl": "⚠️ Experimenteel. Gebruikt een nauwkeurigere clear-sky-formule om te bepalen hoe zonnig een dag is, wat de hele dagvoorspelling beïnvloedt — vooral relevant in de winter bij lage zonnestand. Laat uit tenzij u dit test."
               },
               "value": false
             },
@@ -5004,8 +4949,8 @@
                 "nl": "Corrigeer nacht-verbruiksbias"
               },
               "hint": {
-                "en": "Measured on 652 samples: between 23:00 and 07:00 the learned consumption profile predicts ~19% too high (−76W on 403W actual), and the DP's safety margin inflates it further. This subtracts the measured per-hour bias (capped at 150W, downward only) from the optimizer's night consumption input. Uses the live accuracy meter, so it follows the seasons. Daytime is untouched — the error there comes from appliance peaks, not a level shift.",
-                "nl": "Gemeten op 652 samples: tussen 23:00 en 07:00 voorspelt het geleerde verbruiksprofiel ~19% te hoog (−76W op 403W werkelijk), en de veiligheidsmarge van de DP blaast dat verder op. Dit trekt de gemeten bias per uur (max 150W, alleen naar beneden) van de nacht-verbruiksinvoer van de optimizer af. Gebruikt de live accuracy-meter, dus volgt de seizoenen. Overdag verandert er niets — de fout daar komt van apparaatpieken, niet van een niveauverschuiving."
+                "en": "Corrects the learned night-time (23:00-07:00) consumption forecast, which tends to predict a bit too high. Follows your own usage automatically. Daytime forecasts are untouched.",
+                "nl": "Corrigeert de geleerde nachtverbruiksvoorspelling (23:00-07:00), die doorgaans iets te hoog uitvalt. Past zich automatisch aan uw eigen verbruik aan. Overdag verandert er niets."
               },
               "value": false
             }
