@@ -3104,7 +3104,10 @@ if (debug) this.log(
       const minInHour = Math.floor((ts % 3600000) / 60000);
       const frac = minInHour / 60;
       const v0 = pvHourly[hr]     ?? 0;
-      const v1 = pvHourly[hr + 1] ?? 0;
+      // Next hour's bucket is null until its first live sample lands — falling back to 0
+      // here would interpolate a fake ramp-down to zero at every hour boundary. Hold v0
+      // instead until a real v1 exists.
+      const v1 = pvHourly[hr + 1] ?? v0;
       const pvW = Math.round(v0 + (v1 - v0) * frac);
       pastSlots.push({
         ts,
@@ -3158,7 +3161,8 @@ if (debug) this.log(
           const hr = amhour(slot.ts);
           const minInHour = Math.floor((slot.ts % 3600000) / 60000);
           const v0 = pvHourly[hr]     ?? 0;
-          const v1 = pvHourly[hr + 1] ?? 0;
+          // Same hold-at-v0 fix as the pastSlots loop above — see comment there.
+          const v1 = pvHourly[hr + 1] ?? v0;
           slot.pvW = Math.round(v0 + (v1 - v0) * (minInHour / 60));
         }
       }
