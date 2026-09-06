@@ -459,16 +459,6 @@
         "value": false
       },
       {
-        "id": "pv_sat_kt_substitute",
-        "type": "checkbox",
-        "label": { "en": "Use satellite clearness to classify the morning (experimental)", "nl": "Gebruik satelliet-helderheid om de ochtend in te delen (experimenteel)" },
-        "hint": {
-          "en": "⚠️ Experimental. Uses the satellite's own sky-clearness reading to classify the morning, instead of waiting for KNMI data (available ~08:00-09:45 UTC). Leave off unless you're testing it.",
-          "nl": "⚠️ Experimenteel. Gebruikt de eigen helderheidswaarneming van de satelliet om de ochtend te classificeren, in plaats van te wachten op KNMI-data (beschikbaar ~08:00-09:45 UTC). Laat uit tenzij u dit test."
-        },
-        "value": false
-      },
-      {
         "id": "pv_clearsky_haurwitz",
         "type": "checkbox",
         "label": { "en": "Atmospheric clear-sky formula for day typing (experimental)", "nl": "Atmosferische clear-sky-formule voor dagindeling (experimenteel)" },

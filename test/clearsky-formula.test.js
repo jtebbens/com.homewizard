@@ -188,8 +188,8 @@ test('haurwitz gives the more season-stationary kt scale on a year of real radia
 });
 
 test('the two kt sources share one denominator, so a model change moves both together', () => {
-  // _computeSatKt documents that it must land on the same scale as _computeKnmiKt. Guard that
-  // they both route through the shared helper by checking they respond to the model argument.
+  // Guard that _computeKnmiKt routes through the shared _clearSkyGhi helper by checking it
+  // responds to the model argument.
   const homey = { log: () => {}, error: () => {} };
   const wf = new WeatherForecaster(homey, { data: { knmi_hourly_actuals: {
     '2026-01-15': { 9: 60, 10: 110, 11: 140, 12: 130, 13: 90 },
