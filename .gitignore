@@ -16,6 +16,7 @@ CRASH_DIAGNOSIS.md
 *.ai.md
 
 .claude/hooks/hook-log.jsonl
+refactor-log.md
 
 # Personal HomeyScript backups (user-specific, not app code)
 /local/

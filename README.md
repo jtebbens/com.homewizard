@@ -73,7 +73,11 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.1)
+## 📝 Latest Updates (v3.15.63–v3.19.2)
+
+### Internal Cleanup: Deduplicated Code and Removed Unused Settings (v3.19.2)
+
+* **No behaviour change.** Merged three duplicated blocks in the planner, policy and explanation code into shared functions (identical logic, now maintained in one place instead of two or three). Also removed 6 functions and 1 setting ("Weather Update Interval") confirmed to have zero call sites anywhere in the app — dead code left over from earlier changes.
 
 ### New Setting: Atmospheric Clear-Sky Formula for Day Typing (v3.19.1, off by default)
 
