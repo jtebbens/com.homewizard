@@ -1624,5 +1624,8 @@
   },
   "3.19.3": {
     "en": "Removed a 5.9MB local log file that was accidentally bundled into the app build (cut build size back down); no functional change."
+  },
+  "3.19.4": {
+    "en": "Excluded scratchpad/tools/test dev directories from the published app bundle (build size fix); no functional change."
   }
 }
