@@ -1618,5 +1618,8 @@
   },
   "3.19.1": {
     "en": "PTHB api added to pull dap prices, dropped xadi and kwhprice. Fixed watermeter day usage reset counter at 2:00 CEST."
+  },
+  "3.19.2": {
+    "en": "Refactor & cleanup (dedupe DP/policy/explainability, dead code removal)"
   }
 }
