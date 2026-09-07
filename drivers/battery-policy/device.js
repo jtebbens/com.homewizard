@@ -6542,30 +6542,6 @@ if (debug) this.log(
     }
   }
 
-
-  // Put satellite GHI on the same tilted plane OM uses, so the chart/accuracy
-  // sat line is comparable (OM feeds GTI to yieldFactor; raw GHI undershoots the
-  // east-tilt morning boost). Falls back to raw GHI when tilt/geo isn't set.
-  _satGhiToPanelGhi(satGhiWm2, date) {
-    const s = this.getSettings();
-    const tilt = s.pv_estimation_enabled && typeof s.pv_tilt === 'number' ? s.pv_tilt : null;
-    const azimuth = s.pv_estimation_enabled && typeof s.pv_azimuth === 'number' ? s.pv_azimuth : null;
-    const lat = s.weather_latitude;
-    const lon = s.weather_longitude;
-    if (typeof tilt === 'number' && typeof azimuth === 'number' && typeof lat === 'number' && typeof lon === 'number') {
-      return WeatherForecaster._ghiToGti(satGhiWm2, date, lat, lon, tilt, azimuth);
-    }
-    return satGhiWm2;
-  }
-
-  // Satellite GHI → panel plane. Prefer the OM ensemble's own per-slot GTI/GHI ratio
-  // (gtiOverGhi) so the sat line shares the operational forecast's transposition geometry;
-  // fall back to the standalone Erbs transposition only when the ratio is unavailable.
-  _satGhiToPanel(satGhiWm2, date, gtiOverGhi) {
-    if (typeof gtiOverGhi === 'number' && gtiOverGhi > 0) return satGhiWm2 * gtiOverGhi;
-    return this._satGhiToPanelGhi(satGhiWm2, date);
-  }
-
   _onSatelliteOverlay() {
     const pvCapW = this.getSetting('pv_capacity_w') || 0;
     const sat = this._buildSatForecastForChart(this.weatherData, pvCapW);
