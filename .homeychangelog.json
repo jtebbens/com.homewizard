@@ -1621,5 +1621,8 @@
   },
   "3.19.2": {
     "en": "Refactor & cleanup (dedupe DP/policy/explainability, dead code removal)"
+  },
+  "3.19.3": {
+    "en": "Removed a 5.9MB local log file that was accidentally bundled into the app build (cut build size back down); no functional change."
   }
 }
