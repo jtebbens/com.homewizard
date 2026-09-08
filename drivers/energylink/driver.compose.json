@@ -7,11 +7,9 @@
     "large": "drivers/energylink/assets/images/large.jpg",
     "small": "drivers/energylink/assets/images/small.jpg"
   },
-  "platforms": [
-    "local"
-  ],
   "class": "sensor",
-  "platforms": [ "local"],
+  "platforms": ["local"],
+  "connectivity": ["lan"],
   "capabilities": [
     "measure_power",
     "meter_power.used",
