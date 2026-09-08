@@ -26,6 +26,14 @@ class BaseloadMonitor {
     this.nightStartHour = 1;
     this.nightEndHour = 5;
     this.maxNights = 30;
+    // maxNights caps the number of nights, not their age: history only rotates from _push(), and
+    // _push() only runs from _finalizeNight(). A monitor that stopped finalizing (no P1 device
+    // registered, or the app down at 05:00) keeps its nights forever. Prune on load by age too,
+    // but never below minNightsKept so _fallback() keeps something to work with.
+    this.maxNightAgeDays = 60;
+    this.minNightsKept = 3;
+    // Resolution history is stored at. currentNightSamples stays at full resolution.
+    this.historySampleIntervalMs = 30000;
     // Fraction of the night window a stored night's samples must span to count. See
     // _hasWindowCoverage(). Measured separation is wide: good nights span 173-240 min,
     // the two truncated ones 27 and 32 min.
@@ -176,8 +184,14 @@ class BaseloadMonitor {
   // that night's median was 0 and dragged the baseload from 211 W down to 126 W.)
   _hasWindowCoverage(samples) {
     if (!Array.isArray(samples) || samples.length < 2) return false;
-    const span = Number(samples[samples.length - 1].ts) - Number(samples[0].ts);
-    return span >= (this.nightEndHour - this.nightStartHour) * 3600000 * this.minWindowCoverage;
+    // Read timestamps through _normaliseTs() rather than Number(): history written before the
+    // downsample landed stores ts as an ISO string, and Number('2026-01-05T01:00:00Z') is NaN.
+    // That made the comparison below false and dropped those nights from _computeSmartBaseload()
+    // and _fallback() without a word.
+    const first = this._normaliseTs(samples[0]?.ts);
+    const last = this._normaliseTs(samples[samples.length - 1]?.ts);
+    if (first === null || last === null) return false;
+    return (last - first) >= (this.nightEndHour - this.nightStartHour) * 3600000 * this.minWindowCoverage;
   }
 
   _isWithinCurrentNightWindow(now = new Date()) {
@@ -476,12 +490,32 @@ class BaseloadMonitor {
     catch{return'en';}
   }
 
-  _downsampleSamples(samples, intervalMs = 30000) {
-    if (!samples.length) return [];
+  // Timestamps reach us as a Date (live samples), a number (history written since the downsample
+  // landed) or an ISO string (history written before it). Without the string case a legacy night
+  // collapses to a single sample instead of being thinned.
+  _normaliseTs(ts) {
+    if (ts && typeof ts.getTime === 'function') {
+      const ms = ts.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if (typeof ts === 'number') return Number.isFinite(ts) ? ts : null;
+    if (typeof ts === 'string') {
+      const parsed = Date.parse(ts);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    return null;
+  }
+
+  _downsampleSamples(samples, intervalMs = this.historySampleIntervalMs) {
+    if (!Array.isArray(samples) || !samples.length) return [];
     const result = [];
     let lastKeptTs = -Infinity;
     for (const s of samples) {
-      const ts = s.ts && s.ts.getTime ? s.ts.getTime() : (typeof s.ts === 'number' ? s.ts : 0);
+      if (!s || typeof s !== 'object') continue;
+      const ts = this._normaliseTs(s.ts);
+      // A sample we cannot place in time is dropped rather than stored at epoch 0, where its
+      // power would still be counted by _computeSmartBaseload() and _fallback().
+      if (ts === null) continue;
       if (ts - lastKeptTs >= intervalMs) {
         // Strip rawGridPower/batteryPower from history — only power is needed for stats
         result.push({ ts, power: s.power });
@@ -495,7 +529,7 @@ class BaseloadMonitor {
     // Downsample before storing: keep 1 sample per 30s instead of 1 per second.
     // currentNightSamples stays at full resolution for real-time detection;
     // history only needs statistical resolution (halved from ~14,400 → ~480/night).
-    const samples = this._downsampleSamples(this.currentNightSamples, 30000);
+    const samples = this._downsampleSamples(this.currentNightSamples, this.historySampleIntervalMs);
     this.nightHistory.push({date,avg,invalid,samples,...meta});
     if (this.nightHistory.length>this.maxNights)
       this.nightHistory.splice(0,this.nightHistory.length-this.maxNights);
@@ -666,7 +700,7 @@ class BaseloadMonitor {
     const fs = require('fs');
     const samples = {};
     for (const n of this.nightHistory) {
-      if (n.date && Array.isArray(n.samples)) samples[n.date] = n.samples;
+      if (n && n.date && Array.isArray(n.samples)) samples[n.date] = n.samples;
     }
     try {
       fs.writeFileSync(this._samplesFile, JSON.stringify(samples));
@@ -687,10 +721,58 @@ class BaseloadMonitor {
     });
   }
 
+  // Drop nights older than maxNightAgeDays, keeping the newest minNightsKept whatever their age so
+  // _fallback() is not left empty. Inert on a healthy monitor: it writes one night a day and
+  // maxNights caps it at 30, so its history never spans more than ~30 days.
+  // Returns true when anything changed, so the caller can persist once.
+  _pruneHistory() {
+    const before = this.nightHistory.length;
+    // Drop malformed nights here, not at every reader: _computeSmartBaseload(), _fallback() and
+    // _writeState() all dereference a night directly.
+    this.nightHistory = this.nightHistory.filter(n => n && typeof n === 'object');
+    const afterMalformed = this.nightHistory.length;
+    if (afterMalformed <= this.minNightsKept) return afterMalformed !== before;
+    const cutoff = Date.now() - this.maxNightAgeDays * 86400000;
+    const keepFrom = afterMalformed - this.minNightsKept;
+    this.nightHistory = this.nightHistory.filter((n, i) => {
+      if (i >= keepFrom) return true;
+      // A night we cannot date is treated as old; the floor above still protects the newest ones.
+      const t = typeof n.date === 'string' ? Date.parse(n.date) : NaN;
+      return !Number.isNaN(t) && t >= cutoff;
+    });
+    return this.nightHistory.length !== before;
+  }
+
+  // Bring the nights we keep up to the current resolution and timestamp shape.
+  // Returns true when anything changed.
+  _migrateHistory() {
+    let changed = false;
+    for (const night of this.nightHistory) {
+      // Stored history is whatever a previous version wrote; do not assume it is well-formed.
+      if (!night || typeof night !== 'object') continue;
+      if (!Array.isArray(night.samples) || !night.samples.length) continue;
+      const before = night.samples.length;
+      // Check every sample, not just the first: a night can mix numeric and ISO timestamps, and
+      // then the payload shrinks without the length changing.
+      const hadStringTs = night.samples.some(s => s && typeof s.ts === 'string');
+      night.samples = this._downsampleSamples(night.samples, this.historySampleIntervalMs);
+      if (night.samples.length !== before || hadStringTs) changed = true;
+    }
+    return changed;
+  }
+
   _loadState() {
     const s=this.homey.settings.get('baseload_state');
     if (!s) return;
-    if (Array.isArray(s.nightHistory)) this.nightHistory=this._restoreSamples(s.nightHistory);
+    if (Array.isArray(s.nightHistory)) {
+      this.nightHistory=s.nightHistory;
+      // Prune before restoring samples: on the first start after the samples split the old blob
+      // still carries them inline, and this drops the expensive nights without touching them.
+      const pruned=this._pruneHistory();
+      this.nightHistory=this._restoreSamples(this.nightHistory);
+      const migrated=this._migrateHistory();
+      if (pruned||migrated) this._save();
+    }
     if (typeof s.currentBaseload==='number') this.currentBaseload=s.currentBaseload;
     // The stored value is derived, not a source: it is only ever recomputed at _finalizeNight().
     // Re-derive it here so a changed filter takes effect at startup instead of at the next 05:00.
@@ -719,11 +801,15 @@ class BaseloadMonitor {
       stored = JSON.parse(fs.readFileSync(this._samplesFile, 'utf8')) || {};
     } catch (e) { /* no file yet, or unreadable — fall through to inline/empty */ }
 
-    return nightHistory.map(n => ({
-      ...n,
-      samples: Array.isArray(n.samples) ? n.samples
-        : (Array.isArray(stored[n.date]) ? stored[n.date] : []),
-    }));
+    return nightHistory.map(n => {
+      // A malformed night must not take the whole load path down with it.
+      if (!n || typeof n !== 'object') return n;
+      return {
+        ...n,
+        samples: Array.isArray(n.samples) ? n.samples
+          : (Array.isArray(stored[n.date]) ? stored[n.date] : []),
+      };
+    });
   }
 
   setNotificationsEnabledForDevice(device,enabled) {
