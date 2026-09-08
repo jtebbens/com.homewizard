@@ -1,6 +1,6 @@
 {
   "name": "com.homewizard",
-  "version": "3.0.2",
+  "version": "3.19.4",
   "description": "Homewizard app for Homey",
   "main": "app.js",
   "dependencies": {
