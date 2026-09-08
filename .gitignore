@@ -9,13 +9,15 @@
 CONTEXT.md
 DEVELOPMENT.md
 SKILL.md
-CRASH_DIAGNOSIS.md
+CRASH_DIAGNOSTICS.md
+CLAUDE.md
+HANDOFF.md
 
 # Optional: any other internal prompt files
 *.prompt.md
 *.ai.md
 
-.claude/hooks/hook-log.jsonl
+.claude/
 refactor-log.md
 
 # Personal HomeyScript backups (user-specific, not app code)
