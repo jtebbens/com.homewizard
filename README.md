@@ -73,7 +73,19 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.2)
+## 📝 Latest Updates (v3.15.63–v3.19.4)
+
+### Smaller Stored Baseload History, and Nights That Were Silently Ignored (v3.19.4)
+
+* **Fixed the app keeping every recorded night forever, and then quietly ignoring the oldest ones anyway.** Reported by a user whose stored baseload data had grown to 6.3 MB — 28 nights holding 125,398 raw measurements. Two separate causes. The history is only trimmed when a night is finalised at 05:00, and that is skipped whenever no P1 meter is registered or the app happens to be down at that moment, so a history that stops growing never shrinks either. And nights recorded before the 30-second thinning was introduced store their timestamps as text, which the coverage check read as "not a number" — so those nights were dropped from the standby-power calculation without any message. On start-up the app now removes nights older than 60 days (always keeping the newest three, so the fallback is never left empty), thins stored nights to 30-second resolution, and discards measurements whose timestamp cannot be read rather than counting them as 1 January 1970. On a healthy installation nothing changes.
+
+### New Setting: Keep the Reserve Waiver Through the Plan Reorder (v3.19.4, off by default)
+
+* **Fixed the overnight reserve blocking discharge in exactly the expensive hours it was meant to protect.** The refill reserve holds a little charge back so the battery can be refilled cheaply overnight, and it already waived that floor for any hour whose own price beats the best price left after the last strong solar hour — otherwise the reserve sacrifices the most expensive hour of the horizon to insure a cheaper one. A later step that reorders the night-window discharge by price put the floor back on every hour in the window, waived ones included. Seen live on 8 September: hours at €0.428, €0.416 and €0.399 stood still to insure a €0.385 peak, roughly 0.21 kWh. Ships **off**; while off, the log reports how much energy the waiver would have released, so the effect can be counted before it is switched on.
+
+### Smaller Published App Bundle (v3.19.3)
+
+* **No behaviour change.** `homey app publish` packages the app from disk rather than from git, so development-only folders (scratchpad, tools and test — 17 MB, 13 MB and 1.2 MB) were being shipped inside the published app. They are now excluded from the bundle.
 
 ### Internal Cleanup: Deduplicated Code and Removed Unused Settings (v3.19.2)
 
