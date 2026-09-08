@@ -38,7 +38,7 @@ const fs    = require('fs');
 const path  = require('path');
 const OptimizationEngine = require('../lib/optimization-engine');
 const { createSim } = require('../tools/replay-sim');
-const { exportValue } = require('../lib/price-formulas');
+const { exportValue, storeValue } = require('../lib/price-formulas');
 
 const LOG_FILE = path.join(__dirname, '..', 'refactor-log.md');
 const RUNS     = 1000;
@@ -4438,6 +4438,169 @@ const inv58 = ([rte, capacityKwh, hourly, maxChargeW, consW, currentSoc]) => {
 
 testInvariant('58:curtailment-flag-equals-masked-pv-and-clamped-export', inv58Arb, inv58);
 log(`Masked ${inv58NegSlots} negative-price slots across the runs.\n`);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 59 — a positive trickle cap never lowers the store value while the free
+//                PV ahead cannot fill the room
+//
+// Economic-dominance guard for dp_trickle_cap_positive (default ON, so CLAUDE.md requires
+// one). trickleSuffixMaxPrice resets to 0 at the first pvStrong slot, so the cap usually
+// lands on a price from BEFORE that slot. The premise is "that pvStrong slot refills the
+// battery anyway, so what you store now is redundant". Where the PV still reachable is
+// smaller than the room left in the pack, that premise is false: the peak beyond the reset
+// IS still reachable, and pricing the surplus at the earlier, lower price gives the kWh away.
+//
+// Live 2026-09-08 11:00Z: 45% SoC, cap on the next slot (€0.2529 → €0.110 stored) while the
+// evening peak (€0.459 → €0.261) was reachable; the run exported at €0.214 and the pack never
+// got past 55%.
+//
+// Shape: two weak-PV slots (below pvStrongCoverage → the trickle branch), then exactly ONE
+// pvStrong slot (the reset), then no PV at all, then a strict price maximum. The pack is
+// sized at 2-5x the PV still reachable, so saturation is impossible by construction.
+// Assert: the store value at slot 0 is the UNCAPPED one. On the pre-fix engine it is the
+// capped one, strictly lower — so this is red on HEAD, not vacuous.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 59 — positive-trickle-cap-never-lowers-store-value\n');
+
+let inv59Probed = 0;   // draws that actually produced a positive cap with unsaturating PV
+
+const inv59Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.integer({ min: 85, max: 100 }),
+    cycle_cost_per_kwh: fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 2.0, max: 5.0, noNaN: true, noDefaultInfinity: true }),    // pack vs PV ahead
+  fc.double({ min: 0, max: 30, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 0.15, max: 0.28, noNaN: true, noDefaultInfinity: true }),  // midday price level
+  fc.double({ min: 0.35, max: 0.60, noNaN: true, noDefaultInfinity: true }),  // evening peak
+);
+
+const inv59 = ([settings, maxChargeW, packFactor, currentSoc, midPrice, peakPrice]) => {
+  const CONS = 200;                                   // W, flat
+  const chargeKwhPerSlot = maxChargeW / 1000;         // hourly slots
+  // pvCoverage = (pvW - CONS) / maxChargeW. 0.45 → weak (threshold 0.5); 1.0 → strong.
+  const weakPvW   = CONS + 0.45 * maxChargeW;
+  const strongPvW = CONS + maxChargeW;
+  // PV still reachable from slot 1 on: the weak slot 1 plus the single strong slot 2.
+  const pvAheadKwh = (0.45 + 1.0) * chargeKwhPerSlot;
+  const capacityKwh = packFactor * pvAheadKwh;
+
+  // Slot 1 carries the price the cap lands on; slot 5 is the strict maximum of the horizon.
+  const priceValues = [
+    midPrice, midPrice + 0.02, midPrice + 0.01, midPrice - 0.01, midPrice,
+    peakPrice, midPrice, midPrice - 0.02,
+  ];
+  const pvWValues = [weakPvW, weakPvW, strongPvW, 0, 0, 0, 0, 0];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const s0 = eng._schedule.slots[0];
+  if (!s0 || typeof s0.pvStoreValue !== 'number') return true;
+
+  const eff   = settings.battery_efficiency;
+  const cycle = settings.cycle_cost_per_kwh;
+  const capped   = storeValue(priceValues[1], eff, cycle); // what the cap would yield
+  const uncapped = storeValue(peakPrice, eff, cycle);      // the reachable peak
+  // Only score draws where the cap is genuinely lower — otherwise there is nothing to lose.
+  if (uncapped <= capped + 1e-9) return true;
+  inv59Probed++;
+
+  return s0.pvStoreValue >= uncapped - 1e-9;
+};
+
+testInvariant('59:positive-trickle-cap-never-lowers-store-value', inv59Arb, inv59);
+log(`Scored ${inv59Probed} draws where the cap was strictly lower than the reachable peak.\n`);
+if (inv59Probed === 0) {
+  console.error('   ⚠ invariant 59 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '59:vacuous-region-never-reached' });
+}
+
+// INVARIANT 60 — the refill-reserve never suppresses a slot that beats the peak it insures.
+// The reserve waives its floor per slot whose own price exceeds releasedPeak (the best price
+// after the last strong-PV slot), but the post-DP reorder used to put that floor back through
+// dpEndTargetG — the window's budget bottom came from a floored morning slot. Live 2026-09-08:
+// €0.428/€0.416/€0.399 idle to insure a €0.385 peak. Guards the switch-on of
+// dp_reserve_waiver_reorder: within the pre-PV window, suppression must stay price-monotone —
+// an idle slot with SoC still in the pack may not sit above a cheaper slot that discharged.
+log('## Invariant 60 — reserve-never-suppresses-above-released-peak\n');
+
+let inv60Probed = 0;
+
+const inv60Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.integer({ min: 85, max: 100 }),
+    cycle_cost_per_kwh: fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+    dp_reserve_waiver_reorder: fc.constant(true),
+  }),
+  fc.double({ min: 0.20, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // refillConfidence
+  fc.double({ min: 15, max: 70, noNaN: true, noDefaultInfinity: true }),      // start SoC
+  fc.double({ min: 0.30, max: 0.42, noNaN: true, noDefaultInfinity: true }),  // released peak level
+  fc.double({ min: 0.02, max: 0.12, noNaN: true, noDefaultInfinity: true }),  // evening premium
+);
+
+const inv60 = ([settings, refillConfidence, currentSoc, peakLevel, premium]) => {
+  const CONS = 200, MAXW = 800, EVENING = [0, 1, 2, 3, 4];
+  // 5 evening slots, all strictly above the released peak; night + morning below it; a strong-PV
+  // block (the refill the reserve insures); then tomorrow's evening, whose max IS releasedPeak.
+  const priceValues = [
+    peakLevel + premium + 0.04, peakLevel + premium + 0.03, peakLevel + premium + 0.02,
+    peakLevel + premium + 0.01, peakLevel + premium,
+    ...Array(7).fill(peakLevel - 0.08),
+    peakLevel - 0.02, peakLevel - 0.01, peakLevel - 0.01,
+    ...Array(5).fill(peakLevel - 0.15),
+    peakLevel, peakLevel - 0.005, peakLevel - 0.01, peakLevel - 0.02,
+  ];
+  const pvWValues = priceValues.map((_, h) => (h >= 15 && h <= 19 ? CONS + MAXW : 0));
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh: 2.688, maxChargeW: MAXW, maxDischargeW: MAXW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0, refillConfidence,
+  });
+  if (!eng._schedule) return true;
+  const slots = eng._schedule.slots;
+  const fired = EVENING.filter(t => slots[t]?.action === 'discharge');
+  // Region: the reserve is actually sized (confidence < 1) and the window did discharge, so a
+  // budget existed. Without both there is nothing for the floor to suppress.
+  const reserveActive = (1 - refillConfidence) > 0.01;
+  if (!reserveActive || fired.length === 0) return true;
+  inv60Probed++;
+
+  for (const t of EVENING) {
+    if (slots[t].action === 'discharge') continue;
+    if (!(slots[t].socProjected > 0.1)) continue; // genuinely empty — not a suppression
+    // Idle while a strictly cheaper slot in the same window discharged → price-blind suppression.
+    if (fired.some(u => priceValues[u] < priceValues[t] - 1e-9)) return false;
+  }
+  return true;
+};
+
+testInvariant('60:reserve-never-suppresses-above-released-peak', inv60Arb, inv60);
+log(`Scored ${inv60Probed} draws with an active reserve and a discharging evening window.\n`);
+if (inv60Probed === 0) {
+  console.error('   ⚠ invariant 60 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '60:vacuous-region-never-reached' });
+}
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
