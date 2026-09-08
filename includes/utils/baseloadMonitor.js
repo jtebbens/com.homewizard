@@ -17,6 +17,9 @@ class BaseloadMonitor {
     this.nightStartHour = 1;
     this.nightEndHour = 5;
     this.maxNights = 30;
+    // Resolution history is stored at. Full-resolution samples stay in currentNightSamples;
+    // history only needs enough points for a median.
+    this.historySampleIntervalMs = 30000;
 
     // Original thresholds - these work well for most households
     // The key insight: fridge cycles (50-300W, 30-120min) are normal and not tracked as invalid
@@ -406,12 +409,32 @@ class BaseloadMonitor {
     catch{return'en';}
   }
 
-  _downsampleSamples(samples, intervalMs = 30000) {
+  // Timestamps reach us as a Date (live samples), a number (history written since the 30 s
+  // downsample landed) or an ISO string (history written before that). Without the string case a
+  // legacy night collapses to a single sample instead of being thinned.
+  _normaliseTs(ts) {
+    if (ts && typeof ts.getTime === 'function') {
+      const ms = ts.getTime();
+      return Number.isFinite(ms) ? ms : null;
+    }
+    if (typeof ts === 'number') return Number.isFinite(ts) ? ts : null;
+    if (typeof ts === 'string') {
+      const parsed = Date.parse(ts);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    return null;
+  }
+
+  _downsampleSamples(samples, intervalMs = this.historySampleIntervalMs) {
     if (!samples.length) return [];
     const result = [];
     let lastKeptTs = -Infinity;
     for (const s of samples) {
-      const ts = s.ts && s.ts.getTime ? s.ts.getTime() : (typeof s.ts === 'number' ? s.ts : 0);
+      if (!s || typeof s !== 'object') continue;
+      const ts = this._normaliseTs(s.ts);
+      // A sample we cannot place in time is dropped rather than stored at epoch 0, where its
+      // power would still be counted by _computeSmartBaseload() and _fallback().
+      if (ts === null) continue;
       if (ts - lastKeptTs >= intervalMs) {
         // Strip rawGridPower/batteryPower from history — only power is needed for stats
         result.push({ ts, power: s.power });
@@ -425,7 +448,7 @@ class BaseloadMonitor {
     // Downsample before storing: keep 1 sample per 30s instead of 1 per second.
     // currentNightSamples stays at full resolution for real-time detection;
     // history only needs statistical resolution (halved from ~14,400 → ~480/night).
-    const samples = this._downsampleSamples(this.currentNightSamples, 30000);
+    const samples = this._downsampleSamples(this.currentNightSamples, this.historySampleIntervalMs);
     this.nightHistory.push({date,avg,invalid,samples,...meta});
     if (this.nightHistory.length>this.maxNights)
       this.nightHistory.splice(0,this.nightHistory.length-this.maxNights);
@@ -584,10 +607,35 @@ class BaseloadMonitor {
     }, 5 * 60 * 1000);
   }
 
+  // Bring stored history up to the current resolution. Returns true when anything changed, so the
+  // caller can persist the smaller payload once instead of carrying it until the next night.
+  _migrateHistory() {
+    let changed = false;
+    for (const night of this.nightHistory) {
+      // Stored history is whatever a previous version wrote; do not assume it is well-formed.
+      if (!night || typeof night !== 'object') continue;
+      if (!Array.isArray(night.samples) || !night.samples.length) continue;
+      const before = night.samples.length;
+      // Check every sample, not just the first: a night can mix numeric and ISO timestamps, and
+      // then the payload shrinks without the length changing.
+      const hadStringTs = night.samples.some(s => s && typeof s.ts === 'string');
+      night.samples = this._downsampleSamples(night.samples, this.historySampleIntervalMs);
+      if (night.samples.length !== before || hadStringTs) changed = true;
+    }
+    return changed;
+  }
+
   _loadState() {
     const s=this.homey.settings.get('baseload_state');
     if (!s) return;
-    if (Array.isArray(s.nightHistory)) this.nightHistory=s.nightHistory;
+    if (Array.isArray(s.nightHistory)) {
+      this.nightHistory=s.nightHistory;
+      // Nights stored before the 30 s downsample landed still hold ~5,700 samples each, and are
+      // never re-processed: _push() only thins nights it writes itself, and maxNights caps the
+      // number of nights rather than their size. A history from December therefore keeps costing
+      // ~300 KB per night indefinitely. Thin it once, on the way in.
+      if (this._migrateHistory()) this._save();
+    }
     if (typeof s.currentBaseload==='number') this.currentBaseload=s.currentBaseload;
     if (Array.isArray(s.deviceNotificationPrefs)) this.deviceNotificationPrefs=new Map(s.deviceNotificationPrefs);
     if (typeof s.invalidNightCounter==='number') this.invalidNightCounter=s.invalidNightCounter;
