@@ -14,5 +14,8 @@
   "javascript.validate.enable": false,
   "typescript.validate.enable": false,
   "typescript.disableAutomaticTypeAcquisition": true,
-  "eslint.run": "onSave"
+  "eslint.run": "onSave",
+  "githubPullRequests.ignoredPullRequestBranches": [
+    "master"
+  ]
 }
