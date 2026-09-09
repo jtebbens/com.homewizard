@@ -4317,7 +4317,12 @@ if (debug) this.log(
     if (refillConfidence < 1.0) {
       const floorAddPct = (1 - refillConfidence) * 0.5 * ((_s.max_soc ?? 100) - (_s.min_soc ?? 0));
       this._lastReserveFloorPct = (_s.min_soc ?? 0) + floorAddPct;
-      this.log(`🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}% (until next strong-PV refill)`);
+      // Only the reserve's SIZE is known here. WHERE it lands is decided inside _runBackwardDP
+      // by the strongPvAhead/releasedPeak gate, which can reject every slot and apply nothing —
+      // so logging the size here reported intent as fact. Held until after compute() below,
+      // where the applied slot count is available. (2026-09-09 12:15 and 12:25 both logged
+      // "+13%" on identical inputs while the gate floored 0 resp. 5 of 47 slots.)
+      this._pendingReserveLog = `🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}%`;
     } else {
       this._lastReserveFloorPct = (_s.min_soc ?? 0);
       if (_cvConf < 1.0) {
@@ -4368,6 +4373,23 @@ if (debug) this.log(
     this.homey.app.logMem?.('[BatteryPolicy] opt:before-dp');
     this.optimizationEngine.compute(prices, soc, capacityKwh, maxChargePowerW, maxDischargePowerW, pvForecast, learnedRte, consumptionWPerSlot, minDischargePrice, consumptionMargin, effectivePvKwhTomorrow, adjustedTerminalPvKwh, _pvCloudFactor, refillConfidence, false, maxChargePrice);
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-dp');
+
+    // Emit the refill-reserve line now that the DP has placed (or rejected) the floor. Reports
+    // what was applied, not what was intended — see the comment at _pendingReserveLog above.
+    if (this._pendingReserveLog) {
+      const _floorG = this.optimizationEngine._lastDpArrays?.reserveFloorG;
+      const _minG = (_s.min_soc ?? 0) * 10; // reserveFloorG counts 0.1% steps (GRID=10)
+      let _applied = null;
+      if (_floorG) {
+        _applied = 0;
+        for (let t = 0; t < _floorG.length; t++) if (_floorG[t] > _minG) _applied++;
+      }
+      const _note = _applied === null ? ' (applied: unknown)'
+        : _applied === 0 ? ` — NOT APPLIED: 0/${_floorG.length} slots passed the strong-PV/releasedPeak gate`
+          : ` applied on ${_applied}/${_floorG.length} slots`;
+      this.log(`${this._pendingReserveLog}${_note}`);
+      this._pendingReserveLog = null;
+    }
 
     // Morning-waive shadow (log-only, project_morning_reserve_floor_holds_through_peak). When the
     // refill-reserve floor is active (refillConfidence < 1.0), re-run the DP with the floor OFF
