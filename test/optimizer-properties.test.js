@@ -4602,6 +4602,104 @@ if (inv60Probed === 0) {
   failedInvariants.push({ name: '60:vacuous-region-never-reached' });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 61 — never store the dearer surplus while exporting the cheaper one
+//                from the same PV block
+//
+// Economic-dominance guard for dp_trickle_cap_saturation (default ON, so CLAUDE.md requires
+// one). It is the twin of 59: 59 covers the POSITIVE cap where the PV ahead does NOT fill the
+// room, this one covers the ZEROED cap where it DOES.
+//
+// trickleSuffixMaxPrice[k] is 0 when k+1 is itself pvStrong ("the window is empty"). The
+// pre-fix rawStorePrice read that 0 as "no cap at all" and fell back to the uncapped suffix
+// max, so a slot with the TIGHTER cap got the HIGHER store value than its neighbour one step
+// later. Where the PV ahead really does saturate the pack, the stored kWh is redundant either
+// way — the only thing the decision changes is WHICH surplus goes to the grid, and then the
+// dearest one must go. Live 2026-09-10 09:00Z: 11:00 (€0.299, cap 0) stored at €0.556 while
+// 11:15 (€0.278, cap €0.263) exported at €0.118, pack full by 13:45 in both cases.
+//
+// Shape: slot 0 dear + pvStrong successor (cap 0), slot 1 cheaper + weak successor (cap =
+// slot 2's price), slot 3 pvStrong (the reset that closes slot 1's window), then a strict
+// price maximum. The pack is sized UNDER the PV still reachable, so saturation holds by
+// construction at both slots. Assert the ordering, not the formula: it may store both, export
+// both, or store the cheaper — it may not keep the dear one and sell the cheap one.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 61 — never-store-dearer-surplus-while-exporting-cheaper\n');
+
+let inv61Probed = 0;   // draws that actually landed in the saturating, dear-before-cheap region
+
+const inv61Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.integer({ min: 85, max: 100 }),
+    cycle_cost_per_kwh: fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 0.20, max: 0.80, noNaN: true, noDefaultInfinity: true }),  // pack vs PV ahead
+  fc.double({ min: 0, max: 25, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 0.20, max: 0.32, noNaN: true, noDefaultInfinity: true }),  // dear midday slot
+  fc.double({ min: 0.01, max: 0.05, noNaN: true, noDefaultInfinity: true }),  // gap to the cheaper
+  fc.double({ min: 0.45, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // evening peak
+);
+
+const inv61 = ([settings, maxChargeW, packFactor, currentSoc, dearPrice, gap, peakPrice]) => {
+  const CONS = 200;                                   // W, flat
+  const chargeKwhPerSlot = maxChargeW / 1000;         // hourly slots
+  // pvCoverage = (pvW - CONS) / maxChargeW. 0.45 → weak (threshold 0.5); ≥0.75 → strong.
+  const weakPvW   = CONS + 0.45 * maxChargeW;
+  const strongPvW = CONS + 0.95 * maxChargeW;
+  // Free PV reachable from slot 1 on. Sized against the pack below so it always saturates.
+  const pvAheadKwh = (0.95 + 0.45 + 0.95 + 0.75) * chargeKwhPerSlot;
+  const capacityKwh = packFactor * pvAheadKwh;
+
+  const cheapPrice = dearPrice - gap;
+  // slot 0 dear (successor strong → cap 0), slot 1 cheaper (successor weak → cap = slot 2),
+  // slot 3 strong closes slot 1's window, slot 5 is the strict horizon maximum.
+  const priceValues = [
+    dearPrice, cheapPrice, cheapPrice - 0.01, cheapPrice - 0.02, cheapPrice,
+    peakPrice, dearPrice - 0.05, cheapPrice - 0.03,
+  ];
+  const pvWValues = [
+    strongPvW, strongPvW, weakPvW, strongPvW, CONS + 0.75 * maxChargeW, 0, 0, 0,
+  ];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const [s0, s1] = eng._schedule.slots;
+  if (!s0 || !s1) return true;
+  if (typeof s0.pvStoreValue !== 'number' || typeof s1.pvStoreValue !== 'number') return true;
+
+  const exportOf = slot => (typeof slot.exportPrice === 'number' ? slot.exportPrice : slot.price);
+  const e0 = exportOf(s0);
+  const e1 = exportOf(s1);
+  // Only score draws where slot 0 really is the dearer disposal and both slots are in the
+  // same PV block — otherwise there is no ordering to violate.
+  if (!(e0 > e1 + 1e-9)) return true;
+  inv61Probed++;
+
+  const keepsDear  = s0.pvStoreValue > e0 + 1e-9;
+  const sellsCheap = s1.pvStoreValue < e1 - 1e-9;
+  return !(keepsDear && sellsCheap);
+};
+
+testInvariant('61:never-store-dearer-surplus-while-exporting-cheaper', inv61Arb, inv61);
+log(`Scored ${inv61Probed} draws where slot 0 was the dearer disposal of the two.\n`);
+if (inv61Probed === 0) {
+  console.error('   ⚠ invariant 61 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '61:vacuous-region-never-reached' });
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));

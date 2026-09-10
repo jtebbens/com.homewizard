@@ -111,7 +111,7 @@ function _settingsFootprintKB(settings) {
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
     'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
-    'battery_policy_state', 'device_settings',
+    'battery_policy_state', 'device_settings', 'policy_weakpv_shadow',
   ];
   try {
     // The mode history lives in ~23 day chunks; report them as one line so they can't crowd the
@@ -191,7 +191,9 @@ class BatteryPolicyDevice extends Homey.Device {
     this.explainabilityEngine = null; // lazy-loaded on first policy check
     this.chartGenerator = null;       // lazy-loaded on first chart request
     this.efficiencyEstimator = new EfficiencyEstimator(this.homey);
-    this.optimizationEngine = new OptimizationEngine(this.getSettings());
+    // dp_weak_pv_shadow is not a user setting: the live engine is the only one that should pay
+    // for the weak-PV shadow pass (the 2027/curtailment engines below are shadows themselves).
+    this.optimizationEngine = new OptimizationEngine({ ...this.getSettings(), dp_weak_pv_shadow: true });
 
 
     // State
@@ -3325,6 +3327,34 @@ if (debug) this.log(
   }
 
   /**
+   * Shadow log for the price-forecast fill: what would the charge ceiling be if the estimated
+   * prices for the not-yet-published part of tomorrow counted? Logs only, changes nothing —
+   * in 'shadow' mode the estimates never reach the planner at all. Runs through policy-engine's
+   * own chargeCeilingFrom() so the comparison uses the one ceiling formula, not a mirror of it.
+   */
+  _logPriceForecastShadow(tariff, learnedRte) {
+    const tm = this.tariffManager;
+    if (!tariff || !tm || tm._priceForecastMode() === 'off' || !tm.forecastProvider?.hasPrices()) return;
+
+    const table = tariff.effectivePrices || tariff.allPrices || tariff.next24Hours;
+    if (!Array.isArray(table) || table.length === 0) return;
+
+    const real = table.filter(p => !p.estimated);
+    if (real.length === 0) return;
+    const known = new Set(real.map(p => new Date(p.timestamp).getTime()));
+    const added = tm.forecastProvider.getAll15MinPrices()
+      .filter(p => !known.has(new Date(p.timestamp).getTime()));
+    if (added.length === 0) return;   // day-ahead already covers everything the estimate knows
+
+    const ceilReal = this.policyEngine.chargeCeilingFrom(real, learnedRte, true);
+    const ceilEst  = this.policyEngine.chargeCeilingFrom(real.concat(added), learnedRte, true);
+    const ahead = arr => ((Math.max(...arr.map(p => new Date(p.timestamp).getTime())) - Date.now()) / 3_600_000).toFixed(1);
+    this.log(`🔮 [PRICE-FC ${tm._priceForecastMode()}] +${added.length} estimated slots: `
+      + `horizon ${ahead(real)}h → ${ahead(real.concat(added))}h, `
+      + `ceiling €${ceilReal.toFixed(4)} → €${ceilEst.toFixed(4)} (Δ €${(ceilEst - ceilReal).toFixed(4)})`);
+  }
+
+  /**
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
@@ -4191,7 +4221,10 @@ if (debug) this.log(
       const nightFloor   = pvRatio >= 1.5 ? 0.00 : Math.max(actualBreakEven + 0.015, 0.115);
       const dayFloor     = inputs.settings?.min_discharge_price || 0.22;
       const weakPvFloorBase = Math.max(actualBreakEven + 0.02, 0.115);
-      const pvStrongW    = (inputs.battery?.maxChargePowerW || 800) * 0.5; // mirrors pvStrongCoverage=400/800
+      // Raw-PV threshold for the discharge floors. It SCALES with charge power, so it
+      // coincides with the fixed PV_STRONG_SURPLUS_W only where maxChargePowerW is 800 W
+      // (the fallback) — not a mirror of it, and it measures raw PV rather than surplus.
+      const pvStrongW    = (inputs.battery?.maxChargePowerW || 800) * 0.5;
       const maxSoc       = inputs.settings?.max_soc ?? 95;
       // When battery is at max_soc, PV cannot add more energy — the opportunity-cost
       // reasoning behind dayFloor (PV recharges for free) does not apply.
@@ -4336,6 +4369,7 @@ if (debug) this.log(
     // Fed the same learnedRte the DP gets below, so the gate and the DP's own round-trip test
     // sit on one break-even instead of two (project_charge_ceiling_two_impls_0902).
     const maxChargePrice = this.policyEngine._getDynamicChargePrice(inputs.tariff, inputs.tariff?.currentPrice, learnedRte);
+    this._logPriceForecastShadow(inputs.tariff, learnedRte);
     // Spread-band (pvTimingRobust) retired 2026-07-04: unmeasured (pv_predictions.csv is blind to
     // a discharge-cap-only change) and inert live; dropped to reduce DP-stack complexity. Pass
     // false — the optimization-engine helper stays as dead-but-tested code (inv20/21).
@@ -4389,6 +4423,46 @@ if (debug) this.log(
           : ` applied on ${_applied}/${_floorG.length} slots`;
       this.log(`${this._pendingReserveLog}${_note}`);
       this._pendingReserveLog = null;
+    }
+
+    // Weak-PV shadow (log-only, project_weak_pv_decided_outside_dp_0910). compute() already ran
+    // the horizon a second time with dp_weak_pv_in_dp flipped and scored BOTH plans with the one
+    // scorer (_runWeakPvShadow) — here it only gets written down. One line per run plus a
+    // 96-record ring, because a single run's Δ€ answers nothing: the question is how the flag
+    // scores over days. Δ€ > 0 means flipping the flag would have earned that much.
+    // ⚠️ Every € here inherits one impurity: the surplus the flag decides over is a Math.max with
+    // PREDICTED consumption, so the measurement can exceed the forecast but never contradict it.
+    // That is what the cons=<distinct>/<n> field is for — 1 distinct means a flat default.
+    const _wps = this.optimizationEngine._weakPvShadow;
+    if (_wps) {
+      this.log(`🔬 [WEAKPV-SHADOW] flag=${_wps.flagOn ? 'ON' : 'off'} weak=${_wps.nWeakSlots}/${_wps.priceN}`
+        + ` diff=${_wps.nDiff}(act ${_wps.nDiffAction}/soc ${_wps.nDiffSoc})`
+        + `${_wps.firstDiffT != null ? `@t${_wps.firstDiffT}` : ''}`
+        + ` t0 base=${_wps.action0Base} shadow=${_wps.action0Shadow}`
+        + ` €base=${_wps.eurBase.toFixed(3)} €shadow=${_wps.eurShadow.toFixed(3)}`
+        + ` Δ€=${_wps.dEur >= 0 ? '+' : ''}${_wps.dEur.toFixed(3)}`
+        + ` socEnd=${_wps.socEndBase}%→${_wps.socEndShadow}%`
+        + ` cons=${_wps.consDistinct}distinct/${_wps.consN}`);
+      try {
+        // Read the in-memory copy first: _setLive batches the settings write 8s out, so
+        // settings.get() can still hold the previous ring and would drop a record.
+        const _prev = this._liveState.policy_weakpv_shadow
+          ?? this.homey.settings.get('policy_weakpv_shadow');
+        const _rows = Array.isArray(_prev?.rows) ? _prev.rows : [];
+        _rows.push({
+          ts: new Date().toISOString(), soc, on: _wps.flagOn ? 1 : 0,
+          w: _wps.nWeakSlots, n: _wps.priceN,
+          d: _wps.nDiff, da: _wps.nDiffAction, ds: _wps.nDiffSoc, ft: _wps.firstDiffT,
+          a0: _wps.action0Base, a0s: _wps.action0Shadow,
+          eb: _wps.eurBase, es: _wps.eurShadow, de: _wps.dEur,
+          rb: _wps.residualBase, rs: _wps.residualShadow,
+          sb: _wps.socEndBase, ss: _wps.socEndShadow,
+          cd: _wps.consDistinct, cn: _wps.consN,
+        });
+        this._setLive('policy_weakpv_shadow', { rows: _rows.slice(-96) });
+      } catch (err) {
+        this.error('weak-PV shadow ring write failed', err);
+      }
     }
 
     // Morning-waive shadow (log-only, project_morning_reserve_floor_holds_through_peak). When the

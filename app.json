@@ -4999,6 +4999,58 @@
                 "nl": "⚠️ Experimenteel — verandert de planning van de optimizer. Bij een klein zonoverschot (ruwweg onder 400 W) houdt de optimizer de accu stil en gaat het overschot naar het net. Met deze optie aan weegt hij opslaan af tegen terugleveren. Onder saldering wint terugleveren vrijwel altijd, dus uit laten staan is voorlopig voordeliger."
               },
               "value": false
+            },
+            {
+              "id": "price_forecast_fill",
+              "type": "dropdown",
+              "label": {
+                "en": "Estimated prices for tomorrow (experimental)",
+                "nl": "Geschatte prijzen voor morgen (experimenteel)"
+              },
+              "hint": {
+                "en": "⚠️ Experimental — changes optimizer planning. Tomorrow's prices are published around 13:00, so before that the plan stops at midnight and the battery may refuse to charge on cheap solar. This fills the gap with estimated prices until the real ones arrive. 'Log only' fetches and logs the difference without changing any decision.",
+                "nl": "⚠️ Experimenteel — verandert de planning van de optimizer. De prijzen voor morgen komen rond 13:00 binnen; daarvóór stopt het plan om middernacht en kan de accu weigeren te laden op goedkope zon. Deze optie vult dat gat met geschatte prijzen tot de echte binnenkomen. 'Alleen loggen' haalt de schatting op en logt het verschil zonder een beslissing te veranderen."
+              },
+              "value": "off",
+              "values": [
+                {
+                  "id": "off",
+                  "label": {
+                    "en": "Off",
+                    "nl": "Uit"
+                  }
+                },
+                {
+                  "id": "shadow",
+                  "label": {
+                    "en": "Log only",
+                    "nl": "Alleen loggen"
+                  }
+                },
+                {
+                  "id": "on",
+                  "label": {
+                    "en": "On",
+                    "nl": "Aan"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "price_forecast_shade",
+              "type": "number",
+              "label": {
+                "en": "Estimated price confidence",
+                "nl": "Vertrouwen in geschatte prijs"
+              },
+              "hint": {
+                "en": "Only used when estimated prices are on. Multiplies the estimated wholesale price, so a value below 1 makes an over-optimistic estimate move the charge limit less far. 1 = use the estimate as-is.",
+                "nl": "Alleen gebruikt als geschatte prijzen aan staan. Vermenigvuldigt de geschatte groothandelsprijs, zodat een te optimistische schatting de laadgrens minder ver opschuift bij een waarde onder 1. 1 = schatting ongewijzigd gebruiken."
+              },
+              "value": 1,
+              "min": 0.5,
+              "max": 1,
+              "step": 0.05
             }
           ]
         },
