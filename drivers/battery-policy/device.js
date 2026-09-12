@@ -2409,7 +2409,10 @@ if (debug) this.log(
   async _maybeRefreshWeatherOnly() {
     const settings = this.getSettings();
     if (settings.tariff_type !== 'dynamic') return;
-    const intervalMs = 3_600_000;
+    // 55min not 60: the 15-min policy tick checks this age at fixed grid points, so a
+    // razor-exact 1h threshold gets missed by a few seconds each cycle and defers to the
+    // next tick — quantizing the real interval up to 75min (confirmed live 2026-09-12).
+    const intervalMs = 55 * 60_000;
     const age = this.weatherData?.fetchedAt ? Date.now() - this.weatherData.fetchedAt : Infinity;
     if (age > intervalMs) {
       await this._updateWeather();
@@ -5617,10 +5620,12 @@ if (debug) this.log(
     let weatherData = null;
 
     if (settings.tariff_type === 'dynamic') {
+      // 55min not 60 — see _maybeRefreshWeatherOnly for why an exact 1h threshold
+      // quantizes up to 75min against the 15-min policy-tick grid.
       if (
         !this.weatherData ||
         !this.weatherData.fetchedAt ||
-        Date.now() - this.weatherData.fetchedAt > 3_600_000
+        Date.now() - this.weatherData.fetchedAt > 55 * 60_000
       ) {
         await this._updateWeather();
       }
