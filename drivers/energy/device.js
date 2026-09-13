@@ -105,6 +105,12 @@ async function safeAddCapability(device, capability) {
 
 
 
+// Rolling wifi-stability warning thresholds — see _trackWifiStability().
+const WIFI_STABILITY_WINDOW = 40;
+const WIFI_STABILITY_FAIL_RATE = 0.5;
+const WIFI_STABILITY_RESET_STREAK = 10;
+const WIFI_STABILITY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
 function getWifiQuality(percent) {
   if (percent >= 80) return 'Excellent / Strong';
   if (percent >= 60) return 'Moderate';
@@ -121,6 +127,10 @@ module.exports = class HomeWizardEnergyDevice extends Homey.Device {
     this._lastSamples = {}; // mini-cache
     this._deleted = false;
     this._pollErrorCount = 0;
+    this._pollHistory = [];
+    this._pollSuccessStreak = 0;
+    this._wifiWarnNotified = false;
+    this._wifiWarnCooldownUntil = 0;
 
     this.agent = new http.Agent({
       keepAlive: true,
@@ -563,10 +573,12 @@ async _onPollImpl() {
     // Succes → reset error counter
     this._pollErrorCount = 0;
     this._backoffTicks = 0;
+    this._trackWifiStability(false, homeyLang);
 
   } catch (err) {
     this._pollErrorCount++;
     this._handlePollError(err);
+    this._trackWifiStability(true, homeyLang);
     return;
   }
 
@@ -1169,6 +1181,45 @@ _handlePollError(err) {
   if (this._pollErrorCount === 1) {
     this._debugLog(`Poll failed: ${msg}`);
   }
+}
+
+// Rolling fail-rate over the last N poll *attempts* (independent of the tick-skip
+// backoff counter above, which resets on a single success). A device with flaky
+// wifi flaps fail/success/fail/success — that never sustains _pollErrorCount, so
+// it never surfaces to the user as anything but silent alarm_connectivity flips.
+// This tracks the real attempt outcomes and warns once when they stay bad.
+_trackWifiStability(failed, lang) {
+  this._pollHistory.push(failed);
+  if (this._pollHistory.length > WIFI_STABILITY_WINDOW) this._pollHistory.shift();
+
+  if (failed) {
+    this._pollSuccessStreak = 0;
+  } else {
+    this._pollSuccessStreak++;
+    if (this._pollSuccessStreak >= WIFI_STABILITY_RESET_STREAK) {
+      this._wifiWarnNotified = false;
+    }
+  }
+
+  if (this._pollHistory.length < WIFI_STABILITY_WINDOW) return;
+  if (this._wifiWarnNotified) return;
+
+  const now = Date.now();
+  if (now < this._wifiWarnCooldownUntil) return;
+
+  const failCount = this._pollHistory.filter(Boolean).length;
+  const failRate = failCount / this._pollHistory.length;
+  if (failRate < WIFI_STABILITY_FAIL_RATE) return;
+
+  const deviceName = this.getName();
+  const pct = Math.round(failRate * 100);
+  const msg = lang === 'nl'
+    ? `${deviceName}: wifi-verbinding lijkt instabiel (${pct}% mislukte pogingen). Controleer het wifi-signaal van het apparaat.`
+    : `${deviceName}: wifi connection seems unstable (${pct}% failed attempts). Check the device's wifi signal.`;
+
+  this.homey.notifications.createNotification({ excerpt: msg }).catch(this.error);
+  this._wifiWarnNotified = true;
+  this._wifiWarnCooldownUntil = now + WIFI_STABILITY_COOLDOWN_MS;
 }
 
 
