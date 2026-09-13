@@ -61,5 +61,39 @@ test('device.js still uses the 55min threshold in both call sites (no regression
   assert.ok(!src.includes('const intervalMs = 60 * 60_000;'), 'threshold must not be reverted to 60 * 60_000');
 });
 
+// Follow-up 2026-09-13: the 55min device threshold alone did not fix it live —
+// fetches stayed 75min apart. The forecaster's own in-memory cache still lived
+// 60min, so at the ~60min tick the device asked for weather, got the valid
+// cache back ("Using cached weather forecast", fetchedAt unchanged) and the real
+// fetch slipped to the next tick. Each cached hit still called
+// optimizationEngine.updateSettings({}). Model both gates together.
+const { CACHE_TTL_MS } = require('../lib/weather-forecaster');
+const DEVICE_THRESHOLD_MS = 55 * 60_000;
+const FETCH_DURATION_MS = 2_000; // fetchedAt/cacheExpiry are stamped when the fetch completes
+
+// Ticks every 15min from t=0; the first fetch completes at FETCH_DURATION_MS.
+// Returns { interval, cachedHits } for the first refresh cycle.
+function refreshCycle(cacheTtlMs) {
+  const fetchedAt = FETCH_DURATION_MS;
+  const cacheExpiry = fetchedAt + cacheTtlMs;
+  let cachedHits = 0;
+  for (let tick = TICK_MS; tick <= 4 * 60 * 60_000; tick += TICK_MS) {
+    if (tick - fetchedAt <= DEVICE_THRESHOLD_MS) continue;
+    if (cacheExpiry > tick) { cachedHits++; continue; }
+    return { interval: tick, cachedHits };
+  }
+  throw new Error('no refresh within 4h');
+}
+
+test('60min forecaster cache (pre-fix) keeps the real fetch at 75min with a wasted cached hit', () => {
+  assert.deepStrictEqual(refreshCycle(60 * 60_000), { interval: 75 * 60_000, cachedHits: 1 });
+});
+
+test('forecaster CACHE_TTL_MS: real fetch at 60min, no cached hits in between', () => {
+  assert.ok(Number.isFinite(CACHE_TTL_MS), 'weather-forecaster must export CACHE_TTL_MS');
+  assert.ok(CACHE_TTL_MS <= DEVICE_THRESHOLD_MS, `cache TTL ${CACHE_TTL_MS / 60_000}min must not exceed device threshold 55min`);
+  assert.deepStrictEqual(refreshCycle(CACHE_TTL_MS), { interval: 60 * 60_000, cachedHits: 0 });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
