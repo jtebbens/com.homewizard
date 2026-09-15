@@ -73,19 +73,7 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.5)
-
-### Warn About Unstable Device Wi-Fi Instead of Blaming the App (v3.19.5)
-
-* **The app now tells you when a device's own Wi-Fi is flaky, instead of silently flipping its connectivity alarm.** The poll-failure counter reset to zero after a single successful poll, so an unstable connection (fail, success, fail, success) never built up enough failures to surface anywhere beyond that alarm — leaving users to assume the app itself was dropping the connection. It now tracks the failure rate over the last 40 poll attempts; at 50% or worse it sends one timeline notification, then waits 24 hours (or 10 consecutive successful polls, whichever comes first) before it can warn again.
-
-### Fixed a Weather Cache Refresh That Drifted Onto a 75-Minute Cycle (v3.19.5)
-
-* **No behaviour change for most installs; fixes a case where weather forecasts refreshed every 75 minutes instead of every hour.** The forecaster's cache expired after 60 minutes, but the device only checks for stale weather every 55 minutes — so a refresh that just missed a check window had to wait for the next one, and those misses could compound into a 75-minute cycle instead of the intended ~60. The cache now expires at 55 minutes, matching the check interval.
-
-### Reduced Two Settings Writes That Rode Along on Every Update (v3.19.5)
-
-* **No behaviour change.** Two internal buffers were being rewritten inside the app's settings blob on every save even when nothing in them had changed, or when nothing reads them from the settings screen. The weak-PV shadow measurement (introduced in v3.19.4, off by default) now stores its 96-row history separately instead of inside settings; the legacy-device error log now only writes when its contents actually change instead of every poll.
+## 📝 Latest Updates (v3.15.63–v3.19.4)
 
 ### Measuring What a Small Solar Surplus Is Worth Before Changing Anything (v3.19.4, off by default)
 
