@@ -37,6 +37,8 @@ const MODE_HISTORY_PREFIX    = 'policy_mode_history_';
 const MODE_HISTORY_DIR       = '/userdata';
 // The 300-sample PV accuracy buffer, on /userdata rather than in settings — see _persistPvPredictions.
 const PV_PREDICTIONS_FILE    = 'pv-predictions-recent';
+// The weak-PV shadow ring, same move — see _appendWeakPvShadowRow.
+const WEAKPV_SHADOW_FILE     = 'weakpv-shadow';
 const MODE_HISTORY_DAYS      = 23;
 const MODE_HISTORY_BUCKET_MS = 15 * 60 * 1000;
 const MODE_HISTORY_FILE_RE   = /^mode-history-(\d{4}-\d{2}-\d{2})\.json$/;
@@ -111,7 +113,7 @@ function _settingsFootprintKB(settings) {
     'policy_pv_actual_today', 'policy_widget_data', 'battery_cycle_history',
     'battery_expansion_analysis', 'policy_daily_profit',
     'policy_consumption_profile', 'pv_surplus_forecast', 'policy_last_run_debug',
-    'battery_policy_state', 'device_settings', 'policy_weakpv_shadow',
+    'battery_policy_state', 'device_settings',
   ];
   try {
     // The mode history lives in ~23 day chunks; report them as one line so they can't crowd the
@@ -920,6 +922,18 @@ class BatteryPolicyDevice extends Homey.Device {
     if (!userdataStore.writeJson(PV_PREDICTIONS_FILE, preds)) return false;
     this._pvPredStamp = stamp;
     return true;
+  }
+
+  // The weak-PV shadow ring (96 rows, ~20 kB) lives on /userdata for the same reason as the PV
+  // sample buffer above: inside settings it rode along on every unrelated settings.set(). Nothing in
+  // the UI reads it. The in-memory copy is the source of truth within a run; the file only seeds it
+  // after a restart, so a run never re-parses 20 kB to append one row.
+  _appendWeakPvShadowRow(row) {
+    const prev = this._weakPvShadowRing ?? userdataStore.readJson(WEAKPV_SHADOW_FILE);
+    const rows = Array.isArray(prev?.rows) ? prev.rows : [];
+    rows.push(row);
+    this._weakPvShadowRing = { rows: rows.slice(-96) };
+    userdataStore.writeJson(WEAKPV_SHADOW_FILE, this._weakPvShadowRing);
   }
 
   // An instrument that writes an all-null/NaN array is dead but looks alive: it fires on cadence,
@@ -4447,12 +4461,7 @@ if (debug) this.log(
         + ` socEnd=${_wps.socEndBase}%→${_wps.socEndShadow}%`
         + ` cons=${_wps.consDistinct}distinct/${_wps.consN}`);
       try {
-        // Read the in-memory copy first: _setLive batches the settings write 8s out, so
-        // settings.get() can still hold the previous ring and would drop a record.
-        const _prev = this._liveState.policy_weakpv_shadow
-          ?? this.homey.settings.get('policy_weakpv_shadow');
-        const _rows = Array.isArray(_prev?.rows) ? _prev.rows : [];
-        _rows.push({
+        this._appendWeakPvShadowRow({
           ts: new Date().toISOString(), soc, on: _wps.flagOn ? 1 : 0,
           w: _wps.nWeakSlots, n: _wps.priceN,
           d: _wps.nDiff, da: _wps.nDiffAction, ds: _wps.nDiffSoc, ft: _wps.firstDiffT,
@@ -4462,7 +4471,6 @@ if (debug) this.log(
           sb: _wps.socEndBase, ss: _wps.socEndShadow,
           cd: _wps.consDistinct, cn: _wps.consN,
         });
-        this._setLive('policy_weakpv_shadow', { rows: _rows.slice(-96) });
       } catch (err) {
         this.error('weak-PV shadow ring write failed', err);
       }
@@ -6516,6 +6524,7 @@ if (debug) this.log(
     }
     this._modeHist = null;
     userdataStore.removeJson(PV_PREDICTIONS_FILE);
+    userdataStore.removeJson(WEAKPV_SHADOW_FILE);
 
     // Clear p1Device reference
     this.p1Device = null;

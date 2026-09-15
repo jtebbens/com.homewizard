@@ -21,6 +21,7 @@
 const Homey = require('homey');
 const v8 = require('v8');
 const { clearDebugLogs } = require('./lib/debug-logs');
+const userdataStore = require('./lib/userdata-store');
 const PbthProvider = require('./lib/pbth-provider');
 
 const Testing = false; // Opens the CDP inspector in onInit. Keep false outside profiling sessions.
@@ -114,11 +115,16 @@ class HomeWizardApp extends Homey.App {
     // along on every settings.set() — the SDK ships the whole settings object each time, so a key
     // nobody reads is still charged to every unrelated write. unset() on an absent key is a no-op,
     // so this costs nothing on later boots.
-    for (const [key, what] of [
+    // A third entry names the /userdata file the existing value is carried over to first, for keys
+    // whose history is the point (the weak-PV shadow ring scores the flag over days).
+    for (const [key, what, file] of [
       ['debug_logs', 'the fetch-debug log'],
       ['policy_pv_predictions_recent', 'the PV sample buffer'],
+      ['policy_weakpv_shadow', 'the weak-PV shadow ring', 'weakpv-shadow'],
     ]) {
-      if (this.homey.settings.get(key) == null) continue;
+      const value = this.homey.settings.get(key);
+      if (value == null) continue;
+      if (file && userdataStore.readJson(file) == null && !userdataStore.writeJson(file, value)) continue;
       try {
         this.homey.settings.unset(key);
         this.log(`[MIGRATE] Dropped ${key} from settings — ${what} now lives on /userdata`);

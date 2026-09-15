@@ -250,9 +250,13 @@ class HomeWizardDevice extends Homey.Device {
       return { ts, name, msg, type };
     });
 
+    // Only on change: every settings.set() ships the whole app settings object, and the error list
+    // is usually identical poll after poll — unguarded this was 165 of 270 settings writes/hour.
     const trimmed = formatted.slice(-LEGACY_MAX_LOG);
-    if (trimmed.length > 0) {
+    const json = JSON.stringify(trimmed);
+    if (trimmed.length > 0 && json !== this._lastLegacyJson) {
       this.homey.settings.set('debug_legacy_fetch', trimmed);
+      this._lastLegacyJson = json;
     }
 
   } catch (e) {
