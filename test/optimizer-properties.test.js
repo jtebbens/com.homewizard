@@ -4700,6 +4700,92 @@ if (inv61Probed === 0) {
   failedInvariants.push({ name: '61:vacuous-region-never-reached' });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 62 — a peak the pack reaches before PV fills it is never valued away
+//
+// Economic-dominance guard for the saturation window of both trickle caps (default ON). The
+// "free PV ahead fills the battery" test used to sum PV to the END of the horizon, so a large
+// PV block TOMORROW satisfied it while tonight's peak still lay between now and that block. The
+// cap then priced the surplus at 0 (zeroed cap) or at the next weak slot (positive cap), and PV
+// was exported at a price the evening peak beat by a wide margin. Live 2026-09-15 13:00Z: €0.209
+// exported at SoC 20%, €0.461 at 19:45, ~4 kWh PV tomorrow.
+//
+// Shape: slot 0 pvStrong at price p; slots 1-2 today's remaining PV (one strong, one weak, order
+// drawn so both cap branches are hit); slot 3 tonight's peak q; a night; a large pvStrong block
+// tomorrow; tomorrow's peak drawn above OR below q. The pack is sized so today's PV after slot 0
+// stays under the room and tomorrow's block overfills it — computed here from the input arrays,
+// not from engine internals. Assert: when storing for q clearly beats disposing of slot 0's
+// surplus, the store value at slot 0 must say so.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 62 — reachable-peak-before-pv-saturation-is-valued\n');
+
+let inv62Probed = 0;
+
+const inv62Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.constant(100),
+    cycle_cost_per_kwh: fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 0.30, max: 0.80, noNaN: true, noDefaultInfinity: true }),  // today PV / room
+  fc.double({ min: 0, max: 40, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.boolean(),                                                               // slot 1 strong?
+  fc.double({ min: 0.05, max: 0.30, noNaN: true, noDefaultInfinity: true }),  // slot 0 price
+  fc.double({ min: 0.35, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // tonight's peak
+  fc.double({ min: 0.10, max: 1.00, noNaN: true, noDefaultInfinity: true }),  // tomorrow's peak
+);
+
+const inv62 = ([settings, maxChargeW, todayFrac, currentSoc, slot1Strong, nowPrice, tonightPeak, tomorrowPeak]) => {
+  const CONS = 200;                                   // W, flat
+  const kwhPerSlot = maxChargeW / 1000;               // hourly slots
+  // pvStrong threshold is 400 W surplus; 0.95·maxChargeW ≥ 760 W is strong, 200 W is weak.
+  const strongPvW = CONS + 0.95 * maxChargeW;
+  const weakPvW   = CONS + 200;
+  const todayAfter0Kwh = 0.95 * kwhPerSlot + 0.2;
+  const roomKwh = todayAfter0Kwh / todayFrac;         // today's PV after slot 0 under the room
+  const capacityKwh = roomKwh / (1 - currentSoc / 100);
+  // Tomorrow: 5 strong slots = 4.75·kwhPerSlot ≥ 3.8 kWh, above the largest room drawn here.
+
+  const priceValues = [
+    nowPrice, 0.12, 0.14, tonightPeak, 0.25, 0.25,
+    0.10, 0.10, 0.10, 0.10, 0.10, tomorrowPeak, 0.20,
+  ];
+  const pvWValues = [
+    strongPvW, slot1Strong ? strongPvW : weakPvW, slot1Strong ? weakPvW : strongPvW, 0, 0, 0,
+    strongPvW, strongPvW, strongPvW, strongPvW, strongPvW, 0, 0,
+  ];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const s0 = eng._schedule.slots[0];
+  if (!s0 || typeof s0.pvStoreValue !== 'number') return true;
+
+  const e0 = typeof s0.exportPrice === 'number' ? s0.exportPrice : s0.price;
+  const reachable = storeValue(tonightPeak, settings.battery_efficiency, settings.cycle_cost_per_kwh);
+  if (!(reachable > e0 + 0.02)) return true;
+  inv62Probed++;
+  return s0.pvStoreValue > e0;
+};
+
+testInvariant('62:reachable-peak-before-pv-saturation-is-valued', inv62Arb, inv62);
+log(`Scored ${inv62Probed} draws where tonight's peak clearly beat disposing of slot 0.\n`);
+if (inv62Probed === 0) {
+  console.error('   ⚠ invariant 62 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '62:vacuous-region-never-reached' });
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));

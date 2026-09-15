@@ -33,7 +33,7 @@ const PEAK_PRICE = 0.863; // t5 — the uncapped suffix max
 
 const CAPPED_VALUE = storeValue(WEAK_PRICE, RTE, CYCLE); // ≈ €0.118, what t1 gets
 const UNCAPPED_VALUE = storeValue(PEAK_PRICE, RTE, CYCLE); // ≈ €0.556, what t0 wrongly gets
-const ZEROED_VALUE = storeValue(0, RTE, CYCLE); // −€0.075, what t0 should get
+const ZEROED_VALUE = storeValue(0, RTE, CYCLE); // −€0.075, a bound cap with no price reachable
 
 let passed = 0; let failed = 0;
 function test(name, fn) {
@@ -98,8 +98,10 @@ test('gate on: a zeroed cap under saturation is honoured, not inverted', () => {
   const s = runEngine({ satGate: true });
   assert.strictEqual(s[0].pvTrickleCapBinds, true,
     'PV ahead (2.40 kWh) covers the room (1.48 kWh) → the zeroed cap must bind');
-  assert.ok(Math.abs(s[0].pvStoreValue - ZEROED_VALUE) < 1e-6,
-    `expected €${ZEROED_VALUE.toFixed(4)}, got ${s[0].pvStoreValue.toFixed(4)}`);
+  // Bound, the store is priced at the best non-pvStrong price before the pack fills (t3):
+  // t2's €0.263 — the same number t1's positive cap lands on, not a flat zero (2026-09-15 fix).
+  assert.ok(Math.abs(s[0].pvStoreValue - CAPPED_VALUE) < 1e-6,
+    `expected €${CAPPED_VALUE.toFixed(4)}, got ${s[0].pvStoreValue.toFixed(4)}`);
 });
 
 test('gate on: store value is monotone in the cap across the two slots', () => {

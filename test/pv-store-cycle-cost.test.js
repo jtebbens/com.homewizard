@@ -105,8 +105,10 @@ function runFlags({ currentPrice, maxFuture, slotMeta = undefined, settings = {}
 }
 
 {
-  // The trickle-capped branch is a raw price × rte and DOES need the deduction.
-  const meta = { pvTrickleMaxValue: 0.376 * 0.72, action: 'preserve', pvStoreValue: 0.9 };
+  // The trickle-capped branch is a raw price × rte and DOES need the deduction. Since 2026-09-15
+  // a slot carrying pvStoreValue passes the DP's already-netted number through instead; the
+  // raw-cap rebuild — and so this deduction — is the fallback for a schedule without it.
+  const meta = { pvTrickleMaxValue: 0.376 * 0.72, action: 'preserve' };
   const out = runFlags({ currentPrice: 0.259, maxFuture: 0.376, slotMeta: meta });
   assert.ok(out._pvStoreValue < 0.259,
     `trickle-capped branch must net cycle cost, got ${out._pvStoreValue}`);
