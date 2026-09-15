@@ -1627,5 +1627,8 @@
   },
   "3.19.4": {
     "en": "Excluded scratchpad/tools/test dev directories from the published app bundle (build size fix); no functional change."
+  },
+  "3.19.5": {
+    "en": "Reduced settings write and P1 energy driver alerting timeline when it lost its wifi connection for a very long time (reduce diagnostics reports from users that have no idea their wifi is the cause)"
   }
 }
