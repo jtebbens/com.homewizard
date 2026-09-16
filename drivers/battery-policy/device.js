@@ -3266,7 +3266,12 @@ if (debug) this.log(
     }
 
     // ── Trigger 2: PV intraday ratio drift ───────────────────────────────────
-    if (this._lastIntradayPvRatio != null &&
+    // Compare like with like: _lastIntradayPvRatio is the damped ratio the DP applied, so the
+    // fresh ratio is damped by the same formula and day-level gate inputs. A raw sumA/sumF here
+    // fired on every run of a volatile day (damped pinned at 1.00, raw ~0.80) and forced a
+    // mid-slot DP recompute (live 2026-09-16 12:53 CEST).
+    const gateInputs = this._lastIntradayPvGateInputs;
+    if (this._lastIntradayPvRatio != null && gateInputs &&
         this.learningEngine &&
         Array.isArray(this.learningEngine.data?.pv_predictions)) {
       const now = new Date();
@@ -3276,10 +3281,10 @@ if (debug) this.log(
         p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
         p.predicted > 50 && p.actual > 50
       );
-      if (preds.length >= 4) {
-        const sumF = preds.reduce((s, p) => s + p.predicted, 0);
-        const sumA = preds.reduce((s, p) => s + p.actual,    0);
-        const currentRatio = Math.min(2.5, Math.max(0.4, sumA / sumF));
+      const avgActual = preds.length ? preds.reduce((s, p) => s + p.actual, 0) / preds.length : 0;
+      if (preds.length >= 4 && avgActual >= 200) {
+        const { ratio: currentRatio } = BatteryPolicyDevice._intradayPvRatio(preds, gateInputs.biasCorrFactor,
+          (c) => BatteryPolicyDevice._knmiAwareCloudGate(c, gateInputs.cloud, gateInputs.kt, gateInputs.okta));
         const ratioDelta = Math.abs(currentRatio - this._lastIntradayPvRatio);
         if (ratioDelta > 0.15) {
           this.log(`[Reopt] PV ratio drift ${ratioDelta.toFixed(2)} (was ${this._lastIntradayPvRatio.toFixed(2)}, now ${currentRatio.toFixed(2)}) → forcing recompute`);
@@ -3913,44 +3918,27 @@ if (debug) this.log(
       const avgActual = todayPreds.length
         ? todayPreds.reduce((s, p) => s + p.actual, 0) / todayPreds.length : 0;
       if (todayPreds.length >= 4 && avgActual >= 200) {
-        // Per-sample ratios, winsorised at [0.25, 2.5] — prevents a single spike from
-        // dominating the correction (sumActual/sumForecast gave high weight to outliers).
-        const WIN_LO = 0.25, WIN_HI = 2.5;
-        const sampleRatios = todayPreds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
-        const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
-
         // p.predicted is the pre-bias day-start forecast; pvForecast here is post-bias.
         // In simplified mode, today's slots have no dailyBias/accFactor applied, so
         // biasCorrFactor=1 and meanRatio passes through directly (actual/pre_bias).
         // In legacy mode: ratio_needed = meanRatio / biasCorrFactor to undo the bias.
         const biasCorrFactor = simplified ? 1.0 : _pvDailyBiasFactor * _pvAccFactor;
-        const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
-
-        // Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
-        // followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data.
-        const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
-        const cv        = Math.sqrt(variance) / meanRatio;
-        this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
-        this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
-        // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
-        const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
-        // Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
-        // The CV guard above can't catch a clear-morning→cloudy-afternoon turn — consistent
-        // morning samples give low CV → full correction → the upward ratio re-inflates PV the
-        // model already (correctly) lowered for the cloudy afternoon. Damp the upward push as
-        // forecast cloud rises (1.0 at ≤70% → 0 at full overcast). KNMI clearness overrides a
-        // false-overcast so it doesn't suppress a legitimate upward correction. See
-        // _knmiAwareCloudGate. Downward correction is left intact.
         const gateKt    = this.weatherForecaster?.getTodayKt() ?? null;
         const gateOkta  = this._oktaForGates();
-        const cloudGate = BatteryPolicyDevice._knmiAwareCloudGate(
-          correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.applied);
-        this._logOktaShadow('cloudGate', gateOkta, cloudGate,
-          BatteryPolicyDevice._knmiAwareCloudGate(correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.raw),
-          `ratio=${correctedMeanRatio.toFixed(2)} cloud=${_pvBiasCloud != null ? Math.round(_pvBiasCloud) : 'null'}% kt=${gateKt != null ? gateKt.toFixed(2) : 'null'}`);
-        const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
+        const { meanRatio, correctedMeanRatio, cv, cvWeight, cloudGate, ratio } =
+          BatteryPolicyDevice._intradayPvRatio(todayPreds, biasCorrFactor, (corrected) => {
+            const gate = BatteryPolicyDevice._knmiAwareCloudGate(corrected, _pvBiasCloud, gateKt, gateOkta.applied);
+            this._logOktaShadow('cloudGate', gateOkta, gate,
+              BatteryPolicyDevice._knmiAwareCloudGate(corrected, _pvBiasCloud, gateKt, gateOkta.raw),
+              `ratio=${corrected.toFixed(2)} cloud=${_pvBiasCloud != null ? Math.round(_pvBiasCloud) : 'null'}% kt=${gateKt != null ? gateKt.toFixed(2) : 'null'}`);
+            return gate;
+          });
+        this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
+        this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
 
         this._lastIntradayPvRatio = ratio;
+        // Day-level gate inputs, so _shouldForceReoptimize can damp fresh samples the same way.
+        this._lastIntradayPvGateInputs = { biasCorrFactor, cloud: _pvBiasCloud, kt: gateKt, okta: gateOkta.applied };
         this.setCapabilityValue('bias_factor', parseFloat(ratio.toFixed(2))).catch(this.error);
         if (Math.abs(ratio - 1.0) > 0.10) {
           // Counterfactual isolation (temp instrumentation, remove after 2026-06-19 A/B):
@@ -5369,6 +5357,34 @@ if (debug) this.log(
    * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} gate factor in [0,1]
    */
+  /**
+   * Damped intraday PV ratio (actual/forecast) — the one formula behind both the intraday PV
+   * corrector and the PV-drift reoptimize trigger.
+   *
+   * Per-sample ratios, winsorised at [0.25, 2.5] — prevents a single spike from dominating the
+   * correction (sumActual/sumForecast gave high weight to outliers).
+   * Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
+   * followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data:
+   * CV<0.25 → full correction; CV>0.60 → no correction; linear between.
+   * Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
+   * The CV guard can't catch a clear-morning→cloudy-afternoon turn — consistent morning samples
+   * give low CV → full correction → the upward ratio re-inflates PV the model already (correctly)
+   * lowered for the cloudy afternoon. `cloudGateOf(correctedMeanRatio)` damps the upward push
+   * (see _knmiAwareCloudGate). Downward correction is left intact.
+   */
+  static _intradayPvRatio(preds, biasCorrFactor, cloudGateOf) {
+    const WIN_LO = 0.25, WIN_HI = 2.5;
+    const sampleRatios = preds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
+    const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
+    const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
+    const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
+    const cv        = Math.sqrt(variance) / meanRatio;
+    const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
+    const cloudGate = cloudGateOf(correctedMeanRatio);
+    const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
+    return { meanRatio, correctedMeanRatio, cv, cvWeight, cloudGate, ratio };
+  }
+
   static _knmiAwareCloudGate(correctedMeanRatio, effectiveCloud, knmiKt, oktaFrac = null) {
     const groundClear = BatteryPolicyDevice._groundClear(knmiKt, oktaFrac);
     if (correctedMeanRatio > 1.0 && effectiveCloud != null && effectiveCloud > 70 && !groundClear) {
