@@ -32,6 +32,7 @@ function fakeDevice({ actuals, lastRatio, gateInputs }) {
   return {
     logs,
     log: (m) => logs.push(m),
+    getSetting: () => null,
     optimizationEngine: { _schedule: { slots: [{ timestamp: new Date(nowMs - 60_000).toISOString(), socProjected: 4 }] } },
     learningEngine: { data: { pv_predictions: preds(actuals) } },
     _lastIntradayPvRatio: lastRatio,

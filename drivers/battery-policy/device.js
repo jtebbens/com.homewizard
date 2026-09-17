@@ -3262,6 +3262,14 @@ if (debug) this.log(
           this.log(`[Reopt] SoC deviation ${socDelta.toFixed(1)} pp (actual ${currentSoc}% vs projected ${currentSlot.socProjected}%) → forcing recompute`);
           return true;
         }
+        // Plan counts the battery full, the battery is not: the DP planned the last kWh at full
+        // power, the BMS tapered near the top (live 2026-09-17: stopped at 99%). The stale plan
+        // reads preserve and never finishes the charge, so replan from the real SoC.
+        const maxSoc = this.getSetting('max_soc') ?? 100;
+        if (currentSlot.socProjected >= maxSoc && currentSoc < maxSoc) {
+          this.log(`[Reopt] plan full (projected ${currentSlot.socProjected}%) but actual ${currentSoc}% → forcing recompute`);
+          return true;
+        }
       }
     }
 
