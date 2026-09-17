@@ -1630,5 +1630,8 @@
   },
   "3.19.5": {
     "en": "Reduced settings write and P1 energy driver alerting timeline when it lost its wifi connection for a very long time (reduce diagnostics reports from users that have no idea their wifi is the cause)"
+  },
+  "3.19.6": {
+    "en": "Bugfix planning and DP not charging. Older bugfix got skipped by another fix. Restore functionality of DP and Planning."
   }
 }
