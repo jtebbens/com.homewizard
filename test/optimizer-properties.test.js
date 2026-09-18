@@ -3966,9 +3966,15 @@ const inv52 = ([settings, base, basePrice, premium, headLen, peakLen, pvTomRatio
   const slots = eng._schedule?.slots;
   if (!slots || slots.length === 0) return true;
 
+  return chargesAreRepayable(eng, settings, Math.max(...priceValues));
+};
+
+// Every planned grid charge must cost less than the best net value still reachable after it
+// (a later discharge, or the terminal credit). Shared by invariants 52 and 63.
+function chargesAreRepayable(eng, settings, maxPrice) {
+  const slots = eng._schedule.slots;
   const rte = settings.battery_efficiency;
   const cycle = settings.cycle_cost_per_kwh;
-  const maxPrice = Math.max(...priceValues);
   const terminalCeil = maxPrice * 0.8 * rte * (eng._schedule.terminalFactor ?? 0);
 
   // Best net €/kWh still obtainable at or after each index, by discharging there.
@@ -3987,7 +3993,7 @@ const inv52 = ([settings, base, basePrice, premium, headLen, peakLen, pvTomRatio
     if (cost > Math.max(valueAhead[i], terminalCeil) + EPS) return false;
   }
   return true;
-};
+}
 
 testInvariant('52:planned-charge-must-be-repayable', inv52Arb, inv52);
 
@@ -4784,6 +4790,118 @@ if (inv62Probed === 0) {
   console.error('   ⚠ invariant 62 never reached its region — the assertion was vacuous');
   totalFailed++;
   failedInvariants.push({ name: '62:vacuous-region-never-reached' });
+}
+
+// ─────────────────────────────────────────────────
+// INVARIANTS 63 + 64 — price_forecast_fill
+//
+// Before the day-ahead auction publishes (~13:00 CEST) the app only knows today's prices, so
+// the horizon is truncated. price_forecast_fill appends ESTIMATED hourly prices (4 identical
+// quarters per hour, tariff-manager source 'forecast') until the real ones arrive. The DP never
+// sees the source — it plans on whatever table it gets — so these two check what a filled
+// table may and may not do to the plan, against the same truncated table without the fill.
+//
+// Settings follow the live device (18-09): saldering, flatten_pv_shift + flatten_arb_gate on,
+// charge_repay_gate off. PV tomorrow is 0 so the pvAbundant half-cycle waiver (invariant 52's
+// territory, gated there) stays out of the picture and only the fill is under test.
+// ─────────────────────────────────────────────────
+log('\n## Invariants 63-64 — price_forecast_fill\n');
+const fillSettingsArb = fc.record({
+  battery_efficiency: fc.double({ min: 0.65, max: 0.85, noNaN: true, noDefaultInfinity: true }),
+  min_soc: fc.constant(0),
+  max_soc: fc.constant(100),
+  cycle_cost_per_kwh: fc.double({ min: 0.05, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+  tariff_model: fc.constant('saldering'),
+  export_price_ratio: fc.constant(1.0),
+  dp_flatten_pv_shift: fc.constant(true),
+  dp_flatten_arb_gate: fc.constant(true),
+  dp_charge_repay_gate: fc.constant(false),
+});
+const fillBaseArb = fc.record({
+  capacityKwh:   fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+  maxChargeW:    fc.integer({ min: 800, max: 2500 }),
+  maxDischargeW: fc.integer({ min: 400, max: 1200 }),
+  currentSoc:    fc.double({ min: 0, max: 90, noNaN: true, noDefaultInfinity: true }),
+});
+const visibleArb = fc.array(fc.double({ min: 0.05, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+  { minLength: 12, maxLength: 48 });                                         // visible real quarters
+/** Plan A (truncated) and B (filled) on the same visible prices. */
+function fillPlans(settings, base, visible, estHours, consW) {
+  const tail = estHours.flatMap(p => [p, p, p, p]);
+  const run = (values) => {
+    const prices = makePriceSlots(values, 0.25);
+    return runCompute(settings, {
+      ...base,
+      prices,
+      pvForecast: makePvForecast(prices, values.map(() => 0)),
+      consumptionW: values.map(() => consW),
+      minDischargePrice: 0,
+      pvKwhTomorrow: 0,
+      terminalPvKwhTomorrow: 0,
+    });
+  };
+  return { A: run(visible), B: run(visible.concat(tail)) };
+}
+
+// 63 — random-arb over the fill shape: a long horizon whose tail is hourly blocks, cut at a
+// random point. Invariant 52's predicate on the filled plan: the estimate may make a charge
+// worthwhile, but only one some later price in the table can actually repay.
+const inv63Arb = fc.tuple(
+  fillSettingsArb, fillBaseArb, visibleArb,
+  fc.array(fc.double({ min: 0.05, max: 0.90, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 24 }),                                        // estimated hours, €/kWh
+  fc.integer({ min: 200, max: 600 }),                                        // flat house load, W
+);
+let inv63Probed = 0;
+const inv63 = ([settings, base, visible, estHours, consW]) => {
+  const { B } = fillPlans(settings, base, visible, estHours, consW);
+  if (!B._schedule?.slots?.length) return true;
+  if (B._schedule.slots.some(s => s.action === 'charge' && s.actionKwh > 0)) inv63Probed++;
+  return chargesAreRepayable(B, settings, Math.max(...visible, ...estHours));
+};
+testInvariant('63:fill-charge-must-be-repayable', inv63Arb, inv63, RUNS_15MIN);
+log(`Scored ${inv63Probed} draws where the filled plan charged.\n`);
+if (inv63Probed === 0) {
+  console.error('   ⚠ invariant 63 never planned a charge — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '63:vacuous-region-never-reached' });
+}
+
+// 64 — economic dominance. When every estimated price sits strictly below the highest real
+// price p* already in view, holding energy past p* for the estimated tail is dominated: the
+// tail can only pay less. So the fill may never discharge LESS at p* than the truncated plan.
+// This is the one harm a fill can do without any estimate being too high.
+const inv64Arb = fc.tuple(
+  fillSettingsArb, fillBaseArb, visibleArb,
+  fc.array(fc.double({ min: 0.20, max: 0.98, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 24 }),                                        // estimate as fraction of p*
+  fc.integer({ min: 200, max: 600 }),
+);
+let inv64Probed = 0;
+const inv64 = ([settings, base, visible, estFrac, consW]) => {
+  const pStar = Math.max(...visible);
+  const { A, B } = fillPlans(settings, base, visible, estFrac.map(f => f * pStar), consW);
+  const sa = A._schedule?.slots;
+  const sb = B._schedule?.slots;
+  if (!sa?.length || !sb?.length) return true;
+  const atPeak = (slots) => {
+    let kwh = 0;
+    for (let i = 0; i < visible.length; i++) {
+      if (slots[i].price >= pStar - 1e-9 && slots[i].action === 'discharge') kwh += slots[i].actionKwh || 0;
+    }
+    return kwh;
+  };
+  const a = atPeak(sa);
+  if (a <= 0) return true;
+  inv64Probed++;
+  return atPeak(sb) >= a - 0.01;
+};
+testInvariant('64:estimate-below-visible-peak-never-steals-its-discharge', inv64Arb, inv64, RUNS_15MIN);
+log(`Scored ${inv64Probed} draws where the truncated plan discharged at the visible peak.\n`);
+if (inv64Probed === 0) {
+  console.error('   ⚠ invariant 64 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '64:vacuous-region-never-reached' });
 }
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
