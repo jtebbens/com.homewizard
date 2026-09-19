@@ -1049,6 +1049,7 @@
           hourly.push({
             day, hour: h, intervals: hourIntervals, avgPrice, avgExportPrice, minPrice, maxPrice, priceVariation,
             hasVariation: priceVariation > 0.02, dominantMode, avgPlannedSoc, avgPlannedConsumptionW,
+            priceEstimated: hourIntervals.some(i => i.priceEstimated),
             avgSoc: hourIntervals.reduce((sum, i) => sum + i.soc, 0) / hourIntervals.length,
             avgPvW: hourIntervals.reduce((sum, i) => sum + (i.pvW ?? 0), 0) / hourIntervals.length,
             avgConsumptionW: (() => {
@@ -1092,7 +1093,9 @@
       intervals.forEach(interval => {
         const { minute, price, exportPrice, hwMode, soc, priceKnown, reason } = interval;
         const hwDef = HW_MODES[hwMode] || HW_MODES.standby;
-        const priceDisplay = priceKnown ? `€${price.toFixed(3)}` : '?';
+        const priceDisplay = !priceKnown ? '?'
+          : interval.priceEstimated ? `<span style="font-style:italic;color:var(--muted);" title="${lang === 'nl' ? 'Voorspelling (EPEX), nog niet definitief' : 'Forecast (EPEX), not final yet'}">~€${price.toFixed(3)}</span>`
+          : `€${price.toFixed(3)}`;
         const exportDiverges = priceKnown && exportPrice != null && Math.abs(exportPrice - price) > 0.001;
         const exportDisplay = exportDiverges
           ? ` <span style="color:${exportPrice < 0 ? '#f87171' : 'var(--muted)'};">/ E €${exportPrice.toFixed(3)}</span>` : '';
@@ -2376,6 +2379,13 @@
             interval.sampleCount  = slot.sampleCount  ?? null;
             interval.reason       = slot.reason       ?? null;
             interval.pvCoverage   = slot.pvCoverage   ?? null;
+            // Forecast (EPEX) prices are never in policy_all_prices_15min; show the price the DP
+            // planned with, marked as an estimate.
+            if (!interval.priceKnown && slot.priceEstimated && typeof slot.price === 'number') {
+              interval.price          = slot.price;
+              interval.priceKnown     = true;
+              interval.priceEstimated = true;
+            }
           }
           // Fallback: no schedule slot yet (e.g. tomorrow before day-ahead prices arrive ~14:00)
           // → fill consumptionW from the learned weekly profile so the hourly tiles still show
@@ -2402,7 +2412,7 @@
       window.cachedLanguage = lang;
 
       /* ── Status bar ── */
-      const knownPriceIntervals = intervals.filter(i => i.priceKnown);
+      const knownPriceIntervals = intervals.filter(i => i.priceKnown && !i.priceEstimated);
       const avgKnownPrice = knownPriceIntervals.length
         ? (knownPriceIntervals.reduce((s, i) => s + i.price, 0) / knownPriceIntervals.length).toFixed(3)
         : '?';
@@ -2459,7 +2469,14 @@
               <div style="font-size:11px;color:#808080;font-family:monospace;">${mode}</div>
             </div>
           </div>`;
-      }).join('');
+      }).join('') + (intervals.some(i => i.priceEstimated) ? `
+          <div class="planning-legend-item">
+            <div class="planning-legend-icon" style="font-style:italic;color:var(--muted);">~€</div>
+            <div>
+              <strong>${lang === 'nl' ? 'Voorspelde prijs' : 'Forecast price'}</strong>
+              <div style="font-size:11px;color:#808080;">${lang === 'nl' ? 'EPEX-schatting, nog niet definitief' : 'EPEX estimate, not final yet'}</div>
+            </div>
+          </div>` : '');
 
       /* ── Render hourly cards with 15-min detail on tap ── */
       document.getElementById('planning-grid').innerHTML = hourlyGroups.map((hourGroup, idx) => {
@@ -2471,7 +2488,9 @@
               : Math.round(Math.min(1.0, (radiationByDay[day]?.[hour] ?? 0) / 1000) * pvCapW * pvPR))
           : 0;
         const hwDef = HW_MODES[dominantMode] || HW_MODES.standby;
-        const priceDisplay = avgPrice !== null ? `€${avgPrice.toFixed(3)}` : '?';
+        const priceDisplay = avgPrice === null ? '?'
+          : hourGroup.priceEstimated ? `<span style="font-style:italic;color:var(--muted);" title="${lang === 'nl' ? 'Voorspelling (EPEX), nog niet definitief' : 'Forecast (EPEX), not final yet'}">~€${avgPrice.toFixed(3)}</span>`
+          : `€${avgPrice.toFixed(3)}`;
         const exportDiverges = avgPrice !== null && avgExportPrice !== null && Math.abs(avgExportPrice - avgPrice) > 0.001;
         const exportDisplay = exportDiverges ? `€${avgExportPrice.toFixed(3)}` : null;
 

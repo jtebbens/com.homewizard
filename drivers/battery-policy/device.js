@@ -3388,6 +3388,18 @@ if (debug) this.log(
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
+  /**
+   * Flag schedule slots whose price is a forecast estimate. Estimates never reach
+   * policy_all_prices_15min (tariff-manager filters them), so the planning page takes the
+   * price from the schedule instead and shows it marked as a forecast.
+   */
+  _markEstimatedPrices(schedule, prices) {
+    const estimatedTs = new Set(prices.filter(p => p.estimated).map(p => new Date(p.timestamp).getTime()));
+    for (const slot of schedule) {
+      slot.priceEstimated = estimatedTs.has(new Date(slot.timestamp).getTime());
+    }
+  }
+
   async _recomputeOptimizer(inputs) {
     // Use 15-min prices unless price_resolution is set to '1h'
     const now = new Date();
@@ -4703,6 +4715,7 @@ if (debug) this.log(
           slot.sampleCount = this.learningEngine.getConsumptionSampleCount(new Date(slot.timestamp));
         }
       }
+      this._markEstimatedPrices(planningSchedule, prices);
       this._setLive('policy_optimizer_schedule', planningSchedule);
 
       // ── PV surplus forecast ────────────────────────────────────────────────
