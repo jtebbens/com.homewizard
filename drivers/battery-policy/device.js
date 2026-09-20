@@ -21,6 +21,9 @@ const debug = false;
 // (139 samples in one profiled second) since it's called once per slot in a filter().
 const _amsDayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
 const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false });
+const _amsTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit', hour12: false,
+});
 const _amsDayTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
 });
@@ -599,7 +602,7 @@ class BatteryPolicyDevice extends Homey.Device {
   // path. Pure — no I/O, no clock beyond `now` — so the shape is testable without a device.
   // Returns null when the engine has nothing to describe; a half record is worse than no record,
   // because a gap is visible in the join and a silently-empty array is not.
-  _buildDecisionTrace({ engine, now, soc, refillConfidence, pvKwhTomorrow, maxChargePrice }) {
+  _buildDecisionTrace({ engine, now, soc, refillConfidence, pvKwhTomorrow, maxChargePrice, capacityKwh, maxChargePowerW }) {
     const slots = engine?._schedule?.slots;
     const fd    = engine?._flattenDebug;
     const arr   = engine?._lastDpArrays;
@@ -614,6 +617,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // would the gate have fired, over how many kWh" answerable after the fact. Omitted rather than
     // nulled when the engine predates it, so a gap in the series reads as "no counter", not "zero".
     const rd = engine._chargeRepayDebug;
+    const fill = this._fillWatch(slots, soc, maxChargePrice, capacityKwh, maxChargePowerW, now);
     return {
       ts: new Date(now).toISOString(),
       soc,
@@ -638,6 +642,10 @@ class BatteryPolicyDevice extends Homey.Device {
           at:    rd.worstAt,
         },
       } : {}),
+      // Today's promised peak SoC and whether it is still reachable (see _fillWatch). Six scalars,
+      // not an array, so the per-run trace line stays the size it was. Omitted rather than nulled
+      // when the plan cannot be judged, so a gap reads as "not scored", not as "unreachable".
+      ...(fill ? { fill } : {}),
       act: slots.map(s => DP_TRACE_ACTION_CHAR[s.action] ?? '?').join(''),
       // Who wrote each action (OptimizationEngine.ACTION_SRC). Without this the trace shows an
       // action next to the backward DP's t=0 values and any difference reads as the DP changing
@@ -646,6 +654,66 @@ class BatteryPolicyDevice extends Homey.Device {
       socP: slots.map(s => (s.socProjected == null ? null : Math.round(s.socProjected))),
       floor: Array.from(floorG).slice(0, n).map(g => +(g / 10).toFixed(1)),
       dischW: Array.from(dischW).slice(0, n).map(w => Math.round(w)),
+    };
+  }
+
+  // ---- [FILLWATCH]: is today's promised peak SoC still reachable from here? ----
+
+  // Pure -- no I/O, no clock beyond `now` -- so the scoring is testable without a device, same
+  // contract as _buildDecisionTrace above. Log-only: it decides nothing, it records whether the
+  // plan's OWN promise is still physically deliverable inside the slots that are cheap enough to
+  // charge in. project_plan_soc_promise_vs_realized_0822 measured why this is missing: on 22-08 the
+  // plan promised 100% for 13h45 and only dropped it at 14:15, after the cheap midday slots were
+  // spent. Nothing in the app holds socProjected against the measured SoC -- the [SoC] drift line
+  // below reports the CURRENT slot only, and _shouldForceReoptimize's triggers are current-slot too,
+  // so a promise can slip for hours without anything noticing while correcting is still possible.
+  _fillWatch(slots, soc, maxChargePrice, capacityKwh, maxChargePowerW, now) {
+    if (!Array.isArray(slots) || !slots.length) return null;
+    if (soc == null || !(capacityKwh > 0) || !(maxChargePowerW > 0) || maxChargePrice == null) return null;
+
+    // Slot length from the plan itself: the same horizon ships as 15-min or hourly slots, and
+    // scoring an hourly runway at 15-min energy understates what it can deliver fourfold.
+    const stepMs = slots.length > 1
+      ? Date.parse(slots[1].timestamp) - Date.parse(slots[0].timestamp)
+      : 900000;
+    const slotH = stepMs > 0 ? stepMs / 3600000 : 0.25;
+
+    // "Today" is the Amsterdam day, so a 100% peak that lands after midnight is next day's
+    // promise and must not be scored against this afternoon's runway.
+    const today = _amsDayKeyFormatter.format(new Date(now));
+    let promise = null;
+    let atIdx = -1;
+    for (let i = 0; i < slots.length; i++) {
+      const ts = Date.parse(slots[i].timestamp);
+      if (!(ts >= now)) continue;
+      if (_amsDayKeyFormatter.format(new Date(ts)) !== today) break;
+      const p = slots[i].socProjected;
+      if (p == null) continue;
+      if (promise === null || p > promise) { promise = p; atIdx = i; }
+    }
+    if (promise === null) return null;
+
+    // Runway: slots still ahead, still before the promise lands, and cheap enough that the charge
+    // mapper would take them -- price <= maxChargePrice is the whole test for a grid charge with
+    // no PV (lib/policy-engine.js:1664). A slot at or after the promise cannot charge toward it.
+    let runway = 0;
+    for (let i = 0; i < atIdx; i++) {
+      if (!(Date.parse(slots[i].timestamp) >= now)) continue;
+      const price = slots[i].price;
+      if (price == null || !(price <= maxChargePrice)) continue;
+      runway++;
+    }
+
+    const needKwh   = Math.max(0, (promise - soc) / 100 * capacityKwh);
+    const runwayKwh = runway * (maxChargePowerW / 1000) * slotH;
+
+    return {
+      promise,
+      at: slots[atIdx].timestamp,
+      needKwh:   +needKwh.toFixed(3),
+      runway,
+      runwayKwh: +runwayKwh.toFixed(3),
+      reachable: needKwh <= runwayKwh,
     };
   }
 
@@ -2586,10 +2654,35 @@ if (debug) this.log(
           const socDrift = currentSoc - plannedSlot.socProjected;
           this.log(`[SoC] actual=${currentSoc}% planned=${plannedSlot.socProjected.toFixed(1)}% drift=${socDrift > 0 ? '+' : ''}${socDrift.toFixed(1)}pp`);
         }
+
       }
 
       const result = this.policyEngine.calculatePolicy(inputs);
       this.homey.app.logMem?.('[BatteryPolicy] after-policy');
+
+      // [FILLWATCH] — the [SoC] drift line above judges the CURRENT slot only, which is how the
+      // 22-08 slip stayed invisible for 13h45 (project_plan_soc_promise_vs_realized_0822). This
+      // judges the REST of the day: can the peak SoC still promised for today be delivered by the
+      // slots that are left and cheap enough to charge in? Log-only, decides nothing.
+      //
+      // Deliberately AFTER calculatePolicy: that is what sets inputs.dynamicMaxChargePrice
+      // (lib/policy-engine.js:147). Before it, only runs that happened to recompute the optimizer
+      // carry the value, and the static max_charge_price fallback (€0.12 live) sits BELOW a normal
+      // cheap midday price — which made consecutive runs report runway=14 and runway=0 on an
+      // unchanged plan. No cap, no line: a missing sample reads as "not scored", a wrong one lies.
+      if (currentSoc != null && inputs.optimizerSlots?.length) {
+        const fw = this._fillWatch(
+          inputs.optimizerSlots,
+          currentSoc,
+          inputs.dynamicMaxChargePrice ?? null,
+          inputs.battery?.totalCapacityKwh ?? null,
+          PolicyEngine.batteryChargePowerW(inputs.battery),
+          Date.now(),
+        );
+        if (fw) {
+          this.log(`[FILLWATCH] promise=${fw.promise}% @${_amsTimeFormatter.format(new Date(fw.at))} soc=${currentSoc}% need=${fw.needKwh}kWh runway=${fw.runway}slots/${fw.runwayKwh}kWh reachable=${fw.reachable}`);
+        }
+      }
 
       // Free large price arrays before loading the explainability engine.
       // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
@@ -4630,6 +4723,8 @@ if (debug) this.log(
         refillConfidence,
         pvKwhTomorrow: effectivePvKwhTomorrow,
         maxChargePrice,
+        capacityKwh,
+        maxChargePowerW,
       }));
     } catch (err) {
       this.error('decision trace failed', err);

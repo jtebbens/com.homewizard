@@ -44,6 +44,8 @@ function ctx(dir) {
   return {
     _modeStateDir: dir,
     _dpTraceFile: BatteryPolicyDevice.prototype._dpTraceFile,
+    // _buildDecisionTrace scores today's promise through this sibling (see test/dp-fillwatch.test.js).
+    _fillWatch: BatteryPolicyDevice.prototype._fillWatch,
     log: (m) => logs.push(m),
     error: (m) => logs.push(m),
     logs,
