@@ -63,6 +63,16 @@ const OKTA_CLEAR_MAX = 2 / 8;
 // which sits outside the blend block's scope — one constant rather than two copies of 3600_000.
 const SAT_MAX_AGE_MS = 3600_000;
 
+// How far ahead the satellite leg may still feed the DP, in whole hours from the running hour.
+// The nowcast covers 4 h from issue, but an image lands ~45 min after its stamp and scores worse
+// than Open-Meteo beyond the current hour (2026-09-09, n=2579 [SAT blend] rows vs realized roof:
+// lead 0h OM 306 / sat 276, lead 1h 298 / 354, lead 2h 296 / 404, lead 3h 215 / 341). Feeding it
+// further ahead also made the DP's PV input flip between the satellite and Open-Meteo every time
+// the image aged past SAT_MAX_AGE_MS, which flipped the plan. Override with the internal setting
+// pv_sat_dp_lead_cap_off.
+const SAT_DP_MAX_LEAD_H = 0;
+const SAT_DP_UNCAPPED_LEAD_H = 3;
+
 // [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
 // stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
 // plan underperformed and never why. Append-only JSONL rather than a field on the mode-history
@@ -3694,12 +3704,21 @@ if (debug) this.log(
         const satOverride = this.getSetting('pv_sat_full_override') === true;
         const satNowMs    = Date.now();
         const satIssueMs  = this.weatherForecaster?.getSatIssueMs?.() ?? null;
-        const SAT_LEAD_MS = 4 * 3600_000;
+        // How far ahead the nowcast may still feed the DP. Beyond the running hour it scores worse
+        // than Open-Meteo and its coming and going flipped the plan — see SAT_DP_MAX_LEAD_H.
+        // Internal key, deliberately absent from driver.settings.compose.json.
+        const satLeadH = this.getSetting('pv_sat_dp_lead_cap_off') === true
+          ? SAT_DP_UNCAPPED_LEAD_H
+          : SAT_DP_MAX_LEAD_H;
         let satDeltaWh    = 0;
         // Coverage denominator: blend-eligible slots overlapping the current lead window that
         // carry any PV signal. Without it, n= has no scale.
         let satWindowSlots = 0;
         let satStaleSlots  = 0;
+        // Slots the lead cap holds back although their image is fresh, and the PV those slots
+        // would have handed the DP on top of Open-Meteo — the swing the cap takes out.
+        let satLeadSkipped = 0;
+        let satLeadDropWh  = 0;
 
         const scEffectiveSlots = []; // collect effective secondary-source value per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
@@ -3718,15 +3737,28 @@ if (debug) this.log(
               r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
             }
           } else if (pvSource === 'satellite') {
-            // Hourly slot overlaps the lead window when it ends after the issue and starts
-            // before issue+3h — the current, partly-elapsed hour counts.
-            if (satIssueMs != null && slotMs + 3600_000 > satIssueMs && slotMs < satIssueMs + SAT_LEAD_MS
+            // Two independent gates: the image must still be current (age), and the slot must sit
+            // inside the lead window the satellite is allowed to speak for (distance ahead).
+            const satInLead = BatteryPolicyDevice._satSlotInLeadWindow(slot, satNowMs, satLeadH);
+            // Coverage denominator, scoped to that same window — slots carrying any PV signal.
+            // Counting the whole nowcast horizon here would read n=1/4 as lost coverage where
+            // 1/1 is the truth; what the cap holds back is reported separately as leadSkip.
+            if (satIssueMs != null && satInLead
                 && (slot.pvPowerW > 0 || slot.satPanelW != null)) satWindowSlots++;
             const satFresh = BatteryPolicyDevice._satSlotIsFresh(slot, satNowMs);
             if (!satFresh && slot.satPanelW != null) satStaleSlots++;
-            const satW = satFresh
+            const satCapW = slot.satPanelW != null
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
+            if (satFresh && !satInLead) {
+              // Held back by the lead cap. Price it through the same blend function the slot
+              // would have gone through, so this stays one implementation of the weighting.
+              satLeadSkipped++;
+              satLeadDropWh += BatteryPolicyDevice._blendOmScSlot({
+                omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW: satCapW, satActive: true, satOverride,
+              }).blendedW - slot.pvPowerW;
+            }
+            const satW = (satFresh && satInLead) ? satCapW : null;
             if (satW != null) {
               // Score both legs every run so the override stays measurable before the toggle
               // flips, and after it. Two calls of a trivial function on a handful of slots.
@@ -3755,7 +3787,11 @@ if (debug) this.log(
           // including satCount=0, so "usable slot" runs can be scaled against attempts —
           // the [SAT blend]/[SAT OVR] lines below only fire when satLog.length > 0 and so
           // silently drop the zero-usable-slot runs from any count taken off them alone.
-          this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots}`);
+          // leadSkip/leadDropKwh: fresh slots the lead cap kept out, and the PV they would have
+          // added on top of Open-Meteo. That drop is the run-to-run swing the cap removes from
+          // the DP's input — the number to watch for the plan flipping.
+          this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots} `
+            + `leadSkip=${satLeadSkipped} leadDropKwh=${(satLeadDropWh / 1000).toFixed(2)}`);
         }
         if (pvSource === 'satellite' && satLog.length > 0) {
           this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
@@ -5525,6 +5561,26 @@ if (debug) this.log(
       && slot.satPanelW != null
       && typeof slot.satIssueMs === 'number'
       && (nowMs - slot.satIssueMs) <= SAT_MAX_AGE_MS;
+  }
+
+  /**
+   * Is this slot close enough ahead for the satellite leg to be allowed into the DP's PV input?
+   *
+   * Indexed on the hour, not on a rolling millisecond difference: slots are UTC-hour-aligned, and
+   * `slotMs < nowMs + maxLeadH * 3600_000` would admit the next hour for all but the first
+   * millisecond of the current one. Freshness is a separate gate (`_satSlotIsFresh`) — this one
+   * says nothing about the image age.
+   * @param {{timestamp?: string}} slot
+   * @param {number} nowMs
+   * @param {number} [maxLeadH] whole hours ahead of the running hour; 0 = running hour only
+   * @returns {boolean}
+   */
+  static _satSlotInLeadWindow(slot, nowMs, maxLeadH = SAT_DP_MAX_LEAD_H) {
+    if (!slot || !Number.isFinite(nowMs)) return false;
+    const slotMs = Date.parse(slot.timestamp);
+    if (!Number.isFinite(slotMs)) return false;
+    const hourStart = Math.floor(nowMs / 3600_000) * 3600_000;
+    return slotMs >= hourStart && slotMs <= hourStart + maxLeadH * 3600_000;
   }
 
   /**
