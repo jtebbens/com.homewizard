@@ -191,7 +191,8 @@ class BatteryPolicyDevice extends Homey.Device {
     // tail) lands this independent 15-min-repeating loop in a different phase of the cycle.
     if (this.getSetting('pv_secondary_source') === 'satellite') {
       this.homey.setTimeout(() => {
-        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay(),
+          { lat: Number(this.getSetting('weather_latitude')), lon: Number(this.getSetting('weather_longitude')) });
       }, 45 * 1000);
     }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
@@ -6525,7 +6526,8 @@ if (debug) this.log(
     // "Off" actually stops sending location, not just stops using the data in the DP.
     if (changedKeys.includes('pv_secondary_source')) {
       if (newSettings.pv_secondary_source === 'satellite') {
-        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay(),
+          { lat: Number(this.getSetting('weather_latitude')), lon: Number(this.getSetting('weather_longitude')) });
       } else {
         this.weatherForecaster.stopSatelliteLoop();
       }
