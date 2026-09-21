@@ -64,14 +64,54 @@ const OKTA_CLEAR_MAX = 2 / 8;
 const SAT_MAX_AGE_MS = 3600_000;
 
 // How far ahead the satellite leg may still feed the DP, in whole hours from the running hour.
-// The nowcast covers 4 h from issue, but an image lands ~45 min after its stamp and scores worse
-// than Open-Meteo beyond the current hour (2026-09-09, n=2579 [SAT blend] rows vs realized roof:
-// lead 0h OM 306 / sat 276, lead 1h 298 / 354, lead 2h 296 / 404, lead 3h 215 / 341). Feeding it
-// further ahead also made the DP's PV input flip between the satellite and Open-Meteo every time
-// the image aged past SAT_MAX_AGE_MS, which flipped the plan. Override with the internal setting
-// pv_sat_dp_lead_cap_off.
-const SAT_DP_MAX_LEAD_H = 0;
+// Re-measured 2026-09-21 over 806 hourly buckets, 2026-08-06..2026-09-20 (44 days), from the
+// [SAT blend] rows against realized roof production. MAE, and the same MAE as a share of the mean
+// production in those hours:
+//
+//   lead 0h: n=240  OM 303 W (28%)  sat 226 W (21%)
+//   lead 1h: n=239  OM 296 W (29%)  sat 315 W (30%)
+//   lead 2h: n=218  OM 286 W (30%)  sat 338 W (35%)
+//   lead 3h: n=108  OM 275 W (32%)  sat 367 W (42%)
+//
+// At lead 1 the two legs are level, and their errors lean opposite ways (OM -110 W, sat +61 W),
+// so an unweighted 50/50 mix scored 262 W against OM's 296 W - better than either leg alone.
+// Lead 2 barely gains (278 vs 286) and lead 3 loses, so the cap sits at 1.
+//
+// The other reason for 1 over 0 is the elevation gate: below SAT_MIN_ELEV_DEG the satellite is
+// dropped entirely, so on an autumn morning lead 0 is gated out and a cap of 0 leaves the DP with
+// no satellite at all while a fresh image carries usable hours (verified live 2026-09-21
+// 06:30-06:59Z: h7 rejected at elev 13.7 deg, h8/h9/h10 usable, none of them reaching the DP).
+//
+// Scope of that measurement: 2026-08..09 only, no autumn or winter data exists yet. Feeding the
+// leg further ahead also made the DP's PV input flip between the satellite and Open-Meteo whenever
+// the image aged past SAT_MAX_AGE_MS, which flipped the plan; that reason is independent of
+// accuracy and still stands, which is why the cap is relaxed by one hour and not lifted.
+// Override with the internal setting pv_sat_dp_lead_cap_off.
+const SAT_DP_MAX_LEAD_H = 1;
 const SAT_DP_UNCAPPED_LEAD_H = 3;
+
+// How broken the cloud field is, as the spatial spread (W/m2) of the satellite's own 11x11
+// advection grid around the house — `wm2_sstd` on the /api/sat curve, carried onto the slot by
+// weather-forecaster's overlay. Near 0 the sky is uniform and the exact cloud position does not
+// matter; high means scattered cloud, where a few km decide whether the panels sit in sun or in
+// shade. Measured 2026-09-21, n=1606 hourly buckets (06-08..21-09, blend vs realised production,
+// spread joined from the LXC curve log): the error grows monotonically with the spread at every
+// lead — blended MAE 174/176/267/323/434 W across the five quintiles.
+//
+// The reason this gates the satellite rather than everything: the ranking FLIPS with the spread,
+// and only ahead of the running hour.
+//   lead 0h  sat 156/134/213/251/328  vs  OM 210/225/224/343/385  -> sat wins in every quintile
+//   lead 1h  sat 153/196/297/334/525  vs  OM 215/213/322/393/385  -> sat wins until the top one
+// So lead 0 is left alone and lead >= 1 tapers off between the two constants below: full strength
+// up to LO, nothing from HI on, linear in between. The crossover sits at the 5th quintile's lower
+// edge (~41); LO is one quintile lower so the taper starts before the leg actually turns bad.
+//
+// The 2026-07-28 threshold sweep concluded this quantity had no crossover and shelved it. That
+// sweep used cumulative thresholds (>=10, >=15, ...) without splitting by lead, so every bin still
+// held the clear-sky majority and the flip averaged out. Scope limit unchanged from the lead cap:
+// 2026-08..09 only, no autumn or winter data.
+const SAT_SSTD_TRUST_LO = 26;
+const SAT_SSTD_TRUST_HI = 41;
 
 // [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
 // stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
@@ -3568,7 +3608,7 @@ if (debug) this.log(
           // Solcast leg without re-finding the hour slot per forecast slot. _applySatelliteOverlay
           // (weather-forecaster.js) writes satPanelW onto these very hourlyForecast slots, and
           // leaves it null outside its 0-3h lead window or below 15° solar elevation.
-          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0, satPanelW: h.satPanelW ?? null, satIssueMs: h.satIssueMs ?? null };
+          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0, satPanelW: h.satPanelW ?? null, satIssueMs: h.satIssueMs ?? null, satSstd: h.satSstd ?? null };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
@@ -3719,6 +3759,7 @@ if (debug) this.log(
         // Slots the lead cap holds back although their image is fresh, and the PV those slots
         // would have handed the DP on top of Open-Meteo — the swing the cap takes out.
         let satLeadSkipped = 0;
+        let satSstdSkipped = 0;
         let satLeadDropWh  = 0;
 
         const scEffectiveSlots = []; // collect effective secondary-source value per slot for chart transparency
@@ -3759,17 +3800,25 @@ if (debug) this.log(
                 omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW: satCapW, satActive: true, satOverride,
               }).blendedW - slot.pvPowerW;
             }
-            const satW = (satFresh && satInLead) ? satCapW : null;
+            // Third gate, next to age and lead: how broken the cloud field is. At lead >= 1 a
+            // scattered sky is where the satellite measurably turns from best to worst, so it
+            // steps aside there and the slot falls back to Open-Meteo alone.
+            const satTrust = BatteryPolicyDevice._satSstdTrust(slot, satNowMs);
+            if (satFresh && satInLead && satCapW != null && satTrust <= 0) satSstdSkipped++;
+            const satW = (satFresh && satInLead && satTrust > 0) ? satCapW : null;
             if (satW != null) {
               // Score both legs every run so the override stays measurable before the toggle
               // flips, and after it. Two calls of a trivial function on a handful of slots.
               const base  = { omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true };
               const rSat  = BatteryPolicyDevice._blendOmScSlot(base);
-              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true });
+              // satRamp interpolates the takeover instead of an all-or-nothing flip: the leg is
+              // allowed the whole slot on a uniform sky and hands the slot back as the spread grows.
+              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true, satRamp: satTrust });
               r = satOverride ? rOvr : rSat;
               satDeltaWh += rOvr.blendedW - rSat.blendedW;
               satCount++;
-              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`
+                + (satTrust < 1 ? ` sstd=${slot.satSstd} trust=${satTrust.toFixed(2)}` : ''));
             }
           }
 
@@ -3792,7 +3841,8 @@ if (debug) this.log(
           // added on top of Open-Meteo. That drop is the run-to-run swing the cap removes from
           // the DP's input — the number to watch for the plan flipping.
           this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots} `
-            + `leadSkip=${satLeadSkipped} leadDropKwh=${(satLeadDropWh / 1000).toFixed(2)}`);
+            + `leadSkip=${satLeadSkipped} leadDropKwh=${(satLeadDropWh / 1000).toFixed(2)} `
+            + `sstdSkip=${satSstdSkipped}`);
         }
         if (pvSource === 'satellite' && satLog.length > 0) {
           this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
@@ -5582,6 +5632,31 @@ if (debug) this.log(
     if (!Number.isFinite(slotMs)) return false;
     const hourStart = Math.floor(nowMs / 3600_000) * 3600_000;
     return slotMs >= hourStart && slotMs <= hourStart + maxLeadH * 3600_000;
+  }
+
+  /**
+   * How far the satellite leg may be trusted on this slot, from the spatial spread of its own
+   * advection grid (see SAT_SSTD_TRUST_LO/HI). 1 = full strength, 0 = step aside for Open-Meteo.
+   *
+   * Only slots ahead of the running hour taper: at lead 0 the satellite is measured ahead of
+   * Open-Meteo in every spread quintile, so a uniform sky and a broken one are both its business.
+   * A slot without a spread reading keeps full strength — the plumbing is younger than the
+   * satellite leg, so a missing value means "not reported", not "sky is broken".
+   * @param {{timestamp?: string, satSstd?: number|null}} slot
+   * @param {number} nowMs
+   * @returns {number} 0..1
+   */
+  static _satSstdTrust(slot, nowMs) {
+    if (!slot || !Number.isFinite(nowMs)) return 1;
+    const sstd = slot.satSstd;
+    if (typeof sstd !== 'number' || !Number.isFinite(sstd) || sstd < 0) return 1;
+    const slotMs = Date.parse(slot.timestamp);
+    if (!Number.isFinite(slotMs)) return 1;
+    const hourStart = Math.floor(nowMs / 3600_000) * 3600_000;
+    if (slotMs < hourStart + 3600_000) return 1;
+    if (sstd <= SAT_SSTD_TRUST_LO) return 1;
+    if (sstd >= SAT_SSTD_TRUST_HI) return 0;
+    return (SAT_SSTD_TRUST_HI - sstd) / (SAT_SSTD_TRUST_HI - SAT_SSTD_TRUST_LO);
   }
 
   /**
