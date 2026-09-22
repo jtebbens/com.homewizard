@@ -1071,6 +1071,7 @@ _flushSettingsQueue() {
       const measurement = await measurementRes.json();
       this._handleMeasurement(measurement);
       this._pollErrorCount = 0; // reset bij succes
+      this.setAvailable().catch(this.error);
     } else {
       this._pollErrorCount++;
       if (this._pollErrorCount % 5 === 1) {

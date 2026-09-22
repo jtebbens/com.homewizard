@@ -538,6 +538,8 @@ _flushFetchStats() {
       updateCapability(this, 'connection_error', 'No errors').catch(this.error);
       updateCapability(this, 'alarm_connectivity', false).catch(this.error);
     } else if (!this._isMarkedUnavailable) {
+      // Should already be available, set it anyway (required for manual IP which otherwise would remain unavailable)
+      this.setAvailable().catch(this.error);
       // Already available — alarm_connectivity is already false, only clear error text if needed
       if (this._consecutiveFailures > 0 || this._consecutiveSuccesses === 1) {
         updateCapability(this, 'connection_error', 'No errors').catch(this.error);
