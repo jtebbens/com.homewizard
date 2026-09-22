@@ -73,6 +73,18 @@
     "button_label_retry": "Försök igen",
     "authorize_failed_no_button_pressed": "Parning misslyckades, knappen trycktes inte. Se till att knappen trycks inom 60 sekunder.",
     "something_went_wrong": "Något gick fel, försök igen: ",
+    "manual_ip": {
+      "title": "Ange IP-adress manuellt",
+      "intro": "Inga enheter hittades automatiskt. Se till att Lokalt API är aktiverat i HomeWizard-appen och ange enhetens IP-adress nedan.",
+      "label": "IP-adress",
+      "btn_add": "Lägg till enhet",
+      "btn_back": "Sök igen",
+      "testing": "Ansluter...",
+      "invalid_ip": "Ogiltigt IP-adressformat",
+      "connection_failed": "Det gick inte att ansluta till en HomeWizard-enhet på den här adressen",
+      "ip_required": "Ange en IP-adress",
+      "already_added": "Den här enheten har redan lagts till"
+    },
     "energy_v2": {
       "authorize_instruction": "Tryck på knappen på P1-mätaren för att slutföra parningen"
     },

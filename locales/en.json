@@ -227,6 +227,18 @@
     "button_label_retry": "Try again",
     "authorize_failed_no_button_pressed": "Pairing failed, the button was not pressed. Make sure the button is pressed within 60 seconds.",
     "something_went_wrong": "Something went wrong, please try again: ",
+    "manual_ip": {
+      "title": "Enter IP address manually",
+      "intro": "No devices were found automatically. Make sure Local API is enabled in the HomeWizard app, then enter the device's IP address below.",
+      "label": "IP address",
+      "btn_add": "Add device",
+      "btn_back": "Search again",
+      "testing": "Connecting...",
+      "invalid_ip": "Invalid IP address format",
+      "connection_failed": "Could not connect to a HomeWizard device at this address",
+      "ip_required": "Please enter an IP address",
+      "already_added": "This device has already been added"
+    },
     "energy_v2": {
       "authorize_instruction": "Press the button on the P1 Meter to complete the pairing"
     },

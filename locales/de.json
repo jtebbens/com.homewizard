@@ -73,6 +73,18 @@
     "button_label_retry": "Erneut versuchen",
     "authorize_failed_no_button_pressed": "Kopplung fehlgeschlagen, die Taste wurde nicht gedrückt. Stellen Sie sicher, dass die Taste innerhalb von 60 Sekunden gedrückt wird.",
     "something_went_wrong": "Etwas ist schiefgelaufen, bitte erneut versuchen: ",
+    "manual_ip": {
+      "title": "IP-Adresse manuell eingeben",
+      "intro": "Es wurden keine Geräte automatisch gefunden. Stellen Sie sicher, dass die lokale API in der HomeWizard-App aktiviert ist, und geben Sie unten die IP-Adresse des Geräts ein.",
+      "label": "IP-Adresse",
+      "btn_add": "Gerät hinzufügen",
+      "btn_back": "Erneut suchen",
+      "testing": "Verbindung wird hergestellt...",
+      "invalid_ip": "Ungültiges IP-Adressformat",
+      "connection_failed": "Verbindung zu einem HomeWizard-Gerät unter dieser Adresse nicht möglich",
+      "ip_required": "Bitte geben Sie eine IP-Adresse ein",
+      "already_added": "Dieses Gerät wurde bereits hinzugefügt"
+    },
     "energy_v2": {
       "authorize_instruction": "Drücken Sie die Taste am P1-Messgerät, um die Kopplung abzuschließen"
     },

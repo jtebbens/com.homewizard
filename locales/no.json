@@ -73,6 +73,18 @@
     "button_label_retry": "Prøv igjen",
     "authorize_failed_no_button_pressed": "Sammenkobling mislyktes, knappen ble ikke trykket. Sørg for at knappen trykkes innen 60 sekunder.",
     "something_went_wrong": "Noe gikk galt, prøv igjen: ",
+    "manual_ip": {
+      "title": "Angi IP-adresse manuelt",
+      "intro": "Ingen enheter ble funnet automatisk. Sørg for at Lokal API er aktivert i HomeWizard-appen, og angi enhetens IP-adresse nedenfor.",
+      "label": "IP-adresse",
+      "btn_add": "Legg til enhet",
+      "btn_back": "Søk på nytt",
+      "testing": "Kobler til...",
+      "invalid_ip": "Ugyldig IP-adresseformat",
+      "connection_failed": "Kunne ikke koble til en HomeWizard-enhet på denne adressen",
+      "ip_required": "Vennligst angi en IP-adresse",
+      "already_added": "Denne enheten er allerede lagt til"
+    },
     "energy_v2": {
       "authorize_instruction": "Trykk på knappen på P1-måleren for å fullføre sammenkoblingen"
     },

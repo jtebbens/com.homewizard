@@ -106,6 +106,13 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
     // (safeIndex is set below — forward reference is fine since this runs after allDevices lookup)
     this._statsFlushTimer = null; // set after safeIndex is known
 
+    // Manual IP overrides discovery (set at pairing, or via repair)
+    const manualIP = this.getSetting('manual_ip');
+    if (manualIP) {
+      this.url = `http://${manualIP}/api/v1`;
+      this.log(`🔧 Using manual IP: ${manualIP}`);
+    }
+
     this.agent = SHARED_SOCKET_AGENT;
 
     // Scale agent maxSockets with device count: 4 slots are too few for 15+ devices.
@@ -308,6 +315,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   onDiscoveryAvailable(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._trackDiscovery('available');
     this._consecutiveFailures = 0;
@@ -319,6 +327,7 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._trackDiscovery('address_changed');
     this._debugLog(`Discovery address changed: ${this.url}`);
@@ -331,10 +340,22 @@ module.exports = class HomeWizardEnergySocketDevice extends Homey.Device {
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this._trackDiscovery('last_seen');
     this.setAvailable();
     this._isMarkedUnavailable = false;
+  }
+
+  /**
+   * Reconnect with manual IP after repair flow
+   * @param {string} ip
+   */
+  async reconnectWithManualIP(ip) {
+    this.log(`🔧 Reconnecting with manual IP: ${ip}`);
+    this.url = `http://${ip}/api/v1`;
+    this._consecutiveFailures = 0;
+    this._skipPollsUntil = 0;
   }
 
   /**
@@ -517,6 +538,8 @@ _flushFetchStats() {
       updateCapability(this, 'connection_error', 'No errors').catch(this.error);
       updateCapability(this, 'alarm_connectivity', false).catch(this.error);
     } else if (!this._isMarkedUnavailable) {
+      // Should already be available, set it anyway (required for manual IP which otherwise would remain unavailable)
+      this.setAvailable().catch(this.error);
       // Already available — alarm_connectivity is already false, only clear error text if needed
       if (this._consecutiveFailures > 0 || this._consecutiveSuccesses === 1) {
         updateCapability(this, 'connection_error', 'No errors').catch(this.error);
@@ -548,9 +571,11 @@ _flushFetchStats() {
     // This prevents flapping on temporary WiFi glitches
     if (this._consecutiveFailures >= 5 && timeSinceLastSuccess > 120000) {
       let dr = null;
-      try {
-        dr = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
-      } catch (e) { /* discovery unavailable */ }
+      if (!this.getSetting('manual_ip')) {
+        try {
+          dr = this.driver.getDiscoveryStrategy().getDiscoveryResult(this.getData().id);
+        } catch (e) { /* discovery unavailable */ }
+      }
       if (dr && dr.address) {
         const freshUrl = `http://${dr.address}:${dr.port}${dr.txt.path}`;
         if (freshUrl !== this.url) {

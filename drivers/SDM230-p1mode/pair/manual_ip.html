@@ -1,0 +1,50 @@
+<header class="homey-header">
+  <h1 class="homey-title" data-i18n="pair.manual_ip.title"></h1>
+  <p class="homey-subtitle" data-i18n="pair.manual_ip.intro"></p>
+</header>
+
+<fieldset class="homey-form-fieldset">
+  <label class="homey-form-label" for="manual-ip-input" data-i18n="pair.manual_ip.label"></label>
+  <input class="homey-form-input" type="text" id="manual-ip-input" placeholder="192.168.1.100" />
+</fieldset>
+
+<p class="homey-text-small" id="manual-ip-error" style="color:#dc3545;display:none;"></p>
+
+<button id="manual-ip-submit" class="homey-button-primary-full" data-i18n="pair.manual_ip.btn_add"></button>
+<button id="manual-ip-back" class="homey-button-secondary-full" data-i18n="pair.manual_ip.btn_back"></button>
+
+<script type="application/javascript">
+  function showManualIpError(msg) {
+    const el = document.getElementById('manual-ip-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  document.getElementById('manual-ip-back').addEventListener('click', () => {
+    Homey.showView('list_devices');
+  });
+
+  document.getElementById('manual-ip-submit').addEventListener('click', async () => {
+    const ip = document.getElementById('manual-ip-input').value.trim();
+    document.getElementById('manual-ip-error').style.display = 'none';
+
+    if (!ip) {
+      showManualIpError(Homey.__('pair.manual_ip.ip_required'));
+      return;
+    }
+
+    const btn = document.getElementById('manual-ip-submit');
+    btn.classList.add('is-loading', 'is-disabled');
+    btn.innerHTML = Homey.__('pair.manual_ip.testing');
+
+    try {
+      const device = await Homey.emit('test_manual_device', { ip });
+      await Homey.createDevice(device);
+      Homey.done();
+    } catch (error) {
+      showManualIpError((error && error.message) || Homey.__('pair.manual_ip.connection_failed'));
+      btn.classList.remove('is-loading', 'is-disabled');
+      btn.innerHTML = Homey.__('pair.manual_ip.btn_add');
+    }
+  });
+</script>

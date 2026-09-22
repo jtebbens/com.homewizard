@@ -227,6 +227,18 @@
     "button_label_retry": "Opnieuw proberen",
     "authorize_failed_no_button_pressed": "Koppeling mislukt, de knop is niet ingedrukt. Zorg er voor dat de knop binnen 60 seconden wordt ingedrukt.",
     "something_went_wrong": "Er is iets misgegaan, probeer het opnieuw: ",
+    "manual_ip": {
+      "title": "IP-adres handmatig invoeren",
+      "intro": "Er zijn geen apparaten automatisch gevonden. Zorg dat Lokale API is ingeschakeld in de HomeWizard app en voer hieronder het IP-adres van het apparaat in.",
+      "label": "IP-adres",
+      "btn_add": "Apparaat toevoegen",
+      "btn_back": "Opnieuw zoeken",
+      "testing": "Verbinden...",
+      "invalid_ip": "Ongeldig IP-adres formaat",
+      "connection_failed": "Kan geen verbinding maken met een HomeWizard apparaat op dit adres",
+      "ip_required": "Voer een IP-adres in",
+      "already_added": "Dit apparaat is al toegevoegd"
+    },
     "energy_v2": {
       "authorize_instruction": "Druk op de knop van de P1 Meter om de koppeling te voltooien"
     },

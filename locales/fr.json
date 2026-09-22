@@ -73,6 +73,18 @@
     "button_label_retry": "Réessayer",
     "authorize_failed_no_button_pressed": "Couplage échoué, le bouton n'a pas été appuyé. Assurez-vous d'appuyer sur le bouton dans les 60 secondes.",
     "something_went_wrong": "Une erreur s'est produite, veuillez réessayer : ",
+    "manual_ip": {
+      "title": "Saisir l'adresse IP manuellement",
+      "intro": "Aucun appareil n'a été trouvé automatiquement. Assurez-vous que l'API locale est activée dans l'application HomeWizard, puis saisissez ci-dessous l'adresse IP de l'appareil.",
+      "label": "Adresse IP",
+      "btn_add": "Ajouter l'appareil",
+      "btn_back": "Rechercher à nouveau",
+      "testing": "Connexion en cours...",
+      "invalid_ip": "Format d'adresse IP invalide",
+      "connection_failed": "Impossible de se connecter à un appareil HomeWizard à cette adresse",
+      "ip_required": "Veuillez saisir une adresse IP",
+      "already_added": "Cet appareil a déjà été ajouté"
+    },
     "energy_v2": {
       "authorize_instruction": "Appuyez sur le bouton du compteur P1 pour terminer le couplage"
     },

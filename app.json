@@ -3293,6 +3293,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM230",
@@ -3422,6 +3430,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM230-p1mode",
@@ -3766,6 +3782,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM630",
@@ -3933,6 +3957,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM630-p1mode",
@@ -5827,6 +5859,9 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
         }
       ],
       "repair": [
@@ -6405,6 +6440,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "energy_socket"
@@ -8351,6 +8394,14 @@
         {
           "id": "add_devices",
           "template": "add_devices"
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "watermeter"
