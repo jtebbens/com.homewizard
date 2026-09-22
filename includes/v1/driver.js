@@ -108,6 +108,80 @@ logDiscovery(status, detail = null) {
   return devices;
 }
 
+/**
+ * Adds a "manual IP" fallback on top of the default pairing flow: when
+ * mDNS discovery finds nothing, the user is sent to a view where they can
+ * type in the device's IP address directly instead.
+ */
+async onPair(session) {
+  session.setHandler('list_devices', async () => {
+    try {
+      return await this.onPairListDevices();
+    } catch (err) {
+      try {
+        await session.showView('manual_ip');
+        return [];
+      } catch (showViewErr) {
+        // Driver has no manual_ip pair view configured — keep default behaviour
+        throw err;
+      }
+    }
+  });
+
+  session.setHandler('test_manual_device', async (data) => {
+    return this.testManualDevice(data && data.ip);
+  });
+}
+
+/**
+ * Verifies a manually entered IP address by querying its local API, and
+ * returns a ready-to-create device object (with the IP persisted as the
+ * `manual_ip` setting so the device keeps using it after pairing).
+ *
+ * @param {string} ip
+ * @returns {Promise<{name: string, data: {id: string}, settings: {manual_ip: string}}>}
+ */
+async testManualDevice(ip) {
+  ip = (ip || '').trim();
+
+  if (!ip || !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+    throw new Error(this.homey.__('pair.manual_ip.invalid_ip'));
+  }
+
+  let res;
+  try {
+    res = await fetchWithTimeout(`http://${ip}/api`, {}, 5000);
+  } catch (err) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  if (!res.ok) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  const data = await res.json();
+  const serial = data.serial;
+  if (!serial) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  if (this.getDevices().some((d) => d.getData().id === serial)) {
+    throw new Error(this.homey.__('pair.manual_ip.already_added'));
+  }
+
+  const productName = typeof data.product_name === 'string' && data.product_name
+    ? data.product_name
+    : (data.product_type || 'HomeWizard Device');
+
+  this.logDiscovery('ok', `Manual IP ${ip} -> ${productName} (${serial})`);
+
+  return {
+    name: productName,
+    data: { id: serial },
+    settings: { manual_ip: ip },
+  };
+}
+
 async onRepair(session, device) {
   console.log('[REPAIR] Starting repair session for device:', device.getName());
 

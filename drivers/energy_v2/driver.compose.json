@@ -684,6 +684,9 @@
       "navigation": {
         "prev": "list_devices"
       }
+    },
+    {
+      "id": "manual_ip"
     }
   ],
   "repair": [

@@ -73,6 +73,18 @@
     "button_label_retry": "Yritä uudelleen",
     "authorize_failed_no_button_pressed": "Yhdistäminen epäonnistui, painiketta ei painettu. Varmista, että painiketta painetaan 60 sekunnin kuluessa.",
     "something_went_wrong": "Jokin meni pieleen, yritä uudelleen: ",
+    "manual_ip": {
+      "title": "Anna IP-osoite manuaalisesti",
+      "intro": "Laitteita ei löytynyt automaattisesti. Varmista, että paikallinen API on käytössä HomeWizard-sovelluksessa, ja anna laitteen IP-osoite alla.",
+      "label": "IP-osoite",
+      "btn_add": "Lisää laite",
+      "btn_back": "Hae uudelleen",
+      "testing": "Yhdistetään...",
+      "invalid_ip": "Virheellinen IP-osoitteen muoto",
+      "connection_failed": "Yhteyttä HomeWizard-laitteeseen tässä osoitteessa ei voitu muodostaa",
+      "ip_required": "Anna IP-osoite",
+      "already_added": "Tämä laite on jo lisätty"
+    },
     "energy_v2": {
       "authorize_instruction": "Paina P1-mittarin painiketta yhdistämisen viimeistelemiseksi"
     },

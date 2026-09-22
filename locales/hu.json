@@ -73,6 +73,18 @@
     "button_label_retry": "Próbálja újra",
     "authorize_failed_no_button_pressed": "A párosítás sikertelen, a gombot nem nyomták meg. Győződjön meg róla, hogy a gombot 60 másodpercen belül megnyomja.",
     "something_went_wrong": "Valami hiba történt, kérjük, próbálja újra: ",
+    "manual_ip": {
+      "title": "IP-cím manuális megadása",
+      "intro": "Automatikusan nem található eszköz. Győződjön meg róla, hogy a Helyi API engedélyezve van a HomeWizard alkalmazásban, majd adja meg alább az eszköz IP-címét.",
+      "label": "IP-cím",
+      "btn_add": "Eszköz hozzáadása",
+      "btn_back": "Keresés újra",
+      "testing": "Csatlakozás...",
+      "invalid_ip": "Érvénytelen IP-cím formátum",
+      "connection_failed": "Nem sikerült csatlakozni HomeWizard eszközhöz ezen a címen",
+      "ip_required": "Kérjük, adjon meg egy IP-címet",
+      "already_added": "Ez az eszköz már hozzá lett adva"
+    },
     "energy_v2": {
       "authorize_instruction": "Nyomja meg a P1-mérőn lévő gombot a párosítás befejezéséhez"
     },

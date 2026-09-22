@@ -364,8 +364,8 @@ _getEffectiveURL() {
   const manualIP = this.getSetting('manual_ip');
   if (manualIP) {
     this.log(`🔧 Using manual IP: ${manualIP}`);
-    // Energy v1 uses http and port 80 with /api path
-    return `http://${manualIP}/api`;
+    // Local API v1 uses http, port 80, base path /api/v1
+    return `http://${manualIP}/api/v1`;
   }
   
   const settings = this.getSettings();
@@ -382,7 +382,7 @@ _getEffectiveURL() {
  */
 async reconnectWithManualIP(ip) {
   this.log(`🔧 Reconnecting with manual IP: ${ip}`);
-  this.url = `http://${ip}/api`;
+  this.url = `http://${ip}/api/v1`;
   // Energy v1 uses polling, will reconnect on next poll automatically
   this.log('🔁 Manual IP set, will use on next poll cycle');
 }

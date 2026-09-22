@@ -193,7 +193,11 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     const settings = { use_polling: false, ...this.getSettings() };
     this.log('Plugin Battery settings:', settings);
 
-    if (!this.url && settings.url) {
+    // Manual IP overrides discovery (set at pairing, or via repair)
+    if (settings.manual_ip) {
+      this.url = `https://${settings.manual_ip}`;
+      this.log(`🔧 Using manual IP: ${settings.manual_ip}`);
+    } else if (!this.url && settings.url) {
       this.url = settings.url;
       this.log(`Restored URL from settings: ${this.url}`);
     }
@@ -381,6 +385,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
    * Discovery handlers
    */
   async onDiscoveryAvailable(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     const newIP = discoveryResult.address;
 
     if (!this._lastDiscoveryIP) {
@@ -405,6 +410,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   }
 
   async onDiscoveryAddressChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     const newIP = discoveryResult.address;
 
     if (this._lastDiscoveryIP === newIP) {
@@ -421,6 +427,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
   }
 
   async onDiscoveryLastSeenChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     const newIP = discoveryResult.address;
 
     if (this._lastDiscoveryIP !== newIP) {
@@ -435,6 +442,19 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     await this.setAvailable();
 
     if (!this.getSettings().use_polling && !this.wsManager?.isConnected()) {
+      this._rebuildWebSocketDebounced();
+    }
+  }
+
+  /**
+   * Reconnect with manual IP after repair flow
+   * @param {string} ip
+   */
+  async reconnectWithManualIP(ip) {
+    this.log(`🔧 Reconnecting with manual IP: ${ip}`);
+    this.url = `https://${ip}`;
+
+    if (!this.getSettings().use_polling) {
       this._rebuildWebSocketDebounced();
     }
   }

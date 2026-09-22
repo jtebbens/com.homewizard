@@ -91,9 +91,15 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
 
       if (!discoveryResults || Object.keys(discoveryResults).length === 0) {
         this.logDiscovery('not_found', 'No devices found via mDNS');
-        
-        // Throw helpful error to guide users with mDNS/network issues
-        throw new Error(this.homey.__('pair.no_devices_found'));
+
+        // Offer a manual IP entry screen instead of a dead-end error
+        try {
+          await session.showView('manual_ip');
+          return [];
+        } catch (showViewErr) {
+          // Driver has no manual_ip pair view configured — keep default behaviour
+          throw new Error(this.homey.__('pair.no_devices_found'));
+        }
       } else {
         this.logDiscovery('ok', `Found ${Object.keys(discoveryResults).length} devices`);
       }
@@ -185,6 +191,50 @@ module.exports = class HomeWizardEnergyDriverV2 extends Homey.Driver {
       } catch (error) {
         console.log('Pair Session Timeout error', error);
       }
+    });
+
+    // Triggered from the manual_ip pair view when mDNS discovery found nothing
+    session.setHandler('test_manual_device', async (data) => {
+      const ip = ((data && data.ip) || '').trim();
+
+      if (!ip || !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+        throw new Error(this.homey.__('pair.manual_ip.invalid_ip'));
+      }
+
+      let response;
+      try {
+        response = await fetch(`http://${ip}/api`, { method: 'GET', timeout: 5000 });
+      } catch (err) {
+        throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+      }
+
+      if (!response.ok) {
+        throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+      }
+
+      const info = await response.json();
+      const serial = info.serial;
+      if (!serial) {
+        throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+      }
+
+      if (this.getDevices().some((d) => d.getData().id === serial)) {
+        throw new Error(this.homey.__('pair.manual_ip.already_added'));
+      }
+
+      const productName = typeof info.product_name === 'string' && info.product_name
+        ? info.product_name
+        : (info.product_type || 'HomeWizard Device');
+
+      this.logDiscovery('ok', `Manual IP ${ip} -> ${productName} (${serial})`);
+
+      // Reuses the existing authorize flow: it reads this.selectedDevice.store.address
+      this.selectedDevice = {
+        name: `${productName} (${serial.substr(6)})`,
+        data: { id: serial },
+        store: { address: ip },
+        settings: { manual_ip: ip },
+      };
     });
   }
 
