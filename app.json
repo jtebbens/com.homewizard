@@ -3588,6 +3588,14 @@
           "navigation": {
             "prev": "list_devices"
           }
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM230_v2",
@@ -4132,6 +4140,14 @@
           "navigation": {
             "prev": "list_devices"
           }
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "SDM630_v2",
@@ -7138,6 +7154,9 @@
           "navigation": {
             "prev": "list_devices"
           }
+        },
+        {
+          "id": "manual_ip"
         }
       ],
       "repair": [
@@ -8089,6 +8108,14 @@
           "navigation": {
             "prev": "list_devices"
           }
+        },
+        {
+          "id": "manual_ip"
+        }
+      ],
+      "repair": [
+        {
+          "id": "manual_ip"
         }
       ],
       "id": "plugin_battery",

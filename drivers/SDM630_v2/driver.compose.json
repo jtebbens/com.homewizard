@@ -139,6 +139,14 @@
       {
         "prev": "list_devices"
       }
+    },
+    {
+      "id": "manual_ip"
+    }
+  ],
+  "repair": [
+    {
+      "id": "manual_ip"
     }
   ],
   "id": "SDM630_v2",
