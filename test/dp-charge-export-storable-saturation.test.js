@@ -21,6 +21,7 @@
 
 const assert = require('assert');
 const OE = require('../lib/optimization-engine');
+const { storeValue } = require('../lib/price-formulas');
 const DUMP = require('./fixtures/dp-input-20260924T173007.json');
 
 let passed = 0, failed = 0;
@@ -57,11 +58,11 @@ function run() {
     false, d.maxChargePrice);
   const slots = eng._schedule.slots;
   const at = (hhmm) => slots.find(s => AMS(s.timestamp) === `25, ${hhmm}`);
-  return { at };
+  return { at, slots, d };
 }
 
 console.log('dp-charge-export-storable-saturation');
-const { at } = run();
+const { at, slots, d } = run();
 
 test('fixture reproduces the shape: 15:00 cheaper than 15:15, both carry PV', () => {
   assert.ok(at('15:00').price < at('15:15').price);
@@ -75,10 +76,28 @@ test('a grid charge at 15:15 does not coexist with a cancelled charge at the che
     + `15:15 ${at('15:15').action}`);
 });
 
-test('store value at 15:00 is not capped by weak PV the plan never stores', () => {
-  // Uncapped peak value, the same figure 14:45 and 15:15 carry.
-  assert.ok(at('15:00').pvStoreValue > at('15:00').price,
-    `store €${at('15:00').pvStoreValue?.toFixed(3)} vs price €${at('15:00').price.toFixed(3)}`);
+test('no store value is capped by weak PV the plan never stores', () => {
+  // Checked on every slot, not on 15:00's value: that value depends on the SoC the plan brings
+  // into 15:00. Rule: when storable PV ahead (pvStrong slots only) never fills the room left
+  // at a slot's start SoC, the store is worth the uncapped suffix max. Before the fix, 15:00
+  // (room 0.301 kWh, storable 0.117) was valued at €0.138 instead of €0.293.
+  const rte = (d.learnedRte != null && d.learnedRte > 0.3 && d.learnedRte <= 1) ? d.learnedRte : 0.73;
+  const pvSlotKwh = (d.maxChargePowerW / 1000) * 0.25;
+  const bad = [];
+  for (let t = 1; t < slots.length; t++) {
+    const roomKwh = ((100 - slots[t].socProjected) / 100) * d.capacityKwh;
+    let storable = 0;
+    for (let s = t + 1; s < slots.length; s++) {
+      if (slots[s].pvCoverage >= 0.5) storable += slots[s].pvCoverage * pvSlotKwh;
+    }
+    if (storable >= roomKwh) continue;
+    const suffixMax = Math.max(0, ...slots.slice(t + 1).map(s => s.price));
+    const uncapped = storeValue(suffixMax, rte, 0.075);
+    if (Math.abs(slots[t].pvStoreValue - uncapped) > 1e-9) {
+      bad.push(`${AMS(slots[t].timestamp)} store €${slots[t].pvStoreValue.toFixed(3)} ≠ €${uncapped.toFixed(3)}`);
+    }
+  }
+  assert.deepStrictEqual(bad, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
