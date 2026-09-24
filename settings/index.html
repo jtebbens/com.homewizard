@@ -685,6 +685,27 @@
   <script>
     /* ── TAB SWITCHING ── */
     let homeyInstance = null;
+
+    /* my.homey.app (web) returns only ~2 keys for a bulk Homey.get(cb), so the prices/baseload
+       panels stayed empty. Fetch the keys the UI reads one by one; same (err, settings) shape. */
+    const UI_SETTING_KEYS = ['app_health', 'baseload_state', 'battery_cycle_history', 'battery_efficiency_effective',
+      'battery_expansion_analysis', 'battery_policy_state', 'capability_api_mode_changes', 'debug_discovery',
+      'debug_legacy_fetch', 'debug_ws', 'device_settings', 'expansion_investment', 'fetch_device_stats',
+      'learning_pv_chart_data', 'learning_status', 'pbth_device_id', 'pbth_device_list', 'policy_all_prices',
+      'policy_all_prices_15min', 'policy_consumption_profile', 'policy_daily_profit', 'policy_debug_top3high',
+      'policy_debug_top3low', 'policy_explainability', 'policy_last_run_debug', 'policy_mode',
+      'policy_optimizer_schedule', 'policy_pv_actual_today', 'policy_pv_bias', 'policy_pv_forecast_hourly',
+      'policy_soc_plan', 'policy_weather_fetched_at', 'policy_weather_hourly', 'policy_wind_data',
+      'pv_surplus_forecast', 'today_self_sufficiency', 'ws_journal', 'ws_snapshots'];
+    function homeyGetSettings(hy, cb) {
+      Promise.all(UI_SETTING_KEYS.map(k => new Promise(resolve => {
+        hy.get(k, (err, val) => resolve(err ? undefined : val));
+      }))).then(vals => {
+        const out = {};
+        UI_SETTING_KEYS.forEach((k, i) => { if (vals[i] !== undefined && vals[i] !== null) out[k] = vals[i]; });
+        cb(null, out);
+      });
+    }
     // Set from inside onHomeyReady, where the renderer is defined — the tab handler below lives in
     // this outer scope and cannot see it otherwise.
     let refreshFetchLogs = null;
@@ -718,13 +739,13 @@
 
         // Refresh planning when switching to planning tab
         if (tab.dataset.tab === 'planning' && homeyInstance) {
-          homeyInstance.get((e, s) => {
+          homeyGetSettings(homeyInstance, (e, s) => {
             if (!e) renderBatteryPlanning(s, homeyInstance);
           });
         }
         // Refresh expansion analysis when switching to that tab
         if (tab.dataset.tab === 'expansion' && homeyInstance) {
-          homeyInstance.get((e, s) => {
+          homeyGetSettings(homeyInstance, (e, s) => {
             if (!e) renderExpansionAnalysis(s);
           });
         }
@@ -735,7 +756,7 @@
         }
         // Refresh legacy fetch debug when switching to legacy tab
         if (tab.dataset.tab === 'legacy' && homeyInstance) {
-          homeyInstance.get((e, s) => {
+          homeyGetSettings(homeyInstance, (e, s) => {
             if (!e) renderLegacyDebug(s);
           });
         }
@@ -1151,7 +1172,7 @@
       document.getElementById('pv-accuracy-prev').title = Homey.__('settings.older_day');
       document.getElementById('pv-accuracy-next').title = Homey.__('settings.newer_day');
 
-      Homey.get(async (err, settings) => {
+      homeyGetSettings(Homey, async (err, settings) => {
         if (err) return;
 
         /* ── PBTH PRICE SOURCE ── */
@@ -1435,23 +1456,23 @@
 
         Homey.on('settings.set', changedKey => {
           if (changedKey === 'pbth_device_list') {
-            Homey.get((e, s) => { if (!e) renderPbthDropdown(s); });
+            homeyGetSettings(Homey, (e, s) => { if (!e) renderPbthDropdown(s); });
           }
           if (changedKey === 'fetch_device_stats') {
-            Homey.get((e, s) => { if (!e) renderFetchDebug(s); });
+            homeyGetSettings(Homey, (e, s) => { if (!e) renderFetchDebug(s); });
           }
           if (changedKey === 'policy_consumption_profile' && document.getElementById('planning').classList.contains('active')) {
-            Homey.get((e, s) => { if (!e) renderConsumptionProfile(s); });
+            homeyGetSettings(Homey, (e, s) => { if (!e) renderConsumptionProfile(s); });
           }
           if (changedKey === 'battery_policy_state' || changedKey === 'device_settings' || changedKey === 'policy_optimizer_schedule' || changedKey === 'policy_pv_actual_today' || changedKey === 'today_self_sufficiency') {
-            Homey.get((e, s) => {
+            homeyGetSettings(Homey, (e, s) => {
               if (!e && document.getElementById('planning').classList.contains('active')) {
                 renderBatteryPlanning(s, Homey);
               }
             });
           }
           if (changedKey === 'battery_expansion_analysis' || changedKey === 'today_self_sufficiency') {
-            Homey.get((e, s) => {
+            homeyGetSettings(Homey, (e, s) => {
               if (!e && document.getElementById('expansion').classList.contains('active')) {
                 renderExpansionAnalysis(s);
               }
@@ -1627,7 +1648,7 @@
 
         // Buttons
         document.getElementById('ws-refresh-btn').addEventListener('click', () => {
-          Homey.get((e, s) => { if (!e) renderWsDiagnostics(s); });
+          homeyGetSettings(Homey, (e, s) => { if (!e) renderWsDiagnostics(s); });
         });
         document.getElementById('ws-clear-btn').addEventListener('click', () => {
           Homey.set('ws_journal', []);
@@ -1641,7 +1662,7 @@
         });
 
         document.getElementById('ws-copy-btn').addEventListener('click', () => {
-          Homey.get((e, s) => {
+          homeyGetSettings(Homey, (e, s) => {
             if (e) { alert('Fout: ' + e.message); return; }
             const report = buildDiagnosticReport(s);
 
@@ -2031,12 +2052,12 @@
         renderLegacyDebug(settings);
 
         document.getElementById('legacy-refresh-btn').addEventListener('click', () => {
-          Homey.get((e, s) => { if (!e) renderLegacyDebug(s); });
+          homeyGetSettings(Homey, (e, s) => { if (!e) renderLegacyDebug(s); });
         });
 
         Homey.on('settings.set', changedKey => {
           if (changedKey === 'debug_legacy_fetch' && document.getElementById('legacy').classList.contains('active')) {
-            Homey.get((e, s) => { if (!e) renderLegacyDebug(s); });
+            homeyGetSettings(Homey, (e, s) => { if (!e) renderLegacyDebug(s); });
           }
         });
 
@@ -2047,11 +2068,11 @@
         document.getElementById('expansion-save-btn')?.addEventListener('click', () => {
           const inv = parseFloat(document.getElementById('expansion-investment').value);
           if (inv >= 0) Homey.set('expansion_investment', inv);
-          Homey.get((e, s) => { if (!e) renderExpansionAnalysis(s); });
+          homeyGetSettings(Homey, (e, s) => { if (!e) renderExpansionAnalysis(s); });
         });
 
         setInterval(() => {
-          Homey.get((e, s) => { if (!e) renderBatteryPlanning(s, Homey); });
+          homeyGetSettings(Homey, (e, s) => { if (!e) renderBatteryPlanning(s, Homey); });
         }, 5 * 60 * 1000);
 
         Homey.ready();
