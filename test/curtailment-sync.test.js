@@ -132,12 +132,18 @@ test('chart mapper: curtailment off projects a charge (unchanged)', () => {
     `store -0.010 beats export -0.03 → chart must not project export, got ${hwMode} (${reason})`);
 });
 
-test('chart mapper: curtailment on projects the throw-away, like the DP', () => {
-  const eng = new PolicyEngine(homey, { ...baseSettings, pv_curtailment_enabled: true });
+test('chart mapper: curtailment on projects the throw-away, like the DP (flag off)', () => {
+  const eng = new PolicyEngine(homey, { ...baseSettings, pv_curtailment_enabled: true, dp_mapper_follows_preserve: false });
   const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
   assert.strictEqual(hwMode, 'standby',
     `free disposal (0) beats store -0.010 → chart must project standby, got ${hwMode} (${reason})`);
   assert.ok(reason.includes('export_wins'), `expected export_wins reason, got ${reason}`);
+});
+
+test('chart mapper: curtailment on, flag on → chart follows DP preserve (stores)', () => {
+  const eng = new PolicyEngine(homey, { ...baseSettings, pv_curtailment_enabled: true });
+  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
+  assert.strictEqual(hwMode, 'zero_charge_only', `DP preserve must be followed, got ${hwMode} (${reason})`);
 });
 
 // ── Section 4: explainability (_addPVReasons) ─────────────────────────────────

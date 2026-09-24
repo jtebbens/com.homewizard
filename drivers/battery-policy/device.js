@@ -1596,6 +1596,19 @@ if (debug) this.log(
         // CRITICAL: Account for battery charging when detecting PV state
         // If battery is charging, that power would be exported if battery was in standby
         const PV_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes between PV-triggered runs
+        // A state change inside the window is deferred to the window's end, not dropped:
+        // live 2026-09-24 14:00 CEST the sun-gone run parked the battery, the export 22s later
+        // was debounced away and nothing re-ran until the next quarter.
+        const deferPvRun = (now) => {
+          if (this._pvDeferredRunTimer) return;
+          const waitMs = Math.max(0, PV_DEBOUNCE_MS - (now - this._lastPvPolicyRun));
+          this._pvDeferredRunTimer = this.homey.setTimeout(() => {
+            this._pvDeferredRunTimer = null;
+            this._lastPvPolicyRun = Date.now();
+            this.log(`⚡ PV state deferred run (pvState=${this._pvState}) → running policy`);
+            this._runPolicyCheck().catch(err => this.error(err));
+          }, waitMs);
+        };
         // ✅ HYSTERESIS THRESHOLDS: Different values for ON vs OFF to prevent bouncing
         const PV_EXPORT_ON = -200;            // Turn ON: Clear export < -200W
         const PV_EXPORT_OFF = -150;           // Turn OFF: Must rise above -150W to deactivate export mode
@@ -1660,7 +1673,8 @@ if (debug) this.log(
             this.log(`⚡ PV state changed (OFF → ON) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago, deferred)`);
+            deferPvRun(now);
           }
         } else if (this._pvState && !pvNowActive) {
           // PV state ON → OFF
@@ -1677,7 +1691,8 @@ if (debug) this.log(
             this.log(`⚡ PV state changed (ON → OFF) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago, deferred)`);
+            deferPvRun(now);
           }
         }
         // Otherwise: no state change, no spam
@@ -6730,6 +6745,11 @@ if (debug) this.log(
     if (this._evChargingTimer) {
       this.homey.clearTimeout(this._evChargingTimer);
       this._evChargingTimer = null;
+    }
+
+    if (this._pvDeferredRunTimer) {
+      this.homey.clearTimeout(this._pvDeferredRunTimer);
+      this._pvDeferredRunTimer = null;
     }
     // Final flush — write pending queued settings synchronously on shutdown
     // so the last policy run's state is not lost on restart.

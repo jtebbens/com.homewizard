@@ -208,11 +208,17 @@ function planningArgs(pvStoreValue, over = {}) {
   };
 }
 
-test('chart preserve: weak surplus + export wins → standby', () => {
-  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+test('chart preserve: weak surplus + export wins → standby (flag off)', () => {
+  const eng = new PolicyEngine({ log() {} }, { ...SETTINGS, dp_mapper_follows_preserve: false });
   const { hwMode } = eng._mapActionToHwModeForPlanning('preserve', planningArgs(0.209));
   assert.strictEqual(hwMode, 'standby',
     `chart must project the idle-and-export the runtime performs, got '${hwMode}'`);
+});
+
+test('chart preserve: weak surplus + export wins, flag on → follows DP preserve (pv_trickle)', () => {
+  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+  const { hwMode } = eng._mapActionToHwModeForPlanning('preserve', planningArgs(0.209));
+  assert.strictEqual(hwMode, 'pv_trickle', `DP preserve must be followed, got '${hwMode}'`);
 });
 
 test('chart preserve: weak surplus + store wins → pv_trickle', () => {
