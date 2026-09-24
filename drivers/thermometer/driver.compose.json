@@ -10,6 +10,7 @@
   "platforms": [
     "local"
   ],
+  "connectivity": ["lan"],
   "class": "sensor",
   "capabilities": [
     "measure_temperature",
