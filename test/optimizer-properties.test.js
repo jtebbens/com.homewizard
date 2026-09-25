@@ -4904,6 +4904,58 @@ if (inv64Probed === 0) {
   failedInvariants.push({ name: '64:vacuous-region-never-reached' });
 }
 
+// ─── 67: dp_pv_store_dp_owned — on strong PV the shipped plan is the DP's plan ─────────────
+// With the flag on, the backward DP alone answers store-vs-export on a strong-PV slot. Two
+// ways a second decider used to sneak back in, both checked on every strong slot the DP owns:
+//  (a) no forward override relabels it (PV_STORE / TRICKLE);
+//  (b) the projected SoC follows the DP's transition: standby stores nothing, a preserve at a
+//      non-negative price with room left stores something (the projection used to re-run the
+//      store-vs-export test and drop the gain the DP had valued).
+// Probed count guards against a vacuous pass: (b) must actually see strong standby AND preserve.
+const inv67Arb = fc.tuple(
+  settingsArb,
+  baseArb,
+  fc.array(fc.double({ min: -0.05, max: 0.50, noNaN: true, noDefaultInfinity: true }), { minLength: 24, maxLength: 24 }),
+  fc.array(fc.integer({ min: 0, max: 3500 }), { minLength: 14, maxLength: 14 }),
+);
+const inv67Seen = { standby: 0, preserve: 0 };
+const inv67 = ([settings, base, priceValues, pvHead]) => {
+  const prices = makePriceSlots(priceValues);
+  const consW = 300;
+  const pvW = [...pvHead, ...Array(10).fill(0)];
+  const eng = runCompute({ ...settings, dp_pv_store_dp_owned: true }, {
+    ...base, prices, pvForecast: makePvForecast(prices, pvW),
+    consumptionW: priceValues.map(() => consW), minDischargePrice: 0,
+  });
+  const slots = eng._schedule?.slots;
+  if (!slots?.length) return true;
+  const strongCov = OptimizationEngine.PV_STRONG_SURPLUS_W / base.maxChargeW;
+  const { ACTION_SRC } = OptimizationEngine;
+  const maxSoc = settings.max_soc;
+  for (let t = 0; t + 1 < slots.length; t++) {
+    const s = slots[t];
+    if ((s.pvCoverage ?? 0) < strongCov) continue;
+    if (s.actionSrc === ACTION_SRC.PV_STORE || s.actionSrc === ACTION_SRC.TRICKLE) return false;
+    if (s.actionSrc !== ACTION_SRC.DP) continue;
+    const step = slots[t + 1].socProjected - s.socProjected;
+    if (s.action === 'standby') {
+      inv67Seen.standby++;
+      if (Math.abs(step) > 1e-6) return false;
+    } else if (s.action === 'preserve' && s.price >= 0 && s.socProjected < maxSoc - 0.5) {
+      inv67Seen.preserve++;
+      if (step <= 0) return false;
+    }
+  }
+  return true;
+};
+testInvariant('67:pv-store-dp-owned-plan-is-dp-plan', inv67Arb, inv67);
+log(`Invariant 67 probed ${inv67Seen.standby} strong standby / ${inv67Seen.preserve} strong preserve slots.\n`);
+if (inv67Seen.standby === 0 || inv67Seen.preserve === 0) {
+  console.error('   ⚠ invariant 67 never reached both strong standby and strong preserve — vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '67:vacuous-region-never-reached' });
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));

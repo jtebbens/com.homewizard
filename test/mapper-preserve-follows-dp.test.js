@@ -35,7 +35,7 @@ function atLiveRun(fn) {
   }
 }
 
-function run({ followDp, dpAction = 'preserve' } = {}) {
+function run({ followDp, dpAction = 'preserve', meta = {} } = {}) {
   const settings = {
     tariff_type: 'dynamic',
     min_soc: 0,
@@ -74,7 +74,7 @@ function run({ followDp, dpAction = 'preserve' } = {}) {
     batteryCost: { avgCost: 0.1, energyKwh: 1 },
     batteryEfficiency: 0.73,
     // Cap-bound store value from the live run: PV ahead fills the battery, value to full-point €0.138.
-    optimizer: { getSlotMeta: () => ({ action: dpAction, pvTrickleMaxValue: 0.138 }) },
+    optimizer: { getSlotMeta: () => ({ action: dpAction, pvTrickleMaxValue: 0.138, ...meta }) },
   };
   return atLiveRun(() => {
     inputs.weather = { todaySunset: new Date(Date.now() + 3 * 3_600_000) };
@@ -109,6 +109,17 @@ test('flag on, DP charge: preserve-follow does not touch other DP actions', () =
   const off = run({ dpAction: 'charge', followDp: false });
   assert.strictEqual(on.flags._pvStoreWins, off.flags._pvStoreWins);
   assert.strictEqual(on.mode, off.mode);
+});
+
+// dp_pv_store_dp_owned (optimization-engine): a strong-PV slot marked DP-owned carries the DP's
+// export verdict. The policy layer's own store-vs-export rule must not turn it back into a store,
+// even when its store value (here €0.40 > export €0.216) says it would.
+test('DP-owned standby on strong PV: follow the DP export, no force charge', () => {
+  const owned = run({ dpAction: 'standby', meta: { pvWeakOwnedByDp: true, pvTrickleMaxValue: 0.40 } });
+  const free = run({ dpAction: 'standby', meta: { pvTrickleMaxValue: 0.40 } });
+  assert.strictEqual(free.flags._pvStoreWins, true, 'precondition: own rule would store');
+  assert.strictEqual(owned.flags._pvStoreWins, false, `_pvStoreWins=${owned.flags._pvStoreWins}`);
+  assert.strictEqual(owned.mode, 'standby', `got '${owned.mode}'`);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
