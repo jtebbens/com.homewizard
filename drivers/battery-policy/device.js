@@ -4560,7 +4560,20 @@ if (debug) this.log(
     // an abundant forecast lifts confidence and waives a reserve that guards a vanished risk.
     const _cvConf = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
     const _pvSpread = inputs.weather?.pvSpreadTomorrow;
-    const rawRefillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh, _pvSpread);
+    // pvKwhTomorrow is summed before the PV correction stack runs; the reserve must see the
+    // same corrected forecast as the DP/chart (and `ratio` is measured against post-bias PV).
+    // Rescale the smoothed value by this run's corrected/raw window sum.
+    let _reservePvKwh = pvKwhTomorrow;
+    if (pvForecast && inputs.weather) {
+      const _nowMs = now.getTime();
+      const _consFn = this.learningEngine
+        ? (d) => this.learningEngine.getPredictedConsumption(d)
+        : null;
+      const _corrKwh = OptimizationEngine.sumPvNetWindow(
+        pvForecast, _nowMs, _nowMs + 24 * 3600_000, maxChargePowerW, _consFn);
+      _reservePvKwh = BatteryPolicyDevice._reservePvKwh(pvKwhTomorrow, pvKwhTomorrowRaw, _corrKwh);
+    }
+    const rawRefillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, _reservePvKwh, _usableSpanKwh, _pvSpread);
     const refillConfidence = this._applyRefillConfidenceDeadband(rawRefillConfidence);
     this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
     const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
@@ -4575,7 +4588,7 @@ if (debug) this.log(
       // so logging the size here reported intent as fact. Held until after compute() below,
       // where the applied slot count is available. (2026-09-09 12:15 and 12:25 both logged
       // "+13%" on identical inputs while the gate floored 0 resp. 5 of 47 slots.)
-      this._pendingReserveLog = `🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}%`;
+      this._pendingReserveLog = `🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}→${_reservePvKwh.toFixed(1)}(corr)/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}%`;
     } else {
       this._lastReserveFloorPct = (_s.min_soc ?? 0);
       if (_cvConf < 1.0) {
@@ -5729,6 +5742,15 @@ if (debug) this.log(
    * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} pvCoverage factor in [0.6,1]
    */
+  /**
+   * Refill-reserve PV input: the min-of-3 smoothed pvKwhTomorrow (summed on the uncorrected
+   * forecast) rescaled by this run's corrected/raw window sum. raw=0 → the corrected sum.
+   */
+  static _reservePvKwh(smoothedKwh, rawKwh, correctedKwh) {
+    if (!(rawKwh > 0)) return Math.max(0, correctedKwh);
+    return Math.max(0, smoothedKwh * (correctedKwh / rawKwh));
+  }
+
   static _pvCloudUncertaintyFactor(effectiveCloud, knmiKt, oktaFrac = null) {
     if (effectiveCloud == null || effectiveCloud <= 70) return 1.0;
     if (BatteryPolicyDevice._groundClear(knmiKt, oktaFrac)) return 1.0;
