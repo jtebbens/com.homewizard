@@ -4956,6 +4956,84 @@ if (inv67Seen.standby === 0 || inv67Seen.preserve === 0) {
   failedInvariants.push({ name: '67:vacuous-region-never-reached' });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 70 — in a saturating strong-PV block, never export the cheapest surplus
+//                while a dearer strong surplus follows before the fill point
+//
+// Economic-dominance guard for dp_store_displacement (run with the flag ON; default off, shadow).
+// Mirror of 61. When the PV ahead fills the pack anyway, the stored kWh is redundant: storing one
+// now only frees one kWh of later strong PV for export. With a dearer strong slot before the fill
+// point, the cheap one must be the one stored — so its store value must beat its own export.
+// Pre-flag, every slot up to the fill point being strong left reachPrice at 0 and the store at
+// −cycleCost: "export wins" in the cheapest hour (live 2026-09-20 10:30Z, 2026-09-26 midday).
+//
+// Shape: slot 0 cheap strong, slots 1..3 strong with slot 1 dearer, then a no-PV evening with a
+// strict maximum. The pack is sized under the PV reachable from slot 1, so saturation holds by
+// construction and happens at a strong slot at or after slot 1.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 70 — saturating-block-never-exports-cheapest-before-dearer\n');
+
+let inv70Probed = 0;
+
+const inv70Arb = fc.tuple(
+  fc.record({
+    battery_efficiency:    fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:               fc.constant(0),
+    max_soc:               fc.integer({ min: 85, max: 100 }),
+    cycle_cost_per_kwh:    fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio:    fc.constant(1.0),
+    tariff_model:          fc.constantFrom('saldering', 'asymmetric_2027'),
+    dp_store_displacement: fc.constant(true),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 0.20, max: 0.80, noNaN: true, noDefaultInfinity: true }),  // pack vs PV ahead
+  fc.double({ min: 0, max: 25, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 0.05, max: 0.30, noNaN: true, noDefaultInfinity: true }),  // cheap slot 0
+  fc.double({ min: 0.01, max: 0.08, noNaN: true, noDefaultInfinity: true }),  // gap to slot 1
+  fc.double({ min: 0.45, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // evening peak
+);
+
+const inv70 = ([settings, maxChargeW, packFactor, currentSoc, cheapPrice, gap, peakPrice]) => {
+  const CONS = 200;
+  const chargeKwhPerSlot = maxChargeW / 1000;
+  const strongPvW = CONS + 0.95 * maxChargeW;
+  const pvAheadKwh = 3 * 0.95 * chargeKwhPerSlot;     // slots 1..3
+  const capacityKwh = packFactor * pvAheadKwh;
+
+  const priceValues = [
+    cheapPrice, cheapPrice + gap, cheapPrice + gap / 2, cheapPrice + gap / 4,
+    peakPrice, peakPrice - 0.05, cheapPrice, cheapPrice,
+  ];
+  const pvWValues = [strongPvW, strongPvW, strongPvW, strongPvW, 0, 0, 0, 0];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const [s0, s1] = eng._schedule.slots;
+  if (!s0 || !s1 || typeof s0.pvStoreValue !== 'number') return true;
+
+  const exportOf = slot => (typeof slot.exportPrice === 'number' ? slot.exportPrice : slot.price);
+  const e0 = exportOf(s0);
+  const e1 = exportOf(s1);
+  // Only where slot 1 really is the dearer disposal of the two.
+  if (!(e1 > e0 + 1e-9)) return true;
+  inv70Probed++;
+  return s0.pvStoreValue > e0 + 1e-9;
+};
+testInvariant('70:saturating-block-never-exports-cheapest-before-dearer', inv70Arb, inv70);
+log(`Invariant 70 probed ${inv70Probed} dear-after-cheap saturating draws.\n`);
+if (inv70Probed === 0) {
+  console.error('   ⚠ invariant 70 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '70:vacuous-region-never-reached' });
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
