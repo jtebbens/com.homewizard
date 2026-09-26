@@ -101,6 +101,7 @@ test('runtime: a bound cap with a positive DP store value still forces the charg
     BATTERY_EFFICIENCY: RTE,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
     _disposalValue: PolicyEngine.prototype._disposalValue,
+    _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
     log: () => {},
   };
   const inputs = {
@@ -151,6 +152,7 @@ test('end-to-end: engine schedule + runtime charge the surplus when tonight\'s p
       BATTERY_EFFICIENCY: RTE,
       _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
       _disposalValue: PolicyEngine.prototype._disposalValue,
+      _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
       log: () => {},
     };
     const inputs = {

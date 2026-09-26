@@ -63,6 +63,7 @@ function runFlags({ maxFuture = 0.387, currentPrice = 0.280, p1 = null, soc = 3 
     BATTERY_EFFICIENCY: RTE,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
     _disposalValue: PolicyEngine.prototype._disposalValue,
+    _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
     log: () => {},
   };
   const inputs = {
