@@ -3909,26 +3909,8 @@ if (debug) this.log(
 
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-blend');
 
-    // Compute net PV surplus for next 24h using the blended forecast (post-Solcast).
-    // Placed after the blend so Solcast data is included in the terminal value calculation.
-    // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
-    // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
     if (pvForecast && inputs.weather) {
       const nowMs = now.getTime();
-      const consFn = this.learningEngine
-        ? (d) => this.learningEngine.getPredictedConsumption(d)
-        : null;
-      // Within-horizon refill (flattening / pvAbundant / night-floor guards): rolling 24h from now.
-      inputs.weather.pvKwhTomorrow = OptimizationEngine.sumPvNetWindow(
-        pvForecast, nowMs, nowMs + 24 * 3600_000, maxChargePowerW, consFn);
-      // Post-horizon refill (terminal value only): 24h starting at the end of the priced
-      // horizon, so today's PV — already credited in the DP forward pass via pvWPerSlot — is
-      // not double-counted into the terminal refill discount. Rolling past the horizon end
-      // also avoids the midnight strategy flip the now-window was built to dodge.
-      const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
-      inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
-        pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
-
       // Forward model-spread over the same 24h window: relative std of the per-model
       // ensemble radiation, radiation-weighted (Σstd/Σmean) so disagreement at high-PV
       // slots dominates and dawn/dusk noise barely counts. Feeds the refill-reserve
@@ -4293,6 +4275,28 @@ if (debug) this.log(
 
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-pvcorr');
 
+    // Net PV surplus windows, summed on the FULLY-CORRECTED forecast (bias, accuracy, intraday,
+    // cloud, capacity cap, buienradar, upwind — all applied above) so the DP guards, terminal
+    // value, refill-reserve and policy scoring read the same PV the plan and chart use.
+    // Rolling 24h window from now — NOT the next calendar day — to avoid a strategy flip at
+    // midnight when "tomorrow" jumps to the next calendar date.
+    if (pvForecast && inputs.weather) {
+      const nowMs = now.getTime();
+      const consFn = this.learningEngine
+        ? (d) => this.learningEngine.getPredictedConsumption(d)
+        : null;
+      // Within-horizon refill (flattening / pvAbundant / night-floor guards): rolling 24h from now.
+      inputs.weather.pvKwhTomorrow = OptimizationEngine.sumPvNetWindow(
+        pvForecast, nowMs, nowMs + 24 * 3600_000, maxChargePowerW, consFn);
+      // Post-horizon refill (terminal value only): 24h starting at the end of the priced
+      // horizon, so today's PV — already credited in the DP forward pass via pvWPerSlot — is
+      // not double-counted into the terminal refill discount. Rolling past the horizon end
+      // also avoids the midnight strategy flip the now-window was built to dodge.
+      const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
+      inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
+        pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
+    }
+
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
     // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
     // pvForecast doesn't contain because hourlyForecast only has slots > now.
@@ -4560,20 +4564,7 @@ if (debug) this.log(
     // an abundant forecast lifts confidence and waives a reserve that guards a vanished risk.
     const _cvConf = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio);
     const _pvSpread = inputs.weather?.pvSpreadTomorrow;
-    // pvKwhTomorrow is summed before the PV correction stack runs; the reserve must see the
-    // same corrected forecast as the DP/chart (and `ratio` is measured against post-bias PV).
-    // Rescale the smoothed value by this run's corrected/raw window sum.
-    let _reservePvKwh = pvKwhTomorrow;
-    if (pvForecast && inputs.weather) {
-      const _nowMs = now.getTime();
-      const _consFn = this.learningEngine
-        ? (d) => this.learningEngine.getPredictedConsumption(d)
-        : null;
-      const _corrKwh = OptimizationEngine.sumPvNetWindow(
-        pvForecast, _nowMs, _nowMs + 24 * 3600_000, maxChargePowerW, _consFn);
-      _reservePvKwh = BatteryPolicyDevice._reservePvKwh(pvKwhTomorrow, pvKwhTomorrowRaw, _corrKwh);
-    }
-    const rawRefillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, _reservePvKwh, _usableSpanKwh, _pvSpread);
+    const rawRefillConfidence = OptimizationEngine.refillConfidenceFromForecast(_pvCv, _pvRatio, pvKwhTomorrow, _usableSpanKwh, _pvSpread);
     const refillConfidence = this._applyRefillConfidenceDeadband(rawRefillConfidence);
     this._lastRefillConfidence = refillConfidence; // surfaced to explainability (why battery holds reserve)
     const _ratioNote = typeof _pvRatio === 'number' && _pvRatio < 1 ? ` ratio=${_pvRatio.toFixed(2)}` : '';
@@ -4588,7 +4579,7 @@ if (debug) this.log(
       // so logging the size here reported intent as fact. Held until after compute() below,
       // where the applied slot count is available. (2026-09-09 12:15 and 12:25 both logged
       // "+13%" on identical inputs while the gate floored 0 resp. 5 of 47 slots.)
-      this._pendingReserveLog = `🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}→${_reservePvKwh.toFixed(1)}(corr)/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}%`;
+      this._pendingReserveLog = `🛡️ refill-reserve: cv=${_cvStr}${_ratioNote}${_spreadNote} pvTomorrow=${pvKwhTomorrow.toFixed(1)}/${_usableSpanKwh.toFixed(1)}kWh${_confNote} → overnight floor +${floorAddPct.toFixed(0)}%`;
     } else {
       this._lastReserveFloorPct = (_s.min_soc ?? 0);
       if (_cvConf < 1.0) {
@@ -5742,15 +5733,6 @@ if (debug) this.log(
    * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} pvCoverage factor in [0.6,1]
    */
-  /**
-   * Refill-reserve PV input: the min-of-3 smoothed pvKwhTomorrow (summed on the uncorrected
-   * forecast) rescaled by this run's corrected/raw window sum. raw=0 → the corrected sum.
-   */
-  static _reservePvKwh(smoothedKwh, rawKwh, correctedKwh) {
-    if (!(rawKwh > 0)) return Math.max(0, correctedKwh);
-    return Math.max(0, smoothedKwh * (correctedKwh / rawKwh));
-  }
-
   static _pvCloudUncertaintyFactor(effectiveCloud, knmiKt, oktaFrac = null) {
     if (effectiveCloud == null || effectiveCloud <= 70) return 1.0;
     if (BatteryPolicyDevice._groundClear(knmiKt, oktaFrac)) return 1.0;
