@@ -168,6 +168,26 @@ function baselineHw(pvW, consW) {
   return 'standby';
 }
 
+// Price rule: the simplest price-aware policy, to weigh whether the DP's complexity earns money.
+// Store any PV surplus; grid-charge in the day's cheapest slots when that beats the day's
+// priciest slots after RTE and cycle cost; cover load from the pack only at or above the day's
+// median price, else hold. Uses only the day's (day-ahead known) prices and the realized
+// surplus sign — no PV/consumption forecast, so the forecast-vs-realized trap does not apply.
+function priceRuleHwOf(daySlots) {
+  const nFill = Math.ceil((CAPACITY_KWH * 1000) / (MAX_CHARGE_W * Math.sqrt(RTE) * SLOT_H));
+  const sorted = daySlots.map(s => s.price).sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const top = sorted.slice(-nFill);
+  const topAvg = top.reduce((a, b) => a + b, 0) / top.length;
+  const cheapCut = sorted[Math.min(nFill, sorted.length) - 1];
+  return (s) => {
+    if (s.pvW - s.consW > 0) return 'zero_charge_only';
+    if (s.price <= cheapCut && s.price < RTE * topAvg - CYCLE_COST_PER_KWH) return 'to_full';
+    if (s.price >= median) return 'zero_discharge_only';
+    return 'standby';
+  };
+}
+
 // Free-run a hwMode sequence through the shared simulator from socStart, accumulating €.
 function scoreSequence(daySlots, hwOf) {
   let soc = daySlots[0].socStart;
@@ -187,6 +207,7 @@ function scoreSequence(daySlots, hwOf) {
 // ── Per-day bracket ─────────────────────────────────────────────────────────────────────────
 const dayRows = [];
 const slotDiffs = [];
+const ruleRows = [];
 let tBaseline = 0, tRealized = 0, tOracle = 0, tRealizedMeas = 0;
 
 for (const [day, daySlots] of [...byDay.entries()].sort()) {
@@ -228,6 +249,15 @@ for (const [day, daySlots] of [...byDay.entries()].sort()) {
   const baseline = scoreSequence(daySlots, s => baselineHw(s.pvW, s.consW));
   const oracle   = scoreSequence(daySlots, oracleHwOf);
   const realized = scoreSequence(daySlots, s => s.hwMode);
+  const rule     = scoreSequence(daySlots, priceRuleHwOf(daySlots));
+  // Energy left in (or taken from) the pack at day end, valued at the day's mean price × RTE,
+  // so a policy that ends the day fuller is not scored as having only spent money.
+  const meanPrice = daySlots.reduce((a, s) => a + s.price, 0) / daySlots.length;
+  const endCredit = (seq) => ((seq.endSoc - socStart) / 100) * CAPACITY_KWH * RTE * meanPrice;
+  ruleRows.push({
+    day, realized: realized.profit + endCredit(realized), rule: rule.profit + endCredit(rule),
+    baseline: baseline.profit + endCredit(baseline),
+  });
 
   // Realized measured € — ground-truth anchor from the actual SoC deltas (not simulated).
   let rmRev = 0, rmCost = 0;
@@ -289,6 +319,17 @@ if (worse.length) {
   console.log(`\n⚠️  DP UNDERPERFORMED naive self-consume on ${worse.length}/${dayRows.length} days:`);
   for (const r of worse) console.log(`   ${r.day}  DP €${r.realized.toFixed(3)} vs naive €${r.baseline.toFixed(3)}  (lost €${(-r.dpValue).toFixed(3)})`);
 }
+
+// DP vs simple price rule, all three with end-of-day pack energy credited.
+console.log('\nDP vs price rule (end-of-day SoC credited at day-mean price × RTE):');
+console.log('day          naive€     rule€       DP€   DP−rule€');
+let sN = 0, sR = 0, sD = 0;
+for (const r of ruleRows) {
+  const f = (x) => x.toFixed(3).padStart(9);
+  console.log(`${r.day}  ${f(r.baseline)} ${f(r.rule)} ${f(r.realized)} ${f(r.realized - r.rule)}`);
+  sN += r.baseline; sR += r.rule; sD += r.realized;
+}
+console.log(`TOTAL       ${tf(sN)} ${tf(sR)} ${tf(sD)} ${tf(sD - sR)}   (per day: DP−rule €${((sD - sR) / ruleRows.length).toFixed(3)})`);
 
 console.log('\ntop 15 decision differences by |€| (oracle mode ≠ realized mode):');
 slotDiffs.sort((a, b) => Math.abs(b.eur) - Math.abs(a.eur));
