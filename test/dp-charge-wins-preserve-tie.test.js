@@ -21,8 +21,10 @@ function test(name, fn) {
   catch (e) { console.error(`  ✗ ${name}: ${e.message}`); failed++; }
 }
 
-// Hourly slots, consumption 200 W, charge rate 800 W. t0..t3: cheap midday, PV 1200 W →
-// pvCoverage (1200 − 200) / 800 ≥ 1, enough PV to fill the pack. t4..t6: evening peak, no PV.
+// Hourly slots, charge rate 800 W. t0..t3: cheap midday, 200 W load, PV 1200 W →
+// pvCoverage (1200 − 200) / 800 ≥ 1, enough PV to fill the pack. t4..t11: evening, no PV,
+// 500 W load — enough demand that storing at €0.17 pays; at 200 W the 44% start SoC already
+// covers the peak and standby wins strictly, so there is no tie to break.
 const PV_W   = [1200, 1200, 1200, 1200, 0, 0, 0, 0, 0, 0, 0, 0];
 const PRICES = [0.17, 0.18, 0.19, 0.20, 0.50, 0.50, 0.45, 0.30, 0.30, 0.30, 0.30, 0.30];
 
@@ -34,13 +36,22 @@ function runEngine() {
     cycle_cost_per_kwh: CYCLE,
     tariff_model: 'saldering',
   });
-  const base = Date.now();
+  // Fixed clock at the slot-0 boundary. compute() scales slot 0 by the remaining fraction of
+  // the slot from Date.now(); with a live clock that fraction drifts by milliseconds per run,
+  // which moves vCharge/vPreserve in the last float digits and flips the exact tie at random.
+  const base = Date.UTC(2026, 8, 24, 10);
   const ps = PRICES.map((price, h) => ({
     timestamp: new Date(base + h * 3600e3).toISOString(), price,
   }));
   const pvF = ps.map((p, h) => ({ timestamp: p.timestamp, pvPowerW: PV_W[h] }));
-  const cons = ps.map(() => 200);
-  oe.compute(ps, 44, 2.688, 800, 800, pvF, RTE, cons, 0.276, 1.0, 4.0, 4.0, 1.0, 1.0, false, 0);
+  const cons = ps.map((_, h) => (h < 4 ? 200 : 500));
+  const realNow = Date.now;
+  Date.now = () => base;
+  try {
+    oe.compute(ps, 44, 2.688, 800, 800, pvF, RTE, cons, 0.276, 1.0, 4.0, 4.0, 1.0, 1.0, false, 0);
+  } finally {
+    Date.now = realNow;
+  }
   return oe._schedule.slots;
 }
 
