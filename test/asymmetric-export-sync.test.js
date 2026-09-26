@@ -65,20 +65,11 @@ const flipCtx = {
 };
 
 {
-  // Legacy path (dp_mapper_follows_preserve off): the chart re-derives store-vs-export itself.
-  const eng = new PolicyEngine(homey, { ...baseSettings, tariff_model: 'saldering', dp_mapper_follows_preserve: false });
-  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
-  assert.strictEqual(hwMode, 'standby', `saldering should export (standby), got ${hwMode} (${reason})`);
-  assert.ok(reason.includes('export_wins'), `saldering reason should be export_wins, got ${reason}`);
-  console.log('Section 2a (saldering mapper exports PV, flag off): PASSED');
-}
-
-{
-  // Default (flag on): DP chose preserve with export already priced → chart stores, like the runtime.
+  // DP chose preserve with export already priced → chart stores, like the runtime.
   const eng = new PolicyEngine(homey, { ...baseSettings, tariff_model: 'saldering' });
   const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
   assert.strictEqual(hwMode, 'zero_charge_only', `DP preserve must be followed, got ${hwMode} (${reason})`);
-  console.log('Section 2a2 (saldering, flag on: chart follows DP preserve): PASSED');
+  console.log('Section 2a (saldering: chart follows DP preserve): PASSED');
 }
 
 {

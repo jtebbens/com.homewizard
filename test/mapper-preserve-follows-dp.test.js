@@ -11,7 +11,7 @@
  * 27s earlier the same check read €0.276 (pvKwhFromT1 5.77 → 6.28 kWh) and the battery charged.
  * The DP already prices export in vPreserve/vStandby (optimization-engine _runBackwardDP), so a
  * second decider on the same question flipped the battery on forecast noise.
- * dp_mapper_follows_preserve (hidden, default on) makes the policy layer follow the DP.
+ * The policy layer now follows the DP (was flag dp_mapper_follows_preserve, removed).
  */
 
 const assert = require('assert');
@@ -35,7 +35,7 @@ function atLiveRun(fn) {
   }
 }
 
-function run({ followDp, dpAction = 'preserve', meta = {} } = {}) {
+function run({ dpAction = 'preserve', meta = {} } = {}) {
   const settings = {
     tariff_type: 'dynamic',
     min_soc: 0,
@@ -49,7 +49,6 @@ function run({ followDp, dpAction = 'preserve', meta = {} } = {}) {
     policy_mode: 'balanced',
     tariff_model: 'saldering',
   };
-  if (followDp !== undefined) settings.dp_mapper_follows_preserve = followDp;
   const eng = new PolicyEngine({ log() {} }, settings);
   const inputs = {
     policyMode: 'balanced',
@@ -91,24 +90,18 @@ function test(name, fn) {
 
 console.log('mapper-preserve-follows-dp');
 
-test('flag off reproduces 13:18Z: store €0.138 < export €0.216 → standby', () => {
-  const { flags, mode } = run({ followDp: false });
-  assert.strictEqual(flags._pvStoreWins, false, `_pvStoreWins=${flags._pvStoreWins}`);
-  assert.strictEqual(mode, 'standby', `got '${mode}'`);
-});
-
-test('default (flag on): DP preserve → store PV (zero_charge_only), explainability follows DP', () => {
+test('DP preserve → store PV (zero_charge_only), explainability follows DP', () => {
   const { flags, mode } = run({});
   assert.strictEqual(flags._pvStoreWins, true, `_pvStoreWins=${flags._pvStoreWins}`);
   assert.strictEqual(flags._pvWeakOwnedByDp, true, 'explainability must repeat the DP verdict');
   assert.strictEqual(mode, 'zero_charge_only', `mapper overrode DP preserve; got '${mode}'`);
 });
 
-test('flag on, DP charge: preserve-follow does not touch other DP actions', () => {
-  const on = run({ dpAction: 'charge' });
-  const off = run({ dpAction: 'charge', followDp: false });
-  assert.strictEqual(on.flags._pvStoreWins, off.flags._pvStoreWins);
-  assert.strictEqual(on.mode, off.mode);
+// Values pinned from the legacy mapper (flag off) at 78891ab0, where on and off agreed.
+test('DP charge: preserve-follow does not touch other DP actions', () => {
+  const { flags, mode } = run({ dpAction: 'charge' });
+  assert.strictEqual(flags._pvStoreWins, false, `_pvStoreWins=${flags._pvStoreWins}`);
+  assert.strictEqual(mode, 'standby', `got '${mode}'`);
 });
 
 // dp_pv_store_dp_owned (optimization-engine): a strong-PV slot marked DP-owned carries the DP's
