@@ -2061,6 +2061,7 @@ if (debug) this.log(
               const beforeFingerprint = priceFingerprint(this.tariffManager.mergedProvider.cache);
               this.homey.app.logMem?.('[BatteryPolicy] before-price-refresh');
               await this.tariffManager.mergedProvider.fetchPrices(true);
+              await this.tariffManager.refreshForecast();
               this.homey.app.logMem?.('[BatteryPolicy] after-price-refresh');
               const priceCount = this.tariffManager.mergedProvider.cache?.length || 0;
               const sources    = this.tariffManager.mergedProvider.lastFetchSources.join('+');

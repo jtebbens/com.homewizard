@@ -75,6 +75,10 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 ## 📝 Latest Updates (v3.15.63–v3.19.5)
 
+### Fixed Estimated Prices for Tomorrow Going Stale After a Restart (v3.19.5)
+
+* **Fixed the estimated day-ahead prices for tomorrow never appearing, or disappearing again a day or two after the app started.** The estimates that fill in the part of tomorrow the day-ahead auction has not published yet ("Price forecast fill", set to on) were fetched only once, when the app started. After that the list was never refreshed, so it slowly ran out: two days after a restart it ended at midnight today and tomorrow showed no prices at all, which left the planner with a truncated horizon. The estimates are now re-fetched together with the regular price refresh (the provider keeps its own one-hour cache, so this adds no extra load), and a failed fetch never blocks the real prices. A real price still always replaces an estimate for the same slot.
+
 ### Warn About Unstable Device Wi-Fi Instead of Blaming the App (v3.19.5)
 
 * **The app now tells you when a device's own Wi-Fi is flaky, instead of silently flipping its connectivity alarm.** The poll-failure counter reset to zero after a single successful poll, so an unstable connection (fail, success, fail, success) never built up enough failures to surface anywhere beyond that alarm — leaving users to assume the app itself was dropping the connection. It now tracks the failure rate over the last 40 poll attempts; at 50% or worse it sends one timeline notification, then waits 24 hours (or 10 consecutive successful polls, whichever comes first) before it can warn again.
