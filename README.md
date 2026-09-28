@@ -73,11 +73,71 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.5)
+## 📝 Latest Updates (v3.15.63–v3.19.7)
 
-### Fixed Estimated Prices for Tomorrow Going Stale After a Restart (v3.19.5)
+### Plug-in Battery Reports That It Manages Its Own Power (v3.19.7)
+
+* **The Plug-in Battery now shows a power mode of "device" in Homey's energy features, and refuses to be switched to "homey".** The battery regulates itself: its firmware keeps the P1 meter at zero, so there is no fixed charge or discharge power Homey could dictate. Without the power-mode capability Homey assumes it has full control of a home battery at all times. The battery now carries `target_power_mode`, permanently set to `device`; any attempt to set it to `homey` is rejected with an explanation. `target_power` is deliberately not offered, because the battery cannot honour a fixed value. **The minimum Homey version is now 12.13.0** (was 12.9.0), the first version that has this capability.
+
+### Fixed Estimated Prices for Tomorrow Going Stale After a Restart (v3.19.7)
 
 * **Fixed the estimated day-ahead prices for tomorrow never appearing, or disappearing again a day or two after the app started.** The estimates that fill in the part of tomorrow the day-ahead auction has not published yet ("Price forecast fill", set to on) were fetched only once, when the app started. After that the list was never refreshed, so it slowly ran out: two days after a restart it ended at midnight today and tomorrow showed no prices at all, which left the planner with a truncated horizon. The estimates are now re-fetched together with the regular price refresh (the provider keeps its own one-hour cache, so this adds no extra load), and a failed fetch never blocks the real prices. A real price still always replaces an estimate for the same slot.
+
+### Price Estimates Reach Further Into Day+2, From One Source (v3.19.7)
+
+* **Fixed the evening peak two days ahead never reaching the planner.** The estimate feed used until now (hourly) stopped around 13:00 Dutch time on day+2, so that evening's peak was missing from the plan. The self-hosted EpexPredictor feed (15-minute slots) is now the only estimate source and runs to 23:45 Amsterdam time of day+2. In a replay of a live input (18 Sep, 13:30 UTC) the planned charge slots on the afternoon of 19 Sep went from 0 to 10, and the battery level at 17:00 from 44% to 100% — a replay of the plan, not measured savings. Only applies when "Price forecast fill" is on. Property tests for the merge of real and estimated prices were added before this went live.
+
+### Estimated Prices Now Visible on the Planning Page (v3.19.7)
+
+* **The planning page showed "?" for every slot priced by the estimate, even though the planner did plan with those prices.** Estimated prices are kept out of the price history on purpose, so ROI and history never count them as real, and that history was the page's only price source. Each planned slot now says whether its price is an estimate; such slots show as ~€x (grey, italic, with a tooltip and a legend entry). The average in the status bar still uses real prices only.
+
+### Settings Page Works Again on my.homey.app (v3.19.7)
+
+* **Fixed the prices and baseload panels being empty when the settings page is opened through my.homey.app.** The web client returns only about two keys when all settings are requested in one call. The page now fetches the 38 keys it reads one by one, and hands them back in the same shape, so every place that used the bulk call works again.
+
+### Legacy and Cloud Water Meter Drivers Declare Their Connection Type (v3.19.7)
+
+* **No behaviour change.** The legacy HomeWizard drivers (energylink, heatlink, homewizard, kakusensors, rainmeter, thermometer, wattcher, windmeter) now declare `connectivity: lan` and the cloud water meter declares `cloud`; a duplicate `platforms` key was removed. Manifest only. Taken over by hand from #129 by @smarthomesven.
+
+### Battery Keeps Storing Solar on a Cloud Instead of Parking in Standby (v3.19.7)
+
+* **Fixed the battery going idle when the planner had chosen to store solar.** When the planner picks "preserve" over "standby" it has already priced exporting the surplus, but a second decision layer re-derived store-versus-export and flipped on forecast noise (live 24 Sep, 13:18 UTC: preserve became standby within 27 seconds). The runtime and the planning chart now follow the planner's preserve. A preserve with sticky solar now charges from surplus only regardless of the momentary surplus (at zero surplus it idles like standby, without delaying the restart), and a policy run that lands inside the solar-state debounce is deferred to the end of that window instead of dropped. The hidden switch `dp_mapper_follows_preserve` was on by default and never turned off, so it was removed afterwards — no behaviour change from that cleanup.
+
+### Solar Surplus Counted When the Battery Charges More Than the House Draws From the Grid (v3.19.7)
+
+* **Fixed a battery charging at 800 W while the grid supplied 598 W being read as "no solar surplus".** The surplus calculation returned 0 whenever the grid was importing, so the run fell through to standby (live 16 Sep, 13:29 Dutch time). The part of the charge the grid does not supply is solar by definition, so the surplus is now battery power minus grid import (never below zero). Situations without grid import are unchanged.
+
+### The Planner Only Counts Solar It Can Actually Store (v3.19.7)
+
+* **Fixed two places where weak solar slots were counted as if the battery would store them.** The store value of a kWh depends on whether solar ahead will fill the battery anyway; that test summed all solar, including weak slots that are never stored. The promised fill never happened, so a cheap charge was cancelled and bought back later at a dearer price (live 24 Sep: €0.185 at 15:00 cancelled, €0.220 charged at 15:15). Both that test, and the evening-net check and deferral window that decide whether to postpone charging for cheaper solar, now use the same storable-solar sum. Over 54 stored plans one run changed (Friday 12:00 stores solar instead of deferring; one grid charge instead of two).
+
+### Deferring Solar Under Net Metering Only When the Remaining Sun Can Fill the Battery (v3.19.7)
+
+* **Fixed the planner giving up on storing today's solar for a slightly cheaper price tomorrow, even when today's remaining sun could no longer fill the battery.** In the net-metering (saldering) case it deferred on price alone; it now also requires that the solar in the deferral window fills the room, as the 2027 mode already did. Live 25 Sep, 10:15 UTC: battery empty, €0.207 exported against €0.152 the next day, with 2.22 of 2.69 kWh storable before the evening peak.
+* **Fixed a plan step that could lift the projected battery level up to the overnight reserve floor.** When a stretch of preserve slots was re-discharged, a slot already below its own floor was raised to it, splicing a rise across standby slots into the projected path. The floor now only limits how far the level can drop.
+
+### One Rule for Delaying Solar Storage, Same on Battery and Chart (v3.19.7)
+
+* **Fixed the "export now, charge from cheaper solar later" check never running on days when the whole-day solar balance was negative.** The check only ran when the day's net surplus (solar minus consumption over all solar hours) could fill the battery; deficit hours cancelled the midday surplus (live 26 Sep, 07:40 UTC: 7.8 − 8.9 = 0.0 kWh, so €0.299 solar was stored ahead of a €0.19 block). The planning chart kept its own copy of the rule with other candidate slots, so chart and battery could disagree. Both now use one rule: the storable solar per slot over the next 8 hours, the price-weighted average of the cheapest solar that refills the battery, the same 1.30× / €0.03 margin, and no delay unless that solar refills the battery with 20% to spare. The chart marks the delay so its battery line is re-simulated.
+
+### One Corrected Solar Number for Tomorrow (v3.19.7)
+
+* **The overnight reserve and other checks used tomorrow's solar forecast from before the correction steps, while the plan and chart used the corrected forecast.** That made the reserve under-count tomorrow's refill and apply the downside twice (25 Sep: bias ×1.26, reserve floor +29%, battery held at 28% overnight above break-even). Tomorrow's solar is now summed after the full correction stack, and every consumer — planner guards, terminal value, refill reserve, net-surplus learning and policy scoring — reads that one number. Replay of 8 real plans (21–25 Sep): 4 unchanged, total +€0.21 (two better, two worse), scored against forecast solar, not realised.
+
+### Satellite Solar Forecast: Trusted Less on a Broken Sky, Polled at the Right Moment (v3.19.7)
+
+* **The satellite solar nowcast now speaks for the running hour and the next one, and its weight for the next hour drops when the sky is patchy.** The planner's solar input used to flip between the satellite and Open-Meteo almost every quarter, and the plan flipped with it. The satellite's error grows with the spread of radiation across its grid (measured over 1606 hourly buckets, 6 Aug–21 Sep: blended error 174 W in the calmest fifth against 434 W in the most patchy fifth), and it only beats Open-Meteo at the running hour; one hour ahead it loses at high spread. So the running hour is left alone, and the next hour tapers back to Open-Meteo as the spread rises. Verified live 21 Sep, 10:43 UTC on a broken overcast day. Only August–September data; whether this earns money is not measured, only that the spread predicts the error. An internal setting restores the old reach.
+* **The satellite poll is locked to the quarter.** Its timing used to depend on when the app restarted, so a policy run could read an image 45 minutes old. It now polls at :14:30, so the run reads a 30-minute-old image, well inside the 60-minute limit.
+* **Slots are rejected while the app does not yet know its coordinates.** After a restart the coordinates could still be missing, so the low-sun check was skipped and a 16:00 UTC slot with the sun at 14.8° reached the planner as 353 W for one run (live 20 Sep). The coordinates are now resolved up front, and an unknown sun height counts as a rejection.
+
+### New Planner Options, Off by Default (v3.19.7)
+
+* **`dp_pv_store_dp_owned`: let the planner alone decide store-versus-export on strong solar.** The forward pass no longer overrides the planner's standby there. Replay over 53 stored plans: 17 better, 22 worse, mean −€0.005 per run, sign flipping per day — inconclusive, so it ships **off**.
+* **`dp_store_displacement`: value stored solar at the dearest disposal value among the strong solar slots up to the fill point.** When solar fills the battery and every slot up to that point is strong, the planner saw no price to store for, and a charge in the cheapest midday hour was cancelled to standby while the battery later filled from dearer solar. Ships **off**; a shadow counter `dispFlip` in the "trickle-cap" log line counts the slots it would flip. Replay of 116 stored plans: 59 runs with shadow flips, slot-0 action changed in 2. A later euro replay over 54 runs was inconclusive (23 better, 31 worse).
+
+### Diagnostics and Development Only (v3.19.7)
+
+* **No behaviour change.** New log-only `[FILLWATCH]` line per run: the peak battery level still promised for today, the energy that needs, and whether the slots left below the charge cap can deliver it. The `[SAT YF]` line now also carries `ratio=` (tilt) and `panelGhi=` (satellite irradiance), so high yield-factor samples can be traced. Development: reproduction tests for a charge/preserve tie, property tests for estimated prices and repayable charges, and a comparison of the planner against a simple price rule in the replay tool.
 
 ### Warn About Unstable Device Wi-Fi Instead of Blaming the App (v3.19.5)
 
