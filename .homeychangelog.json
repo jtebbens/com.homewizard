@@ -1633,5 +1633,8 @@
   },
   "3.19.6": {
     "en": "Bugfix planning and DP not charging. Older bugfix got skipped by another fix. Restore functionality of DP and Planning."
+  },
+  "3.19.7": {
+    "en": "Battery Policy DP cleanup, price forecast next day when ENTSOE hasnt got prices yet"
   }
 }
