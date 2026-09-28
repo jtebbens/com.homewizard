@@ -29,7 +29,8 @@
     "rssi",
     "time_to_full",
     "time_to_empty",
-    "estimate_kwh"
+    "estimate_kwh",
+    "target_power_mode"
   ],
   "energy": {
     "homeBattery": true,

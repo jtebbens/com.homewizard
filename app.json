@@ -10,7 +10,7 @@
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
-  "compatibility": ">=12.9.0",
+  "compatibility": ">=12.13.0",
   "description": {
     "en": "Helps you understand and save"
   },
@@ -7875,7 +7875,8 @@
         "rssi",
         "time_to_full",
         "time_to_empty",
-        "estimate_kwh"
+        "estimate_kwh",
+        "target_power_mode"
       ],
       "energy": {
         "homeBattery": true,

@@ -177,6 +177,7 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
     }
 
     await this._updateCapabilities();
+    await this._ensureTargetPowerModeDevice();
     await this._registerCapabilityListeners();
 
     this.previousChargingState = null;
@@ -800,7 +801,8 @@ module.exports = class HomeWizardPluginBattery extends Homey.Device {
       'time_to_full',
       'rssi',
       'wifi_quality',
-      'estimate_kwh'
+      'estimate_kwh',
+      'target_power_mode'
     ];
 
     for (const cap of caps) {
@@ -1114,6 +1116,25 @@ async _registerCapabilityListeners() {
     }
   });
 
+  // TARGET POWER MODE — only 'device'. The firmware holds the P1 meter at zero
+  // ("zero on meter"), so there is no fixed target_power Homey could enforce.
+  if (this.hasCapability('target_power_mode')) {
+    this.registerCapabilityListener('target_power_mode', async (mode) => {
+      if (mode !== 'device') {
+        throw new Error('This battery follows the P1 meter itself and cannot be set to a fixed power. Only "device" mode is supported.');
+      }
+    });
+  }
+
+}
+
+/**
+ * target_power_mode is always 'device' (see listener above).
+ */
+async _ensureTargetPowerModeDevice() {
+  if (!this.hasCapability('target_power_mode')) return;
+  if (this.getCapabilityValue('target_power_mode') === 'device') return;
+  await this.setCapabilityValue('target_power_mode', 'device').catch(this.error);
 }
 
 
