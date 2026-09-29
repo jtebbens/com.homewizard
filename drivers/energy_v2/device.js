@@ -2041,7 +2041,7 @@ async _handleBatteries(data) {
     this._currentDetailedMode = detailedBatteryMode(payload);
 
     // --- Firmware fallback: to_full but power_w = 0 ---
-    if (normalizedMode === 'to_full') this.log(`[to_full] power_w=${payload.power_w ?? 'null'}`);
+    const rawPowerW = payload.power_w;
     if (normalizedMode === 'to_full' && (payload.power_w == null || payload.power_w === 0)) {
       const prev = this._cacheGet('last_battery_state') || {};
 
@@ -2054,6 +2054,7 @@ async _handleBatteries(data) {
 
       payload.power_w = batteryCount * 800;
     }
+    if (normalizedMode === 'to_full') this.log(`[to_full] power_w raw=${rawPowerW ?? 'null'} → used=${payload.power_w} (count=${payload.battery_count ?? 'n/a'})`);
 
     // --- Lazy re-add: caps were skipped/removed while battery_count = 0 ---
     if ((payload.battery_count ?? 0) > 0 && !this.hasCapability('measure_power.battery_group_power_w')) {
