@@ -73,7 +73,8 @@ function run({ dpAction = 'preserve', meta = {} } = {}) {
     batteryCost: { avgCost: 0.1, energyKwh: 1 },
     batteryEfficiency: 0.73,
     // Cap-bound store value from the live run: PV ahead fills the battery, value to full-point €0.138.
-    optimizer: { getSlotMeta: () => ({ action: dpAction, pvTrickleMaxValue: 0.138, ...meta }) },
+    // pvStoredByDp: the DP's own forward pass banks this strong-PV preserve (SoC rises).
+    optimizer: { getSlotMeta: () => ({ action: dpAction, pvTrickleMaxValue: 0.138, pvStoredByDp: dpAction === 'preserve', ...meta }) },
   };
   return atLiveRun(() => {
     inputs.weather = { todaySunset: new Date(Date.now() + 3 * 3_600_000) };

@@ -134,7 +134,7 @@ test('chart mapper: curtailment off projects a charge (unchanged)', () => {
 
 test('chart mapper: curtailment on → chart follows DP preserve (stores)', () => {
   const eng = new PolicyEngine(homey, { ...baseSettings, pv_curtailment_enabled: true });
-  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
+  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx, pvStoredByDp: true });
   assert.strictEqual(hwMode, 'zero_charge_only', `DP preserve must be followed, got ${hwMode} (${reason})`);
 });
 

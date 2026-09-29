@@ -65,9 +65,9 @@ const flipCtx = {
 };
 
 {
-  // DP chose preserve with export already priced → chart stores, like the runtime.
+  // DP chose preserve with export already priced, and its plan stores the PV → chart stores, like the runtime.
   const eng = new PolicyEngine(homey, { ...baseSettings, tariff_model: 'saldering' });
-  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx });
+  const { hwMode, reason } = eng._mapActionToHwModeForPlanning('preserve', { ...flipCtx, pvStoredByDp: true });
   assert.strictEqual(hwMode, 'zero_charge_only', `DP preserve must be followed, got ${hwMode} (${reason})`);
   console.log('Section 2a (saldering: chart follows DP preserve): PASSED');
 }
