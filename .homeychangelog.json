@@ -1636,5 +1636,8 @@
   },
   "3.19.7": {
     "en": "Battery Policy DP cleanup, price forecast next day when ENTSOE hasnt got prices yet"
+  },
+  "3.19.8": {
+    "en": "DP bug fix, delayed charge, export profit"
   }
 }
