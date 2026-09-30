@@ -1639,5 +1639,8 @@
   },
   "3.19.8": {
     "en": "DP bug fix, delayed charge, export profit"
+  },
+  "3.19.9": {
+    "en": "Bugfix DP forecasted price 2 days ahead impacting to early charge mode"
   }
 }
