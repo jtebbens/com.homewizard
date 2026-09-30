@@ -21,7 +21,7 @@
 
 const assert = require('assert');
 const OE = require('../lib/optimization-engine');
-const { storeValue } = require('../lib/price-formulas');
+const { storeValue, knownPrice } = require('../lib/price-formulas');
 const DUMP = require('./fixtures/dp-input-20260924T173007.json');
 
 let passed = 0, failed = 0;
@@ -91,7 +91,8 @@ test('no store value is capped by weak PV the plan never stores', () => {
       if (slots[s].pvCoverage >= 0.5) storable += slots[s].pvCoverage * pvSlotKwh;
     }
     if (storable >= roomKwh) continue;
-    const suffixMax = Math.max(0, ...slots.slice(t + 1).map(s => s.price));
+    // Published prices only — the dump's tail after 2026-09-26 00:00 CEST is estimated (knownPrice).
+    const suffixMax = Math.max(0, ...d.prices.slice(t + 1).map(knownPrice));
     const uncapped = storeValue(suffixMax, rte, 0.075);
     if (Math.abs(slots[t].pvStoreValue - uncapped) > 1e-9) {
       bad.push(`${AMS(slots[t].timestamp)} store €${slots[t].pvStoreValue.toFixed(3)} ≠ €${uncapped.toFixed(3)}`);

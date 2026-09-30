@@ -5034,6 +5034,69 @@ if (inv70Probed === 0) {
   failedInvariants.push({ name: '70:vacuous-region-never-reached' });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 71 — the PV store value never leans on an estimated price
+//
+// price_forecast_fill pads the table with estimated slots; the store-vs-export verdict counts
+// published prices only (knownPrice, price-formulas.js). So on every slot the DP's pvStoreValue
+// is bounded by storing against the highest PUBLISHED price still ahead — whatever the estimated
+// tail holds. Live 2026-09-30 06:30Z: an estimated €0.609 two days out priced storing at €0.371
+// against an export of €0.362; the published peak (€0.448) was worth €0.253.
+// Probed where the estimated tail is dearer than every published price ahead — the region where
+// leaning on the estimate would lift the value.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 71 — pv-store-value-counts-published-prices-only\n');
+
+let inv71Probed = 0;
+
+const inv71Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.65, max: 0.85, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.constant(100),
+    cycle_cost_per_kwh: fc.double({ min: 0.05, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.array(fc.double({ min: 0.05, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 16 }),                                         // published hours
+  fc.array(fc.double({ min: 0.05, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 4, maxLength: 12 }),                                         // estimated hours
+  fc.array(fc.integer({ min: 0, max: 1500 }), { minLength: 28, maxLength: 28 }), // PV W per slot
+  fc.double({ min: 0, max: 80, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),    // capacityKwh
+);
+
+const inv71 = ([settings, known, est, pvW, currentSoc, capacityKwh]) => {
+  const values = known.concat(est);
+  const prices = makePriceSlots(values).map((p, i) => (i >= known.length ? { ...p, estimated: true } : p));
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW: 800, maxDischargeW: 800, currentSoc,
+    prices, pvForecast: makePvForecast(prices, values.map((_, i) => pvW[i])),
+    consumptionW: values.map(() => 200),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  const slots = eng._schedule?.slots;
+  if (!slots?.length) return true;
+  const estMax = Math.max(...est);
+  for (let t = 0; t < slots.length; t++) {
+    if (typeof slots[t].pvStoreValue !== 'number') continue;
+    const knownAhead = Math.max(0, ...known.slice(t + 1));
+    if (estMax > knownAhead) inv71Probed++;
+    const bound = storeValue(knownAhead, settings.battery_efficiency, settings.cycle_cost_per_kwh);
+    if (slots[t].pvStoreValue > bound + 1e-9) return false;
+  }
+  return true;
+};
+testInvariant('71:pv-store-value-counts-published-prices-only', inv71Arb, inv71);
+log(`Invariant 71 probed ${inv71Probed} slots with a dearer estimated tail ahead.\n`);
+if (inv71Probed === 0) {
+  console.error('   ⚠ invariant 71 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '71:vacuous-region-never-reached' });
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log('\n' + '─'.repeat(60));
