@@ -73,7 +73,23 @@ NEW in v3.13.14: Intelligent battery management system that:
 
 **Note**: Cloud-based features depend on internet connectivity and HomeWizard Energy platform availability. During maintenance or outages, you may experience errors or incorrect data.
 
-## 📝 Latest Updates (v3.15.63–v3.19.7)
+## 📝 Latest Updates (v3.15.63–v3.19.9)
+
+### Battery Stays Idle at ~0 W Surplus When Exporting Pays More (v3.19.9)
+
+* **Fixed the battery banking solar at a loss when the plan says "preserve" and there is almost no surplus.** Below 50 W of net surplus the store-versus-export test was skipped, so the runtime fell back to "charge from solar only" even though the store value (€0.238/kWh) was below the export price (€0.325/kWh, live on 29 Sep 14:30 UTC). The test now also runs on "preserve" slots below 50 W; other actions are untouched, so grid charging is not blocked. Confirmed live on 7 runs (29–30 Sep): all went to standby with export ahead by €0.06–0.12/kWh. The opposite case (surplus below 50 W, store value higher than export) has not been seen live yet.
+
+### Solar Storage Value Now Uses Published Prices Only (v3.19.9)
+
+* **Fixed the battery banking solar for an estimated future price peak.** With price estimates enabled, the store value of solar was computed from an *estimated* day+2 peak (€0.609/kWh, Friday) instead of the published evening peak (€0.448/kWh, worth €0.253/kWh after losses). Live on 30 Sep 06:30 UTC this made storing (€0.371) beat exporting (€0.362). The store-versus-export choice now looks only at published prices (planner look-ahead, runtime check and explanation share one `knownPrice()` rule); estimates still feed the rest of the planning. Confirmed live on 3 runs (30 Sep): store value €0.253, export €0.300–0.315, standby. The check against the actual Friday price follows on 1 Oct.
+
+### Battery Log Shows Raw and Used Power (v3.19.9)
+
+* When the battery reports 0 W while charging to full, the app substitutes 800 W per battery. The `[to_full]` log line now shows both the raw firmware value and the value used.
+
+### Weak Sun No Longer Banked in the Battery When Exporting Pays More (v3.19.8)
+
+* **Fixed the battery storing weak solar power at a value below the export price.** On slots where the planner picks "preserve" but the sun is too weak to actually charge the battery, the plan books no solar into the battery: that surplus is exported. The runtime nevertheless read every "preserve" as "store the solar". Live on 29 Sep (08:00 UTC) this banked about 794 W at a store value of €0.238/kWh while export paid €0.359/kWh. The planner now marks per slot whether it really stores solar (`pvStoredByDp`, the same expression that advances the projected battery level). The runtime follows "preserve" as a store only where that flag is set; otherwise its normal store-versus-export test decides. The planning chart shows the export on those slots. Planner decisions and the projected battery level are unchanged. A test reproduces the live run on its real schedule arrays; confirmed live on 4 weak-sun preserve slots (29–30 Sep), all standby.
 
 ### Plug-in Battery Reports That It Manages Its Own Power (v3.19.7)
 
