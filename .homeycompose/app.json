@@ -3,13 +3,13 @@
   "name": {
     "en": "HomeWizard"
   },
-  "version": "3.19.5",
+  "version": "3.19.9",
   "platforms": [
     "local"
   ],
   "sdk": 3,
   "brandColor": "#2fc052",
-  "compatibility": ">=12.9.0",
+  "compatibility": ">=12.13.0",
   "description": {
     "en": "Helps you understand and save"
   },

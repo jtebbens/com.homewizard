@@ -3966,9 +3966,15 @@ const inv52 = ([settings, base, basePrice, premium, headLen, peakLen, pvTomRatio
   const slots = eng._schedule?.slots;
   if (!slots || slots.length === 0) return true;
 
+  return chargesAreRepayable(eng, settings, Math.max(...priceValues));
+};
+
+// Every planned grid charge must cost less than the best net value still reachable after it
+// (a later discharge, or the terminal credit). Shared by invariants 52 and 63.
+function chargesAreRepayable(eng, settings, maxPrice) {
+  const slots = eng._schedule.slots;
   const rte = settings.battery_efficiency;
   const cycle = settings.cycle_cost_per_kwh;
-  const maxPrice = Math.max(...priceValues);
   const terminalCeil = maxPrice * 0.8 * rte * (eng._schedule.terminalFactor ?? 0);
 
   // Best net €/kWh still obtainable at or after each index, by discharging there.
@@ -3987,7 +3993,7 @@ const inv52 = ([settings, base, basePrice, premium, headLen, peakLen, pvTomRatio
     if (cost > Math.max(valueAhead[i], terminalCeil) + EPS) return false;
   }
   return true;
-};
+}
 
 testInvariant('52:planned-charge-must-be-repayable', inv52Arb, inv52);
 
@@ -4698,6 +4704,397 @@ if (inv61Probed === 0) {
   console.error('   ⚠ invariant 61 never reached its region — the assertion was vacuous');
   totalFailed++;
   failedInvariants.push({ name: '61:vacuous-region-never-reached' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 62 — a peak the pack reaches before PV fills it is never valued away
+//
+// Economic-dominance guard for the saturation window of both trickle caps (default ON). The
+// "free PV ahead fills the battery" test used to sum PV to the END of the horizon, so a large
+// PV block TOMORROW satisfied it while tonight's peak still lay between now and that block. The
+// cap then priced the surplus at 0 (zeroed cap) or at the next weak slot (positive cap), and PV
+// was exported at a price the evening peak beat by a wide margin. Live 2026-09-15 13:00Z: €0.209
+// exported at SoC 20%, €0.461 at 19:45, ~4 kWh PV tomorrow.
+//
+// Shape: slot 0 pvStrong at price p; slots 1-2 today's remaining PV (one strong, one weak, order
+// drawn so both cap branches are hit); slot 3 tonight's peak q; a night; a large pvStrong block
+// tomorrow; tomorrow's peak drawn above OR below q. The pack is sized so today's PV after slot 0
+// stays under the room and tomorrow's block overfills it — computed here from the input arrays,
+// not from engine internals. Assert: when storing for q clearly beats disposing of slot 0's
+// surplus, the store value at slot 0 must say so.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 62 — reachable-peak-before-pv-saturation-is-valued\n');
+
+let inv62Probed = 0;
+
+const inv62Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.constant(100),
+    cycle_cost_per_kwh: fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 0.30, max: 0.80, noNaN: true, noDefaultInfinity: true }),  // today PV / room
+  fc.double({ min: 0, max: 40, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.boolean(),                                                               // slot 1 strong?
+  fc.double({ min: 0.05, max: 0.30, noNaN: true, noDefaultInfinity: true }),  // slot 0 price
+  fc.double({ min: 0.35, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // tonight's peak
+  fc.double({ min: 0.10, max: 1.00, noNaN: true, noDefaultInfinity: true }),  // tomorrow's peak
+);
+
+const inv62 = ([settings, maxChargeW, todayFrac, currentSoc, slot1Strong, nowPrice, tonightPeak, tomorrowPeak]) => {
+  const CONS = 200;                                   // W, flat
+  const kwhPerSlot = maxChargeW / 1000;               // hourly slots
+  // pvStrong threshold is 400 W surplus; 0.95·maxChargeW ≥ 760 W is strong, 200 W is weak.
+  const strongPvW = CONS + 0.95 * maxChargeW;
+  const weakPvW   = CONS + 200;
+  const todayAfter0Kwh = 0.95 * kwhPerSlot + 0.2;
+  const roomKwh = todayAfter0Kwh / todayFrac;         // today's PV after slot 0 under the room
+  const capacityKwh = roomKwh / (1 - currentSoc / 100);
+  // Tomorrow: 5 strong slots = 4.75·kwhPerSlot ≥ 3.8 kWh, above the largest room drawn here.
+
+  const priceValues = [
+    nowPrice, 0.12, 0.14, tonightPeak, 0.25, 0.25,
+    0.10, 0.10, 0.10, 0.10, 0.10, tomorrowPeak, 0.20,
+  ];
+  const pvWValues = [
+    strongPvW, slot1Strong ? strongPvW : weakPvW, slot1Strong ? weakPvW : strongPvW, 0, 0, 0,
+    strongPvW, strongPvW, strongPvW, strongPvW, strongPvW, 0, 0,
+  ];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const s0 = eng._schedule.slots[0];
+  if (!s0 || typeof s0.pvStoreValue !== 'number') return true;
+
+  const e0 = typeof s0.exportPrice === 'number' ? s0.exportPrice : s0.price;
+  const reachable = storeValue(tonightPeak, settings.battery_efficiency, settings.cycle_cost_per_kwh);
+  if (!(reachable > e0 + 0.02)) return true;
+  inv62Probed++;
+  return s0.pvStoreValue > e0;
+};
+
+testInvariant('62:reachable-peak-before-pv-saturation-is-valued', inv62Arb, inv62);
+log(`Scored ${inv62Probed} draws where tonight's peak clearly beat disposing of slot 0.\n`);
+if (inv62Probed === 0) {
+  console.error('   ⚠ invariant 62 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '62:vacuous-region-never-reached' });
+}
+
+// ─────────────────────────────────────────────────
+// INVARIANTS 63 + 64 — price_forecast_fill
+//
+// Before the day-ahead auction publishes (~13:00 CEST) the app only knows today's prices, so
+// the horizon is truncated. price_forecast_fill appends ESTIMATED hourly prices (4 identical
+// quarters per hour, tariff-manager source 'forecast') until the real ones arrive. The DP never
+// sees the source — it plans on whatever table it gets — so these two check what a filled
+// table may and may not do to the plan, against the same truncated table without the fill.
+//
+// Settings follow the live device (18-09): saldering, flatten_pv_shift + flatten_arb_gate on,
+// charge_repay_gate off. PV tomorrow is 0 so the pvAbundant half-cycle waiver (invariant 52's
+// territory, gated there) stays out of the picture and only the fill is under test.
+// ─────────────────────────────────────────────────
+log('\n## Invariants 63-64 — price_forecast_fill\n');
+const fillSettingsArb = fc.record({
+  battery_efficiency: fc.double({ min: 0.65, max: 0.85, noNaN: true, noDefaultInfinity: true }),
+  min_soc: fc.constant(0),
+  max_soc: fc.constant(100),
+  cycle_cost_per_kwh: fc.double({ min: 0.05, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+  tariff_model: fc.constant('saldering'),
+  export_price_ratio: fc.constant(1.0),
+  dp_flatten_pv_shift: fc.constant(true),
+  dp_flatten_arb_gate: fc.constant(true),
+  dp_charge_repay_gate: fc.constant(false),
+});
+const fillBaseArb = fc.record({
+  capacityKwh:   fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),
+  maxChargeW:    fc.integer({ min: 800, max: 2500 }),
+  maxDischargeW: fc.integer({ min: 400, max: 1200 }),
+  currentSoc:    fc.double({ min: 0, max: 90, noNaN: true, noDefaultInfinity: true }),
+});
+const visibleArb = fc.array(fc.double({ min: 0.05, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+  { minLength: 12, maxLength: 48 });                                         // visible real quarters
+/** Plan A (truncated) and B (filled) on the same visible prices. */
+function fillPlans(settings, base, visible, estHours, consW) {
+  const tail = estHours.flatMap(p => [p, p, p, p]);
+  const run = (values) => {
+    const prices = makePriceSlots(values, 0.25);
+    return runCompute(settings, {
+      ...base,
+      prices,
+      pvForecast: makePvForecast(prices, values.map(() => 0)),
+      consumptionW: values.map(() => consW),
+      minDischargePrice: 0,
+      pvKwhTomorrow: 0,
+      terminalPvKwhTomorrow: 0,
+    });
+  };
+  return { A: run(visible), B: run(visible.concat(tail)) };
+}
+
+// 63 — random-arb over the fill shape: a long horizon whose tail is hourly blocks, cut at a
+// random point. Invariant 52's predicate on the filled plan: the estimate may make a charge
+// worthwhile, but only one some later price in the table can actually repay.
+const inv63Arb = fc.tuple(
+  fillSettingsArb, fillBaseArb, visibleArb,
+  fc.array(fc.double({ min: 0.05, max: 0.90, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 24 }),                                        // estimated hours, €/kWh
+  fc.integer({ min: 200, max: 600 }),                                        // flat house load, W
+);
+let inv63Probed = 0;
+const inv63 = ([settings, base, visible, estHours, consW]) => {
+  const { B } = fillPlans(settings, base, visible, estHours, consW);
+  if (!B._schedule?.slots?.length) return true;
+  if (B._schedule.slots.some(s => s.action === 'charge' && s.actionKwh > 0)) inv63Probed++;
+  return chargesAreRepayable(B, settings, Math.max(...visible, ...estHours));
+};
+testInvariant('63:fill-charge-must-be-repayable', inv63Arb, inv63, RUNS_15MIN);
+log(`Scored ${inv63Probed} draws where the filled plan charged.\n`);
+if (inv63Probed === 0) {
+  console.error('   ⚠ invariant 63 never planned a charge — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '63:vacuous-region-never-reached' });
+}
+
+// 64 — economic dominance. When every estimated price sits strictly below the highest real
+// price p* already in view, holding energy past p* for the estimated tail is dominated: the
+// tail can only pay less. So the fill may never discharge LESS at p* than the truncated plan.
+// This is the one harm a fill can do without any estimate being too high.
+const inv64Arb = fc.tuple(
+  fillSettingsArb, fillBaseArb, visibleArb,
+  fc.array(fc.double({ min: 0.20, max: 0.98, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 24 }),                                        // estimate as fraction of p*
+  fc.integer({ min: 200, max: 600 }),
+);
+let inv64Probed = 0;
+const inv64 = ([settings, base, visible, estFrac, consW]) => {
+  const pStar = Math.max(...visible);
+  const { A, B } = fillPlans(settings, base, visible, estFrac.map(f => f * pStar), consW);
+  const sa = A._schedule?.slots;
+  const sb = B._schedule?.slots;
+  if (!sa?.length || !sb?.length) return true;
+  const atPeak = (slots) => {
+    let kwh = 0;
+    for (let i = 0; i < visible.length; i++) {
+      if (slots[i].price >= pStar - 1e-9 && slots[i].action === 'discharge') kwh += slots[i].actionKwh || 0;
+    }
+    return kwh;
+  };
+  const a = atPeak(sa);
+  if (a <= 0) return true;
+  inv64Probed++;
+  return atPeak(sb) >= a - 0.01;
+};
+testInvariant('64:estimate-below-visible-peak-never-steals-its-discharge', inv64Arb, inv64, RUNS_15MIN);
+log(`Scored ${inv64Probed} draws where the truncated plan discharged at the visible peak.\n`);
+if (inv64Probed === 0) {
+  console.error('   ⚠ invariant 64 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '64:vacuous-region-never-reached' });
+}
+
+// ─── 67: dp_pv_store_dp_owned — on strong PV the shipped plan is the DP's plan ─────────────
+// With the flag on, the backward DP alone answers store-vs-export on a strong-PV slot. Two
+// ways a second decider used to sneak back in, both checked on every strong slot the DP owns:
+//  (a) no forward override relabels it (PV_STORE / TRICKLE);
+//  (b) the projected SoC follows the DP's transition: standby stores nothing, a preserve at a
+//      non-negative price with room left stores something (the projection used to re-run the
+//      store-vs-export test and drop the gain the DP had valued).
+// Probed count guards against a vacuous pass: (b) must actually see strong standby AND preserve.
+const inv67Arb = fc.tuple(
+  settingsArb,
+  baseArb,
+  fc.array(fc.double({ min: -0.05, max: 0.50, noNaN: true, noDefaultInfinity: true }), { minLength: 24, maxLength: 24 }),
+  fc.array(fc.integer({ min: 0, max: 3500 }), { minLength: 14, maxLength: 14 }),
+);
+const inv67Seen = { standby: 0, preserve: 0 };
+const inv67 = ([settings, base, priceValues, pvHead]) => {
+  const prices = makePriceSlots(priceValues);
+  const consW = 300;
+  const pvW = [...pvHead, ...Array(10).fill(0)];
+  const eng = runCompute({ ...settings, dp_pv_store_dp_owned: true }, {
+    ...base, prices, pvForecast: makePvForecast(prices, pvW),
+    consumptionW: priceValues.map(() => consW), minDischargePrice: 0,
+  });
+  const slots = eng._schedule?.slots;
+  if (!slots?.length) return true;
+  const strongCov = OptimizationEngine.PV_STRONG_SURPLUS_W / base.maxChargeW;
+  const { ACTION_SRC } = OptimizationEngine;
+  const maxSoc = settings.max_soc;
+  for (let t = 0; t + 1 < slots.length; t++) {
+    const s = slots[t];
+    if ((s.pvCoverage ?? 0) < strongCov) continue;
+    if (s.actionSrc === ACTION_SRC.PV_STORE || s.actionSrc === ACTION_SRC.TRICKLE) return false;
+    if (s.actionSrc !== ACTION_SRC.DP) continue;
+    const step = slots[t + 1].socProjected - s.socProjected;
+    if (s.action === 'standby') {
+      inv67Seen.standby++;
+      if (Math.abs(step) > 1e-6) return false;
+    } else if (s.action === 'preserve' && s.price >= 0 && s.socProjected < maxSoc - 0.5) {
+      inv67Seen.preserve++;
+      if (step <= 0) return false;
+    }
+  }
+  return true;
+};
+testInvariant('67:pv-store-dp-owned-plan-is-dp-plan', inv67Arb, inv67);
+log(`Invariant 67 probed ${inv67Seen.standby} strong standby / ${inv67Seen.preserve} strong preserve slots.\n`);
+if (inv67Seen.standby === 0 || inv67Seen.preserve === 0) {
+  console.error('   ⚠ invariant 67 never reached both strong standby and strong preserve — vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '67:vacuous-region-never-reached' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 70 — in a saturating strong-PV block, never export the cheapest surplus
+//                while a dearer strong surplus follows before the fill point
+//
+// Economic-dominance guard for dp_store_displacement (run with the flag ON; default off, shadow).
+// Mirror of 61. When the PV ahead fills the pack anyway, the stored kWh is redundant: storing one
+// now only frees one kWh of later strong PV for export. With a dearer strong slot before the fill
+// point, the cheap one must be the one stored — so its store value must beat its own export.
+// Pre-flag, every slot up to the fill point being strong left reachPrice at 0 and the store at
+// −cycleCost: "export wins" in the cheapest hour (live 2026-09-20 10:30Z, 2026-09-26 midday).
+//
+// Shape: slot 0 cheap strong, slots 1..3 strong with slot 1 dearer, then a no-PV evening with a
+// strict maximum. The pack is sized under the PV reachable from slot 1, so saturation holds by
+// construction and happens at a strong slot at or after slot 1.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 70 — saturating-block-never-exports-cheapest-before-dearer\n');
+
+let inv70Probed = 0;
+
+const inv70Arb = fc.tuple(
+  fc.record({
+    battery_efficiency:    fc.double({ min: 0.60, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    min_soc:               fc.constant(0),
+    max_soc:               fc.integer({ min: 85, max: 100 }),
+    cycle_cost_per_kwh:    fc.double({ min: 0, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio:    fc.constant(1.0),
+    tariff_model:          fc.constantFrom('saldering', 'asymmetric_2027'),
+    dp_store_displacement: fc.constant(true),
+  }),
+  fc.integer({ min: 800, max: 2000 }),                                        // maxChargeW
+  fc.double({ min: 0.20, max: 0.80, noNaN: true, noDefaultInfinity: true }),  // pack vs PV ahead
+  fc.double({ min: 0, max: 25, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 0.05, max: 0.30, noNaN: true, noDefaultInfinity: true }),  // cheap slot 0
+  fc.double({ min: 0.01, max: 0.08, noNaN: true, noDefaultInfinity: true }),  // gap to slot 1
+  fc.double({ min: 0.45, max: 0.90, noNaN: true, noDefaultInfinity: true }),  // evening peak
+);
+
+const inv70 = ([settings, maxChargeW, packFactor, currentSoc, cheapPrice, gap, peakPrice]) => {
+  const CONS = 200;
+  const chargeKwhPerSlot = maxChargeW / 1000;
+  const strongPvW = CONS + 0.95 * maxChargeW;
+  const pvAheadKwh = 3 * 0.95 * chargeKwhPerSlot;     // slots 1..3
+  const capacityKwh = packFactor * pvAheadKwh;
+
+  const priceValues = [
+    cheapPrice, cheapPrice + gap, cheapPrice + gap / 2, cheapPrice + gap / 4,
+    peakPrice, peakPrice - 0.05, cheapPrice, cheapPrice,
+  ];
+  const pvWValues = [strongPvW, strongPvW, strongPvW, strongPvW, 0, 0, 0, 0];
+  const prices = makePriceSlots(priceValues);
+
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW, maxDischargeW: maxChargeW, currentSoc,
+    prices, pvForecast: makePvForecast(prices, pvWValues),
+    consumptionW: priceValues.map(() => CONS),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  if (!eng._schedule) return true;
+  const [s0, s1] = eng._schedule.slots;
+  if (!s0 || !s1 || typeof s0.pvStoreValue !== 'number') return true;
+
+  const exportOf = slot => (typeof slot.exportPrice === 'number' ? slot.exportPrice : slot.price);
+  const e0 = exportOf(s0);
+  const e1 = exportOf(s1);
+  // Only where slot 1 really is the dearer disposal of the two.
+  if (!(e1 > e0 + 1e-9)) return true;
+  inv70Probed++;
+  return s0.pvStoreValue > e0 + 1e-9;
+};
+testInvariant('70:saturating-block-never-exports-cheapest-before-dearer', inv70Arb, inv70);
+log(`Invariant 70 probed ${inv70Probed} dear-after-cheap saturating draws.\n`);
+if (inv70Probed === 0) {
+  console.error('   ⚠ invariant 70 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '70:vacuous-region-never-reached' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INVARIANT 71 — the PV store value never leans on an estimated price
+//
+// price_forecast_fill pads the table with estimated slots; the store-vs-export verdict counts
+// published prices only (knownPrice, price-formulas.js). So on every slot the DP's pvStoreValue
+// is bounded by storing against the highest PUBLISHED price still ahead — whatever the estimated
+// tail holds. Live 2026-09-30 06:30Z: an estimated €0.609 two days out priced storing at €0.371
+// against an export of €0.362; the published peak (€0.448) was worth €0.253.
+// Probed where the estimated tail is dearer than every published price ahead — the region where
+// leaning on the estimate would lift the value.
+// ─────────────────────────────────────────────────────────────────────────────
+
+log('## Invariant 71 — pv-store-value-counts-published-prices-only\n');
+
+let inv71Probed = 0;
+
+const inv71Arb = fc.tuple(
+  fc.record({
+    battery_efficiency: fc.double({ min: 0.65, max: 0.85, noNaN: true, noDefaultInfinity: true }),
+    min_soc:            fc.constant(0),
+    max_soc:            fc.constant(100),
+    cycle_cost_per_kwh: fc.double({ min: 0.05, max: 0.10, noNaN: true, noDefaultInfinity: true }),
+    export_price_ratio: fc.constant(1.0),
+    tariff_model:       fc.constantFrom('saldering', 'asymmetric_2027'),
+  }),
+  fc.array(fc.double({ min: 0.05, max: 0.60, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 6, maxLength: 16 }),                                         // published hours
+  fc.array(fc.double({ min: 0.05, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+    { minLength: 4, maxLength: 12 }),                                         // estimated hours
+  fc.array(fc.integer({ min: 0, max: 1500 }), { minLength: 28, maxLength: 28 }), // PV W per slot
+  fc.double({ min: 0, max: 80, noNaN: true, noDefaultInfinity: true }),       // currentSoc
+  fc.double({ min: 1.5, max: 6.0, noNaN: true, noDefaultInfinity: true }),    // capacityKwh
+);
+
+const inv71 = ([settings, known, est, pvW, currentSoc, capacityKwh]) => {
+  const values = known.concat(est);
+  const prices = makePriceSlots(values).map((p, i) => (i >= known.length ? { ...p, estimated: true } : p));
+  const eng = runCompute(settings, {
+    capacityKwh, maxChargeW: 800, maxDischargeW: 800, currentSoc,
+    prices, pvForecast: makePvForecast(prices, values.map((_, i) => pvW[i])),
+    consumptionW: values.map(() => 200),
+    minDischargePrice: 0, pvKwhTomorrow: 0, terminalPvKwhTomorrow: 0,
+  });
+  const slots = eng._schedule?.slots;
+  if (!slots?.length) return true;
+  const estMax = Math.max(...est);
+  for (let t = 0; t < slots.length; t++) {
+    if (typeof slots[t].pvStoreValue !== 'number') continue;
+    const knownAhead = Math.max(0, ...known.slice(t + 1));
+    if (estMax > knownAhead) inv71Probed++;
+    const bound = storeValue(knownAhead, settings.battery_efficiency, settings.cycle_cost_per_kwh);
+    if (slots[t].pvStoreValue > bound + 1e-9) return false;
+  }
+  return true;
+};
+testInvariant('71:pv-store-value-counts-published-prices-only', inv71Arb, inv71);
+log(`Invariant 71 probed ${inv71Probed} slots with a dearer estimated tail ahead.\n`);
+if (inv71Probed === 0) {
+  console.error('   ⚠ invariant 71 never reached its region — the assertion was vacuous');
+  totalFailed++;
+  failedInvariants.push({ name: '71:vacuous-region-never-reached' });
 }
 
 // ─── Summary ──────────────────────────────────────────────────────────────────

@@ -63,6 +63,7 @@ function runFlags({ maxFuture = 0.387, currentPrice = 0.280, p1 = null, soc = 3 
     BATTERY_EFFICIENCY: RTE,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
     _disposalValue: PolicyEngine.prototype._disposalValue,
+    _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
     log: () => {},
   };
   const inputs = {
@@ -208,11 +209,18 @@ function planningArgs(pvStoreValue, over = {}) {
   };
 }
 
-test('chart preserve: weak surplus + export wins → standby', () => {
+test('chart preserve: weak surplus + export wins, DP stores → follows DP preserve (pv_trickle)', () => {
+  const eng = new PolicyEngine({ log() {} }, SETTINGS);
+  const { hwMode } = eng._mapActionToHwModeForPlanning('preserve', planningArgs(0.209, { pvStoredByDp: true }));
+  assert.strictEqual(hwMode, 'pv_trickle', `DP preserve must be followed, got '${hwMode}'`);
+});
+
+// The DP's forward pass keeps SoC flat on this preserve (pvStoredByDp false): it exports.
+// The runtime then runs its own store-vs-export test — the chart mirrors that export (live 2026-09-29).
+test('chart preserve: weak surplus + export wins, DP does not store → standby', () => {
   const eng = new PolicyEngine({ log() {} }, SETTINGS);
   const { hwMode } = eng._mapActionToHwModeForPlanning('preserve', planningArgs(0.209));
-  assert.strictEqual(hwMode, 'standby',
-    `chart must project the idle-and-export the runtime performs, got '${hwMode}'`);
+  assert.strictEqual(hwMode, 'standby', `chart must mirror the runtime export, got '${hwMode}'`);
 });
 
 test('chart preserve: weak surplus + store wins → pv_trickle', () => {

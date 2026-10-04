@@ -21,6 +21,9 @@ const debug = false;
 // (139 samples in one profiled second) since it's called once per slot in a filter().
 const _amsDayKeyFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam' });
 const _amsHourFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Amsterdam', hour: 'numeric', hour12: false });
+const _amsTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit', hour12: false,
+});
 const _amsDayTimeFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Amsterdam', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
 });
@@ -59,6 +62,56 @@ const OKTA_CLEAR_MAX = 2 / 8;
 // nowcast. Used by the blend leg AND by the dailyBias exemption further down the correction stack,
 // which sits outside the blend block's scope — one constant rather than two copies of 3600_000.
 const SAT_MAX_AGE_MS = 3600_000;
+
+// How far ahead the satellite leg may still feed the DP, in whole hours from the running hour.
+// Re-measured 2026-09-21 over 806 hourly buckets, 2026-08-06..2026-09-20 (44 days), from the
+// [SAT blend] rows against realized roof production. MAE, and the same MAE as a share of the mean
+// production in those hours:
+//
+//   lead 0h: n=240  OM 303 W (28%)  sat 226 W (21%)
+//   lead 1h: n=239  OM 296 W (29%)  sat 315 W (30%)
+//   lead 2h: n=218  OM 286 W (30%)  sat 338 W (35%)
+//   lead 3h: n=108  OM 275 W (32%)  sat 367 W (42%)
+//
+// At lead 1 the two legs are level, and their errors lean opposite ways (OM -110 W, sat +61 W),
+// so an unweighted 50/50 mix scored 262 W against OM's 296 W - better than either leg alone.
+// Lead 2 barely gains (278 vs 286) and lead 3 loses, so the cap sits at 1.
+//
+// The other reason for 1 over 0 is the elevation gate: below SAT_MIN_ELEV_DEG the satellite is
+// dropped entirely, so on an autumn morning lead 0 is gated out and a cap of 0 leaves the DP with
+// no satellite at all while a fresh image carries usable hours (verified live 2026-09-21
+// 06:30-06:59Z: h7 rejected at elev 13.7 deg, h8/h9/h10 usable, none of them reaching the DP).
+//
+// Scope of that measurement: 2026-08..09 only, no autumn or winter data exists yet. Feeding the
+// leg further ahead also made the DP's PV input flip between the satellite and Open-Meteo whenever
+// the image aged past SAT_MAX_AGE_MS, which flipped the plan; that reason is independent of
+// accuracy and still stands, which is why the cap is relaxed by one hour and not lifted.
+// Override with the internal setting pv_sat_dp_lead_cap_off.
+const SAT_DP_MAX_LEAD_H = 1;
+const SAT_DP_UNCAPPED_LEAD_H = 3;
+
+// How broken the cloud field is, as the spatial spread (W/m2) of the satellite's own 11x11
+// advection grid around the house — `wm2_sstd` on the /api/sat curve, carried onto the slot by
+// weather-forecaster's overlay. Near 0 the sky is uniform and the exact cloud position does not
+// matter; high means scattered cloud, where a few km decide whether the panels sit in sun or in
+// shade. Measured 2026-09-21, n=1606 hourly buckets (06-08..21-09, blend vs realised production,
+// spread joined from the LXC curve log): the error grows monotonically with the spread at every
+// lead — blended MAE 174/176/267/323/434 W across the five quintiles.
+//
+// The reason this gates the satellite rather than everything: the ranking FLIPS with the spread,
+// and only ahead of the running hour.
+//   lead 0h  sat 156/134/213/251/328  vs  OM 210/225/224/343/385  -> sat wins in every quintile
+//   lead 1h  sat 153/196/297/334/525  vs  OM 215/213/322/393/385  -> sat wins until the top one
+// So lead 0 is left alone and lead >= 1 tapers off between the two constants below: full strength
+// up to LO, nothing from HI on, linear in between. The crossover sits at the 5th quintile's lower
+// edge (~41); LO is one quintile lower so the taper starts before the leg actually turns bad.
+//
+// The 2026-07-28 threshold sweep concluded this quantity had no crossover and shelved it. That
+// sweep used cumulative thresholds (>=10, >=15, ...) without splitting by lead, so every bin still
+// held the clear-sky majority and the flip averaged out. Scope limit unchanged from the lead cap:
+// 2026-08..09 only, no autumn or winter data.
+const SAT_SSTD_TRUST_LO = 26;
+const SAT_SSTD_TRUST_HI = 41;
 
 // [DP-TRACE] one line per policy run: the decision AND the constraints that bound it. mode-history
 // stores the OUTCOME (mode, SoC, price) but none of the reasons, so a past day could show that the
@@ -178,7 +231,8 @@ class BatteryPolicyDevice extends Homey.Device {
     // tail) lands this independent 15-min-repeating loop in a different phase of the cycle.
     if (this.getSetting('pv_secondary_source') === 'satellite') {
       this.homey.setTimeout(() => {
-        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay(),
+          { lat: Number(this.getSetting('weather_latitude')), lon: Number(this.getSetting('weather_longitude')) });
       }, 45 * 1000);
     }
     this.policyEngine = new PolicyEngine(this.homey, this.getSettings());
@@ -599,7 +653,7 @@ class BatteryPolicyDevice extends Homey.Device {
   // path. Pure — no I/O, no clock beyond `now` — so the shape is testable without a device.
   // Returns null when the engine has nothing to describe; a half record is worse than no record,
   // because a gap is visible in the join and a silently-empty array is not.
-  _buildDecisionTrace({ engine, now, soc, refillConfidence, pvKwhTomorrow, maxChargePrice }) {
+  _buildDecisionTrace({ engine, now, soc, refillConfidence, pvKwhTomorrow, maxChargePrice, capacityKwh, maxChargePowerW }) {
     const slots = engine?._schedule?.slots;
     const fd    = engine?._flattenDebug;
     const arr   = engine?._lastDpArrays;
@@ -614,6 +668,7 @@ class BatteryPolicyDevice extends Homey.Device {
     // would the gate have fired, over how many kWh" answerable after the fact. Omitted rather than
     // nulled when the engine predates it, so a gap in the series reads as "no counter", not "zero".
     const rd = engine._chargeRepayDebug;
+    const fill = this._fillWatch(slots, soc, maxChargePrice, capacityKwh, maxChargePowerW, now);
     return {
       ts: new Date(now).toISOString(),
       soc,
@@ -638,6 +693,10 @@ class BatteryPolicyDevice extends Homey.Device {
           at:    rd.worstAt,
         },
       } : {}),
+      // Today's promised peak SoC and whether it is still reachable (see _fillWatch). Six scalars,
+      // not an array, so the per-run trace line stays the size it was. Omitted rather than nulled
+      // when the plan cannot be judged, so a gap reads as "not scored", not as "unreachable".
+      ...(fill ? { fill } : {}),
       act: slots.map(s => DP_TRACE_ACTION_CHAR[s.action] ?? '?').join(''),
       // Who wrote each action (OptimizationEngine.ACTION_SRC). Without this the trace shows an
       // action next to the backward DP's t=0 values and any difference reads as the DP changing
@@ -646,6 +705,66 @@ class BatteryPolicyDevice extends Homey.Device {
       socP: slots.map(s => (s.socProjected == null ? null : Math.round(s.socProjected))),
       floor: Array.from(floorG).slice(0, n).map(g => +(g / 10).toFixed(1)),
       dischW: Array.from(dischW).slice(0, n).map(w => Math.round(w)),
+    };
+  }
+
+  // ---- [FILLWATCH]: is today's promised peak SoC still reachable from here? ----
+
+  // Pure -- no I/O, no clock beyond `now` -- so the scoring is testable without a device, same
+  // contract as _buildDecisionTrace above. Log-only: it decides nothing, it records whether the
+  // plan's OWN promise is still physically deliverable inside the slots that are cheap enough to
+  // charge in. project_plan_soc_promise_vs_realized_0822 measured why this is missing: on 22-08 the
+  // plan promised 100% for 13h45 and only dropped it at 14:15, after the cheap midday slots were
+  // spent. Nothing in the app holds socProjected against the measured SoC -- the [SoC] drift line
+  // below reports the CURRENT slot only, and _shouldForceReoptimize's triggers are current-slot too,
+  // so a promise can slip for hours without anything noticing while correcting is still possible.
+  _fillWatch(slots, soc, maxChargePrice, capacityKwh, maxChargePowerW, now) {
+    if (!Array.isArray(slots) || !slots.length) return null;
+    if (soc == null || !(capacityKwh > 0) || !(maxChargePowerW > 0) || maxChargePrice == null) return null;
+
+    // Slot length from the plan itself: the same horizon ships as 15-min or hourly slots, and
+    // scoring an hourly runway at 15-min energy understates what it can deliver fourfold.
+    const stepMs = slots.length > 1
+      ? Date.parse(slots[1].timestamp) - Date.parse(slots[0].timestamp)
+      : 900000;
+    const slotH = stepMs > 0 ? stepMs / 3600000 : 0.25;
+
+    // "Today" is the Amsterdam day, so a 100% peak that lands after midnight is next day's
+    // promise and must not be scored against this afternoon's runway.
+    const today = _amsDayKeyFormatter.format(new Date(now));
+    let promise = null;
+    let atIdx = -1;
+    for (let i = 0; i < slots.length; i++) {
+      const ts = Date.parse(slots[i].timestamp);
+      if (!(ts >= now)) continue;
+      if (_amsDayKeyFormatter.format(new Date(ts)) !== today) break;
+      const p = slots[i].socProjected;
+      if (p == null) continue;
+      if (promise === null || p > promise) { promise = p; atIdx = i; }
+    }
+    if (promise === null) return null;
+
+    // Runway: slots still ahead, still before the promise lands, and cheap enough that the charge
+    // mapper would take them -- price <= maxChargePrice is the whole test for a grid charge with
+    // no PV (lib/policy-engine.js:1664). A slot at or after the promise cannot charge toward it.
+    let runway = 0;
+    for (let i = 0; i < atIdx; i++) {
+      if (!(Date.parse(slots[i].timestamp) >= now)) continue;
+      const price = slots[i].price;
+      if (price == null || !(price <= maxChargePrice)) continue;
+      runway++;
+    }
+
+    const needKwh   = Math.max(0, (promise - soc) / 100 * capacityKwh);
+    const runwayKwh = runway * (maxChargePowerW / 1000) * slotH;
+
+    return {
+      promise,
+      at: slots[atIdx].timestamp,
+      needKwh:   +needKwh.toFixed(3),
+      runway,
+      runwayKwh: +runwayKwh.toFixed(3),
+      reachable: needKwh <= runwayKwh,
     };
   }
 
@@ -1477,6 +1596,19 @@ if (debug) this.log(
         // CRITICAL: Account for battery charging when detecting PV state
         // If battery is charging, that power would be exported if battery was in standby
         const PV_DEBOUNCE_MS = 5 * 60 * 1000; // 5 minutes between PV-triggered runs
+        // A state change inside the window is deferred to the window's end, not dropped:
+        // live 2026-09-24 14:00 CEST the sun-gone run parked the battery, the export 22s later
+        // was debounced away and nothing re-ran until the next quarter.
+        const deferPvRun = (now) => {
+          if (this._pvDeferredRunTimer) return;
+          const waitMs = Math.max(0, PV_DEBOUNCE_MS - (now - this._lastPvPolicyRun));
+          this._pvDeferredRunTimer = this.homey.setTimeout(() => {
+            this._pvDeferredRunTimer = null;
+            this._lastPvPolicyRun = Date.now();
+            this.log(`⚡ PV state deferred run (pvState=${this._pvState}) → running policy`);
+            this._runPolicyCheck().catch(err => this.error(err));
+          }, waitMs);
+        };
         // ✅ HYSTERESIS THRESHOLDS: Different values for ON vs OFF to prevent bouncing
         const PV_EXPORT_ON = -200;            // Turn ON: Clear export < -200W
         const PV_EXPORT_OFF = -150;           // Turn OFF: Must rise above -150W to deactivate export mode
@@ -1541,7 +1673,8 @@ if (debug) this.log(
             this.log(`⚡ PV state changed (OFF → ON) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (OFF → ON) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago, deferred)`);
+            deferPvRun(now);
           }
         } else if (this._pvState && !pvNowActive) {
           // PV state ON → OFF
@@ -1558,7 +1691,8 @@ if (debug) this.log(
             this.log(`⚡ PV state changed (ON → OFF) via ${reason} → running policy`);
             this._runPolicyCheck().catch(err => this.error(err));
           } else {
-            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago)`);
+            this.log(`⚡ PV state changed (ON → OFF) via ${reason} → debounced (last run ${Math.round((now - this._lastPvPolicyRun) / 1000)}s ago, deferred)`);
+            deferPvRun(now);
           }
         }
         // Otherwise: no state change, no spam
@@ -1927,6 +2061,7 @@ if (debug) this.log(
               const beforeFingerprint = priceFingerprint(this.tariffManager.mergedProvider.cache);
               this.homey.app.logMem?.('[BatteryPolicy] before-price-refresh');
               await this.tariffManager.mergedProvider.fetchPrices(true);
+              await this.tariffManager.refreshForecast();
               this.homey.app.logMem?.('[BatteryPolicy] after-price-refresh');
               const priceCount = this.tariffManager.mergedProvider.cache?.length || 0;
               const sources    = this.tariffManager.mergedProvider.lastFetchSources.join('+');
@@ -2586,10 +2721,35 @@ if (debug) this.log(
           const socDrift = currentSoc - plannedSlot.socProjected;
           this.log(`[SoC] actual=${currentSoc}% planned=${plannedSlot.socProjected.toFixed(1)}% drift=${socDrift > 0 ? '+' : ''}${socDrift.toFixed(1)}pp`);
         }
+
       }
 
       const result = this.policyEngine.calculatePolicy(inputs);
       this.homey.app.logMem?.('[BatteryPolicy] after-policy');
+
+      // [FILLWATCH] — the [SoC] drift line above judges the CURRENT slot only, which is how the
+      // 22-08 slip stayed invisible for 13h45 (project_plan_soc_promise_vs_realized_0822). This
+      // judges the REST of the day: can the peak SoC still promised for today be delivered by the
+      // slots that are left and cheap enough to charge in? Log-only, decides nothing.
+      //
+      // Deliberately AFTER calculatePolicy: that is what sets inputs.dynamicMaxChargePrice
+      // (lib/policy-engine.js:147). Before it, only runs that happened to recompute the optimizer
+      // carry the value, and the static max_charge_price fallback (€0.12 live) sits BELOW a normal
+      // cheap midday price — which made consecutive runs report runway=14 and runway=0 on an
+      // unchanged plan. No cap, no line: a missing sample reads as "not scored", a wrong one lies.
+      if (currentSoc != null && inputs.optimizerSlots?.length) {
+        const fw = this._fillWatch(
+          inputs.optimizerSlots,
+          currentSoc,
+          inputs.dynamicMaxChargePrice ?? null,
+          inputs.battery?.totalCapacityKwh ?? null,
+          PolicyEngine.batteryChargePowerW(inputs.battery),
+          Date.now(),
+        );
+        if (fw) {
+          this.log(`[FILLWATCH] promise=${fw.promise}% @${_amsTimeFormatter.format(new Date(fw.at))} soc=${currentSoc}% need=${fw.needKwh}kWh runway=${fw.runway}slots/${fw.runwayKwh}kWh reachable=${fw.reachable}`);
+        }
+      }
 
       // Free large price arrays before loading the explainability engine.
       // generateExplanation() in the DP path only reads inputs.tariff.currentPrice
@@ -3262,11 +3422,24 @@ if (debug) this.log(
           this.log(`[Reopt] SoC deviation ${socDelta.toFixed(1)} pp (actual ${currentSoc}% vs projected ${currentSlot.socProjected}%) → forcing recompute`);
           return true;
         }
+        // Plan counts the battery full, the battery is not: the DP planned the last kWh at full
+        // power, the BMS tapered near the top (live 2026-09-17: stopped at 99%). The stale plan
+        // reads preserve and never finishes the charge, so replan from the real SoC.
+        const maxSoc = this.getSetting('max_soc') ?? 100;
+        if (currentSlot.socProjected >= maxSoc && currentSoc < maxSoc) {
+          this.log(`[Reopt] plan full (projected ${currentSlot.socProjected}%) but actual ${currentSoc}% → forcing recompute`);
+          return true;
+        }
       }
     }
 
     // ── Trigger 2: PV intraday ratio drift ───────────────────────────────────
-    if (this._lastIntradayPvRatio != null &&
+    // Compare like with like: _lastIntradayPvRatio is the damped ratio the DP applied, so the
+    // fresh ratio is damped by the same formula and day-level gate inputs. A raw sumA/sumF here
+    // fired on every run of a volatile day (damped pinned at 1.00, raw ~0.80) and forced a
+    // mid-slot DP recompute (live 2026-09-16 12:53 CEST).
+    const gateInputs = this._lastIntradayPvGateInputs;
+    if (this._lastIntradayPvRatio != null && gateInputs &&
         this.learningEngine &&
         Array.isArray(this.learningEngine.data?.pv_predictions)) {
       const now = new Date();
@@ -3276,10 +3449,10 @@ if (debug) this.log(
         p.timestamp >= cutoffMs && p.timestamp <= nowMs &&
         p.predicted > 50 && p.actual > 50
       );
-      if (preds.length >= 4) {
-        const sumF = preds.reduce((s, p) => s + p.predicted, 0);
-        const sumA = preds.reduce((s, p) => s + p.actual,    0);
-        const currentRatio = Math.min(2.5, Math.max(0.4, sumA / sumF));
+      const avgActual = preds.length ? preds.reduce((s, p) => s + p.actual, 0) / preds.length : 0;
+      if (preds.length >= 4 && avgActual >= 200) {
+        const { ratio: currentRatio } = BatteryPolicyDevice._intradayPvRatio(preds, gateInputs.biasCorrFactor,
+          (c) => BatteryPolicyDevice._knmiAwareCloudGate(c, gateInputs.cloud, gateInputs.kt, gateInputs.okta));
         const ratioDelta = Math.abs(currentRatio - this._lastIntradayPvRatio);
         if (ratioDelta > 0.15) {
           this.log(`[Reopt] PV ratio drift ${ratioDelta.toFixed(2)} (was ${this._lastIntradayPvRatio.toFixed(2)}, now ${currentRatio.toFixed(2)}) → forcing recompute`);
@@ -3375,6 +3548,18 @@ if (debug) this.log(
    * (Re)compute the OptimizationEngine schedule from the current inputs.
    * Called lazily in _runPolicyCheck whenever the schedule is stale.
    */
+  /**
+   * Flag schedule slots whose price is a forecast estimate. Estimates never reach
+   * policy_all_prices_15min (tariff-manager filters them), so the planning page takes the
+   * price from the schedule instead and shows it marked as a forecast.
+   */
+  _markEstimatedPrices(schedule, prices) {
+    const estimatedTs = new Set(prices.filter(p => p.estimated).map(p => new Date(p.timestamp).getTime()));
+    for (const slot of schedule) {
+      slot.priceEstimated = estimatedTs.has(new Date(slot.timestamp).getTime());
+    }
+  }
+
   async _recomputeOptimizer(inputs) {
     // Use 15-min prices unless price_resolution is set to '1h'
     const now = new Date();
@@ -3439,7 +3624,7 @@ if (debug) this.log(
           // Solcast leg without re-finding the hour slot per forecast slot. _applySatelliteOverlay
           // (weather-forecaster.js) writes satPanelW onto these very hourlyForecast slots, and
           // leaves it null outside its 0-3h lead window or below 15° solar elevation.
-          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0, satPanelW: h.satPanelW ?? null, satIssueMs: h.satIssueMs ?? null };
+          return { timestamp: d.toISOString(), pvPowerW: pvW, precipMmh: h.precipMmh ?? 0, spreadFrac: h.radiationSpreadFrac ?? 0, satPanelW: h.satPanelW ?? null, satIssueMs: h.satIssueMs ?? null, satSstd: h.satSstd ?? null };
         })
         .filter(h => h.pvPowerW > 0 || pvCapacityW > 0);
 
@@ -3576,12 +3761,22 @@ if (debug) this.log(
         const satOverride = this.getSetting('pv_sat_full_override') === true;
         const satNowMs    = Date.now();
         const satIssueMs  = this.weatherForecaster?.getSatIssueMs?.() ?? null;
-        const SAT_LEAD_MS = 4 * 3600_000;
+        // How far ahead the nowcast may still feed the DP. Beyond the running hour it scores worse
+        // than Open-Meteo and its coming and going flipped the plan — see SAT_DP_MAX_LEAD_H.
+        // Internal key, deliberately absent from driver.settings.compose.json.
+        const satLeadH = this.getSetting('pv_sat_dp_lead_cap_off') === true
+          ? SAT_DP_UNCAPPED_LEAD_H
+          : SAT_DP_MAX_LEAD_H;
         let satDeltaWh    = 0;
         // Coverage denominator: blend-eligible slots overlapping the current lead window that
         // carry any PV signal. Without it, n= has no scale.
         let satWindowSlots = 0;
         let satStaleSlots  = 0;
+        // Slots the lead cap holds back although their image is fresh, and the PV those slots
+        // would have handed the DP on top of Open-Meteo — the swing the cap takes out.
+        let satLeadSkipped = 0;
+        let satSstdSkipped = 0;
+        let satLeadDropWh  = 0;
 
         const scEffectiveSlots = []; // collect effective secondary-source value per slot for chart transparency
         pvForecast = pvForecast.map(slot => {
@@ -3600,25 +3795,46 @@ if (debug) this.log(
               r = BatteryPolicyDevice._blendOmScSlot({ omW: slot.pvPowerW, scP50, scP10, wOM, wSC, unbiased: unbiasedBlend });
             }
           } else if (pvSource === 'satellite') {
-            // Hourly slot overlaps the lead window when it ends after the issue and starts
-            // before issue+3h — the current, partly-elapsed hour counts.
-            if (satIssueMs != null && slotMs + 3600_000 > satIssueMs && slotMs < satIssueMs + SAT_LEAD_MS
+            // Two independent gates: the image must still be current (age), and the slot must sit
+            // inside the lead window the satellite is allowed to speak for (distance ahead).
+            const satInLead = BatteryPolicyDevice._satSlotInLeadWindow(slot, satNowMs, satLeadH);
+            // Coverage denominator, scoped to that same window — slots carrying any PV signal.
+            // Counting the whole nowcast horizon here would read n=1/4 as lost coverage where
+            // 1/1 is the truth; what the cap holds back is reported separately as leadSkip.
+            if (satIssueMs != null && satInLead
                 && (slot.pvPowerW > 0 || slot.satPanelW != null)) satWindowSlots++;
             const satFresh = BatteryPolicyDevice._satSlotIsFresh(slot, satNowMs);
             if (!satFresh && slot.satPanelW != null) satStaleSlots++;
-            const satW = satFresh
+            const satCapW = slot.satPanelW != null
               ? (pvCapacityW > 0 ? Math.min(slot.satPanelW, pvCapacityW) : slot.satPanelW)
               : null;
+            if (satFresh && !satInLead) {
+              // Held back by the lead cap. Price it through the same blend function the slot
+              // would have gone through, so this stays one implementation of the weighting.
+              satLeadSkipped++;
+              satLeadDropWh += BatteryPolicyDevice._blendOmScSlot({
+                omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW: satCapW, satActive: true, satOverride,
+              }).blendedW - slot.pvPowerW;
+            }
+            // Third gate, next to age and lead: how broken the cloud field is. At lead >= 1 a
+            // scattered sky is where the satellite measurably turns from best to worst, so it
+            // steps aside there and the slot falls back to Open-Meteo alone.
+            const satTrust = BatteryPolicyDevice._satSstdTrust(slot, satNowMs);
+            if (satFresh && satInLead && satCapW != null && satTrust <= 0) satSstdSkipped++;
+            const satW = (satFresh && satInLead && satTrust > 0) ? satCapW : null;
             if (satW != null) {
               // Score both legs every run so the override stays measurable before the toggle
               // flips, and after it. Two calls of a trivial function on a handful of slots.
               const base  = { omW: slot.pvPowerW, wOM, wSC, unbiased: unbiasedBlend, satW, satActive: true };
               const rSat  = BatteryPolicyDevice._blendOmScSlot(base);
-              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true });
+              // satRamp interpolates the takeover instead of an all-or-nothing flip: the leg is
+              // allowed the whole slot on a uniform sky and hands the slot back as the spread grows.
+              const rOvr  = BatteryPolicyDevice._blendOmScSlot({ ...base, satOverride: true, satRamp: satTrust });
               r = satOverride ? rOvr : rSat;
               satDeltaWh += rOvr.blendedW - rSat.blendedW;
               satCount++;
-              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`);
+              satLog.push(`h${new Date(slotMs).getUTCHours()} om=${slot.pvPowerW} sat=${satW}→${r.blendedW}W`
+                + (satTrust < 1 ? ` sstd=${slot.satSstd} trust=${satTrust.toFixed(2)}` : ''));
             }
           }
 
@@ -3637,7 +3853,12 @@ if (debug) this.log(
           // including satCount=0, so "usable slot" runs can be scaled against attempts —
           // the [SAT blend]/[SAT OVR] lines below only fire when satLog.length > 0 and so
           // silently drop the zero-usable-slot runs from any count taken off them alone.
-          this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots}`);
+          // leadSkip/leadDropKwh: fresh slots the lead cap kept out, and the PV they would have
+          // added on top of Open-Meteo. That drop is the run-to-run swing the cap removes from
+          // the DP's input — the number to watch for the plan flipping.
+          this.log(`[SAT COV] usable=${satCount > 0 ? 1 : 0} n=${satCount}/${satWindowSlots} stale=${satStaleSlots} `
+            + `leadSkip=${satLeadSkipped} leadDropKwh=${(satLeadDropWh / 1000).toFixed(2)} `
+            + `sstdSkip=${satSstdSkipped}`);
         }
         if (pvSource === 'satellite' && satLog.length > 0) {
           this.log(`[SAT blend] n=${satCount} ${satLog.join(' | ')}`);
@@ -3689,26 +3910,8 @@ if (debug) this.log(
 
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-blend');
 
-    // Compute net PV surplus for next 24h using the blended forecast (post-Solcast).
-    // Placed after the blend so Solcast data is included in the terminal value calculation.
-    // Uses a rolling 24h window from now — NOT the next calendar day — to avoid
-    // a strategy flip at midnight when "tomorrow" jumps to the next calendar date.
     if (pvForecast && inputs.weather) {
       const nowMs = now.getTime();
-      const consFn = this.learningEngine
-        ? (d) => this.learningEngine.getPredictedConsumption(d)
-        : null;
-      // Within-horizon refill (flattening / pvAbundant / night-floor guards): rolling 24h from now.
-      inputs.weather.pvKwhTomorrow = OptimizationEngine.sumPvNetWindow(
-        pvForecast, nowMs, nowMs + 24 * 3600_000, maxChargePowerW, consFn);
-      // Post-horizon refill (terminal value only): 24h starting at the end of the priced
-      // horizon, so today's PV — already credited in the DP forward pass via pvWPerSlot — is
-      // not double-counted into the terminal refill discount. Rolling past the horizon end
-      // also avoids the midnight strategy flip the now-window was built to dodge.
-      const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
-      inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
-        pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
-
       // Forward model-spread over the same 24h window: relative std of the per-model
       // ensemble radiation, radiation-weighted (Σstd/Σmean) so disagreement at high-PV
       // slots dominates and dawn/dusk noise barely counts. Feeds the refill-reserve
@@ -3913,44 +4116,27 @@ if (debug) this.log(
       const avgActual = todayPreds.length
         ? todayPreds.reduce((s, p) => s + p.actual, 0) / todayPreds.length : 0;
       if (todayPreds.length >= 4 && avgActual >= 200) {
-        // Per-sample ratios, winsorised at [0.25, 2.5] — prevents a single spike from
-        // dominating the correction (sumActual/sumForecast gave high weight to outliers).
-        const WIN_LO = 0.25, WIN_HI = 2.5;
-        const sampleRatios = todayPreds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
-        const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
-
         // p.predicted is the pre-bias day-start forecast; pvForecast here is post-bias.
         // In simplified mode, today's slots have no dailyBias/accFactor applied, so
         // biasCorrFactor=1 and meanRatio passes through directly (actual/pre_bias).
         // In legacy mode: ratio_needed = meanRatio / biasCorrFactor to undo the bias.
         const biasCorrFactor = simplified ? 1.0 : _pvDailyBiasFactor * _pvAccFactor;
-        const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
-
-        // Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
-        // followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data.
-        const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
-        const cv        = Math.sqrt(variance) / meanRatio;
-        this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
-        this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
-        // CV<0.25 → full correction; CV>0.60 → no correction; linear between.
-        const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
-        // Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
-        // The CV guard above can't catch a clear-morning→cloudy-afternoon turn — consistent
-        // morning samples give low CV → full correction → the upward ratio re-inflates PV the
-        // model already (correctly) lowered for the cloudy afternoon. Damp the upward push as
-        // forecast cloud rises (1.0 at ≤70% → 0 at full overcast). KNMI clearness overrides a
-        // false-overcast so it doesn't suppress a legitimate upward correction. See
-        // _knmiAwareCloudGate. Downward correction is left intact.
         const gateKt    = this.weatherForecaster?.getTodayKt() ?? null;
         const gateOkta  = this._oktaForGates();
-        const cloudGate = BatteryPolicyDevice._knmiAwareCloudGate(
-          correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.applied);
-        this._logOktaShadow('cloudGate', gateOkta, cloudGate,
-          BatteryPolicyDevice._knmiAwareCloudGate(correctedMeanRatio, _pvBiasCloud, gateKt, gateOkta.raw),
-          `ratio=${correctedMeanRatio.toFixed(2)} cloud=${_pvBiasCloud != null ? Math.round(_pvBiasCloud) : 'null'}% kt=${gateKt != null ? gateKt.toFixed(2) : 'null'}`);
-        const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
+        const { meanRatio, correctedMeanRatio, cv, cvWeight, cloudGate, ratio } =
+          BatteryPolicyDevice._intradayPvRatio(todayPreds, biasCorrFactor, (corrected) => {
+            const gate = BatteryPolicyDevice._knmiAwareCloudGate(corrected, _pvBiasCloud, gateKt, gateOkta.applied);
+            this._logOktaShadow('cloudGate', gateOkta, gate,
+              BatteryPolicyDevice._knmiAwareCloudGate(corrected, _pvBiasCloud, gateKt, gateOkta.raw),
+              `ratio=${corrected.toFixed(2)} cloud=${_pvBiasCloud != null ? Math.round(_pvBiasCloud) : 'null'}% kt=${gateKt != null ? gateKt.toFixed(2) : 'null'}`);
+            return gate;
+          });
+        this._lastPvForecastCv = cv; // persisted for overnight refill-reserve confidence
+        this._lastPvForecastRatio = correctedMeanRatio; // residual actual/post-bias → refill-reserve downside
 
         this._lastIntradayPvRatio = ratio;
+        // Day-level gate inputs, so _shouldForceReoptimize can damp fresh samples the same way.
+        this._lastIntradayPvGateInputs = { biasCorrFactor, cloud: _pvBiasCloud, kt: gateKt, okta: gateOkta.applied };
         this.setCapabilityValue('bias_factor', parseFloat(ratio.toFixed(2))).catch(this.error);
         if (Math.abs(ratio - 1.0) > 0.10) {
           // Counterfactual isolation (temp instrumentation, remove after 2026-06-19 A/B):
@@ -4089,6 +4275,28 @@ if (debug) this.log(
     }
 
     this.homey.app.logMem?.('[BatteryPolicy] opt:after-pvcorr');
+
+    // Net PV surplus windows, summed on the FULLY-CORRECTED forecast (bias, accuracy, intraday,
+    // cloud, capacity cap, buienradar, upwind — all applied above) so the DP guards, terminal
+    // value, refill-reserve and policy scoring read the same PV the plan and chart use.
+    // Rolling 24h window from now — NOT the next calendar day — to avoid a strategy flip at
+    // midnight when "tomorrow" jumps to the next calendar date.
+    if (pvForecast && inputs.weather) {
+      const nowMs = now.getTime();
+      const consFn = this.learningEngine
+        ? (d) => this.learningEngine.getPredictedConsumption(d)
+        : null;
+      // Within-horizon refill (flattening / pvAbundant / night-floor guards): rolling 24h from now.
+      inputs.weather.pvKwhTomorrow = OptimizationEngine.sumPvNetWindow(
+        pvForecast, nowMs, nowMs + 24 * 3600_000, maxChargePowerW, consFn);
+      // Post-horizon refill (terminal value only): 24h starting at the end of the priced
+      // horizon, so today's PV — already credited in the DP forward pass via pvWPerSlot — is
+      // not double-counted into the terminal refill discount. Rolling past the horizon end
+      // also avoids the midnight strategy flip the now-window was built to dodge.
+      const lastPricedSlotEnd = new Date(prices[prices.length - 1].timestamp).getTime() + slotMs;
+      inputs.weather.terminalPvKwh = OptimizationEngine.sumPvNetWindow(
+        pvForecast, lastPricedSlotEnd, lastPricedSlotEnd + 24 * 3600_000, maxChargePowerW, consFn);
+    }
 
     // Capture before _dpHourly (future-only) overwrites liveState at line below.
     // The chart aggregator at line ~2869 needs past-hour data (e.g. hour 9) that
@@ -4622,6 +4830,8 @@ if (debug) this.log(
         refillConfidence,
         pvKwhTomorrow: effectivePvKwhTomorrow,
         maxChargePrice,
+        capacityKwh,
+        maxChargePowerW,
       }));
     } catch (err) {
       this.error('decision trace failed', err);
@@ -4707,6 +4917,7 @@ if (debug) this.log(
           slot.sampleCount = this.learningEngine.getConsumptionSampleCount(new Date(slot.timestamp));
         }
       }
+      this._markEstimatedPrices(planningSchedule, prices);
       this._setLive('policy_optimizer_schedule', planningSchedule);
 
       // ── PV surplus forecast ────────────────────────────────────────────────
@@ -5369,6 +5580,34 @@ if (debug) this.log(
    * @param {number|null} [oktaFrac] - measured cloud cover 0-1 from the okta station, or null
    * @returns {number} gate factor in [0,1]
    */
+  /**
+   * Damped intraday PV ratio (actual/forecast) — the one formula behind both the intraday PV
+   * corrector and the PV-drift reoptimize trigger.
+   *
+   * Per-sample ratios, winsorised at [0.25, 2.5] — prevents a single spike from dominating the
+   * correction (sumActual/sumForecast gave high weight to outliers).
+   * Consistency check: high CV (stddev/mean) means conditions are volatile (e.g. sun spike
+   * followed by cloud). Blend toward 1.0 to avoid over-correcting on noisy data:
+   * CV<0.25 → full correction; CV>0.60 → no correction; linear between.
+   * Cloud gate: the recent actual/forecast ratio is usually sampled over a clear morning.
+   * The CV guard can't catch a clear-morning→cloudy-afternoon turn — consistent morning samples
+   * give low CV → full correction → the upward ratio re-inflates PV the model already (correctly)
+   * lowered for the cloudy afternoon. `cloudGateOf(correctedMeanRatio)` damps the upward push
+   * (see _knmiAwareCloudGate). Downward correction is left intact.
+   */
+  static _intradayPvRatio(preds, biasCorrFactor, cloudGateOf) {
+    const WIN_LO = 0.25, WIN_HI = 2.5;
+    const sampleRatios = preds.map(p => Math.min(WIN_HI, Math.max(WIN_LO, p.actual / p.predicted)));
+    const meanRatio = sampleRatios.reduce((s, r) => s + r, 0) / sampleRatios.length;
+    const correctedMeanRatio = biasCorrFactor > 0 ? meanRatio / biasCorrFactor : meanRatio;
+    const variance  = sampleRatios.reduce((s, r) => s + (r - meanRatio) ** 2, 0) / sampleRatios.length;
+    const cv        = Math.sqrt(variance) / meanRatio;
+    const cvWeight  = Math.max(0, Math.min(1, (0.60 - cv) / 0.35));
+    const cloudGate = cloudGateOf(correctedMeanRatio);
+    const ratio     = 1.0 + (correctedMeanRatio - 1.0) * cvWeight * cloudGate;
+    return { meanRatio, correctedMeanRatio, cv, cvWeight, cloudGate, ratio };
+  }
+
   static _knmiAwareCloudGate(correctedMeanRatio, effectiveCloud, knmiKt, oktaFrac = null) {
     const groundClear = BatteryPolicyDevice._groundClear(knmiKt, oktaFrac);
     if (correctedMeanRatio > 1.0 && effectiveCloud != null && effectiveCloud > 70 && !groundClear) {
@@ -5393,6 +5632,51 @@ if (debug) this.log(
       && slot.satPanelW != null
       && typeof slot.satIssueMs === 'number'
       && (nowMs - slot.satIssueMs) <= SAT_MAX_AGE_MS;
+  }
+
+  /**
+   * Is this slot close enough ahead for the satellite leg to be allowed into the DP's PV input?
+   *
+   * Indexed on the hour, not on a rolling millisecond difference: slots are UTC-hour-aligned, and
+   * `slotMs < nowMs + maxLeadH * 3600_000` would admit the next hour for all but the first
+   * millisecond of the current one. Freshness is a separate gate (`_satSlotIsFresh`) — this one
+   * says nothing about the image age.
+   * @param {{timestamp?: string}} slot
+   * @param {number} nowMs
+   * @param {number} [maxLeadH] whole hours ahead of the running hour; 0 = running hour only
+   * @returns {boolean}
+   */
+  static _satSlotInLeadWindow(slot, nowMs, maxLeadH = SAT_DP_MAX_LEAD_H) {
+    if (!slot || !Number.isFinite(nowMs)) return false;
+    const slotMs = Date.parse(slot.timestamp);
+    if (!Number.isFinite(slotMs)) return false;
+    const hourStart = Math.floor(nowMs / 3600_000) * 3600_000;
+    return slotMs >= hourStart && slotMs <= hourStart + maxLeadH * 3600_000;
+  }
+
+  /**
+   * How far the satellite leg may be trusted on this slot, from the spatial spread of its own
+   * advection grid (see SAT_SSTD_TRUST_LO/HI). 1 = full strength, 0 = step aside for Open-Meteo.
+   *
+   * Only slots ahead of the running hour taper: at lead 0 the satellite is measured ahead of
+   * Open-Meteo in every spread quintile, so a uniform sky and a broken one are both its business.
+   * A slot without a spread reading keeps full strength — the plumbing is younger than the
+   * satellite leg, so a missing value means "not reported", not "sky is broken".
+   * @param {{timestamp?: string, satSstd?: number|null}} slot
+   * @param {number} nowMs
+   * @returns {number} 0..1
+   */
+  static _satSstdTrust(slot, nowMs) {
+    if (!slot || !Number.isFinite(nowMs)) return 1;
+    const sstd = slot.satSstd;
+    if (typeof sstd !== 'number' || !Number.isFinite(sstd) || sstd < 0) return 1;
+    const slotMs = Date.parse(slot.timestamp);
+    if (!Number.isFinite(slotMs)) return 1;
+    const hourStart = Math.floor(nowMs / 3600_000) * 3600_000;
+    if (slotMs < hourStart + 3600_000) return 1;
+    if (sstd <= SAT_SSTD_TRUST_LO) return 1;
+    if (sstd >= SAT_SSTD_TRUST_HI) return 0;
+    return (SAT_SSTD_TRUST_HI - sstd) / (SAT_SSTD_TRUST_HI - SAT_SSTD_TRUST_LO);
   }
 
   /**
@@ -6337,7 +6621,8 @@ if (debug) this.log(
     // "Off" actually stops sending location, not just stops using the data in the DP.
     if (changedKeys.includes('pv_secondary_source')) {
       if (newSettings.pv_secondary_source === 'satellite') {
-        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay());
+        this.weatherForecaster.startSatelliteLoop(this._satNowcastUrl, '', () => this._onSatelliteOverlay(),
+          { lat: Number(this.getSetting('weather_latitude')), lon: Number(this.getSetting('weather_longitude')) });
       } else {
         this.weatherForecaster.stopSatelliteLoop();
       }
@@ -6465,6 +6750,11 @@ if (debug) this.log(
     if (this._evChargingTimer) {
       this.homey.clearTimeout(this._evChargingTimer);
       this._evChargingTimer = null;
+    }
+
+    if (this._pvDeferredRunTimer) {
+      this.homey.clearTimeout(this._pvDeferredRunTimer);
+      this._pvDeferredRunTimer = null;
     }
     // Final flush — write pending queued settings synchronously on shutdown
     // so the last policy run's state is not lost on restart.

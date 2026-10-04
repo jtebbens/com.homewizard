@@ -59,6 +59,7 @@ function runFlags({ currentPrice, maxFuture, slotMeta = undefined, settings = {}
     BATTERY_EFFICIENCY: 0.72,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
     _disposalValue: PolicyEngine.prototype._disposalValue,
+    _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
     log: () => {},
   };
   // One future slot at the peak price, one cheap-but-not-negative slot so the
@@ -105,8 +106,10 @@ function runFlags({ currentPrice, maxFuture, slotMeta = undefined, settings = {}
 }
 
 {
-  // The trickle-capped branch is a raw price × rte and DOES need the deduction.
-  const meta = { pvTrickleMaxValue: 0.376 * 0.72, action: 'preserve', pvStoreValue: 0.9 };
+  // The trickle-capped branch is a raw price × rte and DOES need the deduction. Since 2026-09-15
+  // a slot carrying pvStoreValue passes the DP's already-netted number through instead; the
+  // raw-cap rebuild — and so this deduction — is the fallback for a schedule without it.
+  const meta = { pvTrickleMaxValue: 0.376 * 0.72, action: 'preserve' };
   const out = runFlags({ currentPrice: 0.259, maxFuture: 0.376, slotMeta: meta });
   assert.ok(out._pvStoreValue < 0.259,
     `trickle-capped branch must net cycle cost, got ${out._pvStoreValue}`);

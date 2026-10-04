@@ -133,6 +133,7 @@ function runFlags(slotMeta) {
     BATTERY_EFFICIENCY: RTE,
     _netPvSurplusW: PolicyEngine.prototype._netPvSurplusW,
     _disposalValue: PolicyEngine.prototype._disposalValue,
+    _pvDelayCheaperAvg: PolicyEngine.prototype._pvDelayCheaperAvg,
     log: () => {},
   };
   const allPrices = [
