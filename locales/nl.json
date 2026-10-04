@@ -237,7 +237,8 @@
       "invalid_ip": "Ongeldig IP-adres formaat",
       "connection_failed": "Kan geen verbinding maken met een HomeWizard apparaat op dit adres",
       "ip_required": "Voer een IP-adres in",
-      "already_added": "Dit apparaat is al toegevoegd"
+      "already_added": "Dit apparaat is al toegevoegd",
+      "wrong_product_type": "Het apparaat op dit adres is een ander type HomeWizard apparaat. Voeg het toe via het bijbehorende apparaattype."
     },
     "energy_v2": {
       "authorize_instruction": "Druk op de knop van de P1 Meter om de koppeling te voltooien"

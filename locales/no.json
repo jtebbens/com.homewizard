@@ -83,7 +83,8 @@
       "invalid_ip": "Ugyldig IP-adresseformat",
       "connection_failed": "Kunne ikke koble til en HomeWizard-enhet på denne adressen",
       "ip_required": "Vennligst angi en IP-adresse",
-      "already_added": "Denne enheten er allerede lagt til"
+      "already_added": "Denne enheten er allerede lagt til",
+      "wrong_product_type": "Enheten på denne adressen er en annen type HomeWizard-enhet. Legg den til via den tilsvarende enhetstypen."
     },
     "energy_v2": {
       "authorize_instruction": "Trykk på knappen på P1-måleren for å fullføre sammenkoblingen"

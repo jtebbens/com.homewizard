@@ -237,7 +237,8 @@
       "invalid_ip": "Invalid IP address format",
       "connection_failed": "Could not connect to a HomeWizard device at this address",
       "ip_required": "Please enter an IP address",
-      "already_added": "This device has already been added"
+      "already_added": "This device has already been added",
+      "wrong_product_type": "The device at this address is a different type of HomeWizard device. Add it using the matching device type."
     },
     "energy_v2": {
       "authorize_instruction": "Press the button on the P1 Meter to complete the pairing"

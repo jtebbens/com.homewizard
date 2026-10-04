@@ -83,7 +83,8 @@
       "invalid_ip": "Format d'adresse IP invalide",
       "connection_failed": "Impossible de se connecter à un appareil HomeWizard à cette adresse",
       "ip_required": "Veuillez saisir une adresse IP",
-      "already_added": "Cet appareil a déjà été ajouté"
+      "already_added": "Cet appareil a déjà été ajouté",
+      "wrong_product_type": "L'appareil à cette adresse est un autre type d'appareil HomeWizard. Ajoutez-le via le type d'appareil correspondant."
     },
     "energy_v2": {
       "authorize_instruction": "Appuyez sur le bouton du compteur P1 pour terminer le couplage"

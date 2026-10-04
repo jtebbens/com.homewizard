@@ -83,7 +83,8 @@
       "invalid_ip": "Érvénytelen IP-cím formátum",
       "connection_failed": "Nem sikerült csatlakozni HomeWizard eszközhöz ezen a címen",
       "ip_required": "Kérjük, adjon meg egy IP-címet",
-      "already_added": "Ez az eszköz már hozzá lett adva"
+      "already_added": "Ez az eszköz már hozzá lett adva",
+      "wrong_product_type": "Az ezen a címen található eszköz más típusú HomeWizard eszköz. Add hozzá a megfelelő eszköztípussal."
     },
     "energy_v2": {
       "authorize_instruction": "Nyomja meg a P1-mérőn lévő gombot a párosítás befejezéséhez"

@@ -137,6 +137,7 @@ async onPair(session) {
  * Verifies a manually entered IP address by querying its local API, and
  * returns a ready-to-create device object (with the IP persisted as the
  * `manual_ip` setting so the device keeps using it after pairing).
+ * Rejects devices whose product_type is not in the driver's `productTypes`.
  *
  * @param {string} ip
  * @returns {Promise<{name: string, data: {id: string}, settings: {manual_ip: string}}>}
@@ -163,6 +164,14 @@ async testManualDevice(ip) {
   const serial = data.serial;
   if (!serial) {
     throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  // mDNS discovery filters on txt.product_type per driver; apply the same
+  // filter here so e.g. a P1 meter cannot be paired as an energy socket.
+  const expectedTypes = this.productTypes;
+  if (Array.isArray(expectedTypes) && expectedTypes.length > 0 && !expectedTypes.includes(data.product_type)) {
+    this.logDiscovery('error', `Manual IP ${ip} is a ${data.product_type}, expected ${expectedTypes.join(' or ')}`);
+    throw new Error(this.homey.__('pair.manual_ip.wrong_product_type'));
   }
 
   if (this.getDevices().some((d) => d.getData().id === serial)) {

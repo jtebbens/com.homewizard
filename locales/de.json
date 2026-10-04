@@ -83,7 +83,8 @@
       "invalid_ip": "Ungültiges IP-Adressformat",
       "connection_failed": "Verbindung zu einem HomeWizard-Gerät unter dieser Adresse nicht möglich",
       "ip_required": "Bitte geben Sie eine IP-Adresse ein",
-      "already_added": "Dieses Gerät wurde bereits hinzugefügt"
+      "already_added": "Dieses Gerät wurde bereits hinzugefügt",
+      "wrong_product_type": "Das Gerät unter dieser Adresse ist ein anderer HomeWizard-Gerätetyp. Füge es über den passenden Gerätetyp hinzu."
     },
     "energy_v2": {
       "authorize_instruction": "Drücken Sie die Taste am P1-Messgerät, um die Kopplung abzuschließen"

@@ -83,7 +83,8 @@
       "invalid_ip": "Virheellinen IP-osoitteen muoto",
       "connection_failed": "Yhteyttä HomeWizard-laitteeseen tässä osoitteessa ei voitu muodostaa",
       "ip_required": "Anna IP-osoite",
-      "already_added": "Tämä laite on jo lisätty"
+      "already_added": "Tämä laite on jo lisätty",
+      "wrong_product_type": "Tässä osoitteessa oleva laite on erityyppinen HomeWizard-laite. Lisää se vastaavan laitetyypin kautta."
     },
     "energy_v2": {
       "authorize_instruction": "Paina P1-mittarin painiketta yhdistämisen viimeistelemiseksi"
