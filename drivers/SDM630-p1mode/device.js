@@ -58,6 +58,14 @@ module.exports = class HomeWizardEnergyDevice630 extends Homey.Device {
 async onInit() {
     this.homey.app.bumpDeviceCount?.('SDM630-p1mode');
     // await this.setUnavailable(`${this.getName()} ${this.homey.__('device.init')}`);
+
+    // Manual IP overrides discovery (set at pairing, or via repair)
+    const manualIP = this.getSetting('manual_ip');
+    if (manualIP) {
+      this.url = `http://${manualIP}/api/v1`;
+      this.log(`🔧 Using manual IP: ${manualIP}`);
+    }
+
     const settings = this.getSettings();
     this.log('Settings for SDM630:', settings.polling_interval);
 
@@ -93,12 +101,14 @@ async onInit() {
   }
 
   onDiscoveryAvailable(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.onPoll();
   }
 
   onDiscoveryAddressChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.log('onDiscoveryAddressChanged');
@@ -106,9 +116,20 @@ async onInit() {
   }
 
   onDiscoveryLastSeenChanged(discoveryResult) {
+    if (this.getSetting('manual_ip')) return;
     this.url = `http://${discoveryResult.address}:${discoveryResult.port}${discoveryResult.txt.path}`;
     this.log(`URL: ${this.url}`);
     this.setAvailable();
+    this.onPoll();
+  }
+
+  /**
+   * Reconnect with manual IP after repair flow
+   * @param {string} ip
+   */
+  async reconnectWithManualIP(ip) {
+    this.log(`🔧 Reconnecting with manual IP: ${ip}`);
+    this.url = `http://${ip}/api/v1`;
     this.onPoll();
   }
 

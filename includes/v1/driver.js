@@ -108,6 +108,89 @@ logDiscovery(status, detail = null) {
   return devices;
 }
 
+/**
+ * Adds a "manual IP" fallback on top of the default pairing flow: when
+ * mDNS discovery finds nothing, the user is sent to a view where they can
+ * type in the device's IP address directly instead.
+ */
+async onPair(session) {
+  session.setHandler('list_devices', async () => {
+    try {
+      return await this.onPairListDevices();
+    } catch (err) {
+      try {
+        await session.showView('manual_ip');
+        return [];
+      } catch (showViewErr) {
+        // Driver has no manual_ip pair view configured — keep default behaviour
+        throw err;
+      }
+    }
+  });
+
+  session.setHandler('test_manual_device', async (data) => {
+    return this.testManualDevice(data && data.ip);
+  });
+}
+
+/**
+ * Verifies a manually entered IP address by querying its local API, and
+ * returns a ready-to-create device object (with the IP persisted as the
+ * `manual_ip` setting so the device keeps using it after pairing).
+ * Rejects devices whose product_type is not in the driver's `productTypes`.
+ *
+ * @param {string} ip
+ * @returns {Promise<{name: string, data: {id: string}, settings: {manual_ip: string}}>}
+ */
+async testManualDevice(ip) {
+  ip = (ip || '').trim();
+
+  if (!ip || !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+    throw new Error(this.homey.__('pair.manual_ip.invalid_ip'));
+  }
+
+  let res;
+  try {
+    res = await fetchWithTimeout(`http://${ip}/api`, {}, 5000);
+  } catch (err) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  if (!res.ok) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  const data = await res.json();
+  const serial = data.serial;
+  if (!serial) {
+    throw new Error(this.homey.__('pair.manual_ip.connection_failed'));
+  }
+
+  // mDNS discovery filters on txt.product_type per driver; apply the same
+  // filter here so e.g. a P1 meter cannot be paired as an energy socket.
+  const expectedTypes = this.productTypes;
+  if (Array.isArray(expectedTypes) && expectedTypes.length > 0 && !expectedTypes.includes(data.product_type)) {
+    this.logDiscovery('error', `Manual IP ${ip} is a ${data.product_type}, expected ${expectedTypes.join(' or ')}`);
+    throw new Error(this.homey.__('pair.manual_ip.wrong_product_type'));
+  }
+
+  if (this.getDevices().some((d) => d.getData().id === serial)) {
+    throw new Error(this.homey.__('pair.manual_ip.already_added'));
+  }
+
+  const productName = typeof data.product_name === 'string' && data.product_name
+    ? data.product_name
+    : (data.product_type || 'HomeWizard Device');
+
+  this.logDiscovery('ok', `Manual IP ${ip} -> ${productName} (${serial})`);
+
+  return {
+    name: productName,
+    data: { id: serial },
+    settings: { manual_ip: ip },
+  };
+}
+
 async onRepair(session, device) {
   console.log('[REPAIR] Starting repair session for device:', device.getName());
 
