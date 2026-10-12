@@ -2,7 +2,7 @@
   "type": "number",
   "title": {
     "en": "Battery Group Average SoC",
-    "nl": "Batterij Groep Lading",
+    "nl": "Batterijgroep lading",
     "de": "Durchschn. Gruppen-SoC",
     "da": "Gns. gruppe-SoC",
     "fr": "SoC moyen du groupe",

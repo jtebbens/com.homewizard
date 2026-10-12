@@ -1,11 +1,11 @@
 {
   "title": {
     "en": "Check Battery Mode",
-    "nl": "Controleer batterij Modus"
+    "nl": "Controleer batterij modus"
   },
   "titleFormatted": {
     "en": "Check battery mode !{{is|isn't}} [[mode]]",
-    "nl": "Controleer batterij modus !{{is|isn't}} [[mode]]"
+    "nl": "Controleer batterij modus !{{is|is niet}} [[mode]]"
   },
   "args": [
     {
@@ -42,14 +42,14 @@
           "id": "zero_charge_only",
           "label": {
             "en": "Zero mode, Charge Only",
-            "nl": "Nul op de Meter, Alleen laden"
+            "nl": "Nul op de meter, alleen laden"
           }
         },
         {
           "id": "zero_discharge_only",
           "label": {
             "en": "Zero mode, Discharge Only",
-            "nl": "Nul op de Meter, Alleen ontladen"
+            "nl": "Nul op de meter, alleen ontladen"
           }
         },
         {

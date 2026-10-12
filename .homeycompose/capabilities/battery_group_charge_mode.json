@@ -2,7 +2,7 @@
   "type": "enum",
   "title": {
     "en": "Battery Group Charge Mode",
-    "nl": "Battery Groep Oplaadmodus",
+    "nl": "Batterijgroep oplaadmodus",
     "de": "Gruppen-Lademodus",
     "da": "Gruppe-ladetilstand",
     "fr": "Mode de charge du groupe",

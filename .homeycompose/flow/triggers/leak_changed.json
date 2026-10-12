@@ -11,7 +11,7 @@
       "filter": "driver_id=kakusensor",
       "placeholder": {
         "en": "Which Sensor",
-        "nl": "Welke Sensor"
+        "nl": "Welke sensor"
       }
     }
   ],
