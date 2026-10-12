@@ -2,7 +2,7 @@
   "type": "number",
   "title": {
     "en": "Number of battery cycles",
-    "nl": "Aantal battery laadcycli",
+    "nl": "Aantal batterij laadcycli",
     "de": "Anzahl Batteriezyklen",
     "da": "Antal battericyklusser",
     "fr": "Nombre de cycles de batterie",

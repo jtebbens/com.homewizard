@@ -124,7 +124,7 @@
             "filter": "driver_id=kakusensor",
             "placeholder": {
               "en": "Which Sensor",
-              "nl": "Welke Sensor"
+              "nl": "Welke sensor"
             }
           }
         ],
@@ -1993,11 +1993,11 @@
       {
         "title": {
           "en": "Check Battery Mode",
-          "nl": "Controleer batterij Modus"
+          "nl": "Controleer batterij modus"
         },
         "titleFormatted": {
           "en": "Check battery mode !{{is|isn't}} [[mode]]",
-          "nl": "Controleer batterij modus !{{is|isn't}} [[mode]]"
+          "nl": "Controleer batterij modus !{{is|is niet}} [[mode]]"
         },
         "args": [
           {
@@ -2034,14 +2034,14 @@
                 "id": "zero_charge_only",
                 "label": {
                   "en": "Zero mode, Charge Only",
-                  "nl": "Nul op de Meter, Alleen laden"
+                  "nl": "Nul op de meter, alleen laden"
                 }
               },
               {
                 "id": "zero_discharge_only",
                 "label": {
                   "en": "Zero mode, Discharge Only",
-                  "nl": "Nul op de Meter, Alleen ontladen"
+                  "nl": "Nul op de meter, alleen ontladen"
                 }
               },
               {
@@ -8591,7 +8591,7 @@
       "type": "string",
       "title": {
         "en": "Active Mode",
-        "nl": "Actieve Modus",
+        "nl": "Actieve modus",
         "de": "Aktiver Modus",
         "da": "Aktiv tilstand",
         "fr": "Mode actif",
@@ -8639,7 +8639,7 @@
       "type": "boolean",
       "title": {
         "en": "Auto-Apply",
-        "nl": "Automatisch Toepassen",
+        "nl": "Automatisch toepassen",
         "de": "Automatisch anwenden",
         "da": "Anvend automatisk",
         "fr": "Application automatique",
@@ -8668,7 +8668,7 @@
       "type": "number",
       "title": {
         "en": "Battery Group Average SoC",
-        "nl": "Batterij Groep Lading",
+        "nl": "Batterijgroep lading",
         "de": "Durchschn. Gruppen-SoC",
         "da": "Gns. gruppe-SoC",
         "fr": "SoC moyen du groupe",
@@ -8698,7 +8698,7 @@
       "type": "enum",
       "title": {
         "en": "Battery Group Charge Mode",
-        "nl": "Battery Groep Oplaadmodus",
+        "nl": "Batterijgroep oplaadmodus",
         "de": "Gruppen-Lademodus",
         "da": "Gruppe-ladetilstand",
         "fr": "Mode de charge du groupe",
@@ -8803,7 +8803,7 @@
       "type": "string",
       "title": {
         "en": "Battery Group Charge state",
-        "nl": "Battery Groep Laadt status",
+        "nl": "Batterijgroep laadstatus",
         "de": "Gruppen-Ladezustand",
         "da": "Gruppe-ladetilstand",
         "fr": "État de charge du groupe",
@@ -8822,6 +8822,7 @@
       "type": "number",
       "title": {
         "en": "Battery Group Total Capacity",
+        "nl": "Totale groepscapaciteit",
         "de": "Gesamtkapazität der Gruppe",
         "da": "Gruppens samlede kapacitet",
         "fr": "Capacité totale du groupe",
@@ -8832,6 +8833,7 @@
       },
       "units": {
         "en": "kWh",
+        "nl": "kWh",
         "de": "kWh",
         "da": "kWh",
         "fr": "kWh",
@@ -8936,7 +8938,7 @@
       "type": "number",
       "title": {
         "en": "PV Intraday Bias",
-        "nl": "PV Intradag Bias",
+        "nl": "PV Intradag bias",
         "de": "PV-Intraday-Bias",
         "da": "PV intradag bias",
         "fr": "Biais intraday PV",
@@ -8986,7 +8988,7 @@
       "type": "boolean",
       "title": {
         "en": "Central Heating",
-        "nl": "Central Verwarming",
+        "nl": "Centrale verwarming",
         "de": "Zentralheizung",
         "da": "Centralvarme",
         "fr": "Chauffage central",
@@ -9066,7 +9068,7 @@
       "type": "number",
       "title": {
         "en": "Number of battery cycles",
-        "nl": "Aantal battery laadcycli",
+        "nl": "Aantal batterij laadcycli",
         "de": "Anzahl Batteriezyklen",
         "da": "Antal battericyklusser",
         "fr": "Nombre de cycles de batterie",
@@ -9215,7 +9217,7 @@
       "type": "string",
       "title": {
         "en": "Last Update",
-        "nl": "Laatste Update",
+        "nl": "Laatste update",
         "de": "Letzte Aktualisierung",
         "da": "Seneste opdatering",
         "fr": "Dernière mise à jour",
@@ -9244,7 +9246,7 @@
       "type": "number",
       "title": {
         "en": "LED Brightness",
-        "nl": "LED Helderheid",
+        "nl": "LED helderheid",
         "de": "LED-Helligkeit",
         "da": "LED-lysstyrke",
         "fr": "Luminosité LED",
@@ -9699,7 +9701,7 @@
       "type": "string",
       "title": {
         "en": "Override Until",
-        "nl": "Overschrijven Tot",
+        "nl": "Overschrijven tot",
         "de": "Überschreiben bis",
         "da": "Tilsidesat indtil",
         "fr": "Remplacer jusqu'à",
@@ -9728,7 +9730,7 @@
       "type": "string",
       "title": {
         "en": "Plan Summary",
-        "nl": "Plan Samenvatting",
+        "nl": "Plan samenvatting",
         "de": "Planzusammenfassung",
         "da": "Planresumé",
         "fr": "Résumé du plan",
@@ -9759,7 +9761,7 @@
       "type": "string",
       "title": {
         "en": "Policy Debug",
-        "nl": "Policy Debug",
+        "nl": "Policy debug",
         "de": "Richtlinien-Debug",
         "da": "Politik-debug",
         "fr": "Débogage politique",
@@ -9789,7 +9791,7 @@
       "type": "string",
       "title": {
         "en": "Policy Learning",
-        "nl": "Policy Leren",
+        "nl": "Policy leren",
         "de": "Richtlinien-Lernen",
         "da": "Politik-læring",
         "fr": "Apprentissage politique",
@@ -9820,7 +9822,7 @@
       "type": "string",
       "title": {
         "en": "Policy Price",
-        "nl": "Policy Prijs",
+        "nl": "Policy prijs",
         "de": "Richtlinienpreis",
         "da": "Politikpris",
         "fr": "Prix de la politique",
@@ -9851,7 +9853,7 @@
       "type": "string",
       "title": {
         "en": "Policy Sun",
-        "nl": "Policy Zon",
+        "nl": "Policy zon",
         "de": "Richtlinie Sonne",
         "da": "Politik sol",
         "fr": "Soleil politique",
@@ -9882,7 +9884,7 @@
       "type": "string",
       "title": {
         "en": "Policy Top3 High",
-        "nl": "Policy Top3 Hoog",
+        "nl": "Policy top3 hoog",
         "de": "Richtlinie Top3 Hoch",
         "da": "Politik Top3 Høj",
         "fr": "Politique Top3 Haut",
@@ -9913,7 +9915,7 @@
       "type": "string",
       "title": {
         "en": "Policy Top3 Low",
-        "nl": "Policy Top3 Laag",
+        "nl": "Policy top3 laag",
         "de": "Richtlinie Top3 Niedrig",
         "da": "Politik Top3 Lav",
         "fr": "Politique Top3 Bas",
@@ -9943,7 +9945,7 @@
       "type": "boolean",
       "title": {
         "en": "Policy Enabled",
-        "nl": "Beleid Ingeschakeld",
+        "nl": "Beleid ingeschakeld",
         "de": "Richtlinie aktiviert",
         "da": "Politik aktiveret",
         "fr": "Politique activée",
@@ -10049,7 +10051,7 @@
       "type": "number",
       "title": {
         "en": "Expected Profit",
-        "nl": "Verwachte Winst",
+        "nl": "Verwachte winst",
         "de": "Erwarteter Gewinn",
         "da": "Forventet profit",
         "fr": "Bénéfice attendu",
@@ -10091,7 +10093,7 @@
       "type": "number",
       "title": {
         "en": "Predicted Sun (4h)",
-        "nl": "Voorspelde Zon (4u)",
+        "nl": "Voorspelde zon (4u)",
         "de": "Vorhergesagte Sonne (4h)",
         "da": "Forudsagt sol (4h)",
         "fr": "Soleil prévu (4h)",
@@ -10238,7 +10240,7 @@
       "type": "number",
       "title": {
         "en": "PV Curtailment Target",
-        "nl": "PV Knijp-doel"
+        "nl": "PV knijp-doel"
       },
       "desc": {
         "en": "Maximum PV power worth producing this slot — house load plus battery charge demand",
@@ -10259,7 +10261,7 @@
       "type": "number",
       "title": {
         "en": "PV Forecast Today",
-        "nl": "PV Voorspelling Vandaag",
+        "nl": "PV voorspelling vandaag",
         "de": "PV-Prognose heute",
         "da": "PV-prognose i dag",
         "fr": "Prévision PV aujourd'hui",
@@ -10301,7 +10303,7 @@
       "type": "string",
       "title": {
         "en": "Recommended Mode",
-        "nl": "Aanbevolen Modus",
+        "nl": "Aanbevolen modus",
         "de": "Empfohlener Modus",
         "da": "Anbefalet tilstand",
         "fr": "Mode recommandé",
@@ -10360,7 +10362,7 @@
       "type": "number",
       "title": {
         "en": "Sunshine Score",
-        "nl": "Zonneschijn Score",
+        "nl": "Zonneschijn score",
         "de": "Sonneneinstrahlung",
         "da": "Solscore",
         "fr": "Score d'ensoleillement",
@@ -10625,7 +10627,7 @@
       "type": "enum",
       "title": {
         "en": "Weather Override",
-        "nl": "Weer Overschrijven",
+        "nl": "Weer overschrijven",
         "de": "Wetterüberschreibung",
         "da": "Vejr-tilsidesættelse",
         "fr": "Remplacement météo",
@@ -10712,7 +10714,7 @@
       "type": "string",
       "title": {
         "en": "WiFi State",
-        "nl": "WiFi Status",
+        "nl": "WiFi status",
         "de": "WLAN-Status",
         "da": "WiFi-tilstand",
         "fr": "État WiFi",

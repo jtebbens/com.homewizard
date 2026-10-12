@@ -2,7 +2,7 @@
   "type": "number",
   "title": {
     "en": "PV Forecast Today",
-    "nl": "PV Voorspelling Vandaag",
+    "nl": "PV voorspelling vandaag",
     "de": "PV-Prognose heute",
     "da": "PV-prognose i dag",
     "fr": "Prévision PV aujourd'hui",

@@ -3,7 +3,7 @@
   "type": "enum",
   "title": {
     "en": "Weather Override",
-    "nl": "Weer Overschrijven",
+    "nl": "Weer overschrijven",
     "de": "Wetterüberschreibung",
     "da": "Vejr-tilsidesættelse",
     "fr": "Remplacement météo",

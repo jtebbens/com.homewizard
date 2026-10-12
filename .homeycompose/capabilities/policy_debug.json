@@ -3,7 +3,7 @@
   "type": "string",
   "title": {
     "en": "Policy Debug",
-    "nl": "Policy Debug",
+    "nl": "Policy debug",
     "de": "Richtlinien-Debug",
     "da": "Politik-debug",
     "fr": "Débogage politique",

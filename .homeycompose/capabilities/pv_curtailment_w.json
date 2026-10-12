@@ -2,7 +2,7 @@
   "type": "number",
   "title": {
     "en": "PV Curtailment Target",
-    "nl": "PV Knijp-doel"
+    "nl": "PV knijp-doel"
   },
   "desc": {
     "en": "Maximum PV power worth producing this slot — house load plus battery charge demand",
